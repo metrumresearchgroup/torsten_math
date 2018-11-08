@@ -36,24 +36,21 @@ namespace dsolve {
     //   // TODO(yizhang): adjoint sensitivity initialization
     // }
 
-    template <typename F, int Lmm>
-    void solve(PKCvodesFwdSystem<F, double, double, double, Lmm>& ode,
+    template <typename F, int Lmm, PkCvodesSensMethod Sm>
+    void solve(PKCvodesFwdSystem<F, double, double, double, Lmm, Sm>& ode,
                std::vector<std::vector<double> >& res_y);
 
-    template <typename F, int Lmm>
-    void solve(PKCvodesFwdSystem<F, stan::math::var,
-               double, double, Lmm>& ode,
+    template <typename F, int Lmm, PkCvodesSensMethod Sm>
+    void solve(PKCvodesFwdSystem<F, stan::math::var, double, double, Lmm, Sm>& ode,
                std::vector<std::vector<stan::math::var> >& res_y);
 
-    template <typename F, typename Ty0, typename Tpar, int Lmm>
-    void solve(PKCvodesFwdSystem<F,
-               double, Ty0, Tpar, Lmm>& ode,
+    template <typename F, typename Ty0, typename Tpar, int Lmm, PkCvodesSensMethod Sm>
+    void solve(PKCvodesFwdSystem<F, double, Ty0, Tpar, Lmm, Sm>& ode,
                std::vector<
                std::vector<stan::math::var> >& res_y);
 
-    template <typename F, typename Ty0, typename Tpar, int Lmm>
-    void solve(PKCvodesFwdSystem<F, stan::math::var,
-               Ty0, Tpar, Lmm>& ode,
+    template <typename F, typename Ty0, typename Tpar, int Lmm, PkCvodesSensMethod Sm>
+    void solve(PKCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, Lmm, Sm>& ode,
                std::vector<
                std::vector<stan::math::var> >& res_y);
 
@@ -141,10 +138,8 @@ namespace dsolve {
          * are regarding y0, thus they form a unit matrix.
          **/
         if (Ode::need_fwd_sens) {
-          if (Ode::is_var_y0)
-            for (size_t i = 0; i < n; ++i) NV_Ith_S(ys[i], i) = 1.0;
-          CHECK_SUNDIALS_CALL(CVodeSensInit(mem, ode.ns(), CV_SIMULTANEOUS,
-                                            ode.sens_rhs(), ys));
+          if (Ode::is_var_y0) for (size_t i = 0; i < n; ++i) NV_Ith_S(ys[i], i) = 1.0;
+          CHECK_SUNDIALS_CALL(CVodeSensInit(mem, ode.ns(), CV_SIMULTANEOUS, cvodes_sens_rhs<Ode>(), ys));  // NOLINT
           CHECK_SUNDIALS_CALL(CVodeSensEEtolerances(mem));
         }
 
@@ -167,10 +162,10 @@ namespace dsolve {
    * @param[out] ode ODE system
    * @param[out] res_y ODE solutions
    */
-  template <typename F, int Lmm>
+  template <typename F, int Lmm, PkCvodesSensMethod Sm>
   void PKCvodesIntegrator::solve(PKCvodesFwdSystem<F, double,
-                                   double, double, Lmm>& ode,
-                                   std::vector<std::vector<double> >& res_y) {
+                                 double, double, Lmm, Sm>& ode,
+                                 std::vector<std::vector<double> >& res_y) {
     double t1 = ode.t0();
     const std::vector<double>& ts = ode.ts();
     auto mem = ode.mem();
@@ -195,11 +190,11 @@ namespace dsolve {
    * @param[out] ode ODE system
    * @param[out] res_y ODE solutions
    */
-  template <typename F, int Lmm>
+  template <typename F, int Lmm, PkCvodesSensMethod Sm>
   void PKCvodesIntegrator::solve(PKCvodesFwdSystem<F,
-                                   stan::math::var, double, double, Lmm>& ode,
-                                   std::vector<
-                                   std::vector<stan::math::var> >& res_y) {
+                                 stan::math::var, double, double, Lmm, Sm>& ode,
+                                 std::vector<
+                                 std::vector<stan::math::var> >& res_y) {
     using stan::math::value_of;
     using stan::math::var;
     double t1 = ode.t0();
@@ -236,11 +231,9 @@ namespace dsolve {
    * @param[out] ode ODE system
    * @param[out] res_y ODE solutions
    */
-  template <typename F, typename Ty0, typename Tpar, int Lmm>
-  void PKCvodesIntegrator::solve(PKCvodesFwdSystem<F,
-                                   double, Ty0, Tpar, Lmm>& ode,
-                                   std::vector<
-                                   std::vector<stan::math::var> >& res_y) {
+  template <typename F, typename Ty0, typename Tpar, int Lmm, PkCvodesSensMethod Sm> // NOLINT
+  void PKCvodesIntegrator::solve(PKCvodesFwdSystem<F, double, Ty0, Tpar, Lmm, Sm>& ode, // NOLINT
+                                 std::vector<std::vector<stan::math::var> >& res_y) { // NOLINT
     using stan::math::precomputed_gradients;
     double t1 = ode.t0();
     const std::vector<double>& ts = ode.ts();
@@ -276,12 +269,12 @@ namespace dsolve {
    * @param[out] ode ODE system
    * @param[out] res_y ODE solutions
    */
-  template <typename F, typename Ty0, typename Tpar, int Lmm>
+  template <typename F, typename Ty0, typename Tpar, int Lmm, PkCvodesSensMethod Sm>
   void PKCvodesIntegrator::solve(PKCvodesFwdSystem<F,
-                                   stan::math::var,
-                                   Ty0, Tpar, Lmm>& ode,
-                                   std::vector<
-                                   std::vector<stan::math::var> >& res_y) {
+                                 stan::math::var,
+                                 Ty0, Tpar, Lmm, Sm>& ode,
+                                 std::vector<
+                                 std::vector<stan::math::var> >& res_y) {
     using stan::math::precomputed_gradients;
     using stan::math::var;
     double t1 = ode.t0();

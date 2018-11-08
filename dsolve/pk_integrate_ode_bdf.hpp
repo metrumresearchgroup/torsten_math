@@ -25,7 +25,8 @@ namespace dsolve {
                          long int max_num_step = 1e6) {  // NOLINT(runtime/int)
     using torsten::dsolve::PKCvodesFwdSystem;
     using torsten::dsolve::PKCvodesIntegrator;
-    using Ode = PKCvodesFwdSystem<F, Tt, T_initial, T_param, CV_BDF>;
+    using torsten::PkCvodesSensMethod;
+    using Ode = PKCvodesFwdSystem<F, Tt, T_initial, T_param, CV_BDF, CSDA>;
     const int m = theta.size();
     const int n = y0.size();
 
