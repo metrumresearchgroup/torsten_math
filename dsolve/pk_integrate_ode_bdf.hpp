@@ -26,7 +26,7 @@ namespace dsolve {
     using torsten::dsolve::PKCvodesFwdSystem;
     using torsten::dsolve::PKCvodesIntegrator;
     using torsten::PkCvodesSensMethod;
-    using Ode = PKCvodesFwdSystem<F, Tt, T_initial, T_param, CV_BDF, CSDA>;
+    using Ode = PKCvodesFwdSystem<F, Tt, T_initial, T_param, CV_BDF, AD>;
     const int m = theta.size();
     const int n = y0.size();
 

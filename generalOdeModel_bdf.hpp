@@ -97,7 +97,7 @@ generalOdeModel_bdf(const F& f,
   typedef general_functor<F> F0;
 
   PredWrapper<refactor::PKODEModel> pr;
-  PkOdeIntegrator<StanBdf> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PkOdeIntegrator<PkBdf> integrator(rel_tol, abs_tol, max_num_steps, msgs);
 
   const Pred1_general<F0> pred1(F0(f), rel_tol, abs_tol,
                                 max_num_steps, msgs, "bdf");

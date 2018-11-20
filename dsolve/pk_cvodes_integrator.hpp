@@ -208,7 +208,7 @@ namespace dsolve {
      * only update the entry that is non-zero when create @c
      * var before overwrite it with zero again.
      */
-    static std::vector<double> g(ts.size(), 0.0);
+    std::vector<double> g(ts.size(), 0.0);
 
     for (size_t i = 0; i < ts.size(); ++i) {
       double time = value_of(ts[i]);
@@ -244,7 +244,7 @@ namespace dsolve {
     const auto ns = ode.ns();
     auto vars = ode.vars();
 
-    static std::vector<double> g(ns);
+    std::vector<double> g(ns);
 
     for (size_t i = 0; i < ts.size(); ++i) {
       CHECK_SUNDIALS_CALL(CVode(mem, ts[i], y, &t1, CV_NORMAL));
@@ -286,7 +286,7 @@ namespace dsolve {
     const auto ns = ode.ns();
     auto vars = ode.vars();
 
-    static std::vector<double> g(ns + ts.size(), 0.0);
+    std::vector<double> g(ns + ts.size(), 0.0);
 
     for (size_t i = 0; i < ts.size(); ++i) {
       double time = value_of(ts[i]);
