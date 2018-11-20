@@ -106,7 +106,7 @@ PKModelOneCpt(const std::vector<T0>& time,
     dummy_systems(1, dummy_system);
 
   PredWrapper<refactor::PKOneCptModel> pr;
-  PkOdeIntegrator<> integrator;
+  PkOdeIntegrator<StanRk45> integrator;
 
 #ifdef OLD_TORSTEN
   return Pred(time, amt, rate, ii, evid, cmt, addl, ss,

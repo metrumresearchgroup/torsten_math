@@ -393,6 +393,9 @@ namespace refactor {
       return solve(dt);
     }
 
+    /*
+     * wrapper to fit @c PrepWrapper's call signature
+     */
     template<PkOdeIntegratorId It, typename T_amt, typename T_r, typename T_ii>
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     solve(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,

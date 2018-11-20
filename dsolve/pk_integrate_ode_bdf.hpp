@@ -30,7 +30,7 @@ namespace dsolve {
     const int m = theta.size();
     const int n = y0.size();
 
-    static PKCvodesService<typename Ode::Ode> serv(n, m);
+    PKCvodesService<typename Ode::Ode> serv(n, m);
 
     Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
     PKCvodesIntegrator solver(rtol, atol, max_num_step);

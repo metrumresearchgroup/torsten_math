@@ -81,7 +81,7 @@ linOdeModel(const std::vector<T0>& time,
                 pMatrix_dummy, biovar, tlag, function);
 
   PredWrapper<refactor::PKLinODEModel> pr;
-  PkOdeIntegrator<> integrator;
+  PkOdeIntegrator<StanRk45> integrator;
 
 #ifdef OLD_TORSTEN
   return Pred(time, amt, rate, ii, evid, cmt, addl, ss,

@@ -157,7 +157,7 @@ namespace torsten {
 }
 
 namespace torsten {
-  template<PkOdeIntegratorId It = StanRk45>
+  template<PkOdeIntegratorId It>
   struct PkOdeIntegrator {
     const double rtol;
     const double atol;
