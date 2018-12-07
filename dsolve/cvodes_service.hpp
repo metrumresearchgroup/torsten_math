@@ -7,10 +7,11 @@
 #include <cvodes/cvodes_direct.h>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
-#include <nvector/nvector_serial.h>
 #include <ostream>
 #include <vector>
 #include <algorithm>
+
+#include <nvector/nvector_serial.h>
 
 namespace torsten {
   namespace dsolve {

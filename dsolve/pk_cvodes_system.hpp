@@ -10,17 +10,10 @@
 #include <stan/math/prim/scal/err/system_error.hpp>
 #include <stan/math/prim/arr/err/check_nonzero_size.hpp>
 #include <stan/math/prim/arr/err/check_ordered.hpp>
-#include <stan/math/torsten/dsolve/sundials_check.hpp>
-#include <stan/math/torsten/dsolve/cvodes_rhs.hpp>
-#include <stan/math/torsten/dsolve/cvodes_service.hpp>
-#include <stan/math/rev/scal/meta/is_var.hpp>
 #include <stan/math/prim/scal/meta/return_type.hpp>
 #include <stan/math/prim/mat/fun/typedefs.hpp>
 #include <stan/math/rev/mat/fun/typedefs.hpp>
-#include <cvodes/cvodes.h>
-#include <nvector/nvector_serial.h>
-#include <ostream>
-#include <vector>
+#include <stan/math/torsten/dsolve/cvodes_service.hpp>
 
 namespace torsten {
   namespace dsolve {
@@ -78,7 +71,15 @@ namespace torsten {
       static constexpr bool is_var_ts = stan::is_var<Tts>::value;
 
       using scalar_type = typename stan::return_type<Tts, Ty0, Tpar>::type;
+
+      // For MPI version we solve ODE and return @c double
+      // results so they can be broadcasted, @c var results
+      // will assembled in each processor.
+#ifdef TORSTEN_MPI
+      using return_type = std::vector<std::vector<double> >;
+#else
       using return_type = std::vector<std::vector<scalar_type> >;
+#endif
 
       /**
        * Construct CVODES ODE system from initial condition and parameters
@@ -264,6 +265,20 @@ namespace torsten {
        * return size of ODE system for primary and sensitivity unknowns
        */
       const size_t n_sys() { return N_ * (ns_ + 1); }
+
+      /**
+       * return the return size of ODE solution. For
+       * sequential solution this is the size of the original
+       * ODE system. For MPI solution this is the size of the
+       * enhanced ODE system including the sensitivity equations.
+       */
+      const size_t n_return() {
+#ifdef TORSTEN_MPI
+        return n_sys();
+#else
+        return n();
+#endif
+      }
 
       /**
        * return theta size

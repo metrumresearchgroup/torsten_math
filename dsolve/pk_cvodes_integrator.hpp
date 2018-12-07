@@ -1,17 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_CVODES_INTEGRATOR_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_CVODES_INTEGRATOR_HPP
 
-#include <stan/math/rev/scal/meta/is_var.hpp>
 #include <stan/math/torsten/dsolve/pk_cvodes_fwd_system.hpp>
-#include <stan/math/torsten/dsolve/sundials_check.hpp>
-#include <cvodes/cvodes.h>
-#include <cvodes/cvodes_direct.h>
-#include <sunmatrix/sunmatrix_dense.h>
-#include <sunlinsol/sunlinsol_dense.h>
-#include <nvector/nvector_serial.h>
-#include <ostream>
-#include <vector>
-#include <algorithm>
 
 namespace torsten {
 namespace dsolve {
@@ -44,15 +34,25 @@ namespace dsolve {
     void solve(PKCvodesFwdSystem<F, stan::math::var, double, double, Lmm, Sm>& ode,
                std::vector<std::vector<stan::math::var> >& res_y);
 
+    template <typename F, int Lmm, PkCvodesSensMethod Sm>
+    void solve(PKCvodesFwdSystem<F, stan::math::var, double, double, Lmm, Sm>& ode,
+               std::vector<std::vector<double> >& res_y);
+
     template <typename F, typename Ty0, typename Tpar, int Lmm, PkCvodesSensMethod Sm>
     void solve(PKCvodesFwdSystem<F, double, Ty0, Tpar, Lmm, Sm>& ode,
-               std::vector<
-               std::vector<stan::math::var> >& res_y);
+               std::vector<std::vector<stan::math::var> >& res_y);
+
+    template <typename F, typename Ty0, typename Tpar, int Lmm, PkCvodesSensMethod Sm>
+    void solve(PKCvodesFwdSystem<F, double, Ty0, Tpar, Lmm, Sm>& ode,
+               std::vector<std::vector<double> >& res_y);
 
     template <typename F, typename Ty0, typename Tpar, int Lmm, PkCvodesSensMethod Sm>
     void solve(PKCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, Lmm, Sm>& ode,
-               std::vector<
-               std::vector<stan::math::var> >& res_y);
+               std::vector<std::vector<stan::math::var> >& res_y);
+
+    template <typename F, typename Ty0, typename Tpar, int Lmm, PkCvodesSensMethod Sm>
+    void solve(PKCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, Lmm, Sm>& ode,
+               std::vector<std::vector<double> >& res_y);
 
     // TODO(yizhang): adjoint sensitivity solver
 
@@ -115,8 +115,13 @@ namespace dsolve {
       const size_t n = ode.n();
       const size_t ns= ode.ns();
 
+      // the return type for MPI version is based on @c double,
+      // as the return consists of the CVODES solution
+      // instead of the assembled @c var vector in the
+      // sequential version.
       typename Ode::return_type
-        res_y(ode.ts().size(), std::vector<typename Ode::scalar_type>(n, 0));
+        res_y(ode.ts().size(),
+              std::vector<typename Ode::return_type::value_type::value_type>(ode.n_return(), 0)); // NOLINT
 
       // Initial condition is from nv_y, which has changed
       // from previous solution, we need to reset it. Likewise
@@ -223,8 +228,46 @@ namespace dsolve {
   }
 
   /**
+   * Solve ODE system, with only @c ts sensitivity. In this
+   * case we don't have to solve a fwd sensitivty system. As
+   * the sensitivity regarding @c ts[i] is just the RHS of ODE
+   * for solution at @c ts[i], and is 0 for solution at
+   * other time. Since @c fval stores the last RHS
+   * evaluation in @c eval_f, we can just use it instead
+   * recompute RHS. When MPI is used, we don't generate @c var
+   * vector but simply return CVODES results consisting of
+   * the ODE sensitivity solutions.
+   *
+   * @tparam F ODE functor type
+   * @param[out] ode ODE system
+   * @param[out] res_y ODE solutions, each @c vector
+   * corresponds a time step, arranged as:
+   * @c res_y = [y1, dy1/dt, y2, dy2/dt, ...]
+   */
+  template <typename F, int Lmm, PkCvodesSensMethod Sm>
+  void PKCvodesIntegrator::solve(PKCvodesFwdSystem<F, stan::math::var, double, double, Lmm, Sm>& ode, // NOLINT
+                                 std::vector<std::vector<double> >& res_y) {
+    using stan::math::value_of;
+    using stan::math::var;
+    double t1 = ode.t0();
+    const std::vector<var>& ts = ode.ts();
+    auto mem = ode.mem();
+    auto y = ode.nv_y();
+
+    for (size_t i = 0; i < ts.size(); ++i) {
+      double time = value_of(ts[i]);
+      CHECK_SUNDIALS_CALL(CVode(mem, time, y, &t1, CV_NORMAL));
+      for (size_t j = 0; j < ode.n(); ++j) {
+        ode.eval_rhs(time, y);
+        res_y[i][2 * j] = NV_Ith_S(y, j);
+        res_y[i][2 * j + 1] = ode.fval()[j];
+      }
+    }
+  }
+
+  /**
    * Solve Ode system with forward sensitivty, return a
-   * vector of var with precomputed gradient as sensitivity
+   * vector of @c var with precomputed gradient as sensitivity
    * value, when @c y0 and/or @c theta are parameters but @c ts is not.
    *
    * @tparam Ode ODE system type
@@ -261,6 +304,46 @@ namespace dsolve {
   }
 
   /**
+   * Solve Ode system with forward sensitivty, 
+   * and return a
+   * vector of @c double of ODE sensitivity equation
+   * solutions, for MPI applications,
+   * when @c y0 and/or @c theta are parameters but @c ts is not.
+   *
+   * @tparam Ode ODE system type
+   * @param[out] ode ODE system
+   * @param[out] res_y ODE solutions
+   */
+  template <typename F, typename Ty0, typename Tpar, int Lmm, PkCvodesSensMethod Sm> // NOLINT
+  void PKCvodesIntegrator::solve(PKCvodesFwdSystem<F, double, Ty0, Tpar, Lmm, Sm>& ode, // NOLINT
+                                 std::vector<std::vector<double> >& res_y) { // NOLINT
+    using stan::math::precomputed_gradients;
+    double t1 = ode.t0();
+    const std::vector<double>& ts = ode.ts();
+    auto mem = ode.mem();
+    auto y = ode.nv_y();
+    auto ys = ode.nv_ys();
+    const auto n = ode.n();
+    const auto ns = ode.ns();
+    auto vars = ode.vars();
+
+    std::vector<double> g(ns);
+
+    for (size_t i = 0; i < ts.size(); ++i) {
+      CHECK_SUNDIALS_CALL(CVode(mem, ts[i], y, &t1, CV_NORMAL));
+      if (ode.need_fwd_sens) {
+        CHECK_SUNDIALS_CALL(CVodeGetSens(mem, &t1, ys));
+        for (size_t k = 0; k < n; ++k) {
+          for (size_t j = 0; j < ns; ++j) {
+            g[j] = NV_Ith_S(ys[j], k);
+          }
+          res_y[i][k] = precomputed_gradients(NV_Ith_S(y, k), vars, g);
+        }
+      }
+    }
+  }
+
+  /**
    * Solve Ode system with forward sensitivty, return a
    * vector of var with precomputed gradient as sensitivity
    * value, when @c ts, @c theta and/or @c y0 are parameters.
@@ -269,12 +352,11 @@ namespace dsolve {
    * @param[out] ode ODE system
    * @param[out] res_y ODE solutions
    */
-  template <typename F, typename Ty0, typename Tpar, int Lmm, PkCvodesSensMethod Sm>
+  template <typename F, typename Ty0, typename Tpar, int Lmm, PkCvodesSensMethod Sm> // NOLINT
   void PKCvodesIntegrator::solve(PKCvodesFwdSystem<F,
                                  stan::math::var,
                                  Ty0, Tpar, Lmm, Sm>& ode,
-                                 std::vector<
-                                 std::vector<stan::math::var> >& res_y) {
+                                 std::vector<std::vector<stan::math::var> >& res_y) { // NOLINT
     using stan::math::precomputed_gradients;
     using stan::math::var;
     double t1 = ode.t0();

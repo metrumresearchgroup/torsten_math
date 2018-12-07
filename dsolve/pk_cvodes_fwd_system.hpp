@@ -9,10 +9,7 @@
 #include <stan/math/torsten/dsolve/cvodes_sens_rhs.hpp>
 #include <stan/math/torsten/pk_csda.hpp>
 #include <stan/math/rev/mat/functor/jacobian.hpp>
-#include <cvodes/cvodes.h>
-#include <nvector/nvector_serial.h>
-#include <ostream>
-#include <vector>
+#include <stan/math/torsten/dsolve/cvodes_service.hpp>
 
 namespace torsten {
 

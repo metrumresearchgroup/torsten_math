@@ -1,15 +1,7 @@
 #ifndef TORSTEN_DSOLVE_CVODES_RHS_HPP
 #define TORSTEN_DSOLVE_CVODES_RHS_HPP
 
-#include <stan/math/rev/scal/meta/is_var.hpp>
-#include <cvodes/cvodes.h>
-#include <cvodes/cvodes_direct.h>
-#include <sunmatrix/sunmatrix_dense.h>
-#include <sunlinsol/sunlinsol_dense.h>
-#include <nvector/nvector_serial.h>
-#include <ostream>
-#include <vector>
-#include <algorithm>
+#include <stan/math/torsten/dsolve/cvodes_service.hpp>
 
 namespace torsten {
   namespace dsolve {
