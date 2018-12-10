@@ -17,8 +17,7 @@ namespace mpi {
    * @return true if @c i is current node's responsiblity
    * for computation, false otherwise.
    */
-  bool is_mine(boost::mpi::communicator comm,
-               const int& i, const int& np) {
+  bool is_mine(boost::mpi::communicator comm, int i, int np) {
     int n = np / comm.size();
     int r = np % comm.size();
     int a = comm.rank() * n + (comm.rank() >= r ? r : comm.rank());
