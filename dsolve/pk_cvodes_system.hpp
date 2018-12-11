@@ -72,15 +72,6 @@ namespace torsten {
 
       using scalar_type = typename stan::return_type<Tts, Ty0, Tpar>::type;
 
-      // For MPI version we solve ODE and return @c double
-      // results so they can be broadcasted, @c var results
-      // will assembled in each processor.
-#ifdef TORSTEN_MPI
-      using return_type = std::vector<std::vector<double> >;
-#else
-      using return_type = std::vector<std::vector<scalar_type> >;
-#endif
-
       /**
        * Construct CVODES ODE system from initial condition and parameters
        *
@@ -163,6 +154,34 @@ namespace torsten {
        * handled by @c PKCvodesService
        */
       ~PKCvodesSystem() {
+      }
+
+      /**
+       * intialize solution to ensure right size.
+       */
+      void initialize_solution(Eigen::MatrixXd& sol) {
+        sol = Eigen::MatrixXd::Zero(ts_.size(), n_sys());
+      }
+
+      /**
+       * intialize solution to ensure right size.
+       */
+      void initialize_solution(std::vector<std::vector<scalar_type> >& sol) {
+        sol.resize(ts_.size());
+        for (auto&& v : sol) {
+          v.resize(N_);
+          std::fill(v.begin(), v.end(), 0.0);
+        }
+      }
+
+      /**
+       * Return the size of the solution correspdoning each y[i],
+       * namely 1 + number of sensitivities.
+       *
+       * @return each solution size.
+       */
+      int n_sol() {
+        return 1 + ns_ + stan::is_var<Tts>::value ? ts_.size() : 0;
       }
 
       /**
@@ -264,21 +283,7 @@ namespace torsten {
       /**
        * return size of ODE system for primary and sensitivity unknowns
        */
-      const size_t n_sys() { return N_ * (ns_ + 1); }
-
-      /**
-       * return the return size of ODE solution. For
-       * sequential solution this is the size of the original
-       * ODE system. For MPI solution this is the size of the
-       * enhanced ODE system including the sensitivity equations.
-       */
-      const size_t n_return() {
-#ifdef TORSTEN_MPI
-        return n_sys();
-#else
-        return n();
-#endif
-      }
+      const size_t n_sys() { return N_ * n_sol(); }
 
       /**
        * return theta size

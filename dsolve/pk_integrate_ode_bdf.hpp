@@ -48,7 +48,6 @@ namespace dsolve {
 }
 
 #ifdef TORSTEN_MPI
-  /* MPI version */
   template <typename F, typename Tt, typename T_initial, typename T_param>
   std::vector<std::vector<std::vector<typename stan::return_type<Tt,
                                                                  T_initial,
@@ -64,6 +63,7 @@ namespace dsolve {
                        double rtol = 1e-10,
                        double atol = 1e-10,
                        long int max_num_step = 1e6) {  // NOLINT(runtime/int)
+    using std::vector;
     using torsten::dsolve::PKCvodesFwdSystem;
     using torsten::dsolve::PKCvodesIntegrator;
     using torsten::PkCvodesSensMethod;
@@ -79,13 +79,27 @@ namespace dsolve {
     boost::mpi::environment env;
     boost::mpi::communicator world;
 
+    Eigen::MatrixXd res_i;
+    vector<vector<vector<typename stan::return_type<Tt,
+                                                    T_initial,
+                                                    T_param>::type>> > res;
+
     for (int i = 0; i < np; ++i) {
-      if(torsten::mpi::is_mine(world, i, np)) {
+      int nr, nc;
+      int my_worker_id = torsten::mpi::my_worker(i, np, world.size());
+      if(world.rank() == my_worker_id) {
         Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
-        auto res = solver.integrate(ode);
+        res_i = solver.integrate(ode);
+        nr = res_i.rows();
+        nc = res_i.cols();
       }
+      broadcast(world, nr, my_worker_id);
+      broadcast(world, nc, my_worker_id);
+      res.resize(nr, nc);
+      broadcast(world, res.data(), nr * nc, my_worker_id);
     }
 
+    return res;
 }
 #endif
 }
