@@ -373,9 +373,9 @@ namespace dsolve {
       if (ode.need_fwd_sens) {
         CHECK_SUNDIALS_CALL(CVodeGetSens(mem, &t1, ys));
         for (size_t k = 0; k < n; ++k) {
-          res_y(i, k) = NV_Ith_S(y, k);
+          res_y(i, k * ode.n_sol()) = NV_Ith_S(y, k);
           for (size_t j = 0; j < ns; ++j) {
-            res_y(i, k + j + 1) = NV_Ith_S(ys[j], k);
+            res_y(i, k * ode.n_sol() + j + 1) = NV_Ith_S(ys[j], k);
           }
         }
       }

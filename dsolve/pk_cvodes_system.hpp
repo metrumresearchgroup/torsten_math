@@ -181,7 +181,8 @@ namespace torsten {
        * @return each solution size.
        */
       int n_sol() {
-        return 1 + ns_ + stan::is_var<Tts>::value ? ts_.size() : 0;
+        int nt = stan::is_var<Tts>::value ? ts_.size() : 0;
+        return 1 + ns_ + nt;
       }
 
       /**

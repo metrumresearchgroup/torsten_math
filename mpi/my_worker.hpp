@@ -1,8 +1,5 @@
-#ifndef STAN_MATH_TORSTEN_MPI_IS_MINE_HPP
-#define STAN_MATH_TORSTEN_MPI_IS_MINE_HPP
-
-#include <boost/mpi.hpp>
-#include <boost/mpi/communicator.hpp>
+#ifndef STAN_MATH_TORSTEN_MPI_MY_WORKER_HPP
+#define STAN_MATH_TORSTEN_MPI_MY_WORKER_HPP
 
 namespace torsten {
   namespace mpi {

@@ -48,10 +48,13 @@ namespace dsolve {
 }
 
 #ifdef TORSTEN_MPI
+  /**
+   * 
+   * @return res nested vector that contains results for
+   * (individual i, time j, equation k)
+   **/
   template <typename F, typename Tt, typename T_initial, typename T_param>
-  std::vector<std::vector<std::vector<typename stan::return_type<Tt,
-                                                                 T_initial,
-                                                                 T_param>::type> > > // NOLINT
+  std::vector<std::vector<std::vector<stan::math::var> > >
   pk_integrate_ode_bdf(const F& f,
                        const std::vector<std::vector<T_initial> >& y0,
                        double t0,
@@ -63,6 +66,7 @@ namespace dsolve {
                        double rtol = 1e-10,
                        double atol = 1e-10,
                        long int max_num_step = 1e6) {  // NOLINT(runtime/int)
+    using stan::math::var;
     using std::vector;
     using torsten::dsolve::PKCvodesFwdSystem;
     using torsten::dsolve::PKCvodesIntegrator;
@@ -80,9 +84,7 @@ namespace dsolve {
     boost::mpi::communicator world;
 
     Eigen::MatrixXd res_i;
-    vector<vector<vector<typename stan::return_type<Tt,
-                                                    T_initial,
-                                                    T_param>::type>> > res;
+    vector<vector<vector<var>> > res;
 
     for (int i = 0; i < np; ++i) {
       int nr, nc;
@@ -95,10 +97,15 @@ namespace dsolve {
       }
       broadcast(world, nr, my_worker_id);
       broadcast(world, nc, my_worker_id);
-      res.resize(nr, nc);
-      broadcast(world, res.data(), nr * nc, my_worker_id);
-    }
+      res_i.resize(nr, nc);
+      broadcast(world, res_i.data(), nr * nc, my_worker_id);
+      // for (int j ; j < nr; ++j) {
+      //   for (int k; k < n; ++k) {
+          
+      //   }
+      // }
 
+    }
     return res;
 }
 #endif
