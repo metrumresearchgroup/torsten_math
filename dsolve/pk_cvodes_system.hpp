@@ -14,6 +14,7 @@
 #include <stan/math/prim/mat/fun/typedefs.hpp>
 #include <stan/math/rev/mat/fun/typedefs.hpp>
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
+#include <stan/math/torsten/dsolve/pk_vars.hpp>
 
 namespace torsten {
   namespace dsolve {
@@ -248,17 +249,7 @@ namespace torsten {
        * @return vector of vars
        */
       std::vector<scalar_type> vars() const {
-        std::vector<scalar_type> res;
-        if (is_var_y0) {
-          res.insert(res.end(), y0().begin(), y0().end());
-        }
-        if (is_var_par) {
-          res.insert(res.end(), theta().begin(), theta().end());
-        }
-        if (is_var_ts) {
-          res.insert(res.end(), ts().begin(), ts().end());
-        }
-        return res;
+        return torsten::dsolve::pk_vars(y0_, theta_, ts_);
       }
 
       /**
