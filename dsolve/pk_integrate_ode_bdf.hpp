@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_BDF_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_BDF_HPP
 
+#include <stan/math/prim/scal/err/check_greater.hpp>
 #include <stan/math/torsten/dsolve/pk_cvodes_integrator.hpp>
 #include <boost/mpi.hpp>
 #include <stan/math/torsten/mpi.hpp>
@@ -83,32 +84,32 @@ namespace dsolve {
     PKCvodesIntegrator solver(rtol, atol, max_num_step);
     
     // make sure MPI is on
-    boost::mpi::environment env;
+    int intialized;
+    MPI_Initialized(&intialized);
+    stan::math::check_greater("pk_integrate_ode_bdf", "MPI_Intialized", intialized, 0);
+
     boost::mpi::communicator world;
 
     Eigen::MatrixXd res_i;
     vector<vector<vector<double>> > res(np);
-    int ns, nsol;
+    int ns, nsol, nsys, nt;
 
     for (int i = 0; i < np; ++i) {
-      int nr, nc;
       int my_worker_id = torsten::mpi::my_worker(i, np, world.size());
+      Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
+      ns   = ode.ns();
+      nsol = ode.n_sol();
+      nsys = ode.n_sys();
+      nt   = ode.ts().size();
+      res_i.resize(nt, nsys);
       if(world.rank() == my_worker_id) {
-        Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
-        ns = ode.ns();
-        nsol = ode.n_sol();
         res_i = solver.integrate<Ode, false>(ode);
-        nr = res_i.rows();
-        nc = res_i.cols();
       }
-      broadcast(world, nr, my_worker_id);
-      broadcast(world, nc, my_worker_id);
-      res_i.resize(nr, nc);
-      broadcast(world, res_i.data(), nr * nc, my_worker_id);
-      res[i].resize(nr);
-      for (int j = 0 ; j < nr; ++j) {
-        res[i][j].resize(n);
-        for (int k = 0; k < n; ++k) {
+      broadcast(world, res_i.data(), res_i.size(), my_worker_id);
+      res[i].resize(nt);
+      for (int j = 0 ; j < nt; ++j) {
+        res[i][j].resize(nsys);
+        for (int k = 0; k < nsys; ++k) {
           res[i][j][k] = res_i(j, k);
         }
       }
@@ -162,7 +163,10 @@ namespace dsolve {
     PKCvodesIntegrator solver(rtol, atol, max_num_step);
     
     // make sure MPI is on
-    boost::mpi::environment env;
+    int intialized;
+    MPI_Initialized(&intialized);
+    stan::math::check_greater("pk_integrate_ode_bdf", "MPI_Intialized", intialized, 0);
+
     boost::mpi::communicator world;
 
     using scalar_type = typename stan::return_type<Tt, T_initial, T_param>::type;
@@ -171,28 +175,24 @@ namespace dsolve {
     vector<vector<vector<scalar_type>> > res(np);
     vector<scalar_type> vars;
     std::vector<double> g;
-    int ns, nsol, nsys;
+    int ns, nsol, nsys, nt;
 
     for (int i = 0; i < np; ++i) {
-      int nr, nc;
       int my_worker_id = torsten::mpi::my_worker(i, np, world.size());
+      Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
+      vars = ode.vars();
+      ns   = ode.ns();
+      nsys = ode.n_sys();
+      nt   = ode.ts().size();
+      nsol = ode.n_sol();
+      res_i.resize(nt, nsys);
       if(world.rank() == my_worker_id) {
-        Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
-        ns = ode.ns();
-        nsol = ode.n_sol();
-        nsys = ode.n_sys();
-        vars = ode.vars();
         res_i = solver.integrate<Ode, false>(ode);
-        nr = res_i.rows();
-        nc = res_i.cols();
       }
-      broadcast(world, nr, my_worker_id);
-      broadcast(world, nc, my_worker_id);
-      res_i.resize(nr, nc);
-      broadcast(world, res_i.data(), nr * nc, my_worker_id);
+      broadcast(world, res_i.data(), res_i.size(), my_worker_id);
       g.resize(ns);
-      res[i].resize(nr);
-      for (int j = 0 ; j < nr; ++j) {
+      res[i].resize(nt);
+      for (int j = 0 ; j < nt; ++j) {
         res[i][j].resize(nsys);
         for (int k = 0; k < n; ++k) {
           for (int l = 0 ; l < ns; ++l) g[l] = res_i(j, k * nsol + l + 1);
