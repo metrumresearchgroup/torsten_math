@@ -58,7 +58,8 @@ namespace dsolve {
    * (individual i, time j, equation k)
    **/
   template<typename F>
-  std::vector<std::vector<std::vector<double> > >
+  std::vector<Eigen::MatrixXd>
+  // std::vector<std::vector<std::vector<double> > >
   pk_integrate_ode_bdf(const F& f,
                        const std::vector<std::vector<double> >& y0,
                        double t0,
@@ -88,33 +89,48 @@ namespace dsolve {
     MPI_Initialized(&intialized);
     stan::math::check_greater("pk_integrate_ode_bdf", "MPI_Intialized", intialized, 0);
 
-    boost::mpi::communicator world;
+    MPI_Comm comm;
+    comm = MPI_COMM_WORLD;
+    int rank, size;
+    MPI_Comm_size(comm, &size);
+    MPI_Comm_rank(comm, &rank);
 
-    Eigen::MatrixXd res_i;
+    vector<Eigen::MatrixXd> res_i(np);
     vector<vector<vector<double>> > res(np);
     int ns, nsol, nsys, nt;
+    MPI_Request req[np];
 
     for (int i = 0; i < np; ++i) {
-      int my_worker_id = torsten::mpi::my_worker(i, np, world.size());
+      int my_worker_id = torsten::mpi::my_worker(i, np, size);
       Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
       ns   = ode.ns();
       nsol = ode.n_sol();
       nsys = ode.n_sys();
       nt   = ode.ts().size();
-      res_i.resize(nt, nsys);
-      if(world.rank() == my_worker_id) {
-        res_i = solver.integrate<Ode, false>(ode);
+      res_i[i].resize(nt, nsys);
+      if(rank == my_worker_id) {
+        res_i[i] = solver.integrate<Ode, false>(ode);
       }
-      broadcast(world, res_i.data(), res_i.size(), my_worker_id);
-      res[i].resize(nt);
-      for (int j = 0 ; j < nt; ++j) {
-        res[i][j].resize(nsys);
-        for (int k = 0; k < nsys; ++k) {
-          res[i][j][k] = res_i(j, k);
-        }
-      }
+      MPI_Ibcast(res_i[i].data(), res_i[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
+
+      // For each node prepare storage for data sent over from other nodes
+      // res[i].resize(nt);
+      // for (int j = 0 ; j < nt; ++j) {
+      //   res[i][j].resize(nsys);
+      // }
     }
-    return res;
+
+    for (int i = 0; i < np; ++i) {
+      // hopefully broadcast is done by now.
+      MPI_Wait(&req[i], MPI_STATUS_IGNORE);
+      // for (int j = 0 ; j < nt; ++j) {
+      //   for (int k = 0; k < nsys; ++k) {
+      //     res[i][j][k] = res_i[i](j, k);
+      //   }
+      // }
+    }
+
+    return res_i;
   }
 
   // template<typename T>
@@ -136,9 +152,8 @@ namespace dsolve {
    * (individual i, time j, equation k)
    **/
   template <typename F, typename Tt, typename T_initial, typename T_param>
-  std::vector<std::vector<std::vector<typename stan::return_type<Tt,
-                                                                 T_initial,
-                                                                 T_param>::type> > >
+  std::vector<Eigen::Matrix<typename stan::return_type<Tt, T_initial, T_param>::type, // NOLINT
+                            Eigen::Dynamic, Eigen::Dynamic> >
   pk_integrate_ode_bdf(const F& f,
                        const std::vector<std::vector<T_initial> >& y0,
                        double t0,
@@ -154,6 +169,9 @@ namespace dsolve {
     using torsten::dsolve::PKCvodesFwdSystem;
     using torsten::dsolve::PKCvodesIntegrator;
     using torsten::PkCvodesSensMethod;
+    using Eigen::Matrix;
+    using Eigen::MatrixXd;
+    using Eigen::Dynamic;
     using Ode = PKCvodesFwdSystem<F, Tt, T_initial, T_param, CV_BDF, AD>;
     const int m = theta[0].size();
     const int n = y0[0].size();
@@ -167,39 +185,61 @@ namespace dsolve {
     MPI_Initialized(&intialized);
     stan::math::check_greater("pk_integrate_ode_bdf", "MPI_Intialized", intialized, 0);
 
-    boost::mpi::communicator world;
+    MPI_Comm comm;
+    comm = MPI_COMM_WORLD;
+    int rank, size;
+    MPI_Comm_size(comm, &size);
+    MPI_Comm_rank(comm, &rank);
 
     using scalar_type = typename stan::return_type<Tt, T_initial, T_param>::type;
 
-    Eigen::MatrixXd res_i;
-    vector<vector<vector<scalar_type>> > res(np);
+    vector<MatrixXd> res_i(np);
+    vector<Matrix<scalar_type, Dynamic, Dynamic> > res(np);
     vector<scalar_type> vars;
     std::vector<double> g;
     int ns, nsol, nsys, nt;
+    MPI_Request req[np];
 
     for (int i = 0; i < np; ++i) {
-      int my_worker_id = torsten::mpi::my_worker(i, np, world.size());
+      int my_worker_id = torsten::mpi::my_worker(i, np, size);
       Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
       vars = ode.vars();
       ns   = ode.ns();
       nsys = ode.n_sys();
       nt   = ode.ts().size();
       nsol = ode.n_sol();
-      res_i.resize(nt, nsys);
-      if(world.rank() == my_worker_id) {
-        res_i = solver.integrate<Ode, false>(ode);
+      res_i[i].resize(nt, nsys);
+      if(rank == my_worker_id) {
+        res_i[i] = solver.integrate<Ode, false>(ode);
       }
-      broadcast(world, res_i.data(), res_i.size(), my_worker_id);
+      MPI_Ibcast(res_i[i].data(), res_i[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
       g.resize(ns);
-      res[i].resize(nt);
-      for (int j = 0 ; j < nt; ++j) {
-        res[i][j].resize(nsys);
-        for (int k = 0; k < n; ++k) {
-          for (int l = 0 ; l < ns; ++l) g[l] = res_i(j, k * nsol + l + 1);
-          res[i][j][k] = precomputed_gradients(res_i(j, k * nsol), vars, g);
+      res[i].resize(nt, n);
+      if(rank == my_worker_id) {
+        for (int j = 0 ; j < nt; ++j) {
+          for (int k = 0; k < n; ++k) {
+            for (int l = 0 ; l < ns; ++l) g[l] = res_i[i](j, k * nsol + l + 1);
+            res[i](j, k) = precomputed_gradients(res_i[i](j, k * nsol), vars, g);
+          }
         }
       }
     }
+
+    for (int i = 0; i < np; ++i) {
+      int my_worker_id = torsten::mpi::my_worker(i, np, size);
+      Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
+      vars = ode.vars();
+      MPI_Wait(&req[i], MPI_STATUS_IGNORE);
+      if(rank != my_worker_id) {
+        for (int j = 0 ; j < nt; ++j) {
+          for (int k = 0; k < n; ++k) {
+            for (int l = 0 ; l < ns; ++l) g[l] = res_i[i](j, k * nsol + l + 1);
+            res[i](j, k) = precomputed_gradients(res_i[i](j, k * nsol), vars, g);
+          }
+        }
+      }      
+    }
+
     return res;
 }
 #endif
