@@ -112,22 +112,16 @@ namespace dsolve {
         res_i[i] = solver.integrate<Ode, false>(ode);
       }
       MPI_Ibcast(res_i[i].data(), res_i[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
-
-      // For each node prepare storage for data sent over from other nodes
-      // res[i].resize(nt);
-      // for (int j = 0 ; j < nt; ++j) {
-      //   res[i][j].resize(nsys);
-      // }
     }
 
-    for (int i = 0; i < np; ++i) {
-      // hopefully broadcast is done by now.
-      MPI_Wait(&req[i], MPI_STATUS_IGNORE);
-      // for (int j = 0 ; j < nt; ++j) {
-      //   for (int k = 0; k < nsys; ++k) {
-      //     res[i][j][k] = res_i[i](j, k);
-      //   }
-      // }
+    int finished = 0;
+    int flag = 0;
+    int index;
+    while(finished != np) {
+      MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
+      if(flag) {
+        finished++;
+      }
     }
 
     return res_i;
@@ -225,21 +219,27 @@ namespace dsolve {
       }
     }
 
-    for (int i = 0; i < np; ++i) {
-      int my_worker_id = torsten::mpi::my_worker(i, np, size);
-      Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
-      vars = ode.vars();
-      MPI_Wait(&req[i], MPI_STATUS_IGNORE);
-      if(rank != my_worker_id) {
-        for (int j = 0 ; j < nt; ++j) {
-          for (int k = 0; k < n; ++k) {
-            for (int l = 0 ; l < ns; ++l) g[l] = res_i[i](j, k * nsol + l + 1);
-            res[i](j, k) = precomputed_gradients(res_i[i](j, k * nsol), vars, g);
+    int finished = 0;
+    int flag = 0;
+    int index;
+    while(finished != np) {
+      MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
+      if(flag) {
+        int i = index;
+        int my_worker_id = torsten::mpi::my_worker(i, np, size);
+        Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
+        vars = ode.vars();
+        if(rank != my_worker_id) {
+          for (int j = 0 ; j < nt; ++j) {
+            for (int k = 0; k < n; ++k) {
+              for (int l = 0 ; l < ns; ++l) g[l] = res_i[i](j, k * nsol + l + 1);
+              res[i](j, k) = precomputed_gradients(res_i[i](j, k * nsol), vars, g);
+            }
           }
         }
-      }      
+        finished++;
+      }
     }
-
     return res;
 }
 #endif
