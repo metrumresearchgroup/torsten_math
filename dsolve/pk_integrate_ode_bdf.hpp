@@ -3,7 +3,7 @@
 
 #include <stan/math/prim/scal/err/check_greater.hpp>
 #include <stan/math/torsten/dsolve/pk_cvodes_integrator.hpp>
-#include <boost/mpi.hpp>
+#include <mpi.h>
 #include <stan/math/torsten/mpi.hpp>
 #include <ostream>
 #include <vector>
