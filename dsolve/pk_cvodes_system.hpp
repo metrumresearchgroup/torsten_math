@@ -211,7 +211,7 @@ namespace torsten {
        * evaluate RHS function using current state, store
        * the result in internal @c fval_
        */
-      void eval_rhs(double t, N_Vector& y) {
+      inline void eval_rhs(double t, N_Vector& y) {
         for (size_t i = 0; i < N_; ++i) y_vec_[i] = NV_Ith_S(y, i);
         fval_ = f_(t, y_vec_, theta_dbl_, x_r_, x_i_, msgs_);
       }
@@ -220,7 +220,7 @@ namespace torsten {
        * evaluate RHS function using current state, store
        * the result in @c N_Vector.
        */
-      void eval_rhs(double t, N_Vector& y, N_Vector& ydot) {
+      inline void eval_rhs(double t, N_Vector& y, N_Vector& ydot) {
         for (size_t i = 0; i < N_; ++i) y_vec_[i] = NV_Ith_S(y, i);
         fval_ = f_(t, y_vec_, theta_dbl_, x_r_, x_i_, msgs_);
         for (size_t i = 0; i < N_; ++i) NV_Ith_S(ydot, i) = fval_[i];
