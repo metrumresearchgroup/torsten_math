@@ -107,7 +107,7 @@ namespace torsten {
        * We use CSDA to compute senstivity, so we need to
        * generate complex version of parameters.
        */
-      void eval_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
+      inline void eval_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
                          N_Vector* ys, N_Vector* ysdot,
                          N_Vector temp1, N_Vector temp2) {
         using std::complex;
@@ -205,7 +205,7 @@ namespace torsten {
        * Calculate sensitivity rhs using CVODES vectors. The
        * internal workspace is allocated by @c PKCvodesService.
        */
-      void eval_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
+      inline void eval_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
                          N_Vector* ys, N_Vector* ysdot,
                          N_Vector temp1, N_Vector temp2) {
         using Eigen::Matrix;
