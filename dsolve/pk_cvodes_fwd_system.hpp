@@ -107,7 +107,7 @@ namespace torsten {
        * We use CSDA to compute senstivity, so we need to
        * generate complex version of parameters.
        */
-      inline void eval_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
+      void eval_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
                          N_Vector* ys, N_Vector* ysdot,
                          N_Vector temp1, N_Vector temp2) {
         using std::complex;
@@ -205,7 +205,7 @@ namespace torsten {
        * Calculate sensitivity rhs using CVODES vectors. The
        * internal workspace is allocated by @c PKCvodesService.
        */
-      inline void eval_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
+      void eval_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
                          N_Vector* ys, N_Vector* ysdot,
                          N_Vector temp1, N_Vector temp2) {
         using Eigen::Matrix;
@@ -229,6 +229,8 @@ namespace torsten {
         static std::vector<double> g;
         std::vector<double>& yv_{B::y_vec_};
         for (int i = 0; i < n; ++i) yv_[i] = NV_Ith_S(y, i);
+        MatrixXd Jp;
+        VectorXd f_val(n);
 
         // initialize ysdot
         for (int i = 0; i < ns; ++i) {
@@ -236,41 +238,34 @@ namespace torsten {
           for (int j = 0; j < n; ++j) nvp[j] = 0.0;
         }
 
-        std::vector<var> theta(theta_dbl.begin(), theta_dbl.end());
-        for (int j = 0; j < n; ++j) ysv[j] = yv_[j];
-        std::vector<var> pars;
-        pars.reserve(ns);
-        pars.insert(pars.end(), ysv.begin(), ysv.end());
-        if (B::is_var_par) {
-          pars.insert(pars.end(), theta.begin(), theta.end());
-        }
-
         try {
           stan::math::start_nested();
-          std::vector<stan::math::var> fy(n);
-          if (B::is_var_par) {
-            fy = f(t, ysv, theta, x_r, x_i, msgs);
-          } else {
-            fy = f(t, ysv, theta_dbl, x_r, x_i, msgs);
-          }
 
+          for (int j = 0; j < n; ++j) ysv[j] = yv_[j];
+          auto fy = f(t, ysv, theta_dbl, x_r, x_i, msgs);              
 
+          // df/dy*s_i term, for i = 1...ns
           for (int j = 0; j < n; ++j) {
             stan::math::set_zero_all_adjoints_nested();
-            fy[j].grad(pars, g);
-
-            // df/dy*s_i term, for i = 1...ns
+            fy[j].grad(ysv, g);
             for (int i = 0; i < ns; ++i) {
               auto ysp = N_VGetArrayPointer(ys[i]);
               auto nvp = N_VGetArrayPointer(ysdot[i]);
               for (int k = 0; k < n; ++k) nvp[j] += g[k] * ysp[k];
             }
+          }
 
-            // df/dp_i term, for i = n...n+m-1
-            if (B::is_var_par) {
-              for (int i = 0; i < m; ++i) {
-                auto nvp = N_VGetArrayPointer(ysdot[ns - m + i]);
-                nvp[j] += g[ns - m + i];
+          // df/dp_i term, for i = n...n+m-1
+          if (B::is_var_par) {
+            std::vector<var> theta(m);
+            for (int i = 0; i < m; ++i) theta[i] = B::theta_dbl_[i];
+            std::vector<var> fpar = f(t, yv_, theta, x_r, x_i, msgs);
+            for (int i = 0; i < n; ++i) {
+              stan::math::set_zero_all_adjoints_nested();
+              fpar[i].grad(theta, g);
+              for (int j = 0; j < m; ++j) {
+                auto nvp = N_VGetArrayPointer(ysdot[ns - m + j]);
+                nvp[i] += g[j];
               }
             }
           }
