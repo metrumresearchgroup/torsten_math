@@ -244,14 +244,25 @@ namespace torsten {
           for (int j = 0; j < n; ++j) ysv[j] = yv_[j];
           auto fy = f(t, ysv, theta_dbl, x_r, x_i, msgs);              
 
-          for (int i = 0; i < ns; ++i) {
-            auto ysp = N_VGetArrayPointer(ys[i]);
-            auto nvp = N_VGetArrayPointer(ysdot[i]);
+          // for (int i = 0; i < ns; ++i) {
+          //   auto ysp = N_VGetArrayPointer(ys[i]);
+          //   auto nvp = N_VGetArrayPointer(ysdot[i]);
 
-            // df/dy*s_i term, for i = 1...ns
-            for (int j = 0; j < n; ++j) {
-              stan::math::set_zero_all_adjoints_nested();
-              fy[j].grad(ysv, g);
+          //   // df/dy*s_i term, for i = 1...ns
+          //   for (int j = 0; j < n; ++j) {
+          //     stan::math::set_zero_all_adjoints_nested();
+          //     fy[j].grad(ysv, g);
+          //     for (int k = 0; k < n; ++k) nvp[j] += g[k] * ysp[k];
+          //   }
+          // }
+
+          // df/dy*s_i term, for i = 1...ns
+          for (int j = 0; j < n; ++j) {
+            stan::math::set_zero_all_adjoints_nested();
+            fy[j].grad(ysv, g);
+            for (int i = 0; i < ns; ++i) {
+              auto ysp = N_VGetArrayPointer(ys[i]);
+              auto nvp = N_VGetArrayPointer(ysdot[i]);
               for (int k = 0; k < n; ++k) nvp[j] += g[k] * ysp[k];
             }
           }
