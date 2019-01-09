@@ -12,7 +12,6 @@ namespace torsten {
 // forward declare
 template <typename T_time, typename T_amt,
   typename T_rate, typename T_ii> class EventHistory;
-template <typename T_time, typename T_amt> class RateHistory;
 template<typename T_time, typename T_parameters, typename T_biovar,
   typename T_tlag> class ModelParameterHistory;
 

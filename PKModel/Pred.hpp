@@ -133,11 +133,10 @@ Pred(const std::vector<T_time>& time,
     // Use index iRate instead of i to find rate at matching time, given there
     // is one rate per time, not per event.
     if (rates.get_time(iRate) != events.get_time(i)) iRate++;
-    Rate<T_tau, T_rate2> rate2;
-    rate2.copy(rates.GetRate(iRate));
-
-    for (int j = 0; j < nCmt; j++)
-      rate2.rate[j] *= parameters.GetValueBio(i, j);
+    std::vector<T_rate2> rate2(nCmt);
+    for (int j = 0; j < nCmt; ++j) {
+      rate2[j] = rates.Rates[iRate].rate[j] * parameters.GetValueBio(i, j);
+    }
 
     parameter = parameters.GetModelParameters(i);
 

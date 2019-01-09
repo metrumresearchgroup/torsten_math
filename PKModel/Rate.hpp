@@ -8,19 +8,14 @@
 
 namespace torsten {
 
-// forward declaration
-template<typename T_time, typename T_rate> class RateHistory;
-
 /**
  * The Rate class defines objects that contain the rate in each compartment
  * at each time of the event schedule (but not nescessarily at each event,
  * since two events may happen at the same time).
  */
 template<typename T_time, typename T_rate>
-class Rate {
-private:
+struct Rate {
   T_time time;
-public:
   std::vector<T_rate> rate;  // rate for each compartment
 
   Rate() {
@@ -54,11 +49,6 @@ public:
     std::cout << std::endl;
   }
 
-  friend class RateHistory<T_time, T_rate>;
-  template <typename T_amt, typename T_ii>
-  friend void MakeRates(torsten::EventHistory<T_time, T_amt, T_rate, T_ii>&,
-    RateHistory<T_time, T_rate>&);
-
   template <typename T_0, typename T_1, typename T_2, typename T_3,
     typename T_4, typename T_5, typename T_6, typename F_1, typename F_2>
   friend
@@ -88,11 +78,9 @@ public:
  * along with a series of functions that operate on them.
  */
 template <typename T_time, typename T_rate>
-class RateHistory {
-private:
+struct RateHistory {
   std::vector<Rate<T_time, T_rate> > Rates;
 
-public:
   RateHistory() {
     Rate<T_time, T_rate> initRate;
     Rates.resize(1);
@@ -127,10 +115,10 @@ public:
     return ordered;
   }
 
-  Rate<T_time, T_rate> GetRate(int i) {
-    Rate<T_time, T_rate> newRate(Rates[i].time, Rates[i].rate);
-    return newRate;
-  }
+  // Rate<T_time, T_rate> GetRate(int i) {
+  //   Rate<T_time, T_rate> newRate(Rates[i].time, Rates[i].rate);
+  //   return newRate;
+  // }
 
   void InsertRate(Rate<T_time, T_rate> p_Rate) { Rates.push_back(p_Rate); }
 
@@ -225,7 +213,6 @@ public:
   }
 
   // declare friends
-  friend class Rate<T_time, T_rate>;
   template <typename T_amt, typename T_ii>
   friend void MakeRates(torsten::EventHistory<T_time, T_amt, T_rate, T_ii>&,
     RateHistory<T_time, T_amt>&);
