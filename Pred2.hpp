@@ -139,21 +139,18 @@ namespace torsten{
       ModelParameters<T_tau, T_parameters, T_biovar, T_tlag> parameter;
       int iRate = 0, ikeep = 0;
 
+      std::vector<T_rate2> model_rate(nCmt);
+
       for (int i = 0; i < events.get_size(); i++) {
         event = events.GetEvent(i);
 
         // Use index iRate instead of i to find rate at matching time, given there
         // is one rate per time, not per event.
         if (rates.get_time(iRate) != events.get_time(i)) iRate++;
-        std::vector<T_rate2> rate2(nCmt);
+
         for (int j = 0; j < nCmt; ++j) {
-          rate2[j] = rates.Rates[iRate].rate[j] * parameters.GetValueBio(i, j);
+          model_rate[j] = rates.Rates[iRate].rate[j] * parameters.GetValueBio(i, j);
         }
-
-        // Rate<T_tau, T_rate2> rate2;
-        // rate2.copy(rates.GetRate(iRate));
-
-        // for (int j = 0; j < nCmt; j++) rate2[j] * parameters.GetValueBio(i, j);
 
         parameter = parameters.GetModelParameters(i);
         if ((event.get_evid() == 3) || (event.get_evid() == 4)) {  // reset events
@@ -163,7 +160,6 @@ namespace torsten{
           dt = event.get_time() - tprev;
           using model_type = T_model<T_tau, scalar, T_rate2, T_parameters, Ts...>;
           T_tau                     model_time = tprev;
-          std::vector<T_rate2>&     model_rate = rate2;
 
           // std::vector<T_parameters> model_par = parameter.get_RealParameters();
 
@@ -181,7 +177,6 @@ namespace torsten{
             event.get_ss() == 3) {  // steady state event
           using model_type = T_model<T_tau, scalar, T_rate2, T_parameters, Ts...>;
           T_tau model_time = event.get_time(); // FIXME: time is not t0 but for adjust within SS solver
-          auto& model_rate = rate2;
           // auto model_par = parameter.get_RealParameters();
           // FIX ME: we need a better way to relate model type to parameter type
           std::vector<T_parameters> model_par = model_type::get_param(parameter);

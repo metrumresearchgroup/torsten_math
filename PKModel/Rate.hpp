@@ -115,11 +115,6 @@ struct RateHistory {
     return ordered;
   }
 
-  // Rate<T_time, T_rate> GetRate(int i) {
-  //   Rate<T_time, T_rate> newRate(Rates[i].time, Rates[i].rate);
-  //   return newRate;
-  // }
-
   void InsertRate(Rate<T_time, T_rate> p_Rate) { Rates.push_back(p_Rate); }
 
   void RemoveRate(int i) {
