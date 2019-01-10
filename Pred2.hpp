@@ -63,7 +63,7 @@ namespace torsten{
      * @return a matrix with predicted amount in each compartment
      * at each event.
      */
-    template<typename T_eh, typename T_ph, typename T_rate, typename scalar,
+    template<typename T_eh, typename T_ph, typename T_rate, typename T_amt,typename scalar,
              typename T_parameters,
              typename F_one,
              typename F_SS,
@@ -71,6 +71,7 @@ namespace torsten{
              typename... Ts>
     void Pred2(const T_eh& events, const T_ph& parameters,
           const std::vector<std::vector<T_rate> >& model_rate,
+          const std::vector<T_amt>& model_amt,
           Eigen::Matrix<scalar, -1, -1>& pred,
           const int& nCmt,
           const std::vector<Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic> >& system,
@@ -120,7 +121,7 @@ namespace torsten{
           // FIX ME: we need a better way to relate model type to parameter type
           std::vector<T_parameters> model_par = model_type::get_param(parameter);
           model_type pkmodel {model_time, init, model_rate[i], model_par, pars...};
-          pred1 = multiply(pkmodel.solve(parameters.GetValueBio(i, events.cmt(i) - 1) * events.amt(i), //NOLINT
+          pred1 = multiply(pkmodel.solve(model_amt[i], //NOLINT
                                          events.rate(i),
                                          events.ii(i),
                                          events.cmt(i),
@@ -146,7 +147,7 @@ namespace torsten{
         }
 
         if (events.is_bolus_dosing(i)) {
-          init(0, events.cmt(i) - 1) += parameters.GetValueBio(i, events.cmt(i) - 1) * events.amt(i);
+          init(0, events.cmt(i) - 1) += model_amt[i];
         }
 
         if (events.keep(i)) {

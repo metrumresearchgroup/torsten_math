@@ -125,7 +125,7 @@ mixOde2CptModel_rk45(const F& f,
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
 
   PredWrapper<refactor::PkTwoCptOdeModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, T4, F, int> > pr;
-  pr.Pred2(em.events(), em.parameters(), em.rates(), pred, nCmt, dummy_systems,
+  pr.Pred2(em.events(), em.parameters(), em.rates(), em.amts(), pred, nCmt, dummy_systems,
            pred1, predss,
            integrator,
            f, nOde);

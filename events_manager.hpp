@@ -13,10 +13,12 @@ struct EventsManager {
   using T_scalar = typename stan::return_type<T0, T1, T2, T3, typename stan::return_type<T4, T5, T6>::type >::type;
   using T_time = typename stan::return_type<T0, T1, T6, T2>::type;
   using T_rate = typename stan::return_type<T2, T5>::type;
+  using T_amt = typename stan::return_type<T1, T5>::type;
 
   EventHistory<T_time, T1, T2, T3> eh;
   ModelParameterHistory<T_time, T4, T5, T6> ph;
   std::vector<std::vector<T_rate> > rh;
+  std::vector<T_amt> ah;
   int nKeep;
 
   EventsManager(int nCmt,
@@ -35,6 +37,7 @@ struct EventsManager {
   : eh(time, amt, rate, ii, evid, cmt, addl, ss),
     ph(time, pMatrix, biovar, tlag, systems),
     rh(),
+    ah(),
     nKeep(0)
   {
     eh.Sort();
@@ -59,6 +62,8 @@ struct EventsManager {
         rate_i[j] = rate_history.rate(iRate, j) * ph.GetValueBio(i, j);
       }
       rh.push_back(rate_i);
+
+      ah.push_back(ph.GetValueBio(i, eh.cmt(i) - 1) * eh.amt(i));
     }
   }
 
@@ -72,6 +77,10 @@ struct EventsManager {
 
   std::vector<std::vector<T_rate> >& rates() {
     return rh;
+  }
+
+  std::vector<T_amt>& amts() {
+    return ah;
   }
 };
 

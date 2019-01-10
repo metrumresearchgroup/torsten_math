@@ -95,7 +95,7 @@ linOdeModel(const std::vector<T0>& time,
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
 
   PredWrapper<refactor::PKLinODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, T4> > pr;
-  pr.Pred2(em.events(), em.parameters(), em.rates(), pred, nCmt, system,
+  pr.Pred2(em.events(), em.parameters(), em.rates(), em.amts(), pred, nCmt, system,
            Pred1_linOde(), PredSS_linOde(),
            integrator);
   return pred;
