@@ -203,9 +203,8 @@ namespace torsten{
             init = pred1;  // steady state with reset (ss = 1)
         }
 
-        if (events.is_dosing(i) && (events.rate(i) == 0)) {  // bolus dose
-          init(0, events.cmt(i) - 1)
-            += parameters.GetValueBio(i, events.cmt(i) - 1) * events.amt(i);
+        if (events.is_bolus_dosing(i)) {
+          init(0, events.cmt(i) - 1) += parameters.GetValueBio(i, events.cmt(i) - 1) * events.amt(i);
         }
 
         if (events.keep(i)) {

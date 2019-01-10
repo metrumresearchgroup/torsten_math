@@ -173,6 +173,11 @@ struct EventHistory {
     return evid(i) == 1 || evid(i) == 4;
   }
 
+  bool is_bolus_dosing(int i) {
+    const double eps = 1.0E-12;
+    return is_dosing(i) && rate(i) < eps;
+  }
+
   /**
    * Add events to EventHistory object, corresponding to additional dosing,
    * administered at specified inter-dose interval. This information is stored
