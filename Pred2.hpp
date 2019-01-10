@@ -113,7 +113,7 @@ namespace torsten{
 
       ModelParameterHistory<T_tau, T_parameters, T_biovar, T_tlag>
         parameters(time, pMatrix, biovar, tlag, system);
-      RateHistory<T_tau, T_rate> rates;
+
 
       events.Sort();
       parameters.Sort();
@@ -123,7 +123,7 @@ namespace torsten{
       parameters.CompleteParameterHistory(events);
 
       events.AddLagTimes(parameters, nCmt);
-      rates.MakeRates(events, nCmt);
+      RateHistory<T_tau, T_rate> rates(events, nCmt);
       parameters.CompleteParameterHistory(events);
 
       PKRec<scalar> zeros = PKRec<scalar>::Zero(nCmt);

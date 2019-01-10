@@ -99,7 +99,6 @@ Pred(const std::vector<T_time>& time,
 
   ModelParameterHistory<T_tau, T_parameters, T_biovar, T_tlag>
     parameters(time, pMatrix, biovar, tlag, system);
-  RateHistory<T_tau, T_rate> rates;
 
   events.Sort();
   parameters.Sort();
@@ -109,7 +108,7 @@ Pred(const std::vector<T_time>& time,
   parameters.CompleteParameterHistory(events);
 
   events.AddLagTimes(parameters, nCmt);
-  rates.MakeRates(events, nCmt);
+  RateHistory<T_tau, T_rate> rates(events, nCmt);
   parameters.CompleteParameterHistory(events);
 
   Matrix<scalar, 1, Dynamic> zeros = Matrix<scalar, 1, Dynamic>::Zero(nCmt);
