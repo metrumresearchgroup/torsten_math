@@ -134,13 +134,12 @@ namespace torsten{
 
       T_tau dt, tprev = events.time(0);
       Matrix<scalar, Dynamic, 1> pred1;
-      Event<T_tau, T_amt, T_rate, T_ii> event;
       ModelParameters<T_tau, T_parameters, T_biovar, T_tlag> parameter;
 
       int iRate = 0, ikeep = 0;
       std::vector<std::vector<T_rate2> > model_rate;
       for (int i = 0; i < events.size(); i++) {
-        event = events.GetEvent(i);
+
         // Use index iRate instead of i to find rate at matching time, given there
         // is one rate per time, not per event.
         if (rh.time(iRate) != events.time(i)) iRate++;
@@ -152,14 +151,12 @@ namespace torsten{
       }
 
       for (int i = 0; i < events.size(); i++) {
-        event = events.GetEvent(i);
-
         parameter = parameters.GetModelParameters(i);
-        if ((event.get_evid() == 3) || (event.get_evid() == 4)) {  // reset events
+        if (events.is_reset(i)) {
           dt = 0;
           init = zeros;
         } else {
-          dt = event.get_time() - tprev;
+          dt = events.time(i) - tprev;
           using model_type = T_model<T_tau, scalar, T_rate2, T_parameters, Ts...>;
           T_tau                     model_time = tprev;
 
@@ -174,26 +171,24 @@ namespace torsten{
           init = pred1;
         }
 
-        if (((event.get_evid() == 1 || event.get_evid() == 4)
-             && (event.get_ss() == 1 || event.get_ss() == 2)) ||
-            event.get_ss() == 3) {  // steady state event
+        if ((events.is_dosing(i) && (events.ss(i) == 1 || events.ss(i) == 2)) || events.ss(i) == 3) {  // steady state event
           using model_type = T_model<T_tau, scalar, T_rate2, T_parameters, Ts...>;
-          T_tau model_time = event.get_time(); // FIXME: time is not t0 but for adjust within SS solver
+          T_tau model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
           // auto model_par = parameter.get_RealParameters();
           // FIX ME: we need a better way to relate model type to parameter type
           std::vector<T_parameters> model_par = model_type::get_param(parameter);
           model_type pkmodel {model_time, init, model_rate[i], model_par, pars...};
-          pred1 = multiply(pkmodel.solve(parameters.GetValueBio(i, event.get_cmt() - 1) * event.get_amt(), //NOLINT
-                                         event.get_rate(),
-                                         event.get_ii(),
-                                         event.get_cmt(),
+          pred1 = multiply(pkmodel.solve(parameters.GetValueBio(i, events.cmt(i) - 1) * events.amt(i), //NOLINT
+                                         events.rate(i),
+                                         events.ii(i),
+                                         events.cmt(i),
                                          integrator),
                            scalar(1.0));
           // pred1 = multiply(PredSS(parameter,
-          //                         parameters.GetValueBio(i, event.get_cmt() - 1)
-          //                           * event.get_amt(),
-          //                         event.get_rate(), event.get_ii(),
-          //                         event.get_cmt()),
+          //                         parameters.GetValueBio(i, events.cmt(i) - 1)
+          //                           * events.amt(i),
+          //                         events.rate(), events.ii(),
+          //                         events.cmt(i)),
           //                  scalar(1.0));
 
 
@@ -202,28 +197,27 @@ namespace torsten{
           // tlag were a var, the code must promote PredSS to match the type
           // of pred1. This is done by multiplying predSS by a Scalar.
 
-          if (event.get_ss() == 2) init += pred1;  // steady state without reset
+          if (events.ss(i) == 2)
+            init += pred1;  // steady state without reset
           else
             init = pred1;  // steady state with reset (ss = 1)
         }
 
-        if (((event.get_evid() == 1) || (event.get_evid() == 4)) &&
-            (event.get_rate() == 0)) {  // bolus dose
-          init(0, event.get_cmt() - 1)
-            += parameters.GetValueBio(i, event.get_cmt() - 1) * event.get_amt();
+        if (events.is_dosing(i) && (events.rate(i) == 0)) {  // bolus dose
+          init(0, events.cmt(i) - 1)
+            += parameters.GetValueBio(i, events.cmt(i) - 1) * events.amt(i);
         }
 
-        if (event.get_keep()) {
+        if (events.keep(i)) {
           pred.row(ikeep) = init;
           ikeep++;
         }
-        tprev = event.get_time();
+        tprev = events.time(i);
       }
 
       return pred;
     }
   };
-
 }
 
 #endif

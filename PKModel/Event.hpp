@@ -165,6 +165,14 @@ struct EventHistory {
       if (Events[i].keep == false) RemoveEvent(i);
    }
 
+  bool is_reset(int i) {
+    return evid(i) == 3 || evid(i) == 4;
+  }
+
+  bool is_dosing(int i) {
+    return evid(i) == 1 || evid(i) == 4;
+  }
+
   /**
    * Add events to EventHistory object, corresponding to additional dosing,
    * administered at specified inter-dose interval. This information is stored
@@ -176,8 +184,7 @@ struct EventHistory {
     Sort();
     int nEvent = Events.size();
     for (int i = 0; i < nEvent; i++) {
-      if (((Events[i].evid == 1) || (Events[i].evid == 4))
-        && ((Events[i].addl > 0) && (Events[i].ii > 0))) {
+      if (is_dosing(i) && ((Events[i].addl > 0) && (Events[i].ii > 0))) {
         Event<T_time, T_amt, T_rate, T_ii>
           addlEvent = GetEvent(i),
           newEvent = addlEvent;
