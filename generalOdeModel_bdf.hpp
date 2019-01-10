@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_REFACTOR_GENERALODEMODEL_BDF_HPP
 
 #include <Eigen/Dense>
+#include <stan/math/torsten/events_manager.hpp>
 #include <stan/math/torsten/PKModel/functors/general_functor.hpp>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_general.hpp>
@@ -83,6 +84,7 @@ generalOdeModel_bdf(const F& f,
   using Eigen::Dynamic;
   using Eigen::Matrix;
   using boost::math::tools::promote_args;
+  using refactor::PKRec;
 
   // check arguments
   static const char* function("generalOdeModel_bdf");
@@ -96,7 +98,6 @@ generalOdeModel_bdf(const F& f,
 
   typedef general_functor<F> F0;
 
-  PredWrapper<refactor::PKODEModel> pr;
   PkOdeIntegrator<StanBdf> integrator(rel_tol, abs_tol, max_num_steps, msgs);
 
   const Pred1_general<F0> pred1(F0(f), rel_tol, abs_tol,
@@ -109,11 +110,19 @@ generalOdeModel_bdf(const F& f,
               pMatrix, biovar, tlag, nCmt, dummy_systems,
               pred1, predss);
 #else
-  return pr.Pred2(time, amt, rate, ii, evid, cmt, addl, ss,
-                  pMatrix, biovar, tlag, nCmt, dummy_systems,
+  using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
+  EM em(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag, dummy_systems);
+
+  Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
+    Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
+
+  PredWrapper<refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, T4, F, int> > pr;
+  pr.Pred2(em.events(), em.parameters(), em.rates(), pred, nCmt, dummy_systems,
                   pred1, predss,
                   integrator,
                   f, nCmt);
+      return pred;
+
 #endif
 
 }

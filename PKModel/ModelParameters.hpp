@@ -14,7 +14,7 @@ template<typename T_time,
          typename T_parameters,
          typename T_biovar,
          typename T_tlag>
-  class ModelParameterHistory;
+  struct ModelParameterHistory;
 /**
  * The ModelParameters class defines objects that contain the parameters of
  * a model at a given time.
@@ -23,15 +23,13 @@ template<typename T_time,
          typename T_parameters,
          typename T_biovar,
          typename T_tlag>
-class ModelParameters {
-private:
+struct ModelParameters {
   T_time time_;
   std::vector<T_parameters> theta_;
   std::vector<T_biovar> biovar_;
   std::vector<T_tlag> tlag_;
   Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic> K_;
 
-public:
   ModelParameters() {
     // FIX ME - this constructor likely does not work
     time_ = 0;
@@ -134,8 +132,6 @@ public:
   Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic> get_K() const {
     return K_;
   }
-
-  friend class ModelParameterHistory<T_time, T_parameters, T_biovar, T_tlag>;
 };
 
 /**
@@ -147,12 +143,9 @@ template<typename T_time,
          typename T_parameters,
          typename T_biovar,
          typename T_tlag>
-class ModelParameterHistory{
-private:
-  std::vector< ModelParameters<T_time, T_parameters,
-                               T_biovar, T_tlag> > MPV_;
+struct ModelParameterHistory{
+  std::vector<ModelParameters<T_time, T_parameters, T_biovar, T_tlag> > MPV_;
 
-public:
   template<typename T0, typename T1, typename T2, typename T3>
   ModelParameterHistory(std::vector<T0> time,
                         std::vector<std::vector<T1> > theta,
@@ -177,7 +170,7 @@ public:
   }
 
   ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
-    GetModelParameters(int i) {
+    GetModelParameters(int i) const {
       return MPV_[i];
   }
 
@@ -195,7 +188,7 @@ public:
     return MPV_[iEvent].theta_[iParameter];
   }
 
-  T_biovar GetValueBio(int iEvent, int iParameter) {
+  T_biovar GetValueBio(int iEvent, int iParameter) const {
     assert(iEvent >= 0 && (size_t) iEvent < MPV_.size());
     assert(iParameter >= 0 && (size_t) iParameter
              < MPV_[iEvent].biovar_.size());
@@ -350,11 +343,6 @@ public:
     }
     if (!Check()) Sort();
   }
-
-  // declare friends
-  friend class ModelParameters<T_time, T_parameters, T_biovar, T_tlag>;
-  template<typename T1, typename T2, typename T3, typename T4>
-    friend class Events;
 };
 
 } 

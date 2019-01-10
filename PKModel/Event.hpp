@@ -10,7 +10,7 @@
 namespace torsten {
 
 template<typename T_time, typename T_parameters, typename T_biovar,
-  typename T_tlag> class ModelParameterHistory;
+  typename T_tlag> struct ModelParameterHistory;
 
 /**
  * The Event class defines objects that contain the elements of an event,
@@ -94,8 +94,6 @@ struct Event{
   bool get_isnew() { return isnew; }
 
   // declare friends
-  template<typename T1, typename T2, typename T3, typename T4> friend
-    class ModelParameterHistory;
 };
 
 /**
@@ -165,15 +163,15 @@ struct EventHistory {
       if (Events[i].keep == false) RemoveEvent(i);
    }
 
-  bool is_reset(int i) {
+  bool is_reset(int i) const {
     return evid(i) == 3 || evid(i) == 4;
   }
 
-  bool is_dosing(int i) {
+  bool is_dosing(int i) const {
     return evid(i) == 1 || evid(i) == 4;
   }
 
-  bool is_bolus_dosing(int i) {
+  bool is_bolus_dosing(int i) const {
     const double eps = 1.0E-12;
     return is_dosing(i) && rate(i) < eps;
   }
@@ -218,17 +216,17 @@ struct EventHistory {
   void Sort() { std::stable_sort(Events.begin(), Events.end(), by_time()); }
 
   // Access functions
-  T_time time(int i) { return Events[i].time; }
-  T_amt amt(int i)   { return Events[i].amt; }
-  T_rate rate(int i) { return Events[i].rate; }
-  T_ii ii(int i)     { return Events[i].ii; }
-  int evid(int i)    { return Events[i].evid; }
-  int cmt(int i)     { return Events[i].cmt; }
-  int addl(int i)    { return Events[i].addl; }
-  int ss(int i)      { return Events[i].ss; }
-  bool keep(int i)   { return Events[i].keep; }
-  bool isnew(int i)  { return Events[i].isnew; }
-  int size()         { return Events.size(); }
+  T_time time (int i) const { return Events[i].time; }
+  T_amt amt   (int i) const { return Events[i].amt; }
+  T_rate rate (int i) const { return Events[i].rate; }
+  T_ii ii     (int i) const { return Events[i].ii; }
+  int evid    (int i) const { return Events[i].evid; }
+  int cmt     (int i) const { return Events[i].cmt; }
+  int addl    (int i) const { return Events[i].addl; }
+  int ss      (int i) const { return Events[i].ss; }
+  bool keep   (int i) const { return Events[i].keep; }
+  bool isnew  (int i) const { return Events[i].isnew; }
+  int size()          const { return Events.size(); }
 
 
   /**
@@ -274,10 +272,6 @@ struct EventHistory {
     }
     Sort();
   }
-
-  // declare friends
-  template<typename T1, typename T2, typename T3, typename T4> friend
-    class ModelParameterHistory;
 };
 
 }    // torsten namespace

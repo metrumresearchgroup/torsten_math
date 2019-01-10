@@ -13,7 +13,7 @@ namespace torsten{
    * the wrapper is aware of @c T_model so it build model
    * accordingly.
    */
-  template<template<typename...> class T_model>
+  template<typename T_model>
   struct PredWrapper{
     /**
      * Every Torsten function calls Pred.
@@ -63,34 +63,17 @@ namespace torsten{
      * @return a matrix with predicted amount in each compartment
      * at each event.
      */
-    template<typename T_time,
-             typename T_amt,
-             typename T_rate,
-             typename T_ii,
+    template<typename T_eh, typename T_ph, typename T_rate, typename scalar,
              typename T_parameters,
-             typename T_biovar,
-             typename T_tlag,
              typename F_one,
              typename F_SS,
              PkOdeIntegratorId It,
              typename... Ts>
-    Eigen::Matrix<typename boost::math::tools::promote_args<T_time, T_amt, T_rate,
-                                                            T_ii, typename boost::math::tools::promote_args<T_parameters, T_biovar,
-                                                                                                            T_tlag>::type >::type, Eigen::Dynamic, Eigen::Dynamic>
-    Pred2(const std::vector<T_time>& time,
-          const std::vector<T_amt>& amt,
-          const std::vector<T_rate>& rate,
-          const std::vector<T_ii>& ii,
-          const std::vector<int>& evid,
-          const std::vector<int>& cmt,
-          const std::vector<int>& addl,
-          const std::vector<int>& ss,
-          const std::vector<std::vector<T_parameters> >& pMatrix,
-          const std::vector<std::vector<T_biovar> >& biovar,
-          const std::vector<std::vector<T_tlag> >& tlag,
+    void Pred2(const T_eh& events, const T_ph& parameters,
+          const std::vector<std::vector<T_rate> >& model_rate,
+          Eigen::Matrix<scalar, -1, -1>& pred,
           const int& nCmt,
-          const std::vector<Eigen::Matrix<T_parameters,
-          Eigen::Dynamic, Eigen::Dynamic> >& system,
+          const std::vector<Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic> >& system,
           const F_one& Pred1,
           const F_SS& PredSS,
           const PkOdeIntegrator<It>& integrator,
@@ -102,63 +85,22 @@ namespace torsten{
       using::stan::math::multiply;
       using refactor::PKRec;
 
-      typedef typename promote_args<T_time, T_amt, T_rate, T_ii,
-                                    typename promote_args<T_parameters, T_biovar, T_tlag>::type >::type scalar;
-      typedef typename promote_args<T_time, T_amt, T_tlag, T_rate>::type T_tau;
-      typedef typename promote_args<T_rate, T_biovar>::type T_rate2;
-
-      // BOOK-KEEPING: UPDATE DATA SETS
-      EventHistory<T_tau, T_amt, T_rate, T_ii>
-        events(time, amt, rate, ii, evid, cmt, addl, ss);
-
-      ModelParameterHistory<T_tau, T_parameters, T_biovar, T_tlag>
-        parameters(time, pMatrix, biovar, tlag, system);
-
-      events.Sort();
-      parameters.Sort();
-      int nKeep = events.size();
-
-      events.AddlDoseEvents();
-      parameters.CompleteParameterHistory(events);
-
-      events.AddLagTimes(parameters, nCmt);
-      RateHistory<T_tau, T_rate> rh(events, nCmt);
-      parameters.CompleteParameterHistory(events);
-
       PKRec<scalar> zeros = PKRec<scalar>::Zero(nCmt);
       PKRec<scalar> init = zeros;
-
-      // COMPUTE PREDICTIONS
-      Matrix<scalar, Dynamic, Dynamic>
-        pred = Matrix<scalar, Dynamic, Dynamic>::Zero(nKeep, nCmt);
-
-      T_tau dt, tprev = events.time(0);
+      auto dt = events.time(0);
+      auto tprev = events.time(0);
       Matrix<scalar, Dynamic, 1> pred1;
-      ModelParameters<T_tau, T_parameters, T_biovar, T_tlag> parameter;
-
-      int iRate = 0, ikeep = 0;
-      std::vector<std::vector<T_rate2> > model_rate;
-      for (int i = 0; i < events.size(); i++) {
-
-        // Use index iRate instead of i to find rate at matching time, given there
-        // is one rate per time, not per event.
-        if (rh.time(iRate) != events.time(i)) iRate++;
-        std::vector<T_rate2> rate_i(nCmt);
-        for (int j = 0; j < nCmt; ++j) {
-          rate_i[j] = rh.rate(iRate, j) * parameters.GetValueBio(i, j);
-        }
-        model_rate.push_back(rate_i);
-      }
+      int ikeep = 0;
 
       for (int i = 0; i < events.size(); i++) {
-        parameter = parameters.GetModelParameters(i);
+        auto parameter = parameters.GetModelParameters(i);
         if (events.is_reset(i)) {
           dt = 0;
           init = zeros;
         } else {
           dt = events.time(i) - tprev;
-          using model_type = T_model<T_tau, scalar, T_rate2, T_parameters, Ts...>;
-          T_tau                     model_time = tprev;
+          using model_type = T_model;
+          decltype(tprev) model_time = tprev;
 
           // std::vector<T_parameters> model_par = parameter.get_RealParameters();
 
@@ -172,8 +114,8 @@ namespace torsten{
         }
 
         if ((events.is_dosing(i) && (events.ss(i) == 1 || events.ss(i) == 2)) || events.ss(i) == 3) {  // steady state event
-          using model_type = T_model<T_tau, scalar, T_rate2, T_parameters, Ts...>;
-          T_tau model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
+          using model_type = T_model;
+          decltype(tprev) model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
           // auto model_par = parameter.get_RealParameters();
           // FIX ME: we need a better way to relate model type to parameter type
           std::vector<T_parameters> model_par = model_type::get_param(parameter);
@@ -213,8 +155,6 @@ namespace torsten{
         }
         tprev = events.time(i);
       }
-
-      return pred;
     }
   };
 }

@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_REFACTOR_LINODEMODEL_HPP
 
 #include <Eigen/Dense>
+#include <stan/math/torsten/events_manager.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <stan/math/torsten/Pred2.hpp>
 #include <stan/math/torsten/pk_linode_model.hpp>
@@ -61,14 +62,14 @@ linOdeModel(const std::vector<T0>& time,
             const std::vector<int>& cmt,
             const std::vector<int>& addl,
             const std::vector<int>& ss,
-            const std::vector< Eigen::Matrix<T4, Eigen::Dynamic,
-              Eigen::Dynamic> >& system,
+            const std::vector< Eigen::Matrix<T4, Eigen::Dynamic, Eigen::Dynamic> >& system,
             const std::vector<std::vector<T5> >& biovar,
             const std::vector<std::vector<T6> >& tlag) {
   using std::vector;
   using Eigen::Dynamic;
   using Eigen::Matrix;
   using boost::math::tools::promote_args;
+  using refactor::PKRec;
 
   static const char* function("linOdeModel");
   for (size_t i = 0; i < system.size(); i++)
@@ -80,7 +81,6 @@ linOdeModel(const std::vector<T0>& time,
   torsten::pmetricsCheck(time, amt, rate, ii, evid, cmt, addl, ss,
                 pMatrix_dummy, biovar, tlag, function);
 
-  PredWrapper<refactor::PKLinODEModel> pr;
   PkOdeIntegrator<> integrator;
 
 #ifdef OLD_TORSTEN
@@ -88,10 +88,18 @@ linOdeModel(const std::vector<T0>& time,
               pMatrix_dummy, biovar, tlag, nCmt, system,
               Pred1_linOde(), PredSS_linOde());
 #else
-  return pr.Pred2(time, amt, rate, ii, evid, cmt, addl, ss,
-                  pMatrix_dummy, biovar, tlag, nCmt, system,
-                  Pred1_linOde(), PredSS_linOde(),
-                  integrator);
+  using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
+  EM em(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix_dummy, biovar, tlag, system);
+
+  Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
+    Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
+
+  PredWrapper<refactor::PKLinODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, T4> > pr;
+  pr.Pred2(em.events(), em.parameters(), em.rates(), pred, nCmt, system,
+           Pred1_linOde(), PredSS_linOde(),
+           integrator);
+  return pred;
+
 #endif
 }
 

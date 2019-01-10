@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_REFACTOR_MIXODE1CPTMODEL_RK45_HPP
 
 #include <Eigen/Dense>
+#include <stan/math/torsten/events_manager.hpp>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/PKModel/functors/mix1_functor.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_mix1.hpp>
@@ -89,6 +90,7 @@ mixOde1CptModel_rk45(const F& f,
   using Eigen::Dynamic;
   using Eigen::Matrix;
   using boost::math::tools::promote_args;
+  using refactor::PKRec;
 
   // check arguments
   static const char* function("mixOde1CptModel_rk45");
@@ -102,7 +104,7 @@ mixOde1CptModel_rk45(const F& f,
   typedef mix1_functor<F> F0;
 
   const int &nPK = refactor::PKOneCptModel<double, double, double, double>::Ncmt;
-  PredWrapper<refactor::PkOneCptOdeModel> pr;
+
   PkOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
 
   Pred1_mix1<F0> pred1(F0(f), rel_tol, abs_tol, max_num_steps, msgs,
@@ -115,11 +117,20 @@ mixOde1CptModel_rk45(const F& f,
               theta, biovar, tlag, nPK + nOde, dummy_systems,
               pred1, predss);
 #else
-  return pr.Pred2(time, amt, rate, ii, evid, cmt, addl, ss,
-                  theta, biovar, tlag, nPK + nOde, dummy_systems,
+  const int nCmt = nPK + nOde;
+
+  using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
+  EM em(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag, dummy_systems);
+
+  Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
+    Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
+
+  PredWrapper<refactor::PkOneCptOdeModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, T4, F, int> > pr;
+  pr.Pred2(em.events(), em.parameters(), em.rates(), pred, nCmt, dummy_systems,
                   pred1, predss,
                   integrator,
                   f, nOde);
+      return pred;
 #endif
 }
 
