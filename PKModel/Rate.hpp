@@ -63,9 +63,9 @@ struct RateHistory {
 
     vector<T_rate> rate_init(nCmt, 0);
     Rate<T_time, T_rate> newRate(0, rate_init);
-    for (int j = 0; j < events.get_size(); j++)
-      if (j == 0 || events.get_time(j) != events.get_time(j - 1)) {
-        newRate.time = events.get_time(j);
+    for (int j = 0; j < events.size(); j++)
+      if (j == 0 || events.time(j) != events.time(j - 1)) {
+        newRate.time = events.time(j);
         Rates.push_back(newRate);
       }
 
@@ -78,16 +78,16 @@ struct RateHistory {
     for (size_t j = 0; j < Rates.size(); j++) RateTimes[j] = Rates[j].time;
 
     // Create time vector for events
-    vector<T_time> EventTimes(events.get_size(), 0);
-    for (int j = 0; j < events.get_size(); j++) EventTimes[j] = events.get_time(j);
+    vector<T_time> EventTimes(events.size(), 0);
+    for (int j = 0; j < events.size(); j++) EventTimes[j] = events.time(j);
 
     int i = 0, k, l;
     T_time endTime;
     torsten::Event<T_time, T_amt, T_rate, T_ii> newEvent;
-    while (i < events.get_size()) {
-      if ((events.get_evid(i) == 1 || events.get_evid(i) == 4) && (events.get_rate(i) > 0 && events.get_amt(i) > 0)) {
-          endTime = events.get_time(i) + events.get_amt(i)/events.get_rate(i);
-          newEvent = newEvent(endTime, 0, 0, 0, 2, events.get_cmt(i), 0, 0, false, true);
+    while (i < events.size()) {
+      if ((events.evid(i) == 1 || events.evid(i) == 4) && (events.rate(i) > 0 && events.amt(i) > 0)) {
+          endTime = events.time(i) + events.amt(i)/events.rate(i);
+          newEvent = newEvent(endTime, 0, 0, 0, 2, events.cmt(i), 0, 0, false, true);
           events.InsertEvent(newEvent);
           if (!events.Check()) events.Sort();
           EventTimes.push_back(endTime);
@@ -105,12 +105,12 @@ struct RateHistory {
           }
 
           // Find indexes at which time of event and endtime occur.
-          l = SearchReal(RateTimes, events.get_size(), events.get_time(i));
-          k = SearchReal(RateTimes, events.get_size(), endTime);
+          l = SearchReal(RateTimes, events.size(), events.time(i));
+          k = SearchReal(RateTimes, events.size(), endTime);
 
           // Compute Rates for each element between the two times
           for (int iRate = l ; iRate < k; iRate++)
-            Rates[iRate].rate[events.get_cmt(i) - 1] += events.get_rate(i);
+            Rates[iRate].rate[events.cmt(i) - 1] += events.rate(i);
         }
         i++;
     }

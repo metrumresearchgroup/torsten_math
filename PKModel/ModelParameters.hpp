@@ -275,7 +275,7 @@ public:
    */
   template<typename T0, typename T1, typename T2, typename T3>
   void CompleteParameterHistory(torsten::EventHistory<T0, T1, T2, T3>& events) {
-    int nEvent = events.get_size();
+    int nEvent = events.size();
     assert(nEvent > 0);
     int len_Parameters = MPV_.size();  // numbers of events for which parameters
                                        // are determined
@@ -287,8 +287,8 @@ public:
 
     int iEvent = 0;
     for (int i = 0; i < len_Parameters - 1; i++) {
-      while (events.get_isnew(iEvent)) iEvent++;  // skip new events
-      assert(MPV_[i].time_ == events.get_time(iEvent));  // compare time of
+      while (events.isnew(iEvent)) iEvent++;  // skip new events
+      assert(MPV_[i].time_ == events.time(iEvent));  // compare time of
                                                          // "old' events to
                                                          // time of
                                                          // parameters.
@@ -302,7 +302,7 @@ public:
         MPV_[i].biovar_ = MPV_[0].biovar_;
         MPV_[i].tlag_ = MPV_[0].tlag_;
         MPV_[i].K_ = MPV_[0].K_;
-        MPV_[i].time_ = events.get_time(i);
+        MPV_[i].time_ = events.time(i);
         events.Events[i].isnew = false;
       }
     } else {  // parameters are event dependent.
@@ -314,7 +314,7 @@ public:
       ModelParameters<T_time, T_parameters, T_biovar, T_tlag> newParameter;
 
       for (int i = 0; i < nEvent; i++) {
-        while (events.get_isnew(iEvent)) {
+        while (events.isnew(iEvent)) {
           /* Three cases:
            * (a) The time of the new event is higher than the time of the last
            *     parameter vector in parameters (k = len_parameters).
@@ -330,15 +330,15 @@ public:
            */
           // Find the index corresponding to the time of the new event in the
           // times vector.
-          k = SearchReal(times, len_Parameters - 1, events.get_time(iEvent));
+          k = SearchReal(times, len_Parameters - 1, events.time(iEvent));
 
           if ((k == len_Parameters) ||
-            (events.get_time(iEvent) == MPV_[k - 1].time_))
+            (events.time(iEvent) == MPV_[k - 1].time_))
             newParameter = GetModelParameters(k - 1);
           else
             newParameter = GetModelParameters(k);
 
-          newParameter.time_ = events.get_time(iEvent);
+          newParameter.time_ = events.time(iEvent);
           MPV_[len_Parameters + j] = newParameter;
           events.Events[iEvent].isnew = false;
           if (iEvent < nEvent - 1) iEvent++;

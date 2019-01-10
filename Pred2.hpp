@@ -116,7 +116,7 @@ namespace torsten{
 
       events.Sort();
       parameters.Sort();
-      int nKeep = events.get_size();
+      int nKeep = events.size();
 
       events.AddlDoseEvents();
       parameters.CompleteParameterHistory(events);
@@ -132,18 +132,18 @@ namespace torsten{
       Matrix<scalar, Dynamic, Dynamic>
         pred = Matrix<scalar, Dynamic, Dynamic>::Zero(nKeep, nCmt);
 
-      T_tau dt, tprev = events.get_time(0);
+      T_tau dt, tprev = events.time(0);
       Matrix<scalar, Dynamic, 1> pred1;
       Event<T_tau, T_amt, T_rate, T_ii> event;
       ModelParameters<T_tau, T_parameters, T_biovar, T_tlag> parameter;
 
       int iRate = 0, ikeep = 0;
       std::vector<std::vector<T_rate2> > model_rate;
-      for (int i = 0; i < events.get_size(); i++) {
+      for (int i = 0; i < events.size(); i++) {
         event = events.GetEvent(i);
         // Use index iRate instead of i to find rate at matching time, given there
         // is one rate per time, not per event.
-        if (rh.time(iRate) != events.get_time(i)) iRate++;
+        if (rh.time(iRate) != events.time(i)) iRate++;
         std::vector<T_rate2> rate_i(nCmt);
         for (int j = 0; j < nCmt; ++j) {
           rate_i[j] = rh.rate(iRate, j) * parameters.GetValueBio(i, j);
@@ -151,7 +151,7 @@ namespace torsten{
         model_rate.push_back(rate_i);
       }
 
-      for (int i = 0; i < events.get_size(); i++) {
+      for (int i = 0; i < events.size(); i++) {
         event = events.GetEvent(i);
 
         parameter = parameters.GetModelParameters(i);

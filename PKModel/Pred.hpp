@@ -102,7 +102,7 @@ Pred(const std::vector<T_time>& time,
 
   events.Sort();
   parameters.Sort();
-  int nKeep = events.get_size();
+  int nKeep = events.size();
 
   events.AddlDoseEvents();
   parameters.CompleteParameterHistory(events);
@@ -126,7 +126,7 @@ Pred(const std::vector<T_time>& time,
   ModelParameters<T_tau, T_parameters, T_biovar, T_tlag> parameter;
   int iRate = 0, ikeep = 0;
 
-  for (int i = 0; i < events.get_size(); i++) {
+  for (int i = 0; i < events.size(); i++) {
     event = events.GetEvent(i);
 
     // Use index iRate instead of i to find rate at matching time, given there
