@@ -114,7 +114,6 @@ namespace torsten{
       ModelParameterHistory<T_tau, T_parameters, T_biovar, T_tlag>
         parameters(time, pMatrix, biovar, tlag, system);
 
-
       events.Sort();
       parameters.Sort();
       int nKeep = events.get_size();
@@ -123,7 +122,7 @@ namespace torsten{
       parameters.CompleteParameterHistory(events);
 
       events.AddLagTimes(parameters, nCmt);
-      RateHistory<T_tau, T_rate> rates(events, nCmt);
+      RateHistory<T_tau, T_rate> rh(events, nCmt);
       parameters.CompleteParameterHistory(events);
 
       PKRec<scalar> zeros = PKRec<scalar>::Zero(nCmt);
@@ -137,20 +136,23 @@ namespace torsten{
       Matrix<scalar, Dynamic, 1> pred1;
       Event<T_tau, T_amt, T_rate, T_ii> event;
       ModelParameters<T_tau, T_parameters, T_biovar, T_tlag> parameter;
-      int iRate = 0, ikeep = 0;
 
-      std::vector<T_rate2> model_rate(nCmt);
+      int iRate = 0, ikeep = 0;
+      std::vector<std::vector<T_rate2> > model_rate;
+      for (int i = 0; i < events.get_size(); i++) {
+        event = events.GetEvent(i);
+        // Use index iRate instead of i to find rate at matching time, given there
+        // is one rate per time, not per event.
+        if (rh.time(iRate) != events.get_time(i)) iRate++;
+        std::vector<T_rate2> rate_i(nCmt);
+        for (int j = 0; j < nCmt; ++j) {
+          rate_i[j] = rh.rate(iRate, j) * parameters.GetValueBio(i, j);
+        }
+        model_rate.push_back(rate_i);
+      }
 
       for (int i = 0; i < events.get_size(); i++) {
         event = events.GetEvent(i);
-
-        // Use index iRate instead of i to find rate at matching time, given there
-        // is one rate per time, not per event.
-        if (rates.get_time(iRate) != events.get_time(i)) iRate++;
-
-        for (int j = 0; j < nCmt; ++j) {
-          model_rate[j] = rates.Rates[iRate].rate[j] * parameters.GetValueBio(i, j);
-        }
 
         parameter = parameters.GetModelParameters(i);
         if ((event.get_evid() == 3) || (event.get_evid() == 4)) {  // reset events
@@ -165,7 +167,7 @@ namespace torsten{
 
           // FIX ME: we need a better way to relate model type to parameter type
           std::vector<T_parameters> model_par = model_type::get_param(parameter);
-          model_type pkmodel {model_time, init, model_rate, model_par, pars...};
+          model_type pkmodel {model_time, init, model_rate[i], model_par, pars...};
 
           pred1 = pkmodel.solve(dt, integrator);
           // pred1 = Pred1(dt, parameter, init, rate2.get_rate());
@@ -180,7 +182,7 @@ namespace torsten{
           // auto model_par = parameter.get_RealParameters();
           // FIX ME: we need a better way to relate model type to parameter type
           std::vector<T_parameters> model_par = model_type::get_param(parameter);
-          model_type pkmodel {model_time, init, model_rate, model_par, pars...};
+          model_type pkmodel {model_time, init, model_rate[i], model_par, pars...};
           pred1 = multiply(pkmodel.solve(parameters.GetValueBio(i, event.get_cmt() - 1) * event.get_amt(), //NOLINT
                                          event.get_rate(),
                                          event.get_ii(),
@@ -220,8 +222,6 @@ namespace torsten{
 
       return pred;
     }
-
-
   };
 
 }

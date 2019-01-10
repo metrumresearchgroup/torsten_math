@@ -52,16 +52,6 @@ template <typename T_time, typename T_rate>
 struct RateHistory {
   std::vector<Rate<T_time, T_rate> > Rates;
 
-  RateHistory() : Rates(1) {}
-
-  template <typename T0, typename T1>
-  RateHistory(std::vector<T0> p_time, std::vector<std::vector<T1> > p_rate) {
-    int nRate = p_rate.size();
-    Rates.resize(nRate);
-    for (int i = 0; i < nRate; i++) Rates[i] = Rate<T_time, T_rate>(p_time[i],
-      p_rate[i]);
-  }
-
   /*
    * generate rates using event history
    */
@@ -81,7 +71,7 @@ struct RateHistory {
 
     // RemoveRate(0);  // remove rate created by default constructor.
 
-    if (!Check()) Sort();
+    if (!Check()) sort();
 
     // Create time vector for rates
     vector<T_time> RateTimes(Rates.size(), 0);
@@ -109,7 +99,7 @@ struct RateHistory {
             newRate.time = endTime;
             Rates.push_back(newRate);
             // InsertRate(newRate);
-            if (!Check()) Sort();
+            if (!Check()) sort();
             RateTimes.push_back(endTime);
             std::sort(RateTimes.begin(), RateTimes.end());
           }
@@ -126,14 +116,13 @@ struct RateHistory {
     }
 
     // Sort events and rates
-    if (!Check()) Sort();
+    if (!Check()) sort();
     if (!events.Check()) events.Sort();
   }
 
-  explicit RateHistory(int nEvent) : Rates(nEvent) {}
+  T_time time(int i) { return Rates[i].time; }
 
-  T_time get_time(int i) { return Rates[i].time; }
-  std::vector<T_rate> get_rate(int i) { return Rates[i].rate; }
+  T_rate rate(int i, int j) { return Rates[i].rate[j]; }
 
   bool Check() {
     int i = Rates.size() - 1;
@@ -146,22 +135,6 @@ struct RateHistory {
     return ordered;
   }
 
-  void InsertRate(Rate<T_time, T_rate> p_Rate) { Rates.push_back(p_Rate); }
-
-  void RemoveRate(int i) {
-    assert(i >= 0);
-    Rates.erase(Rates.begin() + i);
-  }
-
-  int Size() { return Rates.size(); }
-
-  void Print(int j) {
-    std::cout << Rates[j].time << " ";
-    for (int i = 0; i < Rates[j].rate.size(); i++)
-      std::cout << Rates[j].rate[i] << " ";
-    std::cout << std::endl;
-  }
-
   struct by_time {
     bool operator()(Rate<T_time, T_rate> const &a, Rate<T_time, T_rate>
       const &b) {
@@ -169,7 +142,7 @@ struct RateHistory {
     }
   };
 
-  void Sort() { std::sort(Rates.begin(), Rates.end(), by_time()); }
+  void sort() { std::sort(Rates.begin(), Rates.end(), by_time()); }
 };
 
 }
