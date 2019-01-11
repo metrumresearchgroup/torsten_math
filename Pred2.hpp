@@ -99,13 +99,12 @@ namespace torsten{
           init = zeros;
         } else {
           dt = events.time(i) - tprev;
-          using model_type = T_model;
           decltype(tprev) model_time = tprev;
 
           // std::vector<T_parameters> model_par = parameter.get_RealParameters();
 
           // FIX ME: we need a better way to relate model type to parameter type
-          model_type pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
+          T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
 
           pred1 = pkmodel.solve(dt, pred_pars...);
           // pred1 = Pred1(dt, parameter, init, rate2.get_rate());
@@ -113,11 +112,10 @@ namespace torsten{
         }
 
         if ((events.is_dosing(i) && (events.ss(i) == 1 || events.ss(i) == 2)) || events.ss(i) == 3) {  // steady state event
-          using model_type = T_model;
           decltype(tprev) model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
           // auto model_par = parameter.get_RealParameters();
           // FIX ME: we need a better way to relate model type to parameter type
-          model_type pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
+          T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
           pred1 = multiply(pkmodel.solve(model_amt[i], //NOLINT
                                          events.rate(i),
                                          events.ii(i),
