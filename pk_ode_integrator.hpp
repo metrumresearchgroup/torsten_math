@@ -8,6 +8,7 @@
 
 namespace torsten {
   enum PkOdeIntegratorId {
+    Analytical,
     StanRk45, StanAdams, StanBdf,
     PkAdams, PkBdf
   };

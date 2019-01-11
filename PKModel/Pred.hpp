@@ -99,17 +99,16 @@ Pred(const std::vector<T_time>& time,
 
   ModelParameterHistory<T_tau, T_parameters, T_biovar, T_tlag>
     parameters(time, pMatrix, biovar, tlag, system);
-  RateHistory<T_tau, T_rate> rates;
 
   events.Sort();
   parameters.Sort();
-  int nKeep = events.get_size();
+  int nKeep = events.size();
 
   events.AddlDoseEvents();
   parameters.CompleteParameterHistory(events);
 
   events.AddLagTimes(parameters, nCmt);
-  rates.MakeRates(events, nCmt);
+  RateHistory<T_tau, T_rate> rates(events, nCmt);
   parameters.CompleteParameterHistory(events);
 
   Matrix<scalar, 1, Dynamic> zeros = Matrix<scalar, 1, Dynamic>::Zero(nCmt);
@@ -127,17 +126,16 @@ Pred(const std::vector<T_time>& time,
   ModelParameters<T_tau, T_parameters, T_biovar, T_tlag> parameter;
   int iRate = 0, ikeep = 0;
 
-  for (int i = 0; i < events.get_size(); i++) {
+  for (int i = 0; i < events.size(); i++) {
     event = events.GetEvent(i);
 
     // Use index iRate instead of i to find rate at matching time, given there
     // is one rate per time, not per event.
     if (rates.get_time(iRate) != events.get_time(i)) iRate++;
-    Rate<T_tau, T_rate2> rate2;
-    rate2.copy(rates.GetRate(iRate));
-
-    for (int j = 0; j < nCmt; j++)
-      rate2.rate[j] *= parameters.GetValueBio(i, j);
+    std::vector<T_rate2> rate2(nCmt);
+    for (int j = 0; j < nCmt; ++j) {
+      rate2[j] = rates.Rates[iRate].rate[j] * parameters.GetValueBio(i, j);
+    }
 
     parameter = parameters.GetModelParameters(i);
 

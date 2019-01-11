@@ -9,12 +9,8 @@
 
 namespace torsten {
 
-// forward declare
-template <typename T_time, typename T_amt,
-  typename T_rate, typename T_ii> class EventHistory;
-template <typename T_time, typename T_amt> class RateHistory;
 template<typename T_time, typename T_parameters, typename T_biovar,
-  typename T_tlag> class ModelParameterHistory;
+  typename T_tlag> struct ModelParameterHistory;
 
 /**
  * The Event class defines objects that contain the elements of an event,
@@ -38,8 +34,8 @@ template<typename T_time, typename T_parameters, typename T_biovar,
  *           the input data set
  */
 template <typename T_time, typename T_amt, typename T_rate, typename T_ii>
-class Event{
-private:
+struct Event{
+
   T_time time;
   T_amt amt;
   T_rate rate;
@@ -47,18 +43,8 @@ private:
   int evid, cmt, addl, ss;
   bool keep, isnew;
 
-public:
-  Event() {
-    time = 0;
-    amt = 0;
-    rate = 0;
-    ii = 0;
-    cmt = 0;
-    addl = 0;
-    ss = 0;
-    keep = false;
-    isnew = false;
-  }
+  Event() : time(0), amt(0), rate(0), ii(0), cmt(0), addl(0), ss(0), keep(false), isnew(false)
+  {}
 
   Event(T_time p_time, T_amt p_amt, T_rate p_rate, T_ii p_ii, int p_evid,
     int p_cmt, int p_addl, int p_ss, bool p_keep, bool p_isnew) {
@@ -107,35 +93,17 @@ public:
   bool get_keep() { return keep; }
   bool get_isnew() { return isnew; }
 
-  void Print() {
-    std::cout << time << " "
-              << amt << " "
-              << rate << " "
-              << ii << " "
-              << evid << " "
-              << cmt << " "
-              << addl << " "
-              << ss << " "
-              << keep << " "
-              << isnew << std::endl;
-  }
-
   // declare friends
-  friend class EventHistory<T_time, T_amt, T_rate, T_ii>;
-  template<typename T1, typename T2, typename T3, typename T4> friend
-    class ModelParameterHistory;
 };
 
 /**
- * The EventHistory class defines objects that contain a std::vector of Events,
+ * The EventHistory class defines objects that contain a vector of Events,
  * along with a series of functions that operate on them.
  */
 template<typename T_time, typename T_amt, typename T_rate, typename T_ii>
-class EventHistory {
-private:
+struct EventHistory {
   std::vector<Event<T_time, T_amt, T_rate, T_ii> > Events;
 
-public:
   template<typename T0, typename T1, typename T2, typename T3>
   EventHistory(std::vector<T0> p_time, std::vector<T1> p_amt,
                std::vector<T2> p_rate, std::vector<T3> p_ii,
@@ -195,6 +163,19 @@ public:
       if (Events[i].keep == false) RemoveEvent(i);
    }
 
+  bool is_reset(int i) const {
+    return evid(i) == 3 || evid(i) == 4;
+  }
+
+  bool is_dosing(int i) const {
+    return evid(i) == 1 || evid(i) == 4;
+  }
+
+  bool is_bolus_dosing(int i) const {
+    const double eps = 1.0E-12;
+    return is_dosing(i) && rate(i) < eps;
+  }
+
   /**
    * Add events to EventHistory object, corresponding to additional dosing,
    * administered at specified inter-dose interval. This information is stored
@@ -206,8 +187,7 @@ public:
     Sort();
     int nEvent = Events.size();
     for (int i = 0; i < nEvent; i++) {
-      if (((Events[i].evid == 1) || (Events[i].evid == 4))
-        && ((Events[i].addl > 0) && (Events[i].ii > 0))) {
+      if (is_dosing(i) && ((Events[i].addl > 0) && (Events[i].ii > 0))) {
         Event<T_time, T_amt, T_rate, T_ii>
           addlEvent = GetEvent(i),
           newEvent = addlEvent;
@@ -236,29 +216,18 @@ public:
   void Sort() { std::stable_sort(Events.begin(), Events.end(), by_time()); }
 
   // Access functions
-  T_time get_time(int i) { return Events[i].time; }
-  T_amt get_amt(int i) { return Events[i].amt; }
-  T_rate get_rate(int i) { return Events[i].rate; }
-  T_ii get_ii(int i) { return Events[i].ii; }
-  int get_evid(int i) { return Events[i].evid; }
-  int get_cmt(int i) { return Events[i].cmt; }
-  int get_addl(int i) { return Events[i].addl; }
-  int get_ss(int i) { return Events[i].ss; }
-  bool get_keep(int i) { return Events[i].keep; }
-  bool get_isnew(int i) { return Events[i].isnew; }
-  int get_size() { return Events.size(); }
+  T_time time (int i) const { return Events[i].time; }
+  T_amt amt   (int i) const { return Events[i].amt; }
+  T_rate rate (int i) const { return Events[i].rate; }
+  T_ii ii     (int i) const { return Events[i].ii; }
+  int evid    (int i) const { return Events[i].evid; }
+  int cmt     (int i) const { return Events[i].cmt; }
+  int addl    (int i) const { return Events[i].addl; }
+  int ss      (int i) const { return Events[i].ss; }
+  bool keep   (int i) const { return Events[i].keep; }
+  bool isnew  (int i) const { return Events[i].isnew; }
+  size_t size()       const { return Events.size(); }
 
-  void Print(int i) {
-    std::cout << get_time(i) << " "
-              << get_rate(i) << " "
-              << get_ii(i) << " "
-              << get_evid(i) << " "
-              << get_cmt(i) << " "
-              << get_addl(i) << " "
-              << get_ss(i) << " "
-              << get_keep(i) << " "
-              << get_isnew(i) << std::endl;
-    }
 
   /**
    * Implement absorption lag times by modifying the times of the dosing events.
@@ -303,11 +272,6 @@ public:
     }
     Sort();
   }
-
-  // declare friends
-  friend class Event<T_time, T_amt, T_rate, T_ii>;
-  template<typename T1, typename T2, typename T3, typename T4> friend
-    class ModelParameterHistory;
 };
 
 }    // torsten namespace

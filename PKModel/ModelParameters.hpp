@@ -14,7 +14,7 @@ template<typename T_time,
          typename T_parameters,
          typename T_biovar,
          typename T_tlag>
-  class ModelParameterHistory;
+  struct ModelParameterHistory;
 /**
  * The ModelParameters class defines objects that contain the parameters of
  * a model at a given time.
@@ -23,15 +23,13 @@ template<typename T_time,
          typename T_parameters,
          typename T_biovar,
          typename T_tlag>
-class ModelParameters {
-private:
+struct ModelParameters {
   T_time time_;
   std::vector<T_parameters> theta_;
   std::vector<T_biovar> biovar_;
   std::vector<T_tlag> tlag_;
   Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic> K_;
 
-public:
   ModelParameters() {
     // FIX ME - this constructor likely does not work
     time_ = 0;
@@ -49,30 +47,20 @@ public:
                   const std::vector<T_parameters>& theta,
                   const std::vector<T_biovar>& biovar,
                   const std::vector<T_tlag>& tlag,
-                  const Eigen::Matrix<T_parameters, Eigen::Dynamic,
-                    Eigen::Dynamic>& K)
-    : time_(time), theta_(theta), biovar_(biovar), tlag_(tlag), K_(K) { }
+                  const Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic>& K)
+    : time_(time), theta_(theta), biovar_(biovar), tlag_(tlag), K_(K) {}
+
+  ModelParameters(const T_time& time,
+                  const std::vector<T_biovar>& biovar,
+                  const std::vector<T_tlag>& tlag,
+                  const Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic>& K)
+    : time_(time), theta_(), biovar_(biovar), tlag_(tlag), K_(K) {}
 
   ModelParameters(const T_time& time,
                   const std::vector<T_parameters>& theta,
                   const std::vector<T_biovar>& biovar,
                   const std::vector<T_tlag>& tlag)
-    : time_(time), theta_(theta), biovar_(biovar), tlag_(tlag) {
-  }
-
-  /**
-   * Returns a model parameter object which only contain
-   * the n first parameters. This is useful for the
-   * mixed solver: when we compute the base analytical
-   * solution, we only want to pass the PK parameters
-   * (as oppose to all the PK/PD parameters).
-   */
-  ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
-  truncate(int n) const {
-    std::vector<T_parameters> tr_theta(n);
-    for (int i = 0; i < n; i++) tr_theta[i] = theta_[i];
-    return ModelParameters(time_, tr_theta, biovar_, tlag_, K_);
-  }
+    : time_(time), theta_(theta), biovar_(biovar), tlag_(tlag) {}
 
   /**
    * Adds parameters. Useful for the mixed solver, where
@@ -108,18 +96,6 @@ public:
     return theta_.size();
   }
 
-  void Print() const {
-    std::cout << time_ << " ";
-    for (size_t i = 0; i < theta_.size(); i++)
-      std::cout << theta_[i] << " ";
-    for (size_t i = 0; i < biovar_.size(); i++)
-      std::cout << biovar_[i] << " ";
-    for (size_t i = 0; i < tlag_.size(); i++)
-      std::cout << tlag_[i] << " ";
-    if (K_.rows() != 0) std::cout << K_;
-    std::cout << std::endl;
-  }
-
   // access functions
   T_time get_time() const { return time_; }
   std::vector<T_parameters> get_RealParameters() const {
@@ -134,8 +110,6 @@ public:
   Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic> get_K() const {
     return K_;
   }
-
-  friend class ModelParameterHistory<T_time, T_parameters, T_biovar, T_tlag>;
 };
 
 /**
@@ -147,37 +121,49 @@ template<typename T_time,
          typename T_parameters,
          typename T_biovar,
          typename T_tlag>
-class ModelParameterHistory{
-private:
-  std::vector< ModelParameters<T_time, T_parameters,
-                               T_biovar, T_tlag> > MPV_;
+struct ModelParameterHistory{
+  std::vector<ModelParameters<T_time, T_parameters, T_biovar, T_tlag> > MPV_;
 
-public:
   template<typename T0, typename T1, typename T2, typename T3>
   ModelParameterHistory(std::vector<T0> time,
                         std::vector<std::vector<T1> > theta,
                         std::vector<std::vector<T2> > biovar,
-                        std::vector<std::vector<T3> > tlag,
-                        std::vector< Eigen::Matrix<T1, Eigen::Dynamic,
-                          Eigen::Dynamic> > K) {
+                        std::vector<std::vector<T3> > tlag) {
     using std::max;
-    int nParameters = max(theta.size(),
-                          max(K.size(), max(biovar.size(), tlag.size())));
+    int nParameters = max(theta.size(), max(biovar.size(), tlag.size()));
     MPV_.resize(nParameters);
-    int j, k, l, m;
+    int j, k, l;
     // FIX ME - is this the most efficient way of storing data?
     for (int i = 0; i < nParameters; i++) {
       (theta.size() == 1) ? j = 0 : j = i;
       (biovar.size() == 1) ? k = 0 : k = i;
       (tlag.size() == 1) ? l = 0 : l = i;
+       MPV_[i] = ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
+         (time[i], theta[j], biovar[k], tlag[l]);
+    }
+  }
+
+  template<typename T0, typename T1, typename T2, typename T3>
+  ModelParameterHistory(std::vector<T0> time,
+                        std::vector<std::vector<T2> > biovar,
+                        std::vector<std::vector<T3> > tlag,
+                        std::vector< Eigen::Matrix<T1, Eigen::Dynamic, Eigen::Dynamic> > K) {
+    using std::max;
+    int nParameters = max(K.size(), max(biovar.size(), tlag.size()));
+    MPV_.resize(nParameters);
+    int k, l, m;
+    // FIX ME - is this the most efficient way of storing data?
+    for (int i = 0; i < nParameters; i++) {
+      (biovar.size() == 1) ? k = 0 : k = i;
+      (tlag.size() == 1) ? l = 0 : l = i;
       (K.size() == 1) ? m = 0 : m = i;
        MPV_[i] = ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
-         (time[i], theta[j], biovar[k], tlag[l], K[m]);
+         (time[i], biovar[k], tlag[l], K[m]);
     }
   }
 
   ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
-    GetModelParameters(int i) {
+    GetModelParameters(int i) const {
       return MPV_[i];
   }
 
@@ -195,7 +181,7 @@ public:
     return MPV_[iEvent].theta_[iParameter];
   }
 
-  T_biovar GetValueBio(int iEvent, int iParameter) {
+  T_biovar GetValueBio(int iEvent, int iParameter) const {
     assert(iEvent >= 0 && (size_t) iEvent < MPV_.size());
     assert(iParameter >= 0 && (size_t) iParameter
              < MPV_[iEvent].biovar_.size());
@@ -243,17 +229,6 @@ public:
     return ordered;
   }
 
-  void Print(int j) {
-    std::cout << MPV_[j].time_ << " ";
-      for (size_t i = 0; i < MPV_[j].theta_.size(); i++)
-        std::cout << MPV_[j].theta_[i] << " ";
-      for (size_t i = 0; i < MPV_[j].biovar_.size(); i++)
-        std::cout << MPV_[j].biovar_[i] << " ";
-      for (size_t i = 0; i < MPV_[j].tlag_.size(); i++)
-        std::cout << MPV_[j].tlag_[i] << " ";
-      std::cout << std::endl;
-  }
-
   /**
    * COMPLETE MODEL PARAMETERS
    *
@@ -275,7 +250,7 @@ public:
    */
   template<typename T0, typename T1, typename T2, typename T3>
   void CompleteParameterHistory(torsten::EventHistory<T0, T1, T2, T3>& events) {
-    int nEvent = events.get_size();
+    int nEvent = events.size();
     assert(nEvent > 0);
     int len_Parameters = MPV_.size();  // numbers of events for which parameters
                                        // are determined
@@ -287,8 +262,8 @@ public:
 
     int iEvent = 0;
     for (int i = 0; i < len_Parameters - 1; i++) {
-      while (events.get_isnew(iEvent)) iEvent++;  // skip new events
-      assert(MPV_[i].time_ == events.get_time(iEvent));  // compare time of
+      while (events.isnew(iEvent)) iEvent++;  // skip new events
+      assert(MPV_[i].time_ == events.time(iEvent));  // compare time of
                                                          // "old' events to
                                                          // time of
                                                          // parameters.
@@ -302,7 +277,7 @@ public:
         MPV_[i].biovar_ = MPV_[0].biovar_;
         MPV_[i].tlag_ = MPV_[0].tlag_;
         MPV_[i].K_ = MPV_[0].K_;
-        MPV_[i].time_ = events.get_time(i);
+        MPV_[i].time_ = events.time(i);
         events.Events[i].isnew = false;
       }
     } else {  // parameters are event dependent.
@@ -314,7 +289,7 @@ public:
       ModelParameters<T_time, T_parameters, T_biovar, T_tlag> newParameter;
 
       for (int i = 0; i < nEvent; i++) {
-        while (events.get_isnew(iEvent)) {
+        while (events.isnew(iEvent)) {
           /* Three cases:
            * (a) The time of the new event is higher than the time of the last
            *     parameter vector in parameters (k = len_parameters).
@@ -330,15 +305,15 @@ public:
            */
           // Find the index corresponding to the time of the new event in the
           // times vector.
-          k = SearchReal(times, len_Parameters - 1, events.get_time(iEvent));
+          k = SearchReal(times, len_Parameters - 1, events.time(iEvent));
 
           if ((k == len_Parameters) ||
-            (events.get_time(iEvent) == MPV_[k - 1].time_))
+            (events.time(iEvent) == MPV_[k - 1].time_))
             newParameter = GetModelParameters(k - 1);
           else
             newParameter = GetModelParameters(k);
 
-          newParameter.time_ = events.get_time(iEvent);
+          newParameter.time_ = events.time(iEvent);
           MPV_[len_Parameters + j] = newParameter;
           events.Events[iEvent].isnew = false;
           if (iEvent < nEvent - 1) iEvent++;
@@ -350,11 +325,6 @@ public:
     }
     if (!Check()) Sort();
   }
-
-  // declare friends
-  friend class ModelParameters<T_time, T_parameters, T_biovar, T_tlag>;
-  template<typename T1, typename T2, typename T3, typename T4>
-    friend class Events;
 };
 
 } 

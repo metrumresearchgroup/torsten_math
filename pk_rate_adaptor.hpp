@@ -31,7 +31,7 @@ namespace refactor {
                      torsten::par_t<T_model>,
                      PKOdeFunctorRateAdaptor<torsten::f_t<T_model>,
                                              torsten::rate_t<T_model>,
-                                             torsten::par_t<T_model>>, int> model_;
+                                             torsten::par_t<T_model>>> model_;
 
 
   public:

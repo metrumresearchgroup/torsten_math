@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <boost/math/tools/promotion.hpp>
 #include <stan/math/torsten/Pred2.hpp>
+#include <stan/math/torsten/events_manager.hpp>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_oneCpt.hpp>
 #include <stan/math/torsten/PKModel/Pred/PredSS_oneCpt.hpp>
@@ -64,6 +65,7 @@ PKModelOneCpt(const std::vector<T0>& time,
   using Eigen::Matrix;
   using boost::math::tools::promote_args;
   using stan::math::check_positive_finite;
+  using refactor::PKRec;
 
   int nCmt = 2;
   int nParm = 3;
@@ -105,20 +107,22 @@ PKModelOneCpt(const std::vector<T0>& time,
   std::vector<Eigen::Matrix<T4, Eigen::Dynamic, Eigen::Dynamic> >
     dummy_systems(1, dummy_system);
 
-  PredWrapper<refactor::PKOneCptModel> pr;
-  PkOdeIntegrator<StanRk45> integrator;
-
 #ifdef OLD_TORSTEN
   return Pred(time, amt, rate, ii, evid, cmt, addl, ss,
               pMatrix, biovar, tlag,
               nCmt, dummy_systems,
               Pred1_oneCpt(), PredSS_oneCpt());
 #else
-  return pr.Pred2(time, amt, rate, ii, evid, cmt, addl, ss,
-                  pMatrix, biovar, tlag,
-                  nCmt, dummy_systems,
-                  Pred1_oneCpt(), PredSS_oneCpt(),
-                  integrator);
+  using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
+  EM em(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+
+  Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
+    Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
+
+  using model_type = refactor::PKOneCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
+  PredWrapper<model_type> pr;
+  pr.pred(em, pred);
+  return pred;
 #endif
 }
 

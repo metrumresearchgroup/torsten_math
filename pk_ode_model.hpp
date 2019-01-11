@@ -114,7 +114,7 @@ namespace refactor {
    * @tparam F ODE functor
    * @tparam Ti ODE additional parameter type, usually the ODE size
    */
-  template<typename T_time, typename T_init, typename T_rate, typename T_par, typename F, typename Ti> // NOLINT
+  template<typename T_time, typename T_init, typename T_rate, typename T_par, typename F> // NOLINT
   class PKODEModel {
     const T_time &t0_;
     const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0_;
@@ -131,16 +131,6 @@ namespace refactor {
     using par_type    = T_par;
     using rate_type   = T_rate;
     using f_type      = F;
-
-    /*
-     * FIX ME: we need to get rid of @c ModelParameters in
-     * @c Pred2
-     */
-    template<typename T0, typename T1, typename T2, typename T3>
-    static std::vector<T1>
-    get_param(const torsten::ModelParameters<T0, T1, T2, T3>& p) {
-      return p.get_RealParameters();
-    }
 
     /**
      * Constructor
@@ -162,9 +152,8 @@ namespace refactor {
                const std::vector<T_rate> &rate,
                const std::vector<T_par> &par,
                const T_mp<Ts...> &parameter,
-               const F& f,
-               const Ti &ncmt) :
-      t0_(t0), y0_(y0), rate_(rate), par_(par), f_(f), f1(f_, par_.size()), ncmt_(ncmt) // NOLINT
+               const F& f) :
+      t0_(t0), y0_(y0), rate_(rate), par_(par), f_(f), f1(f_, par_.size()), ncmt_(y0.size()) // NOLINT
     {}
 
     /**
@@ -181,9 +170,8 @@ namespace refactor {
                const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0,
                const std::vector<T_rate> &rate,
                const std::vector<T_par> &par,
-               const F& f,
-               const Ti &ncmt) :
-      t0_(t0), y0_(y0), rate_(rate), par_(par), f_(f), f1(f_, par_.size()), ncmt_(ncmt) // NOLINT
+               const F& f) :
+      t0_(t0), y0_(y0), rate_(rate), par_(par), f_(f), f1(f_, par_.size()), ncmt_(y0.size()) // NOLINT
     {}
 
     /**
