@@ -118,7 +118,7 @@ generalOdeModel_bdf(const F& f,
 
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
   PredWrapper<model_type, PkOdeIntegrator<StanBdf>&> pr;
-  pr.Pred2(em, pred, integrator, f);
+  pr.pred(em, pred, integrator, f);
   return pred;
 
 #endif

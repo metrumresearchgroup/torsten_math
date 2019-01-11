@@ -96,7 +96,7 @@ linOdeModel(const std::vector<T0>& time,
 
   using model_type = refactor::PKLinODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;
-  pr.Pred2(em, pred);
+  pr.pred(em, pred);
   return pred;
 
 #endif

@@ -57,18 +57,18 @@ namespace torsten{
      * @return a matrix with predicted amount in each compartment
      * at each event.
      */
-    template<typename T_em, typename... Ts>
-    void Pred2(T_em& em,
-               Eigen::Matrix<typename T_em::T_scalar, -1, -1>& pred,
-               const T_pred... pred_pars,
-               const Ts... model_pars) {
+    template<typename... T_em, typename... Ts>
+    void pred(EventsManager<T_em...>& em,
+              Eigen::Matrix<typename EventsManager<T_em...>::T_scalar, -1, -1>& pred,
+              const T_pred... pred_pars,
+              const Ts... model_pars) {
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using std::vector;
       using::stan::math::multiply;
       using refactor::PKRec;
 
-      using scalar = typename T_em::T_scalar;
+      using scalar = typename EventsManager<T_em...>::T_scalar;
 
       auto events = em.events();
       auto model_rate = em.rates();
