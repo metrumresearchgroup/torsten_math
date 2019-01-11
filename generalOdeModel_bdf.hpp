@@ -116,12 +116,12 @@ generalOdeModel_bdf(const F& f,
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
 
-  using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F, int>;
+  using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
   PredWrapper<model_type> pr;
   pr.Pred2(em.events(), em.pars(), em.rates(), em.amts(), pred, nCmt,
                   pred1, predss,
                   integrator,
-                  f, nCmt);
+                  f);
       return pred;
 
 #endif

@@ -188,13 +188,12 @@ namespace refactor {
    * @tparam T_rate type of dosing rate.
    * @tparam T_par type of parameter.
    * @tparam F type of ODE functor for @c PKODEModel.
-   * @tparam Ti type of extra param for @c PKODEModel.
    */
   template <template<typename...> class T_m,
-            typename T_time, typename T_init, typename T_rate, typename T_par, typename F, typename Ti> // NOLINT
+            typename T_time, typename T_init, typename T_rate, typename T_par, typename F> // NOLINT
   class PKCoupledModel<T_m<T_time, T_init, T_rate, T_par>,
                        PKODEModel<T_time, T_init, T_rate, T_par,
-                                  PKOdeFunctorCouplingAdaptor<T_m, F, T_rate>, Ti> > { // NOLINT
+                                  PKOdeFunctorCouplingAdaptor<T_m, F, T_rate>> > { // NOLINT
     const refactor::PKRec<T_init>& y0;
     const refactor::PKRec<T_init> y0_pk;
     const refactor::PKRec<T_init> y0_ode;
@@ -204,21 +203,11 @@ namespace refactor {
   public:
     using Fa = PKOdeFunctorCouplingAdaptor<T_m, F, T_rate>;
     const T_m<T_time, T_init, T_rate, T_par> pk_model;
-    const PKODEModel<T_time, T_init, T_rate, T_par, Fa, Ti> ode_model;
+    const PKODEModel<T_time, T_init, T_rate, T_par, Fa> ode_model;
 
     using pk_scalar_type = torsten::scalar_t<T_m<T_time, T_init, T_rate, T_par>>; // NOLINT 
-    using ode_scalar_type = torsten::scalar_t<PKODEModel<T_time, T_init, T_rate, T_par, Fa, Ti> >; // NOLINT
+    using ode_scalar_type = torsten::scalar_t<PKODEModel<T_time, T_init, T_rate, T_par, Fa> >; // NOLINT
     using scalar_type = typename stan::return_type<pk_scalar_type, ode_scalar_type>::type; // NOLINT 
-
-    /*
-     * FIX ME: we need to get rid of @c ModelParameters in
-     * @c Pred2
-     */
-    template<typename T0, typename T1, typename T2, typename T3>
-    static std::vector<T1>
-    get_param(const torsten::ModelParameters<T0, T1, T2, T3>& p) {
-      return p.get_RealParameters();
-    }
 
     /**
      * Coupled model constructor
@@ -236,14 +225,14 @@ namespace refactor {
                    const std::vector<T_rate>& rate,
                    const std::vector<T_par> & par,
                    const F& f0,
-                   const Ti& n_ode) :
+                   const int n_ode) :
       y0(init),
       y0_pk{ y0.head(y0.size() - n_ode) },
       y0_ode{ y0.segment(y0_pk.size(), n_ode) },
       f_(f0),
       f(f0),
       pk_model({t0, y0_pk, rate, par}),
-      ode_model({t0, y0_ode, rate, par, f, n_ode})
+      ode_model({t0, y0_ode, rate, par, f})
     {}
     
   private:
@@ -685,17 +674,17 @@ namespace refactor {
     }
   };
 
-  template<typename T_time, typename T_init, typename T_rate, typename T_par, typename F, typename Ti> // NOLINT
+  template<typename T_time, typename T_init, typename T_rate, typename T_par, typename F> // NOLINT
   using PkOneCptOdeModel =
     PKCoupledModel< PKOneCptModel<T_time, T_init, T_rate, T_par>,
                     PKODEModel<T_time, T_init, T_rate, T_par,
-                               PKOdeFunctorCouplingAdaptor<PKOneCptModel, F, T_rate>, Ti> >; // NOLINT
+                               PKOdeFunctorCouplingAdaptor<PKOneCptModel, F, T_rate>> >; // NOLINT
 
-  template<typename T_time, typename T_init, typename T_rate, typename T_par, typename F, typename Ti> // NOLINT
+  template<typename T_time, typename T_init, typename T_rate, typename T_par, typename F> // NOLINT
   using PkTwoCptOdeModel =
     PKCoupledModel< PKTwoCptModel<T_time, T_init, T_rate, T_par>,
                     PKODEModel<T_time, T_init, T_rate, T_par,
-                               PKOdeFunctorCouplingAdaptor<PKTwoCptModel, F, T_rate>, Ti> >; // NOLINT
+                               PKOdeFunctorCouplingAdaptor<PKTwoCptModel, F, T_rate>> >; // NOLINT
 }
 
 

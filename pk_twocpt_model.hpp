@@ -377,10 +377,10 @@ namespace refactor {
       return pred;
     }
 
-    PKODEModel<T_time, T_init, T_rate, T_par, PKTwoCptODE, int>
+    PKODEModel<T_time, T_init, T_rate, T_par, PKTwoCptODE>
     to_ode_model() {
       return PKODEModel<T_time, T_init, T_rate, T_par,
-                        PKTwoCptODE, int>(t0_, y0_, rate_, par_, f_, Ncmt);
+                        PKTwoCptODE>(t0_, y0_, rate_, par_, f_);
     }
 
     /*
