@@ -121,9 +121,15 @@ PKModelOneCpt(const std::vector<T0>& time,
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
 
-  PredWrapper<refactor::PKOneCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, T4> > pr;
-  pr.Pred2(em.events(), em.parameters(), em.rates(), em.amts(), pred,
-                  nCmt, dummy_systems,
+  using model_type = refactor::PKOneCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, T4>;
+  std::vector<std::vector<T4> > pars(em.events().size());
+  for (size_t i = 0; i < pars.size(); ++i) {
+    auto parameter = em.parameters().GetModelParameters(i);
+    pars[i] = model_type::get_param(parameter);
+  }
+  PredWrapper<model_type> pr;
+  pr.Pred2(em.events(), pars, em.rates(), em.amts(), pred,
+           nCmt,
                   Pred1_oneCpt(), PredSS_oneCpt(),
                   integrator);
       return pred;

@@ -63,22 +63,23 @@ namespace torsten{
      * @return a matrix with predicted amount in each compartment
      * at each event.
      */
-    template<typename T_eh, typename T_ph, typename T_rate, typename T_amt,typename scalar,
+    template<typename T_eh,
+             typename T_rate, typename T_amt,typename scalar,
              typename T_parameters,
              typename F_one,
              typename F_SS,
              PkOdeIntegratorId It,
              typename... Ts>
-    void Pred2(const T_eh& events, const T_ph& parameters,
-          const std::vector<std::vector<T_rate> >& model_rate,
-          const std::vector<T_amt>& model_amt,
-          Eigen::Matrix<scalar, -1, -1>& pred,
-          const int& nCmt,
-          const std::vector<Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic> >& system,
-          const F_one& Pred1,
-          const F_SS& PredSS,
-          const PkOdeIntegrator<It>& integrator,
-          const Ts... pars) {
+    void Pred2(const T_eh& events,
+               const std::vector<std::vector<T_parameters> >& model_par,
+               const std::vector<std::vector<T_rate> >& model_rate,
+               const std::vector<T_amt>& model_amt,
+               Eigen::Matrix<scalar, -1, -1>& pred,
+               const int& nCmt,
+               const F_one& Pred1,
+               const F_SS& PredSS,
+               const PkOdeIntegrator<It>& integrator,
+               const Ts... pars) {
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using boost::math::tools::promote_args;
@@ -94,7 +95,6 @@ namespace torsten{
       int ikeep = 0;
 
       for (int i = 0; i < events.size(); i++) {
-        auto parameter = parameters.GetModelParameters(i);
         if (events.is_reset(i)) {
           dt = 0;
           init = zeros;
@@ -106,8 +106,7 @@ namespace torsten{
           // std::vector<T_parameters> model_par = parameter.get_RealParameters();
 
           // FIX ME: we need a better way to relate model type to parameter type
-          std::vector<T_parameters> model_par = model_type::get_param(parameter);
-          model_type pkmodel {model_time, init, model_rate[i], model_par, pars...};
+          model_type pkmodel {model_time, init, model_rate[i], model_par[i], pars...};
 
           pred1 = pkmodel.solve(dt, integrator);
           // pred1 = Pred1(dt, parameter, init, rate2.get_rate());
@@ -119,8 +118,7 @@ namespace torsten{
           decltype(tprev) model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
           // auto model_par = parameter.get_RealParameters();
           // FIX ME: we need a better way to relate model type to parameter type
-          std::vector<T_parameters> model_par = model_type::get_param(parameter);
-          model_type pkmodel {model_time, init, model_rate[i], model_par, pars...};
+          model_type pkmodel {model_time, init, model_rate[i], model_par[i], pars...};
           pred1 = multiply(pkmodel.solve(model_amt[i], //NOLINT
                                          events.rate(i),
                                          events.ii(i),
