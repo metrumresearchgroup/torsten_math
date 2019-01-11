@@ -63,7 +63,7 @@ struct RateHistory {
 
     vector<T_rate> rate_init(nCmt, 0);
     Rate<T_time, T_rate> newRate(0, rate_init);
-    for (int j = 0; j < events.size(); j++)
+    for (size_t j = 0; j < events.size(); j++)
       if (j == 0 || events.time(j) != events.time(j - 1)) {
         newRate.time = events.time(j);
         Rates.push_back(newRate);
@@ -79,9 +79,9 @@ struct RateHistory {
 
     // Create time vector for events
     vector<T_time> EventTimes(events.size(), 0);
-    for (int j = 0; j < events.size(); j++) EventTimes[j] = events.time(j);
+    for (size_t j = 0; j < events.size(); j++) EventTimes[j] = events.time(j);
 
-    int i = 0, k, l;
+    size_t i = 0, k, l;
     T_time endTime;
     torsten::Event<T_time, T_amt, T_rate, T_ii> newEvent;
     while (i < events.size()) {
@@ -109,7 +109,7 @@ struct RateHistory {
           k = SearchReal(RateTimes, events.size(), endTime);
 
           // Compute Rates for each element between the two times
-          for (int iRate = l ; iRate < k; iRate++)
+          for (size_t iRate = l ; iRate < k; iRate++)
             Rates[iRate].rate[events.cmt(i) - 1] += events.rate(i);
         }
         i++;

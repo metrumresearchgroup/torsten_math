@@ -94,7 +94,7 @@ namespace torsten{
       Matrix<scalar, Dynamic, 1> pred1;
       int ikeep = 0;
 
-      for (int i = 0; i < events.size(); i++) {
+      for (size_t i = 0; i < events.size(); i++) {
         if (events.is_reset(i)) {
           dt = 0;
           init = zeros;

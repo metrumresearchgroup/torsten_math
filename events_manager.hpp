@@ -14,11 +14,13 @@ struct EventsManager {
   using T_time = typename stan::return_type<T0, T1, T6, T2>::type;
   using T_rate = typename stan::return_type<T2, T5>::type;
   using T_amt = typename stan::return_type<T1, T5>::type;
+  using T_par = T4;
 
-  EventHistory<T_time, T1, T2, T3> eh;
-  ModelParameterHistory<T_time, T4, T5, T6> ph;
-  std::vector<std::vector<T_rate> > rh;
-  std::vector<T_amt> ah;
+  EventHistory<T_time, T1, T2, T3> event_his;
+  ModelParameterHistory<T_time, T4, T5, T6> param_his;
+  std::vector<std::vector<T_rate> > rate_v;
+  std::vector<T_amt> amt_v;
+  std::vector<std::vector<T_par> > par_v;
   int nKeep;
 
   EventsManager(int nCmt,
@@ -33,36 +35,43 @@ struct EventsManager {
                 const std::vector<std::vector<T4> >& pMatrix,
                 const std::vector<std::vector<T5> >& biovar,
                 const std::vector<std::vector<T6> >& tlag)
-  : eh(time, amt, rate, ii, evid, cmt, addl, ss),
-    ph(time, pMatrix, biovar, tlag),
-    rh(),
-    ah(),
+  : event_his(time, amt, rate, ii, evid, cmt, addl, ss),
+    param_his(time, pMatrix, biovar, tlag),
+    rate_v(),
+    amt_v(),
+    par_v(),
     nKeep(0)
   {
-    eh.Sort();
-    ph.Sort();
-    nKeep = eh.size();
+    event_his.Sort();
+    param_his.Sort();
+    nKeep = event_his.size();
 
-    eh.AddlDoseEvents();
-    ph.CompleteParameterHistory(eh);
+    event_his.AddlDoseEvents();
+    param_his.CompleteParameterHistory(event_his);
 
-    eh.AddLagTimes(ph, nCmt);
-    RateHistory<T_time, T2> rate_history(eh, nCmt);
-    ph.CompleteParameterHistory(eh);
+    event_his.AddLagTimes(param_his, nCmt);
+    RateHistory<T_time, T2> rate_history(event_his, nCmt);
+    param_his.CompleteParameterHistory(event_his);
 
     int iRate = 0;
-    for (int i = 0; i < eh.size(); i++) {
+    for (size_t i = 0; i < event_his.size(); i++) {
 
       // Use index iRate instead of i to find rate at matching time, given there
       // is one rate per time, not per event.
-      if (rate_history.time(iRate) != eh.time(i)) iRate++;
+      if (rate_history.time(iRate) != event_his.time(i)) iRate++;
       std::vector<T_rate> rate_i(nCmt);
       for (int j = 0; j < nCmt; ++j) {
-        rate_i[j] = rate_history.rate(iRate, j) * ph.GetValueBio(i, j);
+        rate_i[j] = rate_history.rate(iRate, j) * param_his.GetValueBio(i, j);
       }
-      rh.push_back(rate_i);
+      rate_v.push_back(rate_i);
 
-      ah.push_back(ph.GetValueBio(i, eh.cmt(i) - 1) * eh.amt(i));
+      amt_v.push_back(param_his.GetValueBio(i, event_his.cmt(i) - 1) * event_his.amt(i));
+    }
+
+    par_v.resize(event_his.size());
+    for (size_t i = 0; i < event_his.size(); ++i) {
+      auto p = param_his.GetModelParameters(i);
+      par_v[i] = p.get_RealParameters();
     }
   }
 
@@ -78,53 +87,66 @@ struct EventsManager {
                 const std::vector<std::vector<T5> >& biovar,
                 const std::vector<std::vector<T6> >& tlag,
                 const std::vector<Eigen::Matrix<T4, -1, -1> >& systems)
-  : eh(time, amt, rate, ii, evid, cmt, addl, ss),
-    ph(time, biovar, tlag, systems),
-    rh(),
-    ah(),
+  : event_his(time, amt, rate, ii, evid, cmt, addl, ss),
+    param_his(time, biovar, tlag, systems),
+    rate_v(),
+    amt_v(),
     nKeep(0)
   {
-    eh.Sort();
-    ph.Sort();
-    nKeep = eh.size();
+    event_his.Sort();
+    param_his.Sort();
+    nKeep = event_his.size();
 
-    eh.AddlDoseEvents();
-    ph.CompleteParameterHistory(eh);
+    event_his.AddlDoseEvents();
+    param_his.CompleteParameterHistory(event_his);
 
-    eh.AddLagTimes(ph, nCmt);
-    RateHistory<T_time, T2> rate_history(eh, nCmt);
-    ph.CompleteParameterHistory(eh);
+    event_his.AddLagTimes(param_his, nCmt);
+    RateHistory<T_time, T2> rate_history(event_his, nCmt);
+    param_his.CompleteParameterHistory(event_his);
 
     int iRate = 0;
-    for (int i = 0; i < eh.size(); i++) {
+    for (size_t i = 0; i < event_his.size(); i++) {
 
       // Use index iRate instead of i to find rate at matching time, given there
       // is one rate per time, not per event.
-      if (rate_history.time(iRate) != eh.time(i)) iRate++;
+      if (rate_history.time(iRate) != event_his.time(i)) iRate++;
       std::vector<T_rate> rate_i(nCmt);
       for (int j = 0; j < nCmt; ++j) {
-        rate_i[j] = rate_history.rate(iRate, j) * ph.GetValueBio(i, j);
+        rate_i[j] = rate_history.rate(iRate, j) * param_his.GetValueBio(i, j);
       }
-      rh.push_back(rate_i);
+      rate_v.push_back(rate_i);
 
-      ah.push_back(ph.GetValueBio(i, eh.cmt(i) - 1) * eh.amt(i));
+      amt_v.push_back(param_his.GetValueBio(i, event_his.cmt(i) - 1) * event_his.amt(i));
+    }
+
+    par_v.resize(event_his.size());
+    for (size_t i = 0; i < event_his.size(); ++i) {
+      auto p = param_his.GetModelParameters(i);
+      auto k = p.get_K();
+      std::vector<T_par> par(k.size());
+      for (size_t j = 0; j < par.size(); ++j) par[j] = k(j);
+      par_v[i] = par;
     }
   }
 
   EventHistory<T_time, T1, T2, T3>& events() {
-    return eh;
+    return event_his;
   }
 
   ModelParameterHistory<T_time, T4, T5, T6>& parameters() {
-    return ph;
+    return param_his;
   }
 
   std::vector<std::vector<T_rate> >& rates() {
-    return rh;
+    return rate_v;
   }
 
   std::vector<T_amt>& amts() {
-    return ah;
+    return amt_v;
+  }
+
+  std::vector<std::vector<T_par> >& pars() {
+    return par_v;
   }
 };
 

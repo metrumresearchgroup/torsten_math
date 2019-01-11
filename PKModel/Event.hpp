@@ -226,7 +226,7 @@ struct EventHistory {
   int ss      (int i) const { return Events[i].ss; }
   bool keep   (int i) const { return Events[i].keep; }
   bool isnew  (int i) const { return Events[i].isnew; }
-  int size()          const { return Events.size(); }
+  size_t size()       const { return Events.size(); }
 
 
   /**
