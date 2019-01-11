@@ -116,7 +116,7 @@ PKModelOneCpt(const std::vector<T0>& time,
               Pred1_oneCpt(), PredSS_oneCpt());
 #else
   using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
-  EM em(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag, dummy_systems);
+  EM em(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
@@ -130,9 +130,9 @@ PKModelOneCpt(const std::vector<T0>& time,
   PredWrapper<model_type> pr;
   pr.Pred2(em.events(), pars, em.rates(), em.amts(), pred,
            nCmt,
-                  Pred1_oneCpt(), PredSS_oneCpt(),
-                  integrator);
-      return pred;
+           Pred1_oneCpt(), PredSS_oneCpt(),
+           integrator);
+  return pred;
 #endif
 }
 

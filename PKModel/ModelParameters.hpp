@@ -47,30 +47,20 @@ struct ModelParameters {
                   const std::vector<T_parameters>& theta,
                   const std::vector<T_biovar>& biovar,
                   const std::vector<T_tlag>& tlag,
-                  const Eigen::Matrix<T_parameters, Eigen::Dynamic,
-                    Eigen::Dynamic>& K)
-    : time_(time), theta_(theta), biovar_(biovar), tlag_(tlag), K_(K) { }
+                  const Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic>& K)
+    : time_(time), theta_(theta), biovar_(biovar), tlag_(tlag), K_(K) {}
+
+  ModelParameters(const T_time& time,
+                  const std::vector<T_biovar>& biovar,
+                  const std::vector<T_tlag>& tlag,
+                  const Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic>& K)
+    : time_(time), theta_(), biovar_(biovar), tlag_(tlag), K_(K) {}
 
   ModelParameters(const T_time& time,
                   const std::vector<T_parameters>& theta,
                   const std::vector<T_biovar>& biovar,
                   const std::vector<T_tlag>& tlag)
-    : time_(time), theta_(theta), biovar_(biovar), tlag_(tlag) {
-  }
-
-  /**
-   * Returns a model parameter object which only contain
-   * the n first parameters. This is useful for the
-   * mixed solver: when we compute the base analytical
-   * solution, we only want to pass the PK parameters
-   * (as oppose to all the PK/PD parameters).
-   */
-  ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
-  truncate(int n) const {
-    std::vector<T_parameters> tr_theta(n);
-    for (int i = 0; i < n; i++) tr_theta[i] = theta_[i];
-    return ModelParameters(time_, tr_theta, biovar_, tlag_, K_);
-  }
+    : time_(time), theta_(theta), biovar_(biovar), tlag_(tlag) {}
 
   /**
    * Adds parameters. Useful for the mixed solver, where
@@ -106,18 +96,6 @@ struct ModelParameters {
     return theta_.size();
   }
 
-  void Print() const {
-    std::cout << time_ << " ";
-    for (size_t i = 0; i < theta_.size(); i++)
-      std::cout << theta_[i] << " ";
-    for (size_t i = 0; i < biovar_.size(); i++)
-      std::cout << biovar_[i] << " ";
-    for (size_t i = 0; i < tlag_.size(); i++)
-      std::cout << tlag_[i] << " ";
-    if (K_.rows() != 0) std::cout << K_;
-    std::cout << std::endl;
-  }
-
   // access functions
   T_time get_time() const { return time_; }
   std::vector<T_parameters> get_RealParameters() const {
@@ -150,22 +128,37 @@ struct ModelParameterHistory{
   ModelParameterHistory(std::vector<T0> time,
                         std::vector<std::vector<T1> > theta,
                         std::vector<std::vector<T2> > biovar,
-                        std::vector<std::vector<T3> > tlag,
-                        std::vector< Eigen::Matrix<T1, Eigen::Dynamic,
-                          Eigen::Dynamic> > K) {
+                        std::vector<std::vector<T3> > tlag) {
     using std::max;
-    int nParameters = max(theta.size(),
-                          max(K.size(), max(biovar.size(), tlag.size())));
+    int nParameters = max(theta.size(), max(biovar.size(), tlag.size()));
     MPV_.resize(nParameters);
-    int j, k, l, m;
+    int j, k, l;
     // FIX ME - is this the most efficient way of storing data?
     for (int i = 0; i < nParameters; i++) {
       (theta.size() == 1) ? j = 0 : j = i;
       (biovar.size() == 1) ? k = 0 : k = i;
       (tlag.size() == 1) ? l = 0 : l = i;
+       MPV_[i] = ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
+         (time[i], theta[j], biovar[k], tlag[l]);
+    }
+  }
+
+  template<typename T0, typename T1, typename T2, typename T3>
+  ModelParameterHistory(std::vector<T0> time,
+                        std::vector<std::vector<T2> > biovar,
+                        std::vector<std::vector<T3> > tlag,
+                        std::vector< Eigen::Matrix<T1, Eigen::Dynamic, Eigen::Dynamic> > K) {
+    using std::max;
+    int nParameters = max(K.size(), max(biovar.size(), tlag.size()));
+    MPV_.resize(nParameters);
+    int k, l, m;
+    // FIX ME - is this the most efficient way of storing data?
+    for (int i = 0; i < nParameters; i++) {
+      (biovar.size() == 1) ? k = 0 : k = i;
+      (tlag.size() == 1) ? l = 0 : l = i;
       (K.size() == 1) ? m = 0 : m = i;
        MPV_[i] = ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
-         (time[i], theta[j], biovar[k], tlag[l], K[m]);
+         (time[i], biovar[k], tlag[l], K[m]);
     }
   }
 
@@ -234,17 +227,6 @@ struct ModelParameterHistory{
       i--;
     }
     return ordered;
-  }
-
-  void Print(int j) {
-    std::cout << MPV_[j].time_ << " ";
-      for (size_t i = 0; i < MPV_[j].theta_.size(); i++)
-        std::cout << MPV_[j].theta_[i] << " ";
-      for (size_t i = 0; i < MPV_[j].biovar_.size(); i++)
-        std::cout << MPV_[j].biovar_[i] << " ";
-      for (size_t i = 0; i < MPV_[j].tlag_.size(); i++)
-        std::cout << MPV_[j].tlag_[i] << " ";
-      std::cout << std::endl;
   }
 
   /**

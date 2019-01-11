@@ -89,7 +89,7 @@ linOdeModel(const std::vector<T0>& time,
               Pred1_linOde(), PredSS_linOde());
 #else
   using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
-  EM em(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix_dummy, biovar, tlag, system);
+  EM em(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, biovar, tlag, system);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
