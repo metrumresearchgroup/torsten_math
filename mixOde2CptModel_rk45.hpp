@@ -125,7 +125,7 @@ mixOde2CptModel_rk45(const F& f,
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
 
   using model_type = refactor::PkTwoCptOdeModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
-  PredWrapper<model_type> pr;
+  PredWrapper<model_type, PkOdeIntegrator<StanRk45>&> pr;
   pr.Pred2(em.events(), em.pars(), em.rates(), em.amts(), pred, nCmt,
            pred1, predss,
            integrator,

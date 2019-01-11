@@ -92,16 +92,6 @@ namespace refactor {
     using scalar_type = typename
       stan::return_type<T_time, T_init, T_rate, T_par>::type;
 
-    /*
-     * FIX ME: we need to get rid of @c ModelParameters in
-     * @c Pred2
-     */
-    template<typename T0, typename T1, typename T2, typename T3>
-    static std::vector<T1> 
-    get_param(const torsten::ModelParameters<T0, T1, T2, T3>& p) {
-      return p.get_RealParameters();
-    }
-    
   /**
    * Two-compartment PK model constructor
    *

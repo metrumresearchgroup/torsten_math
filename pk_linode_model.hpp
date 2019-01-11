@@ -68,20 +68,6 @@ namespace refactor {
     using scalar_type = typename
       stan::return_type<T_time, T_init, T_rate, T_par>::type;
 
-    /*
-     * FIX ME: we need to get rid of @c ModelParameters in
-     * @c Pred2
-     */
-    template<typename T0, typename T1, typename T2, typename T3>
-    static std::vector<T1> 
-    get_param(const torsten::ModelParameters<T0, T1, T2, T3>& p) {
-      auto k = p.get_K();
-      std::vector<T1> res(k.size());
-      for (size_t i = 0; i < res.size(); ++i) {
-        res[i] = k(i);
-      }
-      return res;
-    }
   /**
    * Constructor
    * FIXME need to remove parameter as this is for linode only.

@@ -13,7 +13,7 @@ namespace torsten{
    * the wrapper is aware of @c T_model so it build model
    * accordingly.
    */
-  template<typename T_model>
+  template<typename T_model, typename... T_pred>
   struct PredWrapper{
     /**
      * Every Torsten function calls Pred.
@@ -68,7 +68,6 @@ namespace torsten{
              typename T_parameters,
              typename F_one,
              typename F_SS,
-             PkOdeIntegratorId It,
              typename... Ts>
     void Pred2(const T_eh& events,
                const std::vector<std::vector<T_parameters> >& model_par,
@@ -78,8 +77,8 @@ namespace torsten{
                const int& nCmt,
                const F_one& Pred1,
                const F_SS& PredSS,
-               const PkOdeIntegrator<It>& integrator,
-               const Ts... pars) {
+               const T_pred... pred_pars,
+               const Ts... model_pars) {
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using boost::math::tools::promote_args;
@@ -106,9 +105,9 @@ namespace torsten{
           // std::vector<T_parameters> model_par = parameter.get_RealParameters();
 
           // FIX ME: we need a better way to relate model type to parameter type
-          model_type pkmodel {model_time, init, model_rate[i], model_par[i], pars...};
+          model_type pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
 
-          pred1 = pkmodel.solve(dt, integrator);
+          pred1 = pkmodel.solve(dt, pred_pars...);
           // pred1 = Pred1(dt, parameter, init, rate2.get_rate());
           init = pred1;
         }
@@ -118,12 +117,12 @@ namespace torsten{
           decltype(tprev) model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
           // auto model_par = parameter.get_RealParameters();
           // FIX ME: we need a better way to relate model type to parameter type
-          model_type pkmodel {model_time, init, model_rate[i], model_par[i], pars...};
+          model_type pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
           pred1 = multiply(pkmodel.solve(model_amt[i], //NOLINT
                                          events.rate(i),
                                          events.ii(i),
                                          events.cmt(i),
-                                         integrator),
+                                         pred_pars...),
                            scalar(1.0));
           // pred1 = multiply(PredSS(parameter,
           //                         parameters.GetValueBio(i, events.cmt(i) - 1)

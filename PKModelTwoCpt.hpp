@@ -133,8 +133,7 @@ PKModelTwoCpt(const std::vector<T0>& time,
   PredWrapper<model_type> pr;
   pr.Pred2(em.events(), em.pars(), em.rates(), em.amts(), pred, 
            nCmt,
-           Pred1_twoCpt(), PredSS_twoCpt(),
-           integrator);
+           Pred1_twoCpt(), PredSS_twoCpt());
   return pred;
 
 #endif
