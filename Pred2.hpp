@@ -33,13 +33,7 @@ namespace torsten{
      * model to the other are the Pred1 and PredSS functions, which
      * calculate the amount at an individual event.
      *
-     * @tparam T_time type of scalar for time
-     * @tparam T_amt type of scalar for amount
-     * @tparam T_rate type of scalar for rate
-     * @tparam T_ii type of scalar for interdose interval
-     * @tparam T_parameters type of scalar for the ODE parameters
-     * @tparam T_biovar type of scalar for bio-variability parameters
-     * @tparam T_tlag type of scalar for lag times parameters
+     * @tparam T_em type the @c EventsManager
      * @param[in] time times of events
      * @param[in] amt amount at each event
      * @param[in] rate rate at each event
@@ -63,30 +57,25 @@ namespace torsten{
      * @return a matrix with predicted amount in each compartment
      * at each event.
      */
-    template<typename T_eh,
-             typename T_rate, typename T_amt,typename scalar,
-             typename T_parameters,
-             typename F_one,
-             typename F_SS,
-             typename... Ts>
-    void Pred2(const T_eh& events,
-               const std::vector<std::vector<T_parameters> >& model_par,
-               const std::vector<std::vector<T_rate> >& model_rate,
-               const std::vector<T_amt>& model_amt,
-               Eigen::Matrix<scalar, -1, -1>& pred,
-               const int& nCmt,
-               const F_one& Pred1,
-               const F_SS& PredSS,
+    template<typename T_em, typename... Ts>
+    void Pred2(T_em& em,
+               Eigen::Matrix<typename T_em::T_scalar, -1, -1>& pred,
                const T_pred... pred_pars,
                const Ts... model_pars) {
       using Eigen::Matrix;
       using Eigen::Dynamic;
-      using boost::math::tools::promote_args;
       using std::vector;
       using::stan::math::multiply;
       using refactor::PKRec;
 
-      PKRec<scalar> zeros = PKRec<scalar>::Zero(nCmt);
+      using scalar = typename T_em::T_scalar;
+
+      auto events = em.events();
+      auto model_rate = em.rates();
+      auto model_amt = em.amts();
+      auto model_par = em.pars();
+
+      PKRec<scalar> zeros = PKRec<scalar>::Zero(pred.cols());
       PKRec<scalar> init = zeros;
       auto dt = events.time(0);
       auto tprev = events.time(0);
@@ -101,13 +90,10 @@ namespace torsten{
           dt = events.time(i) - tprev;
           decltype(tprev) model_time = tprev;
 
-          // std::vector<T_parameters> model_par = parameter.get_RealParameters();
-
           // FIX ME: we need a better way to relate model type to parameter type
           T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
 
           pred1 = pkmodel.solve(dt, pred_pars...);
-          // pred1 = Pred1(dt, parameter, init, rate2.get_rate());
           init = pred1;
         }
 
@@ -122,13 +108,6 @@ namespace torsten{
                                          events.cmt(i),
                                          pred_pars...),
                            scalar(1.0));
-          // pred1 = multiply(PredSS(parameter,
-          //                         parameters.GetValueBio(i, events.cmt(i) - 1)
-          //                           * events.amt(i),
-          //                         events.rate(), events.ii(),
-          //                         events.cmt(i)),
-          //                  scalar(1.0));
-
 
           // the object PredSS returns doesn't always have a scalar type. For
           // instance, PredSS does not depend on tlag, but pred does. So if

@@ -131,9 +131,7 @@ PKModelTwoCpt(const std::vector<T0>& time,
 
   using model_type = refactor::PKTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;
-  pr.Pred2(em.events(), em.pars(), em.rates(), em.amts(), pred, 
-           nCmt,
-           Pred1_twoCpt(), PredSS_twoCpt());
+  pr.Pred2(em, pred);
   return pred;
 
 #endif
