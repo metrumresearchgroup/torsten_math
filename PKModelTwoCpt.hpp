@@ -125,7 +125,7 @@ PKModelTwoCpt(const std::vector<T0>& time,
   EM em(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
-    Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
+    Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, em.ncmt);
 
   using model_type = refactor::PKTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;

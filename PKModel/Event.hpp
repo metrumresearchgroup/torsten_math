@@ -184,26 +184,21 @@ struct EventHistory {
    * Events is sorted at the end of the procedure.
    */
   void AddlDoseEvents() {
-    Sort();
-    int nEvent = Events.size();
-    for (int i = 0; i < nEvent; i++) {
+    for (size_t i = 0; i < Events.size(); i++) {
       if (is_dosing(i) && ((Events[i].addl > 0) && (Events[i].ii > 0))) {
-        Event<T_time, T_amt, T_rate, T_ii>
-          addlEvent = GetEvent(i),
-          newEvent = addlEvent;
+        Event<T_time, T_amt, T_rate, T_ii> newEvent = GetEvent(i);
         newEvent.addl = 0;
         newEvent.ii = 0;
         newEvent.ss = 0;
         newEvent.keep = false;
         newEvent.isnew = true;
 
-        for (int j = 1; j <= addlEvent.addl; j++) {
-          newEvent.time = addlEvent.time + j * addlEvent.ii;
+        for (int j = 1; j <= addl(i); j++) {
+          newEvent.time = time(i) + j * ii(i);
           InsertEvent(newEvent);
         }
       }
     }
-    Sort();
   }
 
   struct by_time {
@@ -245,13 +240,12 @@ struct EventHistory {
     int nEvent = Events.size(), pSize = Parameters.get_size();
     assert((pSize = nEvent) || (pSize == 1));
 
-    int iEvent = nEvent - 1, evid, cmt, ipar;
+    int iEvent = nEvent - 1, cmt, ipar;
     Event<T_time, T_amt, T_rate, T_ii> newEvent;
     while (iEvent >= 0) {
-      evid = Events[iEvent].evid;
       cmt = Events[iEvent].cmt;
 
-      if ((evid == 1) || (evid == 4)) {
+      if (is_dosing(iEvent)) {
         ipar = std::min(iEvent, pSize - 1);  // ipar is the index of the ith
                                              // event or 0, if the parameters
                                              // are constant.

@@ -18,16 +18,12 @@ struct Rate {
   T_time time;
   std::vector<T_rate> rate;  // rate for each compartment
 
-  Rate() {
-    std::vector<T_rate> v(1, 0);
-    time = 0;
-    rate = v;
-  }
+  Rate() {}
 
-  Rate(T_time p_time, std::vector<T_rate> p_rate) {
-    time = p_time;
-    rate = p_rate;
-  }
+  Rate(T_time p_time, std::vector<T_rate>& p_rate) :
+    time(p_time),
+    rate(p_rate)
+  {}
 
   // access functions
   T_time get_time() const { return time; }
@@ -69,9 +65,7 @@ struct RateHistory {
         Rates.push_back(newRate);
       }
 
-    // RemoveRate(0);  // remove rate created by default constructor.
-
-    if (!Check()) sort();
+    if (!std::is_sorted(Rates.begin(), Rates.end(), by_time())) sort();
 
     // Create time vector for rates
     vector<T_time> RateTimes(Rates.size(), 0);
@@ -85,7 +79,7 @@ struct RateHistory {
     T_time endTime;
     torsten::Event<T_time, T_amt, T_rate, T_ii> newEvent;
     while (i < events.size()) {
-      if ((events.evid(i) == 1 || events.evid(i) == 4) && (events.rate(i) > 0 && events.amt(i) > 0)) {
+      if ((events.is_dosing(i)) && (events.rate(i) > 0 && events.amt(i) > 0)) {
           endTime = events.time(i) + events.amt(i)/events.rate(i);
           newEvent = newEvent(endTime, 0, 0, 0, 2, events.cmt(i), 0, 0, false, true);
           events.InsertEvent(newEvent);
@@ -99,7 +93,7 @@ struct RateHistory {
             newRate.time = endTime;
             Rates.push_back(newRate);
             // InsertRate(newRate);
-            if (!Check()) sort();
+            if (!std::is_sorted(Rates.begin(), Rates.end(), by_time())) sort();
             RateTimes.push_back(endTime);
             std::sort(RateTimes.begin(), RateTimes.end());
           }
@@ -116,7 +110,7 @@ struct RateHistory {
     }
 
     // Sort events and rates
-    if (!Check()) sort();
+    if (!std::is_sorted(Rates.begin(), Rates.end(), by_time())) sort();
     if (!events.Check()) events.Sort();
   }
 
@@ -124,16 +118,16 @@ struct RateHistory {
 
   T_rate rate(int i, int j) { return Rates[i].rate[j]; }
 
-  bool Check() {
-    int i = Rates.size() - 1;
-    bool ordered = true;
+  // bool Check() {
+  //   int i = Rates.size() - 1;
+  //   bool ordered = true;
 
-    while ((i > 0) && (ordered)) {
-      ordered = (Rates[i].time >= Rates[i - 1].time);
-      i--;
-    }
-    return ordered;
-  }
+  //   while ((i > 0) && (ordered)) {
+  //     ordered = (Rates[i].time >= Rates[i - 1].time);
+  //     i--;
+  //   }
+  //   return ordered;
+  // }
 
   struct by_time {
     bool operator()(Rate<T_time, T_rate> const &a, Rate<T_time, T_rate>

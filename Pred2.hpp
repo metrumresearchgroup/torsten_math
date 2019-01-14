@@ -59,7 +59,7 @@ namespace torsten{
      */
     template<typename... T_em, typename... Ts>
     void pred(EventsManager<T_em...>& em,
-              Eigen::Matrix<typename EventsManager<T_em...>::T_scalar, -1, -1>& pred,
+              Eigen::Matrix<typename EventsManager<T_em...>::T_scalar, -1, -1>& res,
               const T_pred... pred_pars,
               const Ts... model_pars) {
       using Eigen::Matrix;
@@ -75,7 +75,7 @@ namespace torsten{
       auto model_amt = em.amts();
       auto model_par = em.pars();
 
-      PKRec<scalar> zeros = PKRec<scalar>::Zero(pred.cols());
+      PKRec<scalar> zeros = PKRec<scalar>::Zero(res.cols());
       PKRec<scalar> init = zeros;
       auto dt = events.time(0);
       auto tprev = events.time(0);
@@ -125,12 +125,34 @@ namespace torsten{
         }
 
         if (events.keep(i)) {
-          pred.row(ikeep) = init;
+          res.row(ikeep) = init;
           ikeep++;
         }
         tprev = events.time(i);
       }
     }
+
+    // /* MPI */
+    //     template<typename... T_em, typename... Ts>
+    // void pred(EventsManager<T_em...>& em,
+    //           Eigen::Matrix<double, -1, -1>& res,
+    //           const T_pred... pred_pars,
+    //           const Ts... model_pars) {
+    //   using Eigen::Matrix;
+    //   using Eigen::Dynamic;
+    //   using std::vector;
+    //   using::stan::math::multiply;
+    //   using refactor::PKRec;
+
+    //   using scalar = typename EventsManager<T_em...>::T_scalar;
+    //   if(stan::is_var<scalar>::value) {
+    //     Eigen::Matrix<scalar, -1, -1> pred_var(em.nKeep, em.ncmt);
+    //     pred(em, pred_var, pred_pars..., model_pars...);
+        
+    //   } else {
+    //     pred(em, res, pred_pars..., model_pars...);
+    //   }
+    // }
   };
 }
 

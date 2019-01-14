@@ -22,6 +22,7 @@ struct EventsManager {
   std::vector<T_amt> amt_v;
   std::vector<std::vector<T_par> > par_v;
   int nKeep;
+  int ncmt;
 
   EventsManager(int nCmt,
                 const std::vector<T0>& time,
@@ -40,7 +41,8 @@ struct EventsManager {
     rate_v(),
     amt_v(),
     par_v(),
-    nKeep(0)
+    nKeep(0),
+    ncmt(nCmt)
   {
     event_his.Sort();
     param_his.Sort();
@@ -91,7 +93,8 @@ struct EventsManager {
     param_his(time, biovar, tlag, systems),
     rate_v(),
     amt_v(),
-    nKeep(0)
+    nKeep(0),
+    ncmt(nCmt)
   {
     event_his.Sort();
     param_his.Sort();
