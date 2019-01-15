@@ -9,29 +9,20 @@
 namespace torsten {
 
 /**
- * The Rate class defines objects that contain the rate in each compartment
- * at each time of the event schedule (but not nescessarily at each event,
- * since two events may happen at the same time).
- */
-template<typename T_time, typename T_rate>
-struct Rate {
-  T_time time;
-  std::vector<T_rate> rate;  // rate for each compartment
-
-  Rate() {}
-
-  Rate(T_time p_time, std::vector<T_rate>& p_rate) :
-    time(p_time),
-    rate(p_rate)
-  {}
-};
-
-/**
  * The RateHistory class defines objects that contain a vector of rates,
  * along with a series of functions that operate on them.
  */
 template <typename T_time, typename T_rate>
 struct RateHistory {
+
+  template<typename T1, typename T2>
+  struct Rate {
+    T1 time;
+    std::vector<T2> rate;
+    Rate() {}
+    Rate(T1 p_time, std::vector<T2>& p_rate) : time(p_time), rate(p_rate) {}
+  };
+
   std::vector<Rate<T_time, T_rate> > Rates;
 
   /*
@@ -103,17 +94,6 @@ struct RateHistory {
   T_time time(int i) { return Rates[i].time; }
 
   T_rate rate(int i, int j) { return Rates[i].rate[j]; }
-
-  // bool Check() {
-  //   int i = Rates.size() - 1;
-  //   bool ordered = true;
-
-  //   while ((i > 0) && (ordered)) {
-  //     ordered = (Rates[i].time >= Rates[i - 1].time);
-  //     i--;
-  //   }
-  //   return ordered;
-  // }
 
   struct by_time {
     bool operator()(Rate<T_time, T_rate> const &a, Rate<T_time, T_rate>

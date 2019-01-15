@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
+#include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <string>
 #include <vector>
@@ -21,6 +22,7 @@ struct EventsManager {
   std::vector<std::vector<T_rate> > rate_v;
   std::vector<T_amt> amt_v;
   std::vector<std::vector<T_par> > par_v;
+  std::vector<std::vector<typename stan::return_type<T_rate, T_amt, T_par>::type> > vars_v;
   int nKeep;
   int ncmt;
 
@@ -41,6 +43,7 @@ struct EventsManager {
     rate_v(),
     amt_v(),
     par_v(),
+    vars_v(),
     nKeep(event_his.size()),
     ncmt(nCmt)
   {
@@ -74,6 +77,14 @@ struct EventsManager {
       auto p = param_his.GetModelParameters(i);
       par_v[i] = p.get_RealParameters();
     }
+
+    if (stan::is_var<T_rate>::value || stan::is_var<T_amt>::value || stan::is_var<T_par>::value) {
+      vars_v.resize(event_his.size());
+      for (size_t i = 0; i < event_his.size(); ++i) {    
+        std::vector<T_amt> amt_tmp{amt_v[i]};
+        vars_v[i] = torsten::dsolve::pk_vars(rate_v[i], amt_tmp, par_v[i]);
+      }
+    }
   }
 
   EventsManager(int nCmt,
@@ -92,6 +103,7 @@ struct EventsManager {
     param_his(time, biovar, tlag, systems),
     rate_v(),
     amt_v(),
+    vars_v(),
     nKeep(0),
     ncmt(nCmt)
   {
@@ -129,6 +141,14 @@ struct EventsManager {
       for (size_t j = 0; j < par.size(); ++j) par[j] = k(j);
       par_v[i] = par;
     }
+
+    if (stan::is_var<T_rate>::value || stan::is_var<T_amt>::value || stan::is_var<T_par>::value) {
+      vars_v.resize(event_his.size());
+      for (size_t i = 0; i < event_his.size(); ++i) {    
+        std::vector<T_amt> amt_tmp{amt_v[i]};
+        vars_v[i] = torsten::dsolve::pk_vars(rate_v[i], amt_tmp, par_v[i]);
+      }
+    }
   }
 
   EventHistory<T_time, T1, T2, T3>& events() {
@@ -150,6 +170,11 @@ struct EventsManager {
   std::vector<std::vector<T_par> >& pars() {
     return par_v;
   }
+
+  std::vector<std::vector<typename stan::return_type<T_rate, T_amt, T_par>::type> >& vars() {
+    return vars_v;
+  }
+
 };
 
 }
