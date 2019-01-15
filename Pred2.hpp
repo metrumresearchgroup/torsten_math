@@ -58,10 +58,10 @@ namespace torsten{
      * at each event.
      */
     template<typename... T_em, typename... Ts>
-    void pred(EventsManager<T_em...>& em,
-              Eigen::Matrix<typename EventsManager<T_em...>::T_scalar, -1, -1>& res,
-              const T_pred... pred_pars,
-              const Ts... model_pars) {
+    static void pred(EventsManager<T_em...>& em,
+                     Eigen::Matrix<typename EventsManager<T_em...>::T_scalar, -1, -1>& res,
+                     const T_pred... pred_pars,
+                     const Ts... model_pars) {
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using std::vector;
@@ -132,27 +132,147 @@ namespace torsten{
       }
     }
 
-    // /* MPI */
-    //     template<typename... T_em, typename... Ts>
-    // void pred(EventsManager<T_em...>& em,
-    //           Eigen::Matrix<double, -1, -1>& res,
-    //           const T_pred... pred_pars,
-    //           const Ts... model_pars) {
-    //   using Eigen::Matrix;
-    //   using Eigen::Dynamic;
-    //   using std::vector;
-    //   using::stan::math::multiply;
-    //   using refactor::PKRec;
+#ifdef TORSTEN_MPI
+    template<typename T_E, typename... Ts,
+             typename std::enable_if_t<
+               stan::is_var<stan::return_type<typename T_E::T_amt, typename T_E::T_rate, typename T_E::T_par>::type>::value>* = nullptr> //NOLINT
+    static void pred(std::vector<T_E>& em,
+                     std::vector<Eigen::Matrix<typename EventsManager<T_em...>::T_scalar, -1, -1>>& res,
+                     const T_pred... pred_pars,
+                     const Ts... model_pars) {
+      using Eigen::Matrix;
+      using Eigen::Dynamic;
+      using std::vector;
 
-    //   using scalar = typename EventsManager<T_em...>::T_scalar;
-    //   if(stan::is_var<scalar>::value) {
-    //     Eigen::Matrix<scalar, -1, -1> pred_var(em.nKeep, em.ncmt);
-    //     pred(em, pred_var, pred_pars..., model_pars...);
-        
-    //   } else {
-    //     pred(em, res, pred_pars..., model_pars...);
-    //   }
-    // }
+      static const char* caller = "PredWrapper::pred";
+      stan::math::check_less(caller, "population size", em.size(), res.size());
+
+      // make sure MPI is on
+      int intialized;
+      MPI_Initialized(&intialized);
+      stan::math::check_greater("pk_integrate_ode_bdf", "MPI_Intialized", intialized, 0);
+
+      MPI_Comm comm;
+      comm = MPI_COMM_WORLD;
+      int rank, size;
+      MPI_Comm_size(comm, &size);
+      MPI_Comm_rank(comm, &rank);
+
+      size_t np = em.size();
+      MPI_Request req[np];
+
+      std::vector<Matrix<double, Dynamic, Dynamic> > res_mpi(em.size());
+      for (int i = 0; i < np; ++i) {
+        res[i].resize(em[i].nKeep, em[i].ncmt);
+        int nsys = em[i].ncmt * (em[i].vars(0).size() + 1);
+        res_mpi[i].resize(em[i].nKeep, nsys);
+        int my_worker_id = torsten::mpi::my_worker(i, np, size);      
+        if(rank == my_worker_id) {
+          pred(em[i], res[i], pred_pars..., model_pars...);
+          try {
+            stan::math::start_nested();
+            std::vector<double> g;
+            for (size_t j = 0; j < em[i].ncmt; ++j) {
+              for (size_t k = 0; k < em[i].nKeep; ++k) {
+                stan::math::set_zero_all_adjoints_nested();
+                res_mpi[i](k, j * nsys) = res[i](k, j).val();
+                res[i](k, j).grad(em[i].vars(k), g);
+                for (size_t l = 0; l < g.size(); ++l) {
+                  res_mpi[i](k, j * nsys + l + 1) = g[l];
+                }
+              }
+            }
+          } catch (const std::exception& e) {
+            std::an::math::recover_memory_nested();
+            throw;
+          }
+          stan::math::recover_memory_nested();
+
+          MPI_Ibcast(res_mpi[i].data(), res_mpi[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
+        }
+      }
+
+      int finished = 0;
+      int flag = 0;
+      int index;
+      while(finished != np) {
+        MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
+        if(flag) {
+          int i = index;
+          int nsys = em[i].ncmt * (em[i].vars(0).size() + 1);
+          std::vector<double> g(nsys - 1);
+          int my_worker_id = torsten::mpi::my_worker(i, np, size);
+          if(rank != my_worker_id) {
+            for (size_t j = 0; j < em[i].ncmt; ++j) {
+              for (size_t k = 0; k < em[i].nKeep; ++k) {
+                for (int l = 0 ; l < g.size(); ++l) g[l] = res_mpi[i](k, j * nsys + l + 1);
+                res[i](k, j) = precomputed_gradients(res_i[i](k, j * nsys), em[i].vars(k), g);
+              }
+            }
+          }
+          finished++;
+        }
+      }
+    }
+
+    template<typename T_E, typename... Ts,
+             typename std::enable_if_t<
+               !stan::is_var<stan::return_type<typename T_E::T_amt, typename T_E::T_rate, typename T_E::T_par>::type>::value>* = nullptr> //NOLINT
+    static void pred(std::vector<T_E>& em,
+                     std::vector<Eigen::Matrix<double, -1, -1> >& res,
+                     const T_pred... pred_pars,
+                     const Ts... model_pars) {
+      static const char* caller = "PredWrapper::pred";
+      stan::math::check_less(caller, "population size", em.size(), res.size());
+
+      // make sure MPI is on
+      int intialized;
+      MPI_Initialized(&intialized);
+      stan::math::check_greater("pk_integrate_ode_bdf", "MPI_Intialized", intialized, 0);
+
+      MPI_Comm comm;
+      comm = MPI_COMM_WORLD;
+      int rank, size;
+      MPI_Comm_size(comm, &size);
+      MPI_Comm_rank(comm, &rank);
+
+      size_t np = em.size();
+      MPI_Request req[np];
+
+      for (int i = 0; i < np; ++i) {
+        res[i].resize(em[i].nKeep, em[i].ncmt);
+        int my_worker_id = torsten::mpi::my_worker(i, np, size);      
+        if(rank == my_worker_id) {
+          pred(em[i], res[i], pred_pars..., model_pars...);
+        }
+        MPI_Ibcast(res[i].data(), res[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
+
+        int finished = 0;
+        int flag = 0;
+        int index;
+        while(finished != np) {
+          MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
+          if(flag) {
+            finished++;
+          }
+        }
+      }
+    }
+#else
+    template<typename... T_em, typename... Ts>
+    static void pred(std::vector<EventsManager<T_em...> >& em,
+                     std::vector<Eigen::Matrix<typename EventsManager<T_em...>::T_scalar, -1, -1> >& res,
+                     const T_pred... pred_pars,
+                     const Ts... model_pars) {
+      static const char* caller = "PredWrapper::pred";
+      stan::math::check_less_or_equal(caller, "population size", em.size(), res.size());
+
+      for (size_t i = 0; i < em.size(); ++i) {
+        res[i].resize(em[i].nKeep, em[i].ncmt);
+        pred(em[i], res[i], pred_pars..., model_pars...);
+      }
+    }    
+#endif    
   };
 }
 

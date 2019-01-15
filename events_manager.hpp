@@ -23,8 +23,8 @@ struct EventsManager {
   std::vector<T_amt> amt_v;
   std::vector<std::vector<T_par> > par_v;
   std::vector<std::vector<typename stan::return_type<T_rate, T_amt, T_par>::type> > vars_v;
-  int nKeep;
-  int ncmt;
+  const int nKeep;
+  const int ncmt;
 
   EventsManager(int nCmt,
                 const std::vector<T0>& time,
@@ -104,12 +104,11 @@ struct EventsManager {
     rate_v(),
     amt_v(),
     vars_v(),
-    nKeep(0),
+    nKeep(event_his.size()),
     ncmt(nCmt)
   {
     event_his.Sort();
     param_his.Sort();
-    nKeep = event_his.size();
 
     event_his.AddlDoseEvents();
     param_his.CompleteParameterHistory(event_his);
@@ -173,6 +172,10 @@ struct EventsManager {
 
   std::vector<std::vector<typename stan::return_type<T_rate, T_amt, T_par>::type> >& vars() {
     return vars_v;
+  }
+
+  std::vector<typename stan::return_type<T_rate, T_amt, T_par>::type>& vars(int i) {
+    return vars_v[i];
   }
 
 };

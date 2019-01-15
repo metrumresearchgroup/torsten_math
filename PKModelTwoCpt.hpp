@@ -66,8 +66,8 @@ PKModelTwoCpt(const std::vector<T0>& time,
   using stan::math::check_positive_finite;
   using refactor::PKRec;
 
-  int nCmt = 3;
-  int nParms = 5;
+  int nCmt = refactor::PKTwoCptModel<double, double, double, double>::Ncmt;
+  int nParms = refactor::PKTwoCptModel<double, double, double, double>::Npar;
   static const char* function("PKModelTwoCpt");
 
   // Check arguments
@@ -317,6 +317,49 @@ PKModelTwoCpt(const std::vector<T0>& time,
 
   return PKModelTwoCpt(time, amt, rate, ii, evid, cmt, addl, ss,
                        pMatrix, biovar, vec_tlag);
+}
+
+  /* 
+   * For population models, we follow the call signature
+   * with the only change that each argument adds an additional
+   * level of vector. The size of that vector is the siez of
+   * the population.
+   */
+template <typename T0, typename T1, typename T2, typename T3, typename T4,
+          typename T5, typename T6>
+std::vector<Eigen::Matrix<typename stan::return_type<T0, T1, T2, T3, typename stan::return_type<T4, T5, T6>::type>::type, // NOLINT
+                          Eigen::Dynamic, Eigen::Dynamic> >
+PKModelTwoCpt(const std::vector<std::vector<T0> >& time,
+              const std::vector<std::vector<T1> >& amt,
+              const std::vector<std::vector<T2> >& rate,
+              const std::vector<std::vector<T3> >& ii,
+              const std::vector<std::vector<int> >& evid,
+              const std::vector<std::vector<int> >& cmt,
+              const std::vector<std::vector<int> >& addl,
+              const std::vector<std::vector<int> >& ss,
+              const std::vector<std::vector<std::vector<T4> > >& pMatrix,
+              const std::vector<std::vector<std::vector<T5> > >& biovar,
+              const std::vector<std::vector<std::vector<T6> > >& tlag) {
+
+  int np = time.size();
+  std::vector<Eigen::Matrix<typename stan::return_type<T0, T1, T2, T3, typename stan::return_type<T4, T5, T6>::type>::type, // NOLINT
+                            Eigen::Dynamic, Eigen::Dynamic>> pred(np);
+  
+  int nCmt = refactor::PKTwoCptModel<double, double, double, double>::Ncmt;
+  // static const char* function("PKModelTwoCpt");
+
+  using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
+  std::vector<EM> em;
+  em.reserve(np);
+  for (int i = 0; i < np; ++i) {
+    em.push_back(EM(nCmt, time[i], amt[i], rate[i], ii[i], evid[i], cmt[i], addl[i], ss[i], pMatrix[i], biovar[i], tlag[i]));
+    pred[i].resize(em[i].nKeep, nCmt);
+  }
+
+  using model_type = refactor::PKTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
+  PredWrapper<model_type> pr;
+  pr.pred(em, pred);
+  return pred;
 }
 
 }
