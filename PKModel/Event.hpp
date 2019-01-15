@@ -105,22 +105,26 @@ struct EventHistory {
   std::vector<Event<T_time, T_amt, T_rate, T_ii> > Events;
 
   template<typename T0, typename T1, typename T2, typename T3>
-  EventHistory(std::vector<T0> p_time, std::vector<T1> p_amt,
-               std::vector<T2> p_rate, std::vector<T3> p_ii,
-               std::vector<int> p_evid, std::vector<int> p_cmt,
-               std::vector<int> p_addl, std::vector<int> p_ss) {
-    int nEvent = p_time.size();
-    if (p_ii.size() == 1) {
-      p_ii.assign(nEvent, 0);
-      p_addl.assign(nEvent, 0);
-    }
-    if (p_ss.size() == 1) p_ss.assign(nEvent, 0);
-
-    Events.resize(nEvent);
-    for (int i = 0; i <= nEvent - 1; i++) {
-      Events[i] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i],
-        p_amt[i], p_rate[i], p_ii[i], p_evid[i], p_cmt[i],
-        p_addl[i], p_ss[i], true, false);
+  EventHistory(const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
+               const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
+               const std::vector<int>& p_evid, const std::vector<int>& p_cmt,
+               const std::vector<int>& p_addl, const std::vector<int>& p_ss)
+    : Events(p_evid.size())
+  {
+    for (size_t i = 0; i < p_evid.size(); i++) {
+      if (p_ii.size() == 1) {   // no additional dosing
+        if (p_ss.size() == 1) {
+          Events[i] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i], p_amt[i], p_rate[i], 0, p_evid[i], p_cmt[i], 0, 0, true, false);
+        } else {
+          Events[i] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i], p_amt[i], p_rate[i], 0, p_evid[i], p_cmt[i], 0, p_ss[i], true, false);
+        }
+      } else {
+        if (p_ss.size() == 1) {
+          Events[i] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i], p_amt[i], p_rate[i], p_ii[i], p_evid[i], p_cmt[i], p_addl[i], 0, true, false);
+        } else {
+          Events[i] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i], p_amt[i], p_rate[i], p_ii[i], p_evid[i], p_cmt[i], p_addl[i], p_ss[i], true, false);
+        }
+      }
     }
   }
 
@@ -169,6 +173,10 @@ struct EventHistory {
 
   bool is_dosing(int i) const {
     return evid(i) == 1 || evid(i) == 4;
+  }
+
+  static bool is_dosing(const std::vector<int>& event_id, int i) {
+    return event_id[i] == 1 || event_id[i] == 4;
   }
 
   bool is_bolus_dosing(int i) const {

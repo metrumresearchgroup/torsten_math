@@ -41,12 +41,11 @@ struct EventsManager {
     rate_v(),
     amt_v(),
     par_v(),
-    nKeep(0),
+    nKeep(event_his.size()),
     ncmt(nCmt)
   {
     event_his.Sort();
     param_his.Sort();
-    nKeep = event_his.size();
 
     event_his.AddlDoseEvents();
     param_his.CompleteParameterHistory(event_his);

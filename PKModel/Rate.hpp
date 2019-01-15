@@ -24,20 +24,6 @@ struct Rate {
     time(p_time),
     rate(p_rate)
   {}
-
-  // access functions
-  T_time get_time() const { return time; }
-  std::vector<T_rate> get_rate() const { return rate; }
-
-  // Overload = operator
-  // Allows us to construct a rate of var from a rate of double
-  template <typename T0, typename T1>
-  void copy(const Rate<T0, T1>& rate1) {
-    time = rate1.get_time();
-    rate.resize(rate1.get_rate().size());
-    for (size_t i = 0; i < rate.size(); i++)
-      rate[i] = rate1.get_rate()[i];
-  }
 };
 
 /**
