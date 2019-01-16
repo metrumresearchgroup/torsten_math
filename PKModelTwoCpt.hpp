@@ -346,7 +346,18 @@ PKModelTwoCpt(const std::vector<std::vector<T0> >& time,
                             Eigen::Dynamic, Eigen::Dynamic>> pred(np);
   
   int nCmt = refactor::PKTwoCptModel<double, double, double, double>::Ncmt;
-  // static const char* function("PKModelTwoCpt");
+  static const char* caller("PKModelTwoCpt");
+  stan::math::check_consistent_sizes(caller, "time", time, "amt",     amt);
+  stan::math::check_consistent_sizes(caller, "time", time, "rate",    rate);
+  stan::math::check_consistent_sizes(caller, "time", time, "ii",      ii);
+  stan::math::check_consistent_sizes(caller, "time", time, "evid",    evid);
+  stan::math::check_consistent_sizes(caller, "time", time, "cmt",     cmt);
+  stan::math::check_consistent_sizes(caller, "time", time, "addl",    addl);
+  stan::math::check_consistent_sizes(caller, "time", time, "ss",      ss);
+  stan::math::check_consistent_sizes(caller, "time", time, "pMatrix", pMatrix);
+  stan::math::check_consistent_sizes(caller, "time", time, "biovar",  biovar);
+  stan::math::check_consistent_sizes(caller, "time", time, "tlag",    tlag);
+
 
   using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
   std::vector<EM> em;

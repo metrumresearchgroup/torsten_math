@@ -135,9 +135,9 @@ namespace torsten{
 #ifdef TORSTEN_MPI
     template<typename T_E, typename... Ts,
              typename std::enable_if_t<
-               stan::is_var<stan::return_type<typename T_E::T_amt, typename T_E::T_rate, typename T_E::T_par>::type>::value>* = nullptr> //NOLINT
+               stan::is_var<typename stan::return_type<typename T_E::T_amt, typename T_E::T_rate, typename T_E::T_par>::type>::value>* = nullptr> //NOLINT
     static void pred(std::vector<T_E>& em,
-                     std::vector<Eigen::Matrix<typename EventsManager<T_em...>::T_scalar, -1, -1>>& res,
+                     std::vector<Eigen::Matrix<typename T_E::T_scalar, -1, -1>>& res,
                      const T_pred... pred_pars,
                      const Ts... model_pars) {
       using Eigen::Matrix;
@@ -145,12 +145,12 @@ namespace torsten{
       using std::vector;
 
       static const char* caller = "PredWrapper::pred";
-      stan::math::check_less(caller, "population size", em.size(), res.size());
+      stan::math::check_less_or_equal(caller, "population size", em.size(), res.size());
 
       // make sure MPI is on
       int intialized;
       MPI_Initialized(&intialized);
-      stan::math::check_greater("pk_integrate_ode_bdf", "MPI_Intialized", intialized, 0);
+      stan::math::check_greater("PredWrapper::pred", "MPI_Intialized", intialized, 0);
 
       MPI_Comm comm;
       comm = MPI_COMM_WORLD;
@@ -183,7 +183,7 @@ namespace torsten{
               }
             }
           } catch (const std::exception& e) {
-            std::an::math::recover_memory_nested();
+            stan::math::recover_memory_nested();
             throw;
           }
           stan::math::recover_memory_nested();
@@ -206,7 +206,7 @@ namespace torsten{
             for (size_t j = 0; j < em[i].ncmt; ++j) {
               for (size_t k = 0; k < em[i].nKeep; ++k) {
                 for (int l = 0 ; l < g.size(); ++l) g[l] = res_mpi[i](k, j * nsys + l + 1);
-                res[i](k, j) = precomputed_gradients(res_i[i](k, j * nsys), em[i].vars(k), g);
+                res[i](k, j) = precomputed_gradients(res_mpi[i](k, j * nsys), em[i].vars(k), g);
               }
             }
           }
@@ -217,18 +217,18 @@ namespace torsten{
 
     template<typename T_E, typename... Ts,
              typename std::enable_if_t<
-               !stan::is_var<stan::return_type<typename T_E::T_amt, typename T_E::T_rate, typename T_E::T_par>::type>::value>* = nullptr> //NOLINT
+               !stan::is_var<typename stan::return_type<typename T_E::T_amt, typename T_E::T_rate, typename T_E::T_par>::type>::value>* = nullptr> //NOLINT
     static void pred(std::vector<T_E>& em,
                      std::vector<Eigen::Matrix<double, -1, -1> >& res,
                      const T_pred... pred_pars,
                      const Ts... model_pars) {
       static const char* caller = "PredWrapper::pred";
-      stan::math::check_less(caller, "population size", em.size(), res.size());
+      stan::math::check_less_or_equal(caller, "population size", em.size(), res.size());
 
       // make sure MPI is on
       int intialized;
       MPI_Initialized(&intialized);
-      stan::math::check_greater("pk_integrate_ode_bdf", "MPI_Intialized", intialized, 0);
+      stan::math::check_greater("PredWrapper::pred", "MPI_Intialized", intialized, 0);
 
       MPI_Comm comm;
       comm = MPI_COMM_WORLD;
@@ -236,7 +236,7 @@ namespace torsten{
       MPI_Comm_size(comm, &size);
       MPI_Comm_rank(comm, &rank);
 
-      size_t np = em.size();
+      int np = em.size();
       MPI_Request req[np];
 
       for (int i = 0; i < np; ++i) {
@@ -246,15 +246,15 @@ namespace torsten{
           pred(em[i], res[i], pred_pars..., model_pars...);
         }
         MPI_Ibcast(res[i].data(), res[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
+      }
 
-        int finished = 0;
-        int flag = 0;
-        int index;
-        while(finished != np) {
-          MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
-          if(flag) {
-            finished++;
-          }
+      int finished = 0;
+      int flag = 0;
+      int index;
+      while(finished != np) {
+        MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
+        if(flag) {
+          finished++;
         }
       }
     }
