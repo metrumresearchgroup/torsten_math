@@ -47,19 +47,35 @@ struct Event{
   {}
 
   Event(T_time p_time, T_amt p_amt, T_rate p_rate, T_ii p_ii, int p_evid,
-    int p_cmt, int p_addl, int p_ss, bool p_keep, bool p_isnew) {
-    time = p_time;
-    amt = p_amt;
-    rate = p_rate;
-    ii = p_ii;
-    evid = p_evid;
-    cmt = p_cmt;
-    addl = p_addl;
-    ss = p_ss;
-    keep = p_keep;
-    isnew = p_isnew;
-  }
+        int p_cmt, int p_addl, int p_ss, bool p_keep, bool p_isnew) :
+    time  (p_time ),
+    amt   (p_amt  ),
+    rate  (p_rate ),
+    ii    (p_ii   ),
+    evid  (p_evid ),
+    cmt   (p_cmt  ),
+    addl  (p_addl ),
+    ss    (p_ss   ),
+    keep  (p_keep ),
+    isnew (p_isnew)
+  {}
 
+  /*
+   * copy constructor
+   */
+  Event(const Event& other) :
+    time  (other.time ),
+    amt   (other.amt  ),
+    rate  (other.rate ),
+    ii    (other.ii   ),
+    evid  (other.evid ),
+    cmt   (other.cmt  ),
+    addl  (other.addl ),
+    ss    (other.ss   ),
+    keep  (other.keep ),
+    isnew (other.isnew)
+  {}
+    
   /**
    * The function operator is handy when we need to define the same event
    * multiple times, as we might in a FOR loop.
@@ -104,6 +120,8 @@ template<typename T_time, typename T_amt, typename T_rate, typename T_ii>
 struct EventHistory {
   std::vector<Event<T_time, T_amt, T_rate, T_ii> > Events;
 
+  EventHistory() : Events() {}
+
   template<typename T0, typename T1, typename T2, typename T3>
   EventHistory(const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
                const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
@@ -127,7 +145,16 @@ struct EventHistory {
       }
     }
   }
-
+  /*
+   * copy constructor
+   */
+  template<typename T0, typename T1, typename T2, typename T3>
+  EventHistory(const EventHistory<T0, T1, T2, T3>& other) : Events() {
+    Events.reserve(other.size());
+    for (size_t i = 0; i < other.size(); ++i) {
+      Events.push_back(other.Events[i]);
+    }
+  }
   /*
    * Check if the events are in chronological order
    */

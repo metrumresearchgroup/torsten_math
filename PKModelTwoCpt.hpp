@@ -1,6 +1,8 @@
 #ifndef STAN_MATH_TORSTEN_PKMODELTWOCPT2_HPP
 #define STAN_MATH_TORSTEN_PKMODELTWOCPT2_HPP
 
+#include <test/unit/math/torsten/test_util.hpp>
+
 #include <Eigen/Dense>
 #include <boost/math/tools/promotion.hpp>
 #include <stan/math/torsten/Pred2.hpp>
@@ -327,7 +329,7 @@ PKModelTwoCpt(const std::vector<T0>& time,
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6>
-std::vector<Eigen::Matrix<typename stan::return_type<T0, T1, T2, T3, typename stan::return_type<T4, T5, T6>::type>::type, // NOLINT
+std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, // NOLINT
                           Eigen::Dynamic, Eigen::Dynamic> >
 PKModelTwoCpt(const std::vector<std::vector<T0> >& time,
               const std::vector<std::vector<T1> >& amt,
@@ -342,9 +344,6 @@ PKModelTwoCpt(const std::vector<std::vector<T0> >& time,
               const std::vector<std::vector<std::vector<T6> > >& tlag) {
 
   int np = time.size();
-  std::vector<Eigen::Matrix<typename stan::return_type<T0, T1, T2, T3, typename stan::return_type<T4, T5, T6>::type>::type, // NOLINT
-                            Eigen::Dynamic, Eigen::Dynamic>> pred(np);
-  
   int nCmt = refactor::PKTwoCptModel<double, double, double, double>::Ncmt;
   static const char* caller("PKModelTwoCpt");
   stan::math::check_consistent_sizes(caller, "time", time, "amt",     amt);
@@ -360,16 +359,13 @@ PKModelTwoCpt(const std::vector<std::vector<T0> >& time,
 
 
   using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
-  std::vector<EM> em;
-  em.reserve(np);
-  for (int i = 0; i < np; ++i) {
-    em.push_back(EM(nCmt, time[i], amt[i], rate[i], ii[i], evid[i], cmt[i], addl[i], ss[i], pMatrix[i], biovar[i], tlag[i]));
-    pred[i].resize(em[i].nKeep, nCmt);
-  }
-
   using model_type = refactor::PKTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;
-  pr.pred(em, pred);
+
+  std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
+
+  pr.pred(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag, pred);
+
   return pred;
 }
 

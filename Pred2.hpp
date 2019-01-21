@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <vector>
+#include <stan/math/torsten/duplicate.hpp>
 #include <stan/math/torsten/pk_twocpt_model.hpp>
 #include <stan/math/torsten/pk_onecpt_model.hpp>
 #include <stan/math/torsten/pk_linode_model.hpp>
@@ -58,7 +59,7 @@ namespace torsten{
      * at each event.
      */
     template<typename... T_em, typename... Ts>
-    static void pred(EventsManager<T_em...>& em,
+    static void pred(const EventsManager<T_em...>& em,
                      Eigen::Matrix<typename EventsManager<T_em...>::T_scalar, -1, -1>& res,
                      const T_pred... pred_pars,
                      const Ts... model_pars) {
@@ -74,8 +75,8 @@ namespace torsten{
       auto model_rate = em.rates();
       auto model_amt = em.amts();
       auto model_par = em.pars();
-
-      PKRec<scalar> zeros = PKRec<scalar>::Zero(res.cols());
+      res.resize(em.nKeep, em.ncmt);
+      PKRec<scalar> zeros = PKRec<scalar>::Zero(em.ncmt);
       PKRec<scalar> init = zeros;
       auto dt = events.time(0);
       auto tprev = events.time(0);
@@ -132,20 +133,52 @@ namespace torsten{
       }
     }
 
+    template<typename T0, typename T1, typename T2, typename T3, typename T4,
+          typename T5, typename T6, typename... Ts>
+    static void pred(int nCmt,
+                     const std::vector<T0>& time,
+                     const std::vector<T1>& amt,
+                     const std::vector<T2>& rate,
+                     const std::vector<T3>& ii,
+                     const std::vector<int>& evid,
+                     const std::vector<int>& cmt,
+                     const std::vector<int>& addl,
+                     const std::vector<int>& ss,
+                     const std::vector<std::vector<T4> >& pMatrix,
+                     const std::vector<std::vector<T5> >& biovar,
+                     const std::vector<std::vector<T6> >& tlag,
+                     Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, -1, -1>& res,
+                     const T_pred... pred_pars,
+                     const Ts... model_pars) {
+      EventsManager<T0, T1, T2, T3, T4, T5, T6> em(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+      pred(em, res, pred_pars..., model_pars...);
+    }
+
 #ifdef TORSTEN_MPI
-    template<typename T_E, typename... Ts,
-             typename std::enable_if_t<
-               stan::is_var<typename stan::return_type<typename T_E::T_amt, typename T_E::T_rate, typename T_E::T_par>::type>::value>* = nullptr> //NOLINT
-    static void pred(std::vector<T_E>& em,
-                     std::vector<Eigen::Matrix<typename T_E::T_scalar, -1, -1>>& res,
+    template<typename T0, typename T1, typename T2, typename T3, typename T4,
+             typename T5, typename T6, typename... Ts>
+    static void pred(int nCmt,
+                     const std::vector<std::vector<T0> >& time,
+                     const std::vector<std::vector<T1> >& amt,
+                     const std::vector<std::vector<T2> >& rate,
+                     const std::vector<std::vector<T3> >& ii,
+                     const std::vector<std::vector<int> >& evid,
+                     const std::vector<std::vector<int> >& cmt,
+                     const std::vector<std::vector<int> >& addl,
+                     const std::vector<std::vector<int> >& ss,
+                     const std::vector<std::vector<std::vector<T4> > >& pMatrix,
+                     const std::vector<std::vector<std::vector<T5> > >& biovar,
+                     const std::vector<std::vector<std::vector<T6> > >& tlag,
+                     std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, -1, -1>>& res,
                      const T_pred... pred_pars,
                      const Ts... model_pars) {
       using Eigen::Matrix;
+      using Eigen::MatrixXd;
       using Eigen::Dynamic;
       using std::vector;
+      using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
 
-      static const char* caller = "PredWrapper::pred";
-      stan::math::check_less_or_equal(caller, "population size", em.size(), res.size());
+      const int np = time.size();
 
       // make sure MPI is on
       int intialized;
@@ -158,27 +191,41 @@ namespace torsten{
       MPI_Comm_size(comm, &size);
       MPI_Comm_rank(comm, &rank);
 
-      size_t np = em.size();
       MPI_Request req[np];
 
-      std::vector<Matrix<double, Dynamic, Dynamic> > res_mpi(em.size());
+      std::vector<MatrixXd> res_d(np);
       for (int i = 0; i < np; ++i) {
-        res[i].resize(em[i].nKeep, em[i].ncmt);
-        int nsys = em[i].ncmt * (em[i].vars(0).size() + 1);
-        res_mpi[i].resize(em[i].nKeep, nsys);
+        EM em(nCmt, time[i], amt[i], rate[i], ii[i], evid[i], cmt[i], addl[i], ss[i], pMatrix[i], biovar[i], tlag[i]);
+        const int nrec = em.nvars() + 1;
+        res_d[i].resize(em.nKeep, em.ncmt * nrec);
+        res[i].resize(em.nKeep, em.ncmt);
         int my_worker_id = torsten::mpi::my_worker(i, np, size);      
         if(rank == my_worker_id) {
-          pred(em[i], res[i], pred_pars..., model_pars...);
+          stan::math::start_nested();
           try {
-            stan::math::start_nested();
-            std::vector<double> g;
-            for (size_t j = 0; j < em[i].ncmt; ++j) {
-              for (size_t k = 0; k < em[i].nKeep; ++k) {
-                stan::math::set_zero_all_adjoints_nested();
-                res_mpi[i](k, j * nsys) = res[i](k, j).val();
-                res[i](k, j).grad(em[i].vars(k), g);
-                for (size_t l = 0; l < g.size(); ++l) {
-                  res_mpi[i](k, j * nsys + l + 1) = g[l];
+            std::vector<T0> time_i = torsten::duplicate<T0, T0>(time[i]);
+            std::vector<T1> amt_i = torsten::duplicate<T1, T1>(amt[i]);
+            std::vector<T2> rate_i = torsten::duplicate<T2, T2>(rate[i]);        
+            std::vector<T3> ii_i = torsten::duplicate<T3, T3>(ii[i]);        
+            std::vector<std::vector<T4> > pMatrix_i = torsten::duplicate<T4, T4>(pMatrix[i]);
+            std::vector<std::vector<T5> > biovar_i = torsten::duplicate<T5, T5>(biovar[i]);
+            std::vector<std::vector<T6> > tlag_i = torsten::duplicate<T6, T6>(tlag[i]);
+            EM e_i(nCmt, time_i, amt_i, rate_i, ii_i, evid[i], cmt[i], addl[i], ss[i], pMatrix_i, biovar_i, tlag_i);
+            // EM e_i(nCmt, time[i], amt[i], rate[i], ii[i], evid[i], cmt[i], addl[i], ss[i], pMatrix[i], biovar[i], tlag[i]);
+            std::vector<double> g(nrec - 1);
+            Eigen::Matrix<typename EM::T_scalar, -1, -1> pred_i;
+            pred(e_i, pred_i, pred_pars..., model_pars...);
+            for (size_t j = 0; j < e_i.ncmt; ++j) {
+              int ikeep = 0;
+              for (size_t k = 0; k < e_i.events().size(); ++k) {
+                if (e_i.events().keep(k)) {
+                  stan::math::set_zero_all_adjoints_nested();
+                  res_d[i](ikeep, j * nrec) = pred_i(ikeep, j).val();
+                  pred_i(ikeep, j).grad(e_i.vars(k), g);
+                  for (size_t l = 0; l < e_i.nvars(); ++l) {
+                    res_d[i](ikeep, j * nrec + l + 1) = g[l];
+                  }
+                  ikeep++;
                 }
               }
             }
@@ -187,8 +234,24 @@ namespace torsten{
             throw;
           }
           stan::math::recover_memory_nested();
+        }
 
-          MPI_Ibcast(res_mpi[i].data(), res_mpi[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
+        MPI_Ibcast(res_d[i].data(), res_d[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
+
+        if(rank == my_worker_id) {
+          for (size_t j = 0; j < em.ncmt; ++j) {
+            int ikeep = 0;
+            for (size_t k = 0; k < em.events().size(); ++k) {
+              if (em.events().keep(k)) {
+                std::vector<double> g(nrec - 1);
+                for (int l = 0 ; l < nrec - 1; ++l) {
+                  g[l] = res_d[i](ikeep, j * nrec + l + 1); 
+                }
+                res[i](ikeep, j) = precomputed_gradients(res_d[i](ikeep, j * nrec), em.vars(k), g);
+                ikeep++;
+              }
+            }
+          }
         }
       }
 
@@ -199,14 +262,15 @@ namespace torsten{
         MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
         if(flag) {
           int i = index;
-          int nsys = em[i].ncmt * (em[i].vars(0).size() + 1);
-          std::vector<double> g(nsys - 1);
           int my_worker_id = torsten::mpi::my_worker(i, np, size);
           if(rank != my_worker_id) {
-            for (size_t j = 0; j < em[i].ncmt; ++j) {
-              for (size_t k = 0; k < em[i].nKeep; ++k) {
-                for (int l = 0 ; l < g.size(); ++l) g[l] = res_mpi[i](k, j * nsys + l + 1);
-                res[i](k, j) = precomputed_gradients(res_mpi[i](k, j * nsys), em[i].vars(k), g);
+            EM em(nCmt, time[i], amt[i], rate[i], ii[i], evid[i], cmt[i], addl[i], ss[i], pMatrix[i], biovar[i], tlag[i]);
+            int nrec = em.nvars() + 1;
+            std::vector<double> g(nrec - 1);
+            for (size_t j = 0; j < em.ncmt; ++j) {
+              for (size_t k = 0; k < em.nKeep; ++k) {
+                for (int l = 0 ; l < nrec - 1; ++l) g[l] = res_d[i](k, j * nrec + l + 1);
+                res[i](k, j) = precomputed_gradients(res_d[i](k, j * nrec), em.vars(k), g);
               }
             }
           }
@@ -215,10 +279,13 @@ namespace torsten{
       }
     }
 
+    /*
+     * Data-only MPI solution
+     */
     template<typename T_E, typename... Ts,
              typename std::enable_if_t<
                !stan::is_var<typename stan::return_type<typename T_E::T_amt, typename T_E::T_rate, typename T_E::T_par>::type>::value>* = nullptr> //NOLINT
-    static void pred(std::vector<T_E>& em,
+    static void pred(const std::vector<T_E>& em,
                      std::vector<Eigen::Matrix<double, -1, -1> >& res,
                      const T_pred... pred_pars,
                      const Ts... model_pars) {
@@ -259,17 +326,32 @@ namespace torsten{
       }
     }
 #else
-    template<typename... T_em, typename... Ts>
-    static void pred(std::vector<EventsManager<T_em...> >& em,
-                     std::vector<Eigen::Matrix<typename EventsManager<T_em...>::T_scalar, -1, -1> >& res,
+    template<typename T0, typename T1, typename T2, typename T3, typename T4,
+             typename T5, typename T6, typename... Ts>
+    static void pred(int nCmt,
+                     const std::vector<std::vector<T0> >& time,
+                     const std::vector<std::vector<T1> >& amt,
+                     const std::vector<std::vector<T2> >& rate,
+                     const std::vector<std::vector<T3> >& ii,
+                     const std::vector<std::vector<int> >& evid,
+                     const std::vector<std::vector<int> >& cmt,
+                     const std::vector<std::vector<int> >& addl,
+                     const std::vector<std::vector<int> >& ss,
+                     const std::vector<std::vector<std::vector<T4> > >& pMatrix,
+                     const std::vector<std::vector<std::vector<T5> > >& biovar,
+                     const std::vector<std::vector<std::vector<T6> > >& tlag,
+                     std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, -1, -1>>& res,
                      const T_pred... pred_pars,
                      const Ts... model_pars) {
-      static const char* caller = "PredWrapper::pred";
-      stan::math::check_less_or_equal(caller, "population size", em.size(), res.size());
+      using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
+      const int np = time.size();
 
-      for (size_t i = 0; i < em.size(); ++i) {
-        res[i].resize(em[i].nKeep, em[i].ncmt);
-        pred(em[i], res[i], pred_pars..., model_pars...);
+      res.resize(np);
+
+      for (int i = 0; i < np; ++i) {
+        EM em(nCmt, time[i], amt[i], rate[i], ii[i], evid[i], cmt[i], addl[i], ss[i], pMatrix[i], biovar[i], tlag[i]);
+        res[i].resize(em.nKeep, em.ncmt);
+        pred(em, res[i], pred_pars..., model_pars...);
       }
     }    
 #endif    

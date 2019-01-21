@@ -17,37 +17,50 @@ struct EventsManager {
   using T_amt = typename stan::return_type<T1, T5>::type;
   using T_par = T4;
 
+  // const std::vector<T0>& time_;
+  // const std::vector<T1>& amt_;
+  // const std::vector<T2>& rate_;
+  // const std::vector<T3>& ii_;
+  // const std::vector<int>& evid_;
+  // const std::vector<int>& cmt_;
+  // const std::vector<int>& addl_;
+  // const std::vector<int>& ss_;
+  // const std::vector<std::vector<T4> >& pMatrix_;
+  // const std::vector<std::vector<T5> >& biovar_;
+  // const std::vector<std::vector<T6> >& tlag_;
+
   EventHistory<T_time, T1, T2, T3> event_his;
-  ModelParameterHistory<T_time, T4, T5, T6> param_his;
   std::vector<std::vector<T_rate> > rate_v;
   std::vector<T_amt> amt_v;
   std::vector<std::vector<T_par> > par_v;
-  std::vector<std::vector<typename stan::return_type<T_rate, T_amt, T_par>::type> > vars_v;
+  std::vector<std::vector<typename stan::return_type<T_rate,T_amt,T_par>::type> > vars_v;
+
   const int nKeep;
   const int ncmt;
 
+  template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
   EventsManager(int nCmt,
-                const std::vector<T0>& time,
-                const std::vector<T1>& amt,
-                const std::vector<T2>& rate,
-                const std::vector<T3>& ii,
+                const std::vector<T0_>& time,
+                const std::vector<T1_>& amt,
+                const std::vector<T2_>& rate,
+                const std::vector<T3_>& ii,
                 const std::vector<int>& evid,
                 const std::vector<int>& cmt,
                 const std::vector<int>& addl,
                 const std::vector<int>& ss,
-                const std::vector<std::vector<T4> >& pMatrix,
-                const std::vector<std::vector<T5> >& biovar,
-                const std::vector<std::vector<T6> >& tlag)
-  : event_his(time, amt, rate, ii, evid, cmt, addl, ss),
-    param_his(time, pMatrix, biovar, tlag),
+                const std::vector<std::vector<T4_> >& pMatrix,
+                const std::vector<std::vector<T5_> >& biovar,
+                const std::vector<std::vector<T6_> >& tlag) :
+    event_his(time, amt, rate, ii, evid, cmt, addl, ss),
     rate_v(),
     amt_v(),
     par_v(),
-    vars_v(),
     nKeep(event_his.size()),
     ncmt(nCmt)
   {
     event_his.Sort();
+
+    ModelParameterHistory<T_time, T4, T5, T6> param_his(time, pMatrix, biovar, tlag);
     param_his.Sort();
 
     event_his.AddlDoseEvents();
@@ -87,27 +100,29 @@ struct EventsManager {
     }
   }
 
+  template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
   EventsManager(int nCmt,
-                const std::vector<T0>& time,
-                const std::vector<T1>& amt,
-                const std::vector<T2>& rate,
-                const std::vector<T3>& ii,
+                const std::vector<T0_>& time,
+                const std::vector<T1_>& amt,
+                const std::vector<T2_>& rate,
+                const std::vector<T3_>& ii,
                 const std::vector<int>& evid,
                 const std::vector<int>& cmt,
                 const std::vector<int>& addl,
                 const std::vector<int>& ss,
-                const std::vector<std::vector<T5> >& biovar,
-                const std::vector<std::vector<T6> >& tlag,
-                const std::vector<Eigen::Matrix<T4, -1, -1> >& systems)
-  : event_his(time, amt, rate, ii, evid, cmt, addl, ss),
-    param_his(time, biovar, tlag, systems),
+                const std::vector<std::vector<T5_> >& biovar,
+                const std::vector<std::vector<T6_> >& tlag,
+                const std::vector<Eigen::Matrix<T4_, -1, -1>>& systems) :
+    event_his(time, amt, rate, ii, evid, cmt, addl, ss),
     rate_v(),
     amt_v(),
-    vars_v(),
+    par_v(),
     nKeep(event_his.size()),
     ncmt(nCmt)
   {
     event_his.Sort();
+
+    ModelParameterHistory<T_time, T4, T5, T6> param_his(time, biovar, tlag, systems);
     param_his.Sort();
 
     event_his.AddlDoseEvents();
@@ -150,23 +165,19 @@ struct EventsManager {
     }
   }
 
-  EventHistory<T_time, T1, T2, T3>& events() {
+  const EventHistory<T_time, T1, T2, T3>& events() const {
     return event_his;
   }
 
-  ModelParameterHistory<T_time, T4, T5, T6>& parameters() {
-    return param_his;
-  }
-
-  std::vector<std::vector<T_rate> >& rates() {
+  const std::vector<std::vector<T_rate> >& rates() const {
     return rate_v;
   }
 
-  std::vector<T_amt>& amts() {
+  const std::vector<T_amt>& amts() const {
     return amt_v;
   }
 
-  std::vector<std::vector<T_par> >& pars() {
+  const std::vector<std::vector<T_par> >& pars() const {
     return par_v;
   }
 
@@ -176,6 +187,10 @@ struct EventsManager {
 
   std::vector<typename stan::return_type<T_rate, T_amt, T_par>::type>& vars(int i) {
     return vars_v[i];
+  }
+
+  int nvars() const {
+    return vars_v[0].size();
   }
 
 };
