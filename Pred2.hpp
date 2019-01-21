@@ -87,18 +87,7 @@ namespace torsten{
         if (events.is_reset(i)) {
           dt = 0;
           init = zeros;
-        } else {
-          dt = events.time(i) - tprev;
-          decltype(tprev) model_time = tprev;
-
-          // FIX ME: we need a better way to relate model type to parameter type
-          T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
-
-          pred1 = pkmodel.solve(dt, pred_pars...);
-          init = pred1;
-        }
-
-        if ((events.is_dosing(i) && (events.ss(i) == 1 || events.ss(i) == 2)) || events.ss(i) == 3) {  // steady state event
+        } else if ((events.is_dosing(i) && (events.ss(i) == 1 || events.ss(i) == 2)) || events.ss(i) == 3) {  // steady state event
           decltype(tprev) model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
           // auto model_par = parameter.get_RealParameters();
           // FIX ME: we need a better way to relate model type to parameter type
@@ -119,6 +108,15 @@ namespace torsten{
             init += pred1;  // steady state without reset
           else
             init = pred1;  // steady state with reset (ss = 1)
+        } else {           // non-steady dosing event
+          dt = events.time(i) - tprev;
+          decltype(tprev) model_time = tprev;
+
+          // FIX ME: we need a better way to relate model type to parameter type
+          T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
+
+          pred1 = pkmodel.solve(dt, pred_pars...);
+          init = pred1;
         }
 
         if (events.is_bolus_dosing(i)) {
