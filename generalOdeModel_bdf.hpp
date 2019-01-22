@@ -98,8 +98,6 @@ generalOdeModel_bdf(const F& f,
 
   typedef general_functor<F> F0;
 
-  PkOdeIntegrator<StanBdf> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-
   const Pred1_general<F0> pred1(F0(f), rel_tol, abs_tol,
                                 max_num_steps, msgs, "bdf");
   const PredSS_general<F0> predss (F0(f), rel_tol, abs_tol,
@@ -117,7 +115,8 @@ generalOdeModel_bdf(const F& f,
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
 
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
-  PredWrapper<model_type, PkOdeIntegrator<StanBdf>&> pr;
+  PkOdeIntegrator<PkBdf> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PredWrapper<model_type, PkOdeIntegrator<PkBdf>&> pr;
   pr.pred(em, pred, integrator, f);
   return pred;
 

@@ -14,6 +14,30 @@ namespace refactor {
   using torsten::PkOdeIntegrator;
   using torsten::PkOdeIntegratorId;
 
+  /*
+   * when solving ODE with @c var rate, we append it to
+   * parameter vector. Note that spurious @c var
+   * parameters will be generated if the original parameters
+   * are data.
+   */
+  template<typename T>
+  inline std::vector<stan::math::var> parameters_with_rate(const std::vector<T> &par,
+                                                           const std::vector<stan::math::var> &rate)
+  {
+    std::vector<stan::math::var> theta(par.size() + rate.size());
+    for (size_t i = 0; i < par.size();  ++i) theta[i] = par[i];
+    for (size_t i = 0; i < rate.size(); ++i) theta[i + par.size()] = rate[i];
+    return theta;
+  }
+
+  template<typename T>
+  inline std::vector<stan::math::var> parameters_with_rate(const std::vector<T> &par,
+                                                           const std::vector<double> &rate)
+  {
+    std::vector<stan::math::var> res;
+    return res;
+  }
+
   template<typename F, typename T_rate>
   struct PKOdeFunctorRateAdaptor;
 
@@ -193,6 +217,108 @@ namespace refactor {
       ncmt_(m.ncmt())
     {}
     
+    /*
+     * The number of @c var that will be in the ODE
+     * integrator. Note that not all @c var will be
+     * explicitly in an integrator's call signature.
+     * Since we only step one time-step, if @c t0_ is @c var
+     * it only adds one(because @c ts will be of size one). Also note that regardless if @c
+     * par_ is @c var or not, when @c rate_ is @c var we
+     * generate a new @c theta of @c var vector to pass to ODE integrator that
+     * contains both @c par_ and @c rate_.
+     */
+    template<typename T0, typename T1, typename T2, typename T3>
+    static int nvars(const T0& t0,
+                     const Eigen::Matrix<T1, 1, Eigen::Dynamic>& y0,
+                     const std::vector<T2> &rate,
+                     const std::vector<T3> &par) {
+      using stan::is_var;
+      int res = 0;
+      if (is_var<T0>::value) res += 1;
+      if (is_var<T1>::value) res += y0.size();
+      if (is_var<T2>::value) {
+        res += rate.size() + par.size();
+      } else if (is_var<T3>::value) {
+        res += par.size();
+      }
+      return res;
+    }
+
+    /*
+     * generate @c var vector that consisting of all the
+     * parameters used passed to an ODE integrator. The output
+     * will be arranged in order (y0, par, rate, dt)
+     */
+    template<typename T0, typename T1, typename T2, typename T3>
+    static std::vector<stan::math::var> vars(const T0& t1,
+                                             const Eigen::Matrix<T1, 1, Eigen::Dynamic>& y0,
+                                             const std::vector<T2> &rate,
+                                             const std::vector<T3> &par) {
+      using stan::is_var;      
+      std::vector<stan::math::var> res(nvars(t1, y0, rate, par));
+      int i = 0;
+      if (is_var<T1>::value) {
+        for (int j = 0; j < y0.size(); ++j) {
+          res[i] = y0(j);
+          i++;
+        }
+      }
+      if (is_var<T2>::value) {
+        std::vector<stan::math::var> theta(parameters_with_rate(par, rate));
+        for (size_t j = 0; j < theta.size(); ++j) {
+          res[i] = theta[j];
+          i++;
+        }
+      } else if (is_var<T3>::value) {
+        for (size_t j = 0; j < par.size(); ++j) {
+          res[i] = par[j];
+          i++;
+        }
+      }
+
+      if (is_var<T0>::value) {
+        res[i] = t1;
+      }
+
+      return res;
+    }
+
+    /*
+     * Calculate the size of the entire system, with ODe
+     * solutions and their gradients w.r.t. the parameters.
+     */
+    template<typename T0, typename T1, typename T2, typename T3>
+    static int n_sys(const T0& t0,
+                     const Eigen::Matrix<T1, 1, Eigen::Dynamic>& y0,
+                     const std::vector<T2> &rate,
+                     const std::vector<T3> &par) {
+      using stan::is_var;
+      int n = nvars(t0, y0, rate, par);
+      return y0.size() * (n + 1);
+    }
+
+    /*
+     * calculate number of vars with constructed data
+     */
+    int nvars() {
+      return nvars(t0_, y0_, rate_, par_);
+    }
+
+    /*
+     * return @c vars that will be in integrator calls
+     */
+    template<typename T0>
+    std::vector<stan::math::var> vars(const T0 t1) {
+      return vars(t1, y0_, rate_, par_);
+    }
+
+    /*
+     * calculate size of the entire system
+     */
+    int n_sys() const {
+      return n_sys(t0_, y0_, rate_, par_);
+    }
+
     /**
      * @return initial time
      */
@@ -295,12 +421,53 @@ namespace refactor {
         auto y = stan::math::to_array_1d(y0_);
         std::vector<double> x_r;
         std::vector<int> x_i;
-        std::vector<stan::math::var> theta(par_.size() + rate.size());
-        for (size_t i = 0; i < par_.size(); ++i) theta[i] = par_[i];
-        for (size_t i = 0; i < rate.size(); ++i) theta[i + par_.size()] = rate[i];
+        std::vector<stan::math::var> theta(parameters_with_rate(par_, rate));
         std::vector<std::vector<scalar_type> > res_v =
           integrator(f1, y, t0, ts, theta, x_r, x_i); // NOLINT
         res = stan::math::to_vector(res_v[0]);
+      }
+      return res;
+    }
+
+    /*
+     * For @c torsten::PkBdf integrator
+     */
+    Eigen::VectorXd integrate0(const std::vector<stan::math::var> &rate,
+                               const T_time& dt,
+                               const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
+      using stan::math::var;
+      using stan::math::value_of;
+
+      const double t0 = value_of(t0_);
+      std::vector<T_time> ts{t0_ + dt};
+      Eigen::VectorXd res(n_sys());
+      if (ts[0] == t0_) {
+        res = stan::math::value_of(y0_);
+        res.resize(n_sys());
+      } else {
+        auto y = stan::math::to_array_1d(y0_);
+        std::vector<double> x_r;
+        std::vector<int> x_i;
+        std::vector<stan::math::var> theta(parameters_with_rate(par_, rate));
+        res = integrator.solve(f1, y, t0, ts, theta, x_r, x_i).row(0);
+      }
+      return res;
+    }
+
+    Eigen::VectorXd integrate0(const std::vector<double> &rate,
+                              const T_time& dt,
+                              const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
+      using stan::math::value_of;
+
+      Eigen::VectorXd res(n_sys());
+      const double t0 = value_of(t0_);
+      std::vector<T_time> ts{t0_ + dt};
+      if (ts[0] == t0_) {
+
+      } else {
+        auto y = stan::math::to_array_1d(y0_);
+        std::vector<int> x_i;
+        res = integrator.solve(f1, y, t0, ts, par_, rate, x_i).row(0);
       }
       return res;
     }
@@ -324,7 +491,22 @@ namespace refactor {
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     solve(const T_time& dt,
           const PkOdeIntegrator<It>& integrator) const {
+
+      // static const char* caller = "PKODEModel::solve";
+      // stan::math::check_greater(caller, "time step", dt, 0.0);
+
       return integrate(rate_, dt, integrator);
+    }
+
+    /*
+     * specialization
+     */
+    Eigen::VectorXd solve0(const T_time& dt,
+                          const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
+      static const char* caller = "PKODEModel::solve";
+      stan::math::check_greater(caller, "time step", dt, 0.0);
+
+      return integrate0(rate_, dt, integrator);
     }
 
     /**
