@@ -33,7 +33,7 @@ struct EventsManager {
   std::vector<std::vector<T_rate> > rate_v;
   std::vector<T_amt> amt_v;
   std::vector<std::vector<T_par> > par_v;
-  std::vector<std::vector<typename stan::return_type<T_rate,T_amt,T_par>::type> > vars_v;
+  std::vector<std::vector<stan::math::var> > vars_v;
 
   const int nKeep;
   const int ncmt;
@@ -181,11 +181,11 @@ struct EventsManager {
     return par_v;
   }
 
-  std::vector<std::vector<typename stan::return_type<T_rate, T_amt, T_par>::type> >& vars() {
+  std::vector<std::vector<stan::math::var> >& vars() {
     return vars_v;
   }
 
-  std::vector<typename stan::return_type<T_rate, T_amt, T_par>::type>& vars(int i) {
+  std::vector<stan::math::var>& vars(int i) {
     return vars_v[i];
   }
 

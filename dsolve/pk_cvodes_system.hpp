@@ -248,7 +248,7 @@ namespace torsten {
        *
        * @return vector of vars
        */
-      std::vector<scalar_type> vars() const {
+      std::vector<stan::math::var> vars() const {
         return torsten::dsolve::pk_vars(y0_, theta_, ts_);
       }
 
