@@ -67,6 +67,10 @@ namespace dsolve {
     void solve(PKCvodesFwdSystem<F, double, Ty0, Tpar, Lmm, Sm>& ode,
                Eigen::MatrixXd& res_y);
 
+    template <typename F, typename Ty0, typename Tpar, int Lmm, PkCvodesSensMethod Sm>
+    void solve(PKCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, Lmm, Sm>& ode, // NOLINT
+                                   Eigen::MatrixXd& res_y);
+
     // TODO
     // template <typename F, typename Ty0, typename Tpar, int Lmm, PkCvodesSensMethod Sm>
     // void solve(PKCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, Lmm, Sm>& ode,
@@ -418,6 +422,51 @@ namespace dsolve {
           g[i + ns] = ode.fval()[k];
           res_y[i][k] = precomputed_gradients(NV_Ith_S(y, k), vars, g);
           g[i + ns] = 0.0;
+        }
+      }
+    }
+  }
+
+  /**
+   * Solve Ode system with forward sensitivty, return a
+   * vector of var with precomputed gradient as sensitivity
+   * value, when @c ts, @c theta and/or @c y0 are parameters.
+   *
+   * @tparam Ode ODE system type
+   * @param[out] ode ODE system
+   * @param[out] res_y ODE solutions with sensitivity,
+   * arranged as (sol value, grad(y0), grad(theta), grad(ts))
+   */
+  template <typename F, typename Ty0, typename Tpar, int Lmm, PkCvodesSensMethod Sm> // NOLINT
+  void PKCvodesIntegrator::solve(PKCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, Lmm, Sm>& ode, // NOLINT
+                                 Eigen::MatrixXd& res_y) {
+    using stan::math::precomputed_gradients;
+    using stan::math::var;
+    double t1 = ode.t0();
+    const std::vector<var>& ts = ode.ts();
+    auto mem = ode.mem();
+    auto y = ode.nv_y();
+    auto ys = ode.nv_ys();
+    const int n = ode.n();
+    const int ns = ode.ns();
+    const int nsol = ode.n_sol();
+    auto vars = ode.vars();
+
+    res_y = Eigen::MatrixXd::Zero(ts.size(), ode.n_sys());
+
+    for (size_t i = 0; i < ts.size(); ++i) {
+      double time = value_of(ts[i]);
+      CHECK_SUNDIALS_CALL(CVode(mem, time, y, &t1, CV_NORMAL));
+      if (ode.need_fwd_sens) {
+        CHECK_SUNDIALS_CALL(CVodeGetSens(mem, &t1, ys));
+        ode.eval_rhs(time, y);
+        for (int k = 0; k < n; ++k) {
+          int j0 = k * nsol;
+          res_y(i, j0) = NV_Ith_S(y, k);
+          for (int j = 0; j < ns; ++j) {
+              res_y(i, j0 + j + 1) = NV_Ith_S(ys[j], k);
+          }
+          res_y(i, j0 + ns + 1 + i) = ode.fval()[k];
         }
       }
     }
