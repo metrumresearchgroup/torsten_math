@@ -406,9 +406,8 @@ namespace torsten{
      * @return a matrix with predicted amount in each compartment
      * at each event.
      */
-    template<typename... T_em, typename F,
-             typename std::enable_if_t<stan::is_var<typename EventsManager<T_em...>::T_scalar>::value>* = nullptr>
-    static void pred(EventsManager<T_em...>& em,
+    template<typename F, typename... T_em, typename... Ts>
+    static void pred(const EventsManager<T_em...>& em,
                      Eigen::Matrix<typename EventsManager<T_em...>::T_scalar, -1, -1>& res,
                      const PkOdeIntegrator<PkBdf>& integrator,
                      const F& f) {
@@ -419,10 +418,6 @@ namespace torsten{
       using refactor::PKRec;
 
       using scalar = typename EventsManager<T_em...>::T_scalar;
-      using T_time = typename EventsManager<T_em...>::T_time;
-      // using T_rate = typename EventsManager<T_em...>::T_rate;
-      // using T_par = typename EventsManager<T_em...>::T_par;
-      using T_model = refactor::PKODEModel<T_model_pars...>;
 
       auto events = em.events();
       auto model_rate = em.rates();
@@ -431,13 +426,12 @@ namespace torsten{
       res.resize(em.nKeep, em.ncmt);
       PKRec<scalar> zeros = PKRec<scalar>::Zero(em.ncmt);
       PKRec<scalar> init = zeros;
-      T_time dt = events.time(0);
-      T_time tprev = events.time(0);
+      auto dt = events.time(0);
+      auto tprev = events.time(0);
+      Matrix<scalar, Dynamic, 1> pred1;
       int ikeep = 0;
 
-      Matrix<scalar, Dynamic, 1> pred1;
-
-      // std::cout << "taki time is var: " << stan::is_var<T_time>::value << "\n";
+      using T_model = refactor::PKODEModel<T_model_pars...>;
 
       for (size_t i = 0; i < events.size(); i++) {
         if (events.is_reset(i)) {
@@ -448,7 +442,7 @@ namespace torsten{
           // auto model_par = parameter.get_RealParameters();
           // FIX ME: we need a better way to relate model type to parameter type
           T_model pkmodel {model_time, init, model_rate[i], model_par[i], f};
-          auto pred1 = multiply(pkmodel.solve(model_amt[i], //NOLINT
+          pred1 = multiply(pkmodel.solve(model_amt[i], //NOLINT
                                          events.rate(i),
                                          events.ii(i),
                                          events.cmt(i),
@@ -464,20 +458,15 @@ namespace torsten{
             init += pred1;  // steady state without reset
           else
             init = pred1;  // steady state with reset (ss = 1)
-        } else {
+        } else {           // non-steady dosing event
           dt = events.time(i) - tprev;
-          if (dt > 0) {
-            decltype(tprev) model_time = tprev;
+          decltype(tprev) model_time = tprev;
 
-            T_model pkmodel {model_time, init, model_rate[i], model_par[i], f};
-            std::vector<stan::math::var> vars = pkmodel.vars(events.time(i));
-            PKRec<double> pred1 = pkmodel.solve0(dt, integrator);
+          // FIX ME: we need a better way to relate model type to parameter type
+          T_model pkmodel {model_time, init, model_rate[i], model_par[i], f};
 
-            init = torsten::mpi::precomputed_gradients(pred1, vars);
-
-            // auto pred1 = pkmodel.solve(dt, integrator);
-            // init = pred1;
-          }
+          pred1 = pkmodel.solve(dt, integrator);
+          init = pred1;
         }
 
         if (events.is_bolus_dosing(i)) {
@@ -565,6 +554,198 @@ namespace torsten{
         tprev = events.time(i);
       }
     }
+
+#ifdef TORSTEN_MPI
+    /*
+     * MPI solution when @c amt is data and there is no steady-state dosing events
+     */
+    template<typename T0, typename T1, typename T2, typename T3, typename T4,
+             typename T5, typename T6, typename F,
+             typename std::enable_if_t<!stan::is_var<T1>::value >* = nullptr>
+    static void pred(int nCmt,
+                     const std::vector<std::vector<T0> >& time,
+                     const std::vector<std::vector<T1> >& amt,
+                     const std::vector<std::vector<T2> >& rate,
+                     const std::vector<std::vector<T3> >& ii,
+                     const std::vector<std::vector<int> >& evid,
+                     const std::vector<std::vector<int> >& cmt,
+                     const std::vector<std::vector<int> >& addl,
+                     const std::vector<std::vector<int> >& ss,
+                     const std::vector<std::vector<std::vector<T4> > >& pMatrix,
+                     const std::vector<std::vector<std::vector<T5> > >& biovar,
+                     const std::vector<std::vector<std::vector<T6> > >& tlag,
+                     std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, -1, -1> >& res,
+                     const PkOdeIntegrator<PkBdf>& integrator,
+                     const F& f) {
+      using Eigen::Matrix;
+      using Eigen::MatrixXd;
+      using Eigen::VectorXd;
+      using Eigen::Dynamic;
+      using std::vector;
+      using::stan::math::var;
+      using::stan::math::multiply;
+      using refactor::PKRec;
+
+      using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
+      using scalar = typename EM::T_scalar;
+      using T_model = refactor::PKODEModel<T_model_pars...>;
+
+      const int np = time.size();
+
+      // make sure MPI is on
+      int intialized;
+      MPI_Initialized(&intialized);
+      stan::math::check_greater("PredWrapper::pred", "MPI_Intialized", intialized, 0);
+
+      MPI_Comm comm;
+      comm = MPI_COMM_WORLD;
+      int rank, size;
+      MPI_Comm_size(comm, &size);
+      MPI_Comm_rank(comm, &rank);
+
+      MPI_Request req[np];
+      vector<MatrixXd> res_d(np);
+      
+      res.resize(np);
+      std::vector<int> nvars(np);
+
+      for (int id = 0; id < np; ++id) {
+
+        /* For every rank */
+
+        EM em(nCmt, time[id], amt[id], rate[id], ii[id], evid[id], cmt[id], addl[id], ss[id], pMatrix[id], biovar[id], tlag[id]);
+        res[id].resize(em.nKeep, em.ncmt);
+
+        auto events = em.events();
+        auto model_rate = em.rates();
+        auto model_amt = em.amts();
+        auto model_par = em.pars();
+        PKRec<scalar> zeros = PKRec<scalar>::Zero(em.ncmt);
+        PKRec<scalar> init = zeros;
+
+        nvars[id] = T_model::nvars(events.time(0), init, model_rate[0], model_par[0]);
+        int nsys = T_model::n_sys(events.time(0), init, model_rate[0], model_par[0]);
+        res_d[id].resize(events.size(), nsys);
+
+        typename EM::T_time dt = events.time(0);
+        typename EM::T_time tprev = events.time(0);
+
+        PKRec<double> pred1 = VectorXd::Zero(nsys);
+        int ikeep = 0;
+
+        int my_worker_id = torsten::mpi::my_worker(id, np, size);
+
+        /* only solver rank */
+
+        if (rank == my_worker_id) {
+          std::cout << "rank " << rank << " solving " << id << "\n";
+
+          for (size_t i = 0; i < events.size(); i++) {
+            // error out if there are steady-states events
+            if ((events.is_dosing(i) && (events.ss(i) == 1 || events.ss(i) == 2)) || events.ss(i) == 3) {
+              std::stringstream msg;
+              static const char* expr("events");
+              msg << "; SS = " << expr;
+              static const char* caller("PredWrapper::pred");
+              std::string msg_str(msg.str());
+              stan::math::invalid_argument(caller, "ss(i)", events.ss(i), "must not be steady-states but is ",
+                                           msg_str.c_str());
+            }
+
+            if (events.is_reset(i)) {
+              dt = 0;
+              init = zeros;
+              pred1 = Eigen::VectorXd::Zero(nsys);
+            } else {
+              dt = events.time(i) - tprev;
+              if (dt > 0) {
+                typename EM::T_time model_time = tprev;
+                T_model pkmodel {model_time, init, model_rate[i], model_par[i], f};
+                vector<var> v_i = pkmodel.vars(events.time(i));
+                pred1 = pkmodel.solve0(dt, integrator);
+                init = torsten::mpi::precomputed_gradients(pred1, v_i);
+              }
+            }
+
+            if (events.is_bolus_dosing(i)) {
+              init(0, events.cmt(i) - 1) += model_amt[i];
+              pred1((events.cmt(i) - 1) * (nvars[id] + 1)) += model_amt[i];
+            }
+
+            res_d[id].row(i) = pred1;
+            if (events.keep(i)) {
+              res[id].row(ikeep) = init;
+              ikeep++;
+            }
+            tprev = events.time(i);
+          }
+        }
+
+        MPI_Ibcast(res_d[id].data(), res_d[id].size(), MPI_DOUBLE, my_worker_id, comm, &req[id]);
+      }
+
+      /* Assemble other ranks' results */
+
+      int finished = 0;
+      int flag = 0;
+      int index;
+      while (finished != np) {
+        MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
+        if(flag) {
+          int id = index;
+          int my_worker_id = torsten::mpi::my_worker(id, np, size);
+          if (rank != my_worker_id) {
+            std::cout << "rank " << rank << " syncing " << id << "\n";
+
+            EM em(nCmt, time[id], amt[id], rate[id], ii[id], evid[id], cmt[id], addl[id], ss[id], pMatrix[id], biovar[id], tlag[id]);
+            res[id].resize(em.nKeep, em.ncmt);
+            auto events = em.events();
+            auto model_rate = em.rates();
+            auto model_amt = em.amts();
+            auto model_par = em.pars();
+            PKRec<scalar> zeros = PKRec<scalar>::Zero(em.ncmt);
+            PKRec<scalar> init = zeros;
+            nvars[id] = T_model::nvars(events.time(0), init, model_rate[0], model_par[0]);
+            int nsys = T_model::n_sys(events.time(0), init, model_rate[0], model_par[0]);
+            typename EM::T_time dt = events.time(0);
+            typename EM::T_time tprev = events.time(0);
+            PKRec<double> pred1 = VectorXd::Zero(nsys);
+            int ikeep = 0;
+
+            for (size_t i = 0; i < events.size(); i++) {
+              if (events.is_reset(i)) {
+                dt = 0;
+                init = zeros;
+              } else {
+                dt = events.time(i) - tprev;
+                if (dt > 0) {
+                  typename EM::T_time model_time = tprev;
+                  T_model pkmodel {model_time, init, model_rate[i], model_par[i], f};
+                  vector<var> v_i = pkmodel.vars(events.time(i));
+                  pred1 = res_d[id].row(i);
+                  init = torsten::mpi::precomputed_gradients(pred1, v_i);
+                }
+              }
+
+              if (events.is_bolus_dosing(i)) {
+                init(0, events.cmt(i) - 1) += model_amt[i];
+              }
+
+              if (events.keep(i)) {
+                res[id].row(ikeep) = init;
+                ikeep++;
+              }
+              tprev = events.time(i);
+            }
+          }
+          finished++;
+        }
+      }
+
+      // finished
+    }
+#endif
+
   };
 
 }

@@ -14,7 +14,7 @@ namespace torsten {
      * @return true if @c i is current node's responsiblity
      * for computation, false otherwise.
      */
-    int my_worker(int i, int np, int nproc) {
+    inline int my_worker(int i, int np, int nproc) {
       int n = np / nproc;
       int r = np % nproc;
       if(i < r * (n + 1)) {

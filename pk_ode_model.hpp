@@ -255,6 +255,7 @@ namespace refactor {
                                              const std::vector<T2> &rate,
                                              const std::vector<T3> &par) {
       using stan::is_var;      
+      using stan::math::var;
       std::vector<stan::math::var> res(nvars(t1, y0, rate, par));
       int i = 0;
       if (is_var<T1>::value) {
@@ -279,7 +280,6 @@ namespace refactor {
       if (is_var<T0>::value) {
         res[i] = t1;
       }
-
       return res;
     }
 

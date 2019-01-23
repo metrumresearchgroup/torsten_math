@@ -367,6 +367,62 @@ generalOdeModel_bdf(const F& f,
                               msgs, rel_tol, abs_tol, max_num_steps);
 }
 
+#ifdef TORSTEN_MPI
+  /*
+   * For population models, we follow the call signature
+   * with the only change that each argument adds an additional
+   * level of vector. The size of that vector is the siez of
+   * the population.
+   */
+template <typename T0, typename T1, typename T2, typename T3, typename T4,
+          typename T5, typename T6, typename F>
+std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, // NOLINT
+                          Eigen::Dynamic, Eigen::Dynamic> >
+generalOdeModel_bdf(const F& f,
+                    const int nCmt,
+                    const std::vector<std::vector<T0> >& time,
+                    const std::vector<std::vector<T1> >& amt,
+                    const std::vector<std::vector<T2> >& rate,
+                    const std::vector<std::vector<T3> >& ii,
+                    const std::vector<std::vector<int> >& evid,
+                    const std::vector<std::vector<int> >& cmt,
+                    const std::vector<std::vector<int> >& addl,
+                    const std::vector<std::vector<int> >& ss,
+                    const std::vector<std::vector<std::vector<T4> > >& pMatrix,
+                    const std::vector<std::vector<std::vector<T5> > >& biovar,
+                    const std::vector<std::vector<std::vector<T6> > >& tlag,
+                    std::ostream* msgs = 0,
+                    double rel_tol = 1e-10,
+                    double abs_tol = 1e-10,
+                    long int max_num_steps = 1e8) {  // NOLINT(runtime/int)
+
+  int np = time.size();
+  static const char* caller("PKModelTwoCpt");
+  stan::math::check_consistent_sizes(caller, "time", time, "amt",     amt);
+  stan::math::check_consistent_sizes(caller, "time", time, "rate",    rate);
+  stan::math::check_consistent_sizes(caller, "time", time, "ii",      ii);
+  stan::math::check_consistent_sizes(caller, "time", time, "evid",    evid);
+  stan::math::check_consistent_sizes(caller, "time", time, "cmt",     cmt);
+  stan::math::check_consistent_sizes(caller, "time", time, "addl",    addl);
+  stan::math::check_consistent_sizes(caller, "time", time, "ss",      ss);
+  stan::math::check_consistent_sizes(caller, "time", time, "pMatrix", pMatrix);
+  stan::math::check_consistent_sizes(caller, "time", time, "biovar",  biovar);
+  stan::math::check_consistent_sizes(caller, "time", time, "tlag",    tlag);
+
+  using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
+
+  using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
+  PkOdeIntegrator<PkBdf> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PredWrapper<model_type, PkOdeIntegrator<PkBdf>&> pr;
+
+  std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
+
+  pr.pred(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag, pred, integrator, f);
+
+  return pred;
+}
+#endif
+
 }
 
 #endif
