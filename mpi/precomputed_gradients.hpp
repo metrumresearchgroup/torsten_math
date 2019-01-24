@@ -41,6 +41,38 @@ namespace torsten {
     }
 
     /*
+     * Generate a Eigen::Vector with @c var entries that have given
+     * value and gradients. The value and gradients are provided
+     * through @c VectorXd consisting of multiple
+     * records in the format (value, grad1, grad2, grad3...).
+     * @param d input vector data with consisting of
+     * multiple records, each record of format (value, grad1, grad2...)
+     * @return @c var matrix with given value and gradients
+     */
+    inline stan::math::vector_v
+    precomputed_gradients(const Eigen::VectorXd& d, const std::vector<stan::math::var>& operands) {
+      const int nrec = operands.size() + 1;
+      if (d.size() % nrec != 0) {
+        std::stringstream msg;
+        static const char* expr("n * operands.size()");
+        msg << "; column number expression = " << expr;
+        static const char* caller("torten::mpi::precomputed_gradients");
+        std::string msg_str(msg.str());
+        stan::math::invalid_argument(caller, "d", d.size(), "must have size = n * operands.size(), but is ",
+                                     msg_str.c_str());
+      }
+
+      const int n = d.size() / nrec;
+      stan::math::vector_v res(n);
+      std::vector<double> g(nrec - 1);
+      for (int j = 0; j < n; ++j) {
+        for (int l = 0 ; l < nrec - 1; ++l) g[l] = d(j * nrec + l + 1);
+        res(j) = precomputed_gradients(d(j * nrec), operands, g);
+      }
+      return res;
+    }
+
+    /*
      * Generate a matrix with @c var entries that have given
      * value and gradients. The value and gradients are provided
      * through @c MatrixXd, with each row consisting of multiple

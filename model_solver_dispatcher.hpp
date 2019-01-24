@@ -71,33 +71,39 @@ namespace torsten {
 
       stan::math::start_nested();
 
-      Matrix<T_init, 1, -1> y0_new(y0.size());
-      vector<T_rate> rate_new(rate.size());
-      vector<T_par> par_new(par.size());
+      try {
+        Matrix<T_init, 1, -1> y0_new(y0.size());
+        vector<T_rate> rate_new(rate.size());
+        vector<T_par> par_new(par.size());
 
-      for (int i = 0; i < y0_new.size(); ++i) {y0_new(i) = value_of(y0(i));}
-      for (size_t i = 0; i < rate_new.size(); ++i) {rate_new[i] = value_of(rate[i]);}
-      for (size_t i = 0; i < par_new.size(); ++i) {par_new[i] = value_of(par[i]);}
+        for (int i = 0; i < y0_new.size(); ++i) {y0_new(i) = value_of(y0(i));}
+        for (size_t i = 0; i < rate_new.size(); ++i) {rate_new[i] = value_of(rate[i]);}
+        for (size_t i = 0; i < par_new.size(); ++i) {par_new[i] = value_of(par[i]);}
 
-      T_time t0 = value_of(pkmodel.t0());
-      T_time t1 = value_of(pkmodel.t0()) + value_of(dt);
-      T_time dt_new = t1 - t0;
-      model_t pkmodel_new(t0, y0_new, rate_new, par_new);
+        T_time t0 = value_of(pkmodel.t0());
+        T_time t1 = value_of(pkmodel.t0()) + value_of(dt);
+        T_time dt_new = t1 - t0;
+        model_t pkmodel_new(t0, y0_new, rate_new, par_new);
 
-      auto res = pkmodel_new.solve(dt_new, pred_pars...);
-      vector<var> var_new(pkmodel_new.vars(t1));
-      vector<double> g;
-      const int nx = res.size();
-      const int ny = var_new.size();      
-      res_d.resize(nx * (ny + 1));
-      for (int i = 0; i < nx; ++i) {
-        stan::math::set_zero_all_adjoints_nested();
-        res_d(i * (ny + 1)) = res[i].val();
-        res[i].grad(ny, g);
-        for (int j = 0; j < ny; ++j) {
-          res_d(i * (ny + 1) + j + 1) = g[j];
+        auto res = pkmodel_new.solve(dt_new, pred_pars...);
+        vector<var> var_new(pkmodel_new.vars(t1));
+        vector<double> g;
+        const int nx = res.size();
+        const int ny = var_new.size();      
+        res_d.resize(nx * (ny + 1));
+        for (int i = 0; i < nx; ++i) {
+          stan::math::set_zero_all_adjoints_nested();
+          res_d(i * (ny + 1)) = res[i].val();
+          res[i].grad(var_new, g);
+          for (int j = 0; j < ny; ++j) {
+            res_d(i * (ny + 1) + j + 1) = g[j];
+          }
         }
+      } catch (const std::exception& e) {
+        stan::math::recover_memory_nested();
+        throw;
       }
+      stan::math::recover_memory_nested();
 
       return res_d;
     }
@@ -118,34 +124,40 @@ namespace torsten {
 
       stan::math::start_nested();
 
-      Matrix<T_init, 1, -1> y0_new(y0.size());
-      vector<T_rate> rate_new(rate.size());
-      vector<T_par> par_new(par.size());
+      try {
+        Matrix<T_init, 1, -1> y0_new(y0.size());
+        vector<T_rate> rate_new(rate.size());
+        vector<T_par> par_new(par.size());
 
-      for (int i = 0; i < y0_new.size(); ++i) {y0_new(i) = value_of(y0(i));}
-      for (size_t i = 0; i < rate_new.size(); ++i) {rate_new[i] = value_of(rate[i]);}
-      for (size_t i = 0; i < par_new.size(); ++i) {par_new[i] = value_of(par[i]);}
+        for (int i = 0; i < y0_new.size(); ++i) {y0_new(i) = value_of(y0(i));}
+        for (size_t i = 0; i < rate_new.size(); ++i) {rate_new[i] = value_of(rate[i]);}
+        for (size_t i = 0; i < par_new.size(); ++i) {par_new[i] = value_of(par[i]);}
 
-      T_time t0 = value_of(pkmodel.t0());
-      model_t pkmodel_new(t0, y0_new, rate_new, par_new);
+        T_time t0 = value_of(pkmodel.t0());
+        model_t pkmodel_new(t0, y0_new, rate_new, par_new);
 
-      T_amt amt_new = value_of(amt);
-      T_r r_new = value_of(r);
-      T_ii ii_new = value_of(ii);
-      auto res = pkmodel_new.solve(amt_new, r_new, ii_new, cmt, pred_pars...);
-      vector<var> var_new(pkmodel_new.vars(amt_new, r_new, ii_new));
-      vector<double> g;
-      const int nx = res.size();
-      const int ny = var_new.size();      
-      res_d.resize(nx * (ny + 1));
-      for (int i = 0; i < nx; ++i) {
-        stan::math::set_zero_all_adjoints_nested();
-        res_d(i * (ny + 1)) = res[i].val();
-        res[i].grad(ny, g);
-        for (int j = 0; j < ny; ++j) {
-          res_d(i * (ny + 1) + j + 1) = g[j];
+        T_amt amt_new = value_of(amt);
+        T_r r_new = value_of(r);
+        T_ii ii_new = value_of(ii);
+        auto res = pkmodel_new.solve(amt_new, r_new, ii_new, cmt, pred_pars...);
+        vector<var> var_new(pkmodel_new.vars(amt_new, r_new, ii_new));
+        vector<double> g;
+        const int nx = res.size();
+        const int ny = var_new.size();      
+        res_d.resize(nx * (ny + 1));
+        for (int i = 0; i < nx; ++i) {
+          stan::math::set_zero_all_adjoints_nested();
+          res_d(i * (ny + 1)) = res[i].val();
+          res[i].grad(var_new, g);
+          for (int j = 0; j < ny; ++j) {
+            res_d(i * (ny + 1) + j + 1) = g[j];
+          }
         }
+      } catch (const std::exception& e) {
+        stan::math::recover_memory_nested();
+        throw;
       }
+      stan::math::recover_memory_nested();
 
       return res_d;
     }

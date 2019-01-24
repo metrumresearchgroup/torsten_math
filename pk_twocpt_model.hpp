@@ -3,6 +3,7 @@
 
 #include <stan/math/torsten/torsten_def.hpp>
 #include <stan/math/torsten/pk_ode_model.hpp>
+#include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/prim/scal/err/check_positive.hpp>
 #include <stan/math/prim/scal/err/check_finite.hpp>
 
@@ -174,6 +175,24 @@ namespace refactor {
                   const std::vector<T_par> & par) :
       PKTwoCptModel(t0, y0, rate, par[0], par[1], par[2], par[3], par[4])
     {}
+
+    /*
+     * return @c vars that will be solution
+     */
+    template<typename T0>
+    std::vector<stan::math::var> vars(const T0 t1) {
+      return torsten::dsolve::pk_vars(t1, y0_, rate_, par_);
+    }
+
+    /*
+     * return @c vars that will be steady-state
+     * solution. For SS solution @c rate_ or @ y0_ will not
+     * be in the solution.
+     */
+    template<typename T_a, typename T_r, typename T_ii>
+    std::vector<stan::math::var> vars(const T_a& a, const T_r& r, const T_ii& ii) {
+      return torsten::dsolve::pk_vars(a, r, ii, par_);
+    }
 
   /**
    * two-compartment PK model get methods
