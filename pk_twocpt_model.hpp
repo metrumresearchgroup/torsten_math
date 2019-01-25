@@ -4,6 +4,7 @@
 #include <stan/math/torsten/torsten_def.hpp>
 #include <stan/math/torsten/pk_ode_model.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
+#include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/prim/scal/err/check_positive.hpp>
 #include <stan/math/prim/scal/err/check_finite.hpp>
 
@@ -90,8 +91,11 @@ namespace refactor {
     static constexpr int Npar = 5;
     static constexpr PKTwoCptODE f_ = PKTwoCptODE();
 
-    using scalar_type = typename
-      stan::return_type<T_time, T_init, T_rate, T_par>::type;
+    using scalar_type = typename stan::return_type<T_time, T_init, T_rate, T_par>::type;
+    using init_type   = T_init;
+    using time_type   = T_time;
+    using par_type    = T_par;
+    using rate_type   = T_rate;
 
   /**
    * Two-compartment PK model constructor
@@ -266,7 +270,15 @@ namespace refactor {
       }
 
       return pred;
-    }    
+    }
+
+    /*
+     * Solve the transient problem and return the result in
+     * form of data, arranged as (solution value, grad1, grad2...)
+     */
+    Eigen::VectorXd solve_d(const T_time& dt) const {
+      return torsten::model_solve_d(*this, dt);
+    }
 
   /**
    * Solve two-cpt steady state model. We have to consider
@@ -278,19 +290,21 @@ namespace refactor {
    * @param cmt dosing compartment
    */
     template<typename T_amt, typename T_r, typename T_ii>
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
+    Eigen::Matrix<typename stan::return_type<T_par, T_amt, T_r, T_ii>::type, Eigen::Dynamic, 1>
     solve(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt) const { // NOLINT
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using std::vector;
+
+      using ss_scalar_type = typename stan::return_type<T_par, T_amt, T_r, T_ii>::type;
 
       const double inf = std::numeric_limits<double>::max();
 
       stan::math::check_positive("steady state two-cpt solver", "cmt", cmt);
       stan::math::check_less("steady state two-cpt solver", "cmt", cmt, 4);
 
-      std::vector<scalar_type> a(3, 0);
-      Matrix<scalar_type, 1, Dynamic> pred = Matrix<scalar_type, 1, Dynamic>::Zero(3);
+      std::vector<ss_scalar_type> a(3, 0);
+      Matrix<ss_scalar_type, 1, Dynamic> pred = Matrix<ss_scalar_type, 1, Dynamic>::Zero(3);
 
       if (rate == 0) {  // bolus dose
         if (cmt == 1) {
@@ -384,6 +398,15 @@ namespace refactor {
         }
       }
       return pred;
+    }
+
+    /*
+     * Solve the transient problem and return the result in
+     * form of data, arranged as (solution value, grad1, grad2...)
+     */
+    template<typename T_amt, typename T_r, typename T_ii>
+    Eigen::VectorXd solve_d(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt) const {
+      return torsten::model_solve_d(*this, amt, rate, ii, cmt);
     }
 
     PKODEModel<T_time, T_init, T_rate, T_par, PKTwoCptODE>
