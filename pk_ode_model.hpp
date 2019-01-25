@@ -3,6 +3,7 @@
 
 #include <stan/math/torsten/torsten_def.hpp>
 #include <stan/math/torsten/pk_ode_integrator.hpp>
+#include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/torsten/pk_ss_system.hpp>
 #include <stan/math/torsten/PKModel/Pred/unpromote.hpp>
 
@@ -510,7 +511,26 @@ namespace refactor {
     }
 
     /*
-     * specialization
+     * Solve the ODE but return the results in form of data.
+     * The default behavior is defined in function template
+     * @c model_solve_d(), using autodiff to recalculate gradients.
+     * Some integrators, such as @c PkBdf, have their own implementation
+     * that can return data directly, so we skip them.
+     */
+    template<PkOdeIntegratorId It,
+             typename std::enable_if_t<It != torsten::PkBdf>* = nullptr>
+    Eigen::VectorXd solve_d(const T_time& dt,
+                            const PkOdeIntegrator<It>& integrator) const
+    {
+      static const char* caller = "PKODEModel::solve";
+      stan::math::check_greater(caller, "time step", dt, 0.0);
+
+      return torsten::model_solve_d(*this, dt, integrator);
+    }
+
+    /*
+     * @c PkBdf can return results in form of data directly,
+     * thanks to @c pk_cvodes_integrator implementation.
      */
     Eigen::VectorXd solve_d(const T_time& dt,
                             const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
@@ -685,7 +705,22 @@ namespace refactor {
       }
       return pred;
     }
+
+    /*
+     * return steady state solution in form of data, use
+     * default behavior, namely take gradients using autodiff.
+     */
+    template<PkOdeIntegratorId It, typename T_amt, typename T_ii>
+    Eigen::VectorXd solve_d(const T_amt& amt,
+                            const double& rate,
+                            const T_ii& ii,
+                            const int& cmt,
+                            const PkOdeIntegrator<It>& integrator) const {
+      return torsten::model_solve_d(*this, amt, rate, ii, cmt, integrator);
+    }
+
   };
+
 }
 
 #endif
