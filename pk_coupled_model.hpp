@@ -208,6 +208,10 @@ namespace refactor {
     using pk_scalar_type = torsten::scalar_t<T_m<T_time, T_init, T_rate, T_par>>; // NOLINT 
     using ode_scalar_type = torsten::scalar_t<PKODEModel<T_time, T_init, T_rate, T_par, Fa> >; // NOLINT
     using scalar_type = typename stan::return_type<pk_scalar_type, ode_scalar_type>::type; // NOLINT 
+    using init_type   = T_init;
+    using time_type   = T_time;
+    using par_type    = T_par;
+    using rate_type   = T_rate;
 
     /**
      * Coupled model constructor

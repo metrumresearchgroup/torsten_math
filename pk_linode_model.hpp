@@ -66,8 +66,11 @@ namespace refactor {
 
   public:
     static constexpr PKLinODE f_ = PKLinODE();
-    using scalar_type = typename
-      stan::return_type<T_time, T_init, T_rate, T_par>::type;
+    using scalar_type = typename stan::return_type<T_time, T_init, T_rate, T_par>::type;
+    using init_type   = T_init;
+    using time_type   = T_time;
+    using par_type    = T_par;
+    using rate_type   = T_rate;
 
   /**
    * Constructor
