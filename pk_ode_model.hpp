@@ -313,6 +313,16 @@ namespace refactor {
     }
 
     /*
+     * return @c vars that will be steady-state
+     * solution. For SS solution @c rate_ or @ y0_ will not
+     * be in the solution.
+     */
+    template<typename T_a, typename T_r, typename T_ii>
+    std::vector<stan::math::var> vars(const T_a& a, const T_r& r, const T_ii& ii) {
+      return torsten::dsolve::pk_vars(a, r, ii, par_);
+    }
+
+    /*
      * calculate size of the entire system
      */
     int n_sys() const {
@@ -430,11 +440,12 @@ namespace refactor {
     }
 
     /*
-     * For @c torsten::PkBdf integrator
+     * Solve the ODE but return the results in data
+     * consisting of solution values and gradients.
      */
-    Eigen::VectorXd integrate0(const std::vector<stan::math::var> &rate,
-                               const T_time& dt,
-                               const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
+    Eigen::VectorXd integrate_d(const std::vector<stan::math::var> &rate,
+                                const T_time& dt,
+                                const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
       using stan::math::var;
       using stan::math::value_of;
 
@@ -454,9 +465,13 @@ namespace refactor {
       return res;
     }
 
-    Eigen::VectorXd integrate0(const std::vector<double> &rate,
-                              const T_time& dt,
-                              const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
+    /*
+     * Solve the ODE but return the results in data
+     * consisting of solution values and gradients.
+     */
+    Eigen::VectorXd integrate_d(const std::vector<double> &rate,
+                                const T_time& dt,
+                                const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
       using stan::math::value_of;
 
       Eigen::VectorXd res(n_sys());
@@ -491,22 +506,18 @@ namespace refactor {
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     solve(const T_time& dt,
           const PkOdeIntegrator<It>& integrator) const {
-
-      // static const char* caller = "PKODEModel::solve";
-      // stan::math::check_greater(caller, "time step", dt, 0.0);
-
       return integrate(rate_, dt, integrator);
     }
 
     /*
      * specialization
      */
-    Eigen::VectorXd solve0(const T_time& dt,
-                          const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
+    Eigen::VectorXd solve_d(const T_time& dt,
+                            const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
       static const char* caller = "PKODEModel::solve";
       stan::math::check_greater(caller, "time step", dt, 0.0);
 
-      return integrate0(rate_, dt, integrator);
+      return integrate_d(rate_, dt, integrator);
     }
 
     /**
