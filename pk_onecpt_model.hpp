@@ -278,7 +278,7 @@ namespace refactor {
     }
 
     /*
-     * Solve the transient problem and return the result in
+     * Solve the steady-state problem and return the result in
      * form of data, arranged as (solution value, grad1, grad2...)
      */
     template<typename T_amt, typename T_r, typename T_ii>

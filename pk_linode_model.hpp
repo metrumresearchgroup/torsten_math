@@ -177,6 +177,14 @@ namespace refactor {
     }
 
     /*
+     * Solve the transient problem and return the result in
+     * form of data, arranged as (solution value, grad1, grad2...)
+     */
+    Eigen::VectorXd solve_d(const T_time& dt) const {
+      return torsten::model_solve_d(*this, dt);
+    }
+
+    /*
      * solve the linear ODE: steady state version
      */
     template<typename T_amt, typename T_r, typename T_ii>
@@ -239,24 +247,14 @@ namespace refactor {
     }
 
     /*
-     * wrapper to fit @c PrepWrapper's call signature
+     * Solve the steady-state problem and return the result in
+     * form of data, arranged as (solution value, grad1, grad2...)
      */
-    template<PkOdeIntegratorId It>
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
-    solve(const T_time& dt,
-          const PkOdeIntegrator<It>& integrator) const {
-      return solve(dt);
+    template<typename T_amt, typename T_r, typename T_ii>
+    Eigen::VectorXd solve_d(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt) const {
+      return torsten::model_solve_d(*this, amt, rate, ii, cmt);
     }
 
-    /*
-     * wrapper to fit @c PrepWrapper's call signature
-     */
-    template<PkOdeIntegratorId It, typename T_amt, typename T_r, typename T_ii>
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
-    solve(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
-          const PkOdeIntegrator<It>& integrator) const {
-      return solve(amt, rate, ii, cmt);
-    }
   };
 
   template<typename T_time, typename T_init, typename T_rate, typename T_par>
