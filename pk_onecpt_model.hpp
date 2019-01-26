@@ -143,6 +143,15 @@ namespace refactor {
       PKOneCptModel(t0, y0, rate, par.at(0), par.at(1), par.at(2))
     {}
 
+    // /*
+    //  * Number of vars in transient solution and steady-state solution
+    //  * combined.
+    //  */
+    // template<typename T0, typename T_a, typename T_r, typename T_ii>
+    // int nvar_total() {
+      
+    // }
+
     /*
      * return @c vars that will be solution
      */

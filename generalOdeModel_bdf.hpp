@@ -367,7 +367,6 @@ generalOdeModel_bdf(const F& f,
                               msgs, rel_tol, abs_tol, max_num_steps);
 }
 
-#ifdef TORSTEN_MPI
   /*
    * For population models, we follow the call signature
    * with the only change that each argument adds an additional
@@ -421,7 +420,6 @@ generalOdeModel_bdf(const F& f,
 
   return pred;
 }
-#endif
 
 }
 

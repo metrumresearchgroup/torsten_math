@@ -224,7 +224,7 @@ namespace torsten {
                const std::vector<int>& x_i) const {
       using internal::PkOdeIntegratorDispatcher;
       return PkOdeIntegratorDispatcher<PkBdf>()(f, y0, t0, ts, theta, x_r, x_i,
-                                             msgs, rtol, atol, max_num_step);
+                                                msgs, rtol, atol, max_num_step);
     }
 
     /*
@@ -233,13 +233,13 @@ namespace torsten {
      */
     template <typename F, typename Tt, typename T_initial, typename T_param>
     Eigen::MatrixXd
-    solve(const F& f,
-          const std::vector<T_initial>& y0,
-          double t0,
-          const std::vector<Tt>& ts,
-          const std::vector<T_param>& theta,
-          const std::vector<double>& x_r,
-          const std::vector<int>& x_i) const {
+    solve_d(const F& f,
+            const std::vector<T_initial>& y0,
+            double t0,
+            const std::vector<Tt>& ts,
+            const std::vector<T_param>& theta,
+            const std::vector<double>& x_r,
+            const std::vector<int>& x_i) const {
       using Ode = torsten::dsolve::PKCvodesFwdSystem<F, Tt, T_initial, T_param, CV_BDF, AD>;
       const int m = theta.size();
       const int n = y0.size();
