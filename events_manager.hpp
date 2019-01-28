@@ -33,7 +33,7 @@ struct EventsManager {
   std::vector<std::vector<T_rate> > rate_v;
   std::vector<T_amt> amt_v;
   std::vector<std::vector<T_par> > par_v;
-  std::vector<std::vector<stan::math::var> > vars_v;
+  // std::vector<std::vector<stan::math::var> > vars_v;
 
   const int nKeep;
   const int ncmt;
@@ -89,14 +89,6 @@ struct EventsManager {
     for (size_t i = 0; i < event_his.size(); ++i) {
       auto p = param_his.GetModelParameters(i);
       par_v[i] = p.get_RealParameters();
-    }
-
-    if (stan::is_var<T_rate>::value || stan::is_var<T_amt>::value || stan::is_var<T_par>::value) {
-      vars_v.resize(event_his.size());
-      for (size_t i = 0; i < event_his.size(); ++i) {    
-        std::vector<T_amt> amt_tmp{amt_v[i]};
-        vars_v[i] = torsten::dsolve::pk_vars(rate_v[i], amt_tmp, par_v[i]);
-      }
     }
   }
 
@@ -155,14 +147,6 @@ struct EventsManager {
       for (size_t j = 0; j < par.size(); ++j) par[j] = k(j);
       par_v[i] = par;
     }
-
-    if (stan::is_var<T_rate>::value || stan::is_var<T_amt>::value || stan::is_var<T_par>::value) {
-      vars_v.resize(event_his.size());
-      for (size_t i = 0; i < event_his.size(); ++i) {    
-        std::vector<T_amt> amt_tmp{amt_v[i]};
-        vars_v[i] = torsten::dsolve::pk_vars(rate_v[i], amt_tmp, par_v[i]);
-      }
-    }
   }
 
   const EventHistory<T_time, T1, T2, T3>& events() const {
@@ -180,19 +164,6 @@ struct EventsManager {
   const std::vector<std::vector<T_par> >& pars() const {
     return par_v;
   }
-
-  std::vector<std::vector<stan::math::var> >& vars() {
-    return vars_v;
-  }
-
-  std::vector<stan::math::var>& vars(int i) {
-    return vars_v[i];
-  }
-
-  int nvars() const {
-    return vars_v[0].size();
-  }
-
 };
 
 }

@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <stan/math/torsten/PKModel/functions.hpp>
+#include <stan/math/torsten/pk_nsys.hpp>
 #include <iostream>
 #include <algorithm>
 #include <vector>
@@ -155,6 +156,40 @@ struct EventHistory {
       Events.push_back(other.Events[i]);
     }
   }
+
+  /*
+   * calculate the size of the ODE system for the event history
+   */
+  int nsys(int ncmt, int nvar, int nvar_ss) {
+    using torsten::pk_nsys;
+
+    // has transient dosing events?
+    bool has_trans_dose = false;
+    for (size_t i = 0; i < this -> size(); ++i) {
+      if (is_dosing(i) && (!is_ss_dosing(i))) {
+        has_trans_dose = true;
+        break;
+      }
+    }
+
+    // has SS dosing events?
+    bool has_ss_dose = false;
+    for (size_t i = 0; i < this -> size(); ++i) {
+      if (is_ss_dosing(i)) {
+        has_ss_dose = true;
+        break;
+      }
+    }
+
+    if (has_trans_dose && (!has_ss_dose)) {
+      return pk_nsys(ncmt, nvar);
+    } else if((!has_trans_dose) && has_ss_dose) {
+      return pk_nsys(ncmt, nvar_ss);
+    } else {
+      return pk_nsys(ncmt, nvar, nvar_ss);
+    }
+  }
+
   /*
    * Check if the events are in chronological order
    */
@@ -200,6 +235,13 @@ struct EventHistory {
 
   bool is_dosing(int i) const {
     return evid(i) == 1 || evid(i) == 4;
+  }
+
+  /*
+   * if an event is steady-state dosing event.
+   */
+  bool is_ss_dosing(int i) const {
+    return (is_dosing(i) && (ss(i) == 1 || ss(i) == 2)) || ss(i) == 3;
   }
 
   static bool is_dosing(const std::vector<int>& event_id, int i) {

@@ -370,7 +370,7 @@ generalOdeModel_bdf(const F& f,
   /*
    * For population models, we follow the call signature
    * with the only change that each argument adds an additional
-   * level of vector. The size of that vector is the siez of
+   * level of vector. The size of that vector is the size of
    * the population.
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
@@ -396,7 +396,7 @@ generalOdeModel_bdf(const F& f,
                     long int max_num_steps = 1e8) {  // NOLINT(runtime/int)
 
   int np = time.size();
-  static const char* caller("PKModelTwoCpt");
+  static const char* caller("generalOdeModel_bdf");
   stan::math::check_consistent_sizes(caller, "time", time, "amt",     amt);
   stan::math::check_consistent_sizes(caller, "time", time, "rate",    rate);
   stan::math::check_consistent_sizes(caller, "time", time, "ii",      ii);

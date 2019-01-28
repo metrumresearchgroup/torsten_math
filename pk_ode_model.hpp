@@ -4,6 +4,7 @@
 #include <stan/math/torsten/torsten_def.hpp>
 #include <stan/math/torsten/pk_ode_integrator.hpp>
 #include <stan/math/torsten/model_solve_d.hpp>
+#include <stan/math/torsten/pk_nvars.hpp>
 #include <stan/math/torsten/pk_ss_system.hpp>
 #include <stan/math/torsten/PKModel/Pred/unpromote.hpp>
 
@@ -301,8 +302,18 @@ namespace refactor {
     /*
      * calculate number of vars with constructed data
      */
-    int nvars() {
-      return nvars(t0_, y0_, rate_, par_);
+    template<typename T0>
+    int nvars(const T0& t1) {
+      return nvars(t1, y0_, rate_, par_);
+    }
+
+    /*
+     * return the number @c var that will be the parameters
+     * of the stead-state dosing event's solution
+     */
+    template<typename T_a, typename T_r, typename T_ii>
+    int nvars(const T_a& a, const T_r& r, const T_ii& ii) {
+      return torsten::pk_nvars(a, r, ii, par_);
     }
 
     /*

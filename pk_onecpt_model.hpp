@@ -3,6 +3,7 @@
 
 #include <stan/math/torsten/torsten_def.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
+#include <stan/math/torsten/pk_nvars.hpp>
 #include <stan/math/torsten/model_solve_d.hpp>
 
 namespace refactor {
@@ -143,14 +144,23 @@ namespace refactor {
       PKOneCptModel(t0, y0, rate, par.at(0), par.at(1), par.at(2))
     {}
 
-    // /*
-    //  * Number of vars in transient solution and steady-state solution
-    //  * combined.
-    //  */
-    // template<typename T0, typename T_a, typename T_r, typename T_ii>
-    // int nvar_total() {
-      
-    // }
+    /*
+     * return the number @c var that will be the parameters
+     * of the trasient dosing event's solution
+     */
+    template<typename T0>
+    int nvars(const T0& t0) {
+      return torsten::pk_nvars(t0, y0_, rate_, par_);
+    }
+
+    /*
+     * return the number @c var that will be the parameters
+     * of the stead-state dosing event's solution
+     */
+    template<typename T_a, typename T_r, typename T_ii>
+    int nvars(const T_a& a, const T_r& r, const T_ii& ii) {
+      return torsten::pk_nvars(a, r, ii, par_);
+    }
 
     /*
      * return @c vars that will be solution

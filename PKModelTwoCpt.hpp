@@ -357,8 +357,8 @@ PKModelTwoCpt(const std::vector<std::vector<T0> >& time,
   stan::math::check_consistent_sizes(caller, "time", time, "biovar",  biovar);
   stan::math::check_consistent_sizes(caller, "time", time, "tlag",    tlag);
 
-
   using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
+
   using model_type = refactor::PKTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;
 
