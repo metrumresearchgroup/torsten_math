@@ -383,8 +383,8 @@ namespace torsten{
       MPI_Comm_size(comm, &size);
       MPI_Comm_rank(comm, &rank);
 
+      MPI_Status status[np];
       MPI_Request req[np];
-      vector<MatrixXd> res_d(np);
       
       res.resize(np);
 
@@ -392,37 +392,32 @@ namespace torsten{
 
         /* For every rank */
 
-        EM em(nCmt, time[id], amt[id], rate[id], ii[id], evid[id], cmt[id], addl[id], ss[id], pMatrix[id], biovar[id], tlag[id]);
-        res[id].resize(em.nKeep, em.ncmt);
-
-        auto events = em.events();
-        auto model_rate = em.rates();
-        auto model_amt = em.amts();
-        auto model_par = em.pars();
-        PKRec<double> zeros = PKRec<double>::Zero(em.ncmt);
-        PKRec<double> init = zeros;
-
-        res_d[id].resize(events.size(), em.ncmt);
-
-        double dt = events.time(0);
-        double tprev = events.time(0);
-
-        PKRec<double> pred1 = VectorXd::Zero(em.ncmt);
-        int ikeep = 0;
-
+        res[id].resize(evid[id].size(), nCmt);
         int my_worker_id = torsten::mpi::my_worker(id, np, size);
 
         /* only solver rank */
 
         if (rank == my_worker_id) {
-          std::cout << "rank " << rank << " solving " << id << "\n";
+
+          EM em(nCmt, time[id], amt[id], rate[id], ii[id], evid[id], cmt[id], addl[id], ss[id], pMatrix[id], biovar[id], tlag[id]);
+          auto events = em.events();
+          auto model_rate = em.rates();
+          auto model_amt = em.amts();
+          auto model_par = em.pars();
+          PKRec<double> zeros = PKRec<double>::Zero(em.ncmt);
+          PKRec<double> init = zeros;
+
+          double dt = events.time(0);
+          double tprev = events.time(0);
+
+          PKRec<double> pred1 = VectorXd::Zero(em.ncmt);
+          int ikeep = 0;
 
           for (size_t i = 0; i < events.size(); i++) {
             if (events.is_reset(i)) {
               dt = 0;
               init = zeros;
-              pred1 = Eigen::VectorXd::Zero(em.ncmt);
-            } else if ((events.is_dosing(i) && (events.ss(i) == 1 || events.ss(i) == 2)) || events.ss(i) == 3) {  // steady state event
+            } else if (events.is_ss_dosing(i)) {  // steady state event
               decltype(tprev) model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
               T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
               pred1 = pkmodel.solve_d(model_amt[i], events.rate(i), events.ii(i), events.cmt(i), pred_pars...);
@@ -442,11 +437,7 @@ namespace torsten{
 
             if (events.is_bolus_dosing(i)) {
               init(0, events.cmt(i) - 1) += model_amt[i];
-              pred1(0, events.cmt(i) - 1) += model_amt[i];
             }
-
-            // we need every step, not just ikeep steps.
-            res_d[id].row(i) = pred1;
 
             if (events.keep(i)) {
               res[id].row(ikeep) = init;
@@ -456,65 +447,11 @@ namespace torsten{
           }
         }
 
-        MPI_Ibcast(res_d[id].data(), res_d[id].size(), MPI_DOUBLE, my_worker_id, comm, &req[id]);
+        MPI_Ibcast(res[id].data(), res[id].size(), MPI_DOUBLE, my_worker_id, comm, &req[id]);
       }
 
       /* Assemble other ranks' results */
-
-      int finished = 0;
-      int flag = 0;
-      int index;
-      while (finished != np) {
-        MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
-        if(flag) {
-          int id = index;
-          int my_worker_id = torsten::mpi::my_worker(id, np, size);
-          if (rank != my_worker_id) {
-            std::cout << "rank " << rank << " syncing " << id << "\n";
-
-            EM em(nCmt, time[id], amt[id], rate[id], ii[id], evid[id], cmt[id], addl[id], ss[id], pMatrix[id], biovar[id], tlag[id]);
-            res[id].resize(em.nKeep, em.ncmt);
-            auto events = em.events();
-            auto model_rate = em.rates();
-            auto model_amt = em.amts();
-            auto model_par = em.pars();
-            PKRec<double> zeros = PKRec<double>::Zero(em.ncmt);
-            PKRec<double> init = zeros;
-            typename EM::T_time dt = events.time(0);
-            typename EM::T_time tprev = events.time(0);
-            int ikeep = 0;
-
-            for (size_t i = 0; i < events.size(); i++) {
-              if (events.is_reset(i)) {
-                dt = 0;
-                init = zeros;
-              } else if ((events.is_dosing(i) && (events.ss(i) == 1 || events.ss(i) == 2)) || events.ss(i) == 3) {  // steady state event
-                if (events.ss(i) == 2)
-                  init += res_d[id].row(i);  // steady state without reset
-                else
-                  init = res_d[id].row(i);  // steady state with reset (ss = 1)
-              } else {
-                dt = events.time(i) - tprev;
-                if (dt > 0) {
-                  init = res_d[id].row(i);
-                }
-              }
-
-              if (events.is_bolus_dosing(i)) {
-                init(0, events.cmt(i) - 1) += model_amt[i];
-              }
-
-              if (events.keep(i)) {
-                res[id].row(ikeep) = init;
-                ikeep++;
-              }
-              tprev = events.time(i);
-            }
-          }
-          finished++;
-        }
-      }
-      // finished
+      MPI_Waitall(np, req, status);
     }
     
 #else
