@@ -177,7 +177,10 @@ struct EventsManager {
                      const std::vector<std::vector<T4_> >& pMatrix,
                      const std::vector<std::vector<T5_> >& biovar,
                      const std::vector<std::vector<T6_> >& tlag) {
-    int n = time.size();
+    using stan::math::value_of;
+
+    int res;
+
     bool nolag = false;
     if (tlag.size() == 1) {
       nolag = std::all_of(tlag[0].begin(), tlag[0].end(), [](double x) { return std::abs(x) < 1.E-10; });
@@ -189,6 +192,7 @@ struct EventsManager {
     }
 
     if (nolag) {
+      int n = time.size();
       for (size_t i = 0; i < time.size(); i++) {
         if (evid[i] == 1 || evid[i] == 4) {      // is dosing event
           if (addl[i] > 0 && ii[i] > 0) {        // has addl doses
@@ -203,26 +207,63 @@ struct EventsManager {
           }
         }
       }
+      res = n;
     } else if (tlag.size() == 1) {
+      int n = time.size();
+      std::vector<std::tuple<double, int>> dose;
+      dose.reserve(time.size());
+      for (size_t i = 0; i < time.size(); i++) {
+        if (evid[i] == 1 || evid[i] == 4) {      // is dosing event
+          if (tlag[0][cmt[i] - 1] > 0.0) {       // tlag dose
+            n++;
+          }
+          if (addl[i] > 0 && ii[i] > 0) {        // has addl doses
+            if (rate[i] > 0 && amt[i] > 0) {
+              n++;                               // end ev for IV dose
+              n += 2 * addl[i];                  // end ev for addl IV dose
+            } else {
+              n += addl[i];
+            }
+            if (tlag[0][cmt[i] - 1] > 0.0) {     // tlag dose
+              n += addl[i];
+            }
+          } else if (rate[i] > 0 && amt[i] > 0) {
+            n++;                                 // end event for IV dose
+          }
+        }
+      }
+      res = n;
+    } else {
+      // int n = time.size();
+      // std::vector<std::tuple<double, int>> addl_dose;
       // for (size_t i = 0; i < time.size(); i++) {
       //   if (evid[i] == 1 || evid[i] == 4) {      // is dosing event
+      //     if (tlag[0][cmt[i] - 1] > 0.0) {       // tlag dose
+      //       n++;
+      //     }
       //     if (addl[i] > 0 && ii[i] > 0) {        // has addl doses
       //       if (rate[i] > 0 && amt[i] > 0) {
-      //         n++;                               // end event for original IV dose
-      //         n += 2 * addl[i];                  // end event for addl IV dose
+      //         n++;                               // end ev for IV dose
+      //         n += 2 * addl[i];                  // end ev for addl IV dose
       //       } else {
       //         n += addl[i];
+      //       }
+      //       for (int j = 0; j < addl[i]; ++j) {
+      //         addl_dose.push_back(std::make_tuple(value_of(time[i]) + (1+j) * value_of(ii[i]), cmt[i]));
       //       }
       //     } else if (rate[i] > 0 && amt[i] > 0) {
       //       n++;                                 // end event for IV dose
       //     }
       //   }
       // }
-    } else {
-      // TODO
+      // std::sort(addl_dose.begin(), addl_dose.end(),
+      //           [](std::tuple<double, int>& a, std::tuple<double, int>& b)
+      //           {
+      //             return std::get<0>(a) < std::get<0>(b);
+      //           });
     }
 
-    return n;
+    return res;
   }
 };
 
