@@ -145,6 +145,33 @@ namespace refactor {
     {}
 
     /*
+     * calculate number of @c vars for transient dosing.
+     */
+    static int nvars(int ncmt, int npar) {
+      using stan::is_var;
+      int n = 0;
+      if (is_var<T_time>::value) n++; // t0
+      if (is_var<T_init>::value) n += Ncmt; // y0 is fixed for onecpt model
+      if (is_var<T_rate>::value) n += Ncmt; // rate is fixed for onecpt model
+      if (is_var<T_par>::value) n += Npar; // par is fixed for onecpt model
+      return n;
+    }
+
+    /*
+     * calculate number of @c vars for steady-state dosing.
+     */
+    template<typename T_a, typename T_r, typename T_ii>
+    static int nvars(int npar) {
+      using stan::is_var;
+      int n = 0;
+      if (is_var<T_a>::value) n++; // amt
+      if (is_var<T_r>::value) n++; // rate
+      if (is_var<T_ii>::value) n++; // ii
+      if (is_var<T_par>::value) n += Npar; // par is fixed for onecpt model
+      return n;
+    }
+
+    /*
      * return the number @c var that will be the parameters
      * of the trasient dosing event's solution
      */
