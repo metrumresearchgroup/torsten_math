@@ -164,6 +164,66 @@ struct EventsManager {
   const std::vector<std::vector<T_par> >& pars() const {
     return par_v;
   }
+
+  template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
+  static int nevents(const std::vector<T0_>& time,
+                     const std::vector<T1_>& amt,
+                     const std::vector<T2_>& rate,
+                     const std::vector<T3_>& ii,
+                     const std::vector<int>& evid,
+                     const std::vector<int>& cmt,
+                     const std::vector<int>& addl,
+                     const std::vector<int>& ss,
+                     const std::vector<std::vector<T4_> >& pMatrix,
+                     const std::vector<std::vector<T5_> >& biovar,
+                     const std::vector<std::vector<T6_> >& tlag) {
+    int n = time.size();
+    bool nolag = false;
+    if (tlag.size() == 1) {
+      nolag = std::all_of(tlag[0].begin(), tlag[0].end(), [](double x) { return std::abs(x) < 1.E-10; });
+    } else {
+      for (const auto& v : tlag) {
+        nolag = std::all_of(v.begin(), v.end(), [](double x) { return std::abs(x) < 1.E-10; });
+        if (!nolag) break;
+      }
+    }
+
+    if (nolag) {
+      for (size_t i = 0; i < time.size(); i++) {
+        if (evid[i] == 1 || evid[i] == 4) {      // is dosing event
+          if (addl[i] > 0 && ii[i] > 0) {        // has addl doses
+            if (rate[i] > 0 && amt[i] > 0) {
+              n++;                               // end event for original IV dose
+              n += 2 * addl[i];                  // end event for addl IV dose
+            } else {
+              n += addl[i];
+            }
+          } else if (rate[i] > 0 && amt[i] > 0) {
+            n++;                                 // end event for IV dose
+          }
+        }
+      }
+    } else if (tlag.size() == 1) {
+      // for (size_t i = 0; i < time.size(); i++) {
+      //   if (evid[i] == 1 || evid[i] == 4) {      // is dosing event
+      //     if (addl[i] > 0 && ii[i] > 0) {        // has addl doses
+      //       if (rate[i] > 0 && amt[i] > 0) {
+      //         n++;                               // end event for original IV dose
+      //         n += 2 * addl[i];                  // end event for addl IV dose
+      //       } else {
+      //         n += addl[i];
+      //       }
+      //     } else if (rate[i] > 0 && amt[i] > 0) {
+      //       n++;                                 // end event for IV dose
+      //     }
+      //   }
+      // }
+    } else {
+      // TODO
+    }
+
+    return n;
+  }
 };
 
 }
