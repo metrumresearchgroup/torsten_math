@@ -229,6 +229,37 @@ namespace refactor {
      * generate a new @c theta of @c var vector to pass to ODE integrator that
      * contains both @c par_ and @c rate_.
      */
+
+    /*
+     * calculate number of @c vars for transient dosing.
+     */
+    static int nvars(int ncmt, int npar) {
+      using stan::is_var;
+      int n = 0;
+      if (is_var<T_time>::value) n++; // t0
+      if (is_var<T_init>::value) n += ncmt; // y0 is fixed for twocpt model
+      if (is_var<T_rate>::value) {
+        n += ncmt + npar;
+      } else if (is_var<T_par>::value) {
+        n += npar;
+      }
+      return n;
+    }
+
+    /*
+     * calculate number of @c vars for steady-state dosing.
+     */
+    template<typename T_a, typename T_r, typename T_ii>
+    static int nvars(int npar) {
+      using stan::is_var;
+      int n = 0;
+      if (is_var<T_a>::value) n++; // amt
+      if (is_var<T_r>::value) n++; // rate
+      if (is_var<T_ii>::value) n++; // ii
+      if (is_var<T_par>::value) n += npar;
+      return n;
+    }
+
     template<typename T0, typename T1, typename T2, typename T3>
     static int nvars(const T0& t0,
                      const Eigen::Matrix<T1, 1, Eigen::Dynamic>& y0,

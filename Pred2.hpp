@@ -190,29 +190,14 @@ namespace torsten{
 
         /* For every rank */
 
-        EM em(nCmt, time[id], amt[id], rate[id], ii[id], evid[id], cmt[id], addl[id], ss[id], pMatrix[id], biovar[id], tlag[id]);
-        res[id].resize(em.nKeep, em.ncmt);
+        int nKeep = evid[id].size();
 
-        auto events = em.events();
-        auto model_rate = em.rates();
-        auto model_amt = em.amts();
-        auto model_par = em.pars();
-        PKRec<scalar> zeros = PKRec<scalar>::Zero(em.ncmt);
-        PKRec<scalar> init = zeros;
+        res[id].resize(nKeep, nCmt);
 
-        // generae a dummy model to calculate the system size
-        typename EM::T_time dummy_t0 = 0.0;
-        T_model dummy_model{dummy_t0, init, model_rate[0], model_par[0], model_pars...};
-        int nvar = dummy_model.nvars(dummy_t0);
-        int nvar_ss = dummy_model.nvars(model_amt[0], events.rate(0), events.ii(0));
-
-        res_d[id].resize(events.size(), events.nsys(em.ncmt, nvar, nvar_ss));
-
-        typename EM::T_time dt = events.time(0);
-        typename EM::T_time tprev = events.time(0);
-
-        PKRec<double> pred1 = VectorXd::Zero(res_d[id].cols());
-        int ikeep = 0;
+        int nvar = T_model::nvars(nCmt, pMatrix[id][0].size());
+        int nvar_ss = T_model::template nvars<typename EM::T_amt, T2, T3>(pMatrix[id][0].size());
+        int nev = EM::nevents(time[id], amt[id], rate[id], ii[id], evid[id], cmt[id], addl[id], ss[id], pMatrix[id], biovar[id], tlag[id]);
+        res_d[id].resize(nev, EM::has_ss_dosing(evid[id], ss[id]) ? torsten::pk_nsys(nCmt, nvar, nvar_ss) : torsten::pk_nsys(nCmt, nvar));
 
         int my_worker_id = torsten::mpi::my_worker(id, np, size);
 
@@ -221,40 +206,50 @@ namespace torsten{
         if (rank == my_worker_id) {
           std::cout << "rank " << rank << " solving " << id << "\n";
 
+          EM em(nCmt, time[id], amt[id], rate[id], ii[id], evid[id], cmt[id], addl[id], ss[id], pMatrix[id], biovar[id], tlag[id]);
+          auto events = em.events();
+          assert(nev == events.size());
+          assert(nKeep == em.nKeep);
+
+          auto model_rate = em.rates();
+          auto model_amt = em.amts();
+          auto model_par = em.pars();
+          PKRec<scalar> zeros = PKRec<scalar>::Zero(em.ncmt);
+          PKRec<scalar> init = zeros;
+          typename EM::T_time dt = events.time(0);
+          typename EM::T_time tprev = events.time(0);
+          PKRec<double> pred1 = VectorXd::Zero(res_d[id].cols());
+          int ikeep = 0;
+          int nsys = torsten::pk_nsys(nCmt, nvar);
+          int nsys_ss = torsten::pk_nsys(nCmt, nvar_ss);
+
           for (size_t i = 0; i < events.size(); i++) {
             if (events.is_reset(i)) {
               dt = 0;
               init = zeros;
               pred1 = Eigen::VectorXd::Zero(res_d[id].cols());
             } else if (events.is_ss_dosing(i)) {  // steady state event
-              decltype(tprev) model_time = events.time(i);
+              typename EM::T_time model_time = events.time(i);
               T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
               vector<var> v_i = pkmodel.vars(model_amt[i], events.rate(i), events.ii(i));
-              int nsys1 = torsten::pk_nsys(em.ncmt, nvar_ss);
-              pred1.segment(0, nsys1) = pkmodel.solve_d(model_amt[i], events.rate(i), events.ii(i), events.cmt(i), pred_pars...);
+              pred1.segment(0, nsys_ss) = pkmodel.solve_d(model_amt[i], events.rate(i), events.ii(i), events.cmt(i), pred_pars...);
               if (events.ss(i) == 2)
-                init += torsten::mpi::precomputed_gradients(pred1.segment(0, nsys1), v_i);  // steady state without reset
+                init += torsten::mpi::precomputed_gradients(pred1.segment(0, nsys_ss), v_i);  // steady state without reset
               else
-                init = torsten::mpi::precomputed_gradients(pred1.segment(0, nsys1), v_i);  // steady state with reset (ss = 1)
+                init = torsten::mpi::precomputed_gradients(pred1.segment(0, nsys_ss), v_i);  // steady state with reset (ss = 1)
             } else {
               dt = events.time(i) - tprev;
               if (dt > 0) {
                 typename EM::T_time model_time = tprev;
                 T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
                 vector<var> v_i = pkmodel.vars(events.time(i));
-                int nsys1 = torsten::pk_nsys(em.ncmt, nvar);
-                pred1.segment(0, nsys1) = pkmodel.solve_d(dt, pred_pars...);
-                init = torsten::mpi::precomputed_gradients(pred1.segment(0, nsys1), v_i);
+                pred1.segment(0, nsys) = pkmodel.solve_d(dt, pred_pars...);
+                init = torsten::mpi::precomputed_gradients(pred1.segment(0, nsys), v_i);
               }
             }
 
             if (events.is_bolus_dosing(i)) {
               init(0, events.cmt(i) - 1) += model_amt[i];
-              if (events.is_ss_dosing(i)) {
-                pred1((events.cmt(i) - 1) * (nvar_ss + 1)) += model_amt[i];
-              } else {
-                pred1((events.cmt(i) - 1) * (nvar + 1)) += model_amt[i];
-              }
             }
 
             // we need every step, not just ikeep steps.
@@ -276,7 +271,7 @@ namespace torsten{
       int finished = 0;
       int flag = 0;
       int index;
-      while (finished != np) {
+      while (finished != np && size > 1) {
         MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
         if(flag) {
           int id = index;
@@ -285,7 +280,6 @@ namespace torsten{
             std::cout << "rank " << rank << " syncing " << id << "\n";
 
             EM em(nCmt, time[id], amt[id], rate[id], ii[id], evid[id], cmt[id], addl[id], ss[id], pMatrix[id], biovar[id], tlag[id]);
-            res[id].resize(em.nKeep, em.ncmt);
             auto events = em.events();
             auto model_rate = em.rates();
             auto model_amt = em.amts();
@@ -306,21 +300,21 @@ namespace torsten{
                 typename EM::T_time model_time = events.time(i);
                 T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
                 vector<var> v_i = pkmodel.vars(model_amt[i], events.rate(i), events.ii(i));
-                int nsys1 = torsten::pk_nsys(em.ncmt, v_i.size());
+                int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
                 pred1 = res_d[id].row(i);
                 if (events.ss(i) == 2)
-                  init += torsten::mpi::precomputed_gradients(pred1.segment(0, nsys1), v_i);  // steady state without reset
+                  init += torsten::mpi::precomputed_gradients(pred1.segment(0, nsys), v_i);  // steady state without reset
                 else
-                  init = torsten::mpi::precomputed_gradients(pred1.segment(0, nsys1), v_i);  // steady state with reset (ss = 1)
+                  init = torsten::mpi::precomputed_gradients(pred1.segment(0, nsys), v_i);  // steady state with reset (ss = 1)
               } else {
                 dt = events.time(i) - tprev;
                 if (dt > 0) {
                   typename EM::T_time model_time = tprev;
                   T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
                   vector<var> v_i = pkmodel.vars(events.time(i));
-                  int nsys1 = torsten::pk_nsys(em.ncmt, v_i.size());
+                  int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
                   pred1 = res_d[id].row(i);
-                  init = torsten::mpi::precomputed_gradients(pred1.segment(0, nsys1), v_i);
+                  init = torsten::mpi::precomputed_gradients(pred1.segment(0, nsys), v_i);
                 }
               }
 

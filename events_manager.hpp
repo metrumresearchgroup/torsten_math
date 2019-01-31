@@ -165,6 +165,29 @@ struct EventsManager {
     return par_v;
   }
 
+  /*
+   * check the exisitence of SS dosing events
+   */
+  static bool has_ss_dosing(const std::vector<int>& evid,
+                            const std::vector<int>& ss) {
+    if (ss.size() == 1) {
+      return false;
+    } else {
+      bool res = false;
+      for (size_t i = 0; i < evid.size(); ++i) {
+        if ((evid[i] == 1 || evid[i] == 4) && ss[i] != 0) {
+          res = true;
+          break;
+        }
+      }
+      return res;
+    }
+  }
+
+  /*
+   * calculate the total nb. of events without generating
+   * events history.
+   */
   template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
   static int nevents(const std::vector<T0_>& time,
                      const std::vector<T1_>& amt,
@@ -181,17 +204,12 @@ struct EventsManager {
 
     int res;
 
-    bool nolag = false;
-    if (tlag.size() == 1) {
-      nolag = std::all_of(tlag[0].begin(), tlag[0].end(), [](double x) { return std::abs(x) < 1.E-10; });
-    } else {
-      for (const auto& v : tlag) {
-        nolag = std::all_of(v.begin(), v.end(), [](double x) { return std::abs(x) < 1.E-10; });
-        if (!nolag) break;
-      }
-    }
+    bool has_lag = std::any_of(tlag.begin(), tlag.end(),
+                              [](const std::vector<T6_>& v) {
+                                 return std::any_of(v.begin(), v.end(), [](const T6_& x) { return std::abs(value_of(x)) > 1.E-10; });
+                              });
 
-    if (nolag) {
+    if (!has_lag) {
       int n = time.size();
       for (size_t i = 0; i < time.size(); i++) {
         if (evid[i] == 1 || evid[i] == 4) {      // is dosing event
