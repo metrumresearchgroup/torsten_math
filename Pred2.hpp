@@ -60,9 +60,9 @@ namespace torsten{
      * @return a matrix with predicted amount in each compartment
      * at each event.
      */
-    template<typename... T_em, typename... Ts>
-    static void pred(const EventsManager<T_em...>& em,
-                     Eigen::Matrix<typename EventsManager<T_em...>::T_scalar, -1, -1>& res,
+    template<typename T_em, typename... Ts>
+    static void pred(const T_em& em,
+                     Eigen::Matrix<typename T_em::T_scalar, -1, -1>& res,
                      const T_pred... pred_pars,
                      const Ts... model_pars) {
       using Eigen::Matrix;
@@ -71,65 +71,156 @@ namespace torsten{
       using::stan::math::multiply;
       using refactor::PKRec;
 
-      using scalar = typename EventsManager<T_em...>::T_scalar;
+      using scalar = typename T_em::T_scalar;
+
+      res.resize(em.nKeep, em.ncmt);
+      PKRec<scalar> init(em.ncmt);
+      init.setZero();
+
+      for (int ik = 0; ik < em.nKeep; ik++) {
+        int ibegin = ik == 0 ? 0 : em.keep_ev[ik-1] + 1;
+        int iend = em.keep_ev[ik] + 1;
+        for (int i = ibegin; i < iend; ++i) {
+          stepper(i, init, em, pred_pars..., model_pars...);
+        }
+        res.row(ik) = init;
+      }
+    }
+
+    /*
+     * Step through a range of events.
+     */
+    template<typename T_em, typename... Ts>
+    static void stepper(int i, refactor::PKRec<typename T_em::T_scalar>& init,
+                        const T_em& em, const T_pred... pred_pars, const Ts... model_pars) {
+      auto events = em.events();
+      auto model_rate = em.rates();
+      auto model_amt = em.amts();
+      auto model_par = em.pars();
+
+      using scalar = typename T_em::T_scalar;
+      typename T_em::T_time dt;
+      typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
+
+      Eigen::Matrix<scalar, -1, 1> pred1;
+
+      if (events.is_reset(i)) {
+        dt = 0;
+        init.setZero();
+      } else if (events.is_ss_dosing(i)) {  // steady state event
+        typename T_em::T_time model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
+        T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
+        pred1 = stan::math::multiply(pkmodel.solve(model_amt[i], //NOLINT
+                                                   events.rate(i),
+                                                   events.ii(i),
+                                                   events.cmt(i),
+                                                   pred_pars...),
+                                     scalar(1.0));
+
+        if (events.ss(i) == 2)
+          init += pred1;  // steady state without reset
+        else
+          init = pred1;  // steady state with reset (ss = 1)
+      } else {           // non-steady dosing event
+        dt = events.time(i) - tprev;
+        typename T_em::T_time model_time = tprev;
+
+        T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
+
+        pred1 = pkmodel.solve(dt, pred_pars...);
+        init = pred1;
+      }
+
+      if (events.is_bolus_dosing(i)) {
+        init(0, events.cmt(i) - 1) += model_amt[i];
+      }
+      tprev = events.time(i);
+    }
+
+    template<typename T_em, typename... Ts>
+    static void stepper_solve(int i, refactor::PKRec<typename T_em::T_scalar>& init,
+                        refactor::PKRec<double>& sol_d,
+                        const T_em& em, const T_pred... pred_pars, const Ts... model_pars) {
+      using std::vector;
+      using stan::math::var;
 
       auto events = em.events();
       auto model_rate = em.rates();
       auto model_amt = em.amts();
       auto model_par = em.pars();
-      res.resize(em.nKeep, em.ncmt);
-      PKRec<scalar> zeros = PKRec<scalar>::Zero(em.ncmt);
-      PKRec<scalar> init = zeros;
-      auto dt = events.time(0);
-      auto tprev = events.time(0);
-      Matrix<scalar, Dynamic, 1> pred1;
-      int ikeep = 0;
 
-      for (size_t i = 0; i < events.size(); i++) {
-        if (events.is_reset(i)) {
-          dt = 0;
-          init = zeros;
-        } else if ((events.is_dosing(i) && (events.ss(i) == 1 || events.ss(i) == 2)) || events.ss(i) == 3) {  // steady state event
-          decltype(tprev) model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
-          // auto model_par = parameter.get_RealParameters();
-          // FIX ME: we need a better way to relate model type to parameter type
+      typename T_em::T_time dt;
+      typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
+
+      if (events.is_reset(i)) {
+        dt = 0;
+        init.setZero();
+      } else if (events.is_ss_dosing(i)) {  // steady state event
+        typename T_em::T_time model_time = events.time(i);
+        T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
+        vector<var> v_i = pkmodel.vars(model_amt[i], events.rate(i), events.ii(i));
+        sol_d = pkmodel.solve_d(model_amt[i], events.rate(i), events.ii(i), events.cmt(i), pred_pars...);
+        if (events.ss(i) == 2)
+          init += torsten::mpi::precomputed_gradients(sol_d, v_i);  // steady state without reset
+        else
+          init = torsten::mpi::precomputed_gradients(sol_d, v_i);  // steady state with reset (ss = 1)
+      } else {
+        dt = events.time(i) - tprev;
+        if (dt > 0) {
+          typename T_em::T_time model_time = tprev;
           T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
-          pred1 = multiply(pkmodel.solve(model_amt[i], //NOLINT
-                                         events.rate(i),
-                                         events.ii(i),
-                                         events.cmt(i),
-                                         pred_pars...),
-                           scalar(1.0));
+          vector<var> v_i = pkmodel.vars(events.time(i));
+          sol_d = pkmodel.solve_d(dt, pred_pars...);
+          init = torsten::mpi::precomputed_gradients(sol_d, v_i);
+        }
+      }
 
-          // the object PredSS returns doesn't always have a scalar type. For
-          // instance, PredSS does not depend on tlag, but pred does. So if
-          // tlag were a var, the code must promote PredSS to match the type
-          // of pred1. This is done by multiplying predSS by a Scalar.
+      if (events.is_bolus_dosing(i)) {
+        init(0, events.cmt(i) - 1) += model_amt[i];
+      }
+      tprev = events.time(i);
+    }
 
-          if (events.ss(i) == 2)
-            init += pred1;  // steady state without reset
-          else
-            init = pred1;  // steady state with reset (ss = 1)
-        } else {           // non-steady dosing event
-          dt = events.time(i) - tprev;
-          decltype(tprev) model_time = tprev;
+    template<typename T_em, typename... Ts>
+    static void stepper_sync(int i, refactor::PKRec<typename T_em::T_scalar>& init,
+                        refactor::PKRec<double>& sol_d,
+                             const T_em& em, const T_pred... pred_pars, const Ts... model_pars) {
+      using std::vector;
+      using stan::math::var;
 
-          // FIX ME: we need a better way to relate model type to parameter type
+      auto events = em.events();
+      auto model_rate = em.rates();
+      auto model_amt = em.amts();
+      auto model_par = em.pars();
+
+      typename T_em::T_time dt;
+      typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
+
+      if (events.is_reset(i)) {
+        dt = 0;
+        init.setZero();
+      } else if (events.is_ss_dosing(i)) {  // steady state event
+        typename T_em::T_time model_time = events.time(i);
+        T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
+        vector<var> v_i = pkmodel.vars(model_amt[i], events.rate(i), events.ii(i));
+        int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
+        if (events.ss(i) == 2)
+          init += torsten::mpi::precomputed_gradients(sol_d.segment(0, nsys), v_i);  // steady state without reset
+        else
+          init = torsten::mpi::precomputed_gradients(sol_d.segment(0, nsys), v_i);  // steady state with reset (ss = 1)
+      } else {
+        dt = events.time(i) - tprev;
+        if (dt > 0) {
+          typename T_em::T_time model_time = tprev;
           T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
-
-          pred1 = pkmodel.solve(dt, pred_pars...);
-          init = pred1;
+          vector<var> v_i = pkmodel.vars(events.time(i));
+          int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
+          init = torsten::mpi::precomputed_gradients(sol_d.segment(0, nsys), v_i);
         }
+      }
 
-        if (events.is_bolus_dosing(i)) {
-          init(0, events.cmt(i) - 1) += model_amt[i];
-        }
-
-        if (events.keep(i)) {
-          res.row(ikeep) = init;
-          ikeep++;
-        }
-        tprev = events.time(i);
+      if (events.is_bolus_dosing(i)) {
+        init(0, events.cmt(i) - 1) += model_amt[i];
       }
     }
 
@@ -211,55 +302,17 @@ namespace torsten{
           assert(nev == events.size());
           assert(nKeep == em.nKeep);
 
-          auto model_rate = em.rates();
-          auto model_amt = em.amts();
-          auto model_par = em.pars();
-          PKRec<scalar> zeros = PKRec<scalar>::Zero(em.ncmt);
-          PKRec<scalar> init = zeros;
-          typename EM::T_time dt = events.time(0);
-          typename EM::T_time tprev = events.time(0);
-          PKRec<double> pred1 = VectorXd::Zero(res_d[id].cols());
+          PKRec<scalar> init(em.ncmt); init.setZero();
+          PKRec<double> pred1;
           int ikeep = 0;
-          int nsys = torsten::pk_nsys(nCmt, nvar);
-          int nsys_ss = torsten::pk_nsys(nCmt, nvar_ss);
 
           for (size_t i = 0; i < events.size(); i++) {
-            if (events.is_reset(i)) {
-              dt = 0;
-              init = zeros;
-              pred1 = Eigen::VectorXd::Zero(res_d[id].cols());
-            } else if (events.is_ss_dosing(i)) {  // steady state event
-              typename EM::T_time model_time = events.time(i);
-              T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
-              vector<var> v_i = pkmodel.vars(model_amt[i], events.rate(i), events.ii(i));
-              pred1.segment(0, nsys_ss) = pkmodel.solve_d(model_amt[i], events.rate(i), events.ii(i), events.cmt(i), pred_pars...);
-              if (events.ss(i) == 2)
-                init += torsten::mpi::precomputed_gradients(pred1.segment(0, nsys_ss), v_i);  // steady state without reset
-              else
-                init = torsten::mpi::precomputed_gradients(pred1.segment(0, nsys_ss), v_i);  // steady state with reset (ss = 1)
-            } else {
-              dt = events.time(i) - tprev;
-              if (dt > 0) {
-                typename EM::T_time model_time = tprev;
-                T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
-                vector<var> v_i = pkmodel.vars(events.time(i));
-                pred1.segment(0, nsys) = pkmodel.solve_d(dt, pred_pars...);
-                init = torsten::mpi::precomputed_gradients(pred1.segment(0, nsys), v_i);
-              }
-            }
-
-            if (events.is_bolus_dosing(i)) {
-              init(0, events.cmt(i) - 1) += model_amt[i];
-            }
-
-            // we need every step, not just ikeep steps.
-            res_d[id].row(i) = pred1;
-
+            stepper_solve(i, init, pred1, em, pred_pars..., model_pars...);
+            res_d[id].row(i).segment(0, pred1.size()) = pred1;
             if (events.keep(i)) {
               res[id].row(ikeep) = init;
               ikeep++;
             }
-            tprev = events.time(i);
           }
         }
 
@@ -280,59 +333,23 @@ namespace torsten{
             std::cout << "rank " << rank << " syncing " << id << "\n";
 
             EM em(nCmt, time[id], amt[id], rate[id], ii[id], evid[id], cmt[id], addl[id], ss[id], pMatrix[id], biovar[id], tlag[id]);
-            auto events = em.events();
-            auto model_rate = em.rates();
-            auto model_amt = em.amts();
-            auto model_par = em.pars();
-            PKRec<scalar> zeros = PKRec<scalar>::Zero(em.ncmt);
-            PKRec<scalar> init = zeros;
+            PKRec<scalar> init(nCmt); init.setZero();
 
-            typename EM::T_time dt = events.time(0);
-            typename EM::T_time tprev = events.time(0);
             PKRec<double> pred1 = VectorXd::Zero(res_d[id].cols());
             int ikeep = 0;
 
-            for (size_t i = 0; i < events.size(); i++) {
-              if (events.is_reset(i)) {
-                dt = 0;
-                init = zeros;
-              } else if (events.is_ss_dosing(i)) {  // steady state event
-                typename EM::T_time model_time = events.time(i);
-                T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
-                vector<var> v_i = pkmodel.vars(model_amt[i], events.rate(i), events.ii(i));
-                int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
-                pred1 = res_d[id].row(i);
-                if (events.ss(i) == 2)
-                  init += torsten::mpi::precomputed_gradients(pred1.segment(0, nsys), v_i);  // steady state without reset
-                else
-                  init = torsten::mpi::precomputed_gradients(pred1.segment(0, nsys), v_i);  // steady state with reset (ss = 1)
-              } else {
-                dt = events.time(i) - tprev;
-                if (dt > 0) {
-                  typename EM::T_time model_time = tprev;
-                  T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
-                  vector<var> v_i = pkmodel.vars(events.time(i));
-                  int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
-                  pred1 = res_d[id].row(i);
-                  init = torsten::mpi::precomputed_gradients(pred1.segment(0, nsys), v_i);
-                }
-              }
-
-              if (events.is_bolus_dosing(i)) {
-                init(0, events.cmt(i) - 1) += model_amt[i];
-              }
-
-              if (events.keep(i)) {
+            for (size_t i = 0; i < em.events().size(); i++) {
+              pred1 = res_d[id].row(i);
+              stepper_sync(i, init, pred1, em, pred_pars..., model_pars...);
+              if (em.events().keep(i)) {
                 res[id].row(ikeep) = init;
                 ikeep++;
               }
-              tprev = events.time(i);
             }
           }
           finished++;
         }
-      }
-      // finished
+      } // finished
     }
 
     /*
@@ -398,46 +415,17 @@ namespace torsten{
           auto model_rate = em.rates();
           auto model_amt = em.amts();
           auto model_par = em.pars();
-          PKRec<double> zeros = PKRec<double>::Zero(em.ncmt);
-          PKRec<double> init = zeros;
-
-          double dt = events.time(0);
-          double tprev = events.time(0);
+          PKRec<double> init(nCmt); init.setZero();
 
           PKRec<double> pred1 = VectorXd::Zero(em.ncmt);
-          int ikeep = 0;
 
-          for (size_t i = 0; i < events.size(); i++) {
-            if (events.is_reset(i)) {
-              dt = 0;
-              init = zeros;
-            } else if (events.is_ss_dosing(i)) {  // steady state event
-              decltype(tprev) model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
-              T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
-              pred1 = pkmodel.solve_d(model_amt[i], events.rate(i), events.ii(i), events.cmt(i), pred_pars...);
-              if (events.ss(i) == 2)
-                init += pred1;  // steady state without reset
-              else
-                init = pred1;  // steady state with reset (ss = 1)
-            } else {
-              dt = events.time(i) - tprev;
-              if (dt > 0) {
-                double model_time = tprev;
-                T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
-                pred1 = pkmodel.solve_d(dt, pred_pars...);
-                init = pred1;
-              }
+          for (int ik = 0; ik < em.nKeep; ik++) {
+            int ibegin = ik == 0 ? 0 : em.keep_ev[ik-1] + 1;
+            int iend = em.keep_ev[ik] + 1;
+            for (int i = ibegin; i < iend; ++i) {
+              stepper(i, init, em, pred_pars..., model_pars...);          
             }
-
-            if (events.is_bolus_dosing(i)) {
-              init(0, events.cmt(i) - 1) += model_amt[i];
-            }
-
-            if (events.keep(i)) {
-              res[id].row(ikeep) = init;
-              ikeep++;
-            }
-            tprev = events.time(i);
+            res[id].row(ik) = init;
           }
         }
 

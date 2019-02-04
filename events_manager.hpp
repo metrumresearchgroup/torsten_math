@@ -33,7 +33,7 @@ struct EventsManager {
   std::vector<std::vector<T_rate> > rate_v;
   std::vector<T_amt> amt_v;
   std::vector<std::vector<T_par> > par_v;
-  // std::vector<std::vector<stan::math::var> > vars_v;
+  std::vector<int> keep_ev;
 
   const int nKeep;
   const int ncmt;
@@ -52,9 +52,6 @@ struct EventsManager {
                 const std::vector<std::vector<T5_> >& biovar,
                 const std::vector<std::vector<T6_> >& tlag) :
     event_his(time, amt, rate, ii, evid, cmt, addl, ss),
-    rate_v(),
-    amt_v(),
-    par_v(),
     nKeep(event_his.size()),
     ncmt(nCmt)
   {
@@ -90,6 +87,11 @@ struct EventsManager {
       auto p = param_his.GetModelParameters(i);
       par_v[i] = p.get_RealParameters();
     }
+
+    keep_ev.reserve(nKeep);
+    for (size_t i = 0; i < event_his.size(); ++i) {    
+      if (event_his.keep(i)) keep_ev.push_back(i);
+    }
   }
 
   template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
@@ -106,9 +108,6 @@ struct EventsManager {
                 const std::vector<std::vector<T6_> >& tlag,
                 const std::vector<Eigen::Matrix<T4_, -1, -1>>& systems) :
     event_his(time, amt, rate, ii, evid, cmt, addl, ss),
-    rate_v(),
-    amt_v(),
-    par_v(),
     nKeep(event_his.size()),
     ncmt(nCmt)
   {
@@ -146,6 +145,11 @@ struct EventsManager {
       std::vector<T_par> par(k.size());
       for (size_t j = 0; j < par.size(); ++j) par[j] = k(j);
       par_v[i] = par;
+    }
+
+    keep_ev.reserve(nKeep);
+    for (size_t i = 0; i < event_his.size(); ++i) {    
+      if (event_his.keep(i)) keep_ev.push_back(i);
     }
   }
 
