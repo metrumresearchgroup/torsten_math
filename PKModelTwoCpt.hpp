@@ -1,8 +1,6 @@
 #ifndef STAN_MATH_TORSTEN_PKMODELTWOCPT2_HPP
 #define STAN_MATH_TORSTEN_PKMODELTWOCPT2_HPP
 
-#include <test/unit/math/torsten/test_util.hpp>
-
 #include <Eigen/Dense>
 #include <boost/math/tools/promotion.hpp>
 #include <stan/math/torsten/Pred2.hpp>

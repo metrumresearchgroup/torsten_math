@@ -378,7 +378,7 @@ template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
 std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, // NOLINT
                           Eigen::Dynamic, Eigen::Dynamic> >
-generalOdeModel_rk45(const F& f,
+pop_pk_generalOdeModel_rk45(const F& f,
                     const int nCmt,
                     const std::vector<std::vector<T0> >& time,
                     const std::vector<std::vector<T1> >& amt,
