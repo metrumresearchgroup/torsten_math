@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_PKMODEL_EVENT_HPP
 
 #include <Eigen/Dense>
+#include <stan/math/prim/scal/err/check_greater_or_equal.hpp>
 #include <stan/math/torsten/PKModel/functions.hpp>
 #include <stan/math/torsten/pk_nsys.hpp>
 #include <iostream>
@@ -61,22 +62,6 @@ struct Event{
     isnew (p_isnew)
   {}
 
-  /*
-   * copy constructor
-   */
-  Event(const Event& other) :
-    time  (other.time ),
-    amt   (other.amt  ),
-    rate  (other.rate ),
-    ii    (other.ii   ),
-    evid  (other.evid ),
-    cmt   (other.cmt  ),
-    addl  (other.addl ),
-    ss    (other.ss   ),
-    keep  (other.keep ),
-    isnew (other.isnew)
-  {}
-    
   /**
    * The function operator is handy when we need to define the same event
    * multiple times, as we might in a FOR loop.
@@ -130,30 +115,44 @@ struct EventHistory {
                const std::vector<int>& p_addl, const std::vector<int>& p_ss)
     : Events(p_evid.size())
   {
-    for (size_t i = 0; i < p_evid.size(); i++) {
-      if (p_ii.size() == 1) {   // no additional dosing
-        if (p_ss.size() == 1) {
-          Events[i] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i], p_amt[i], p_rate[i], 0, p_evid[i], p_cmt[i], 0, 0, true, false);
-        } else {
-          Events[i] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i], p_amt[i], p_rate[i], 0, p_evid[i], p_cmt[i], 0, p_ss[i], true, false);
-        }
-      } else {
-        if (p_ss.size() == 1) {
-          Events[i] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i], p_amt[i], p_rate[i], p_ii[i], p_evid[i], p_cmt[i], p_addl[i], 0, true, false);
-        } else {
-          Events[i] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i], p_amt[i], p_rate[i], p_ii[i], p_evid[i], p_cmt[i], p_addl[i], p_ss[i], true, false);
-        }
-      }
+    for (size_t i = 0; i < p_evid.size(); ++i) {
+      T3 ii_i;
+      int addl_i;
+      int ss_i;
+      p_ii.size() == 1 ? ii_i = 0.0 : ii_i = p_ii[i];
+      p_ii.size() == 1 ? addl_i = 0 : addl_i = p_addl[i];
+      p_ss.size() == 1 ? ss_i = 0 : ss_i = p_ss[i];
+      Events[i] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i], p_amt[i], p_rate[i], ii_i, p_evid[i], p_cmt[i], addl_i, ss_i, true, false);
     }
   }
+
   /*
-   * copy constructor
+   * for a population with data in ragged array form, we
+   * form the events history using the population data and
+   * the location of the individual in the ragged arrays.
+   * In this constructor we assume @c p_ii.size() > 1 and
+   * @c p_ss.size() > 1.
    */
-  template<typename T0, typename T1, typename T2, typename T3>
-  EventHistory(const EventHistory<T0, T1, T2, T3>& other) : Events() {
-    Events.reserve(other.size());
-    for (size_t i = 0; i < other.size(); ++i) {
-      Events.push_back(other.Events[i]);
+  template<typename t0, typename t1, typename t2, typename t3>
+  EventHistory(int ibegin, int iend,
+               const std::vector<t0>& p_time, const std::vector<t1>& p_amt,
+               const std::vector<t2>& p_rate, const std::vector<t3>& p_ii,
+               const std::vector<int>& p_evid, const std::vector<int>& p_cmt,
+               const std::vector<int>& p_addl, const std::vector<int>& p_ss)
+    : Events(iend - ibegin)
+  {
+    using stan::math::check_greater_or_equal;
+    static const char* caller = "EventHistory::EventHistory";
+    check_greater_or_equal(caller, "time size", p_time.size(), iend);
+    check_greater_or_equal(caller, "amt size", p_amt.size(), iend);
+    check_greater_or_equal(caller, "rate size", p_rate.size(), iend);
+    check_greater_or_equal(caller, "ii size", p_ii.size(), iend);
+    check_greater_or_equal(caller, "evid size", p_evid.size(), iend);
+    check_greater_or_equal(caller, "cmt size", p_cmt.size(), iend);
+    check_greater_or_equal(caller, "addl size", p_addl.size(), iend);
+    check_greater_or_equal(caller, "ss size", p_ss.size(), iend);
+    for (int i = ibegin; i < iend; ++i) {
+      Events[i-ibegin] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i], p_amt[i], p_rate[i], p_ii[i], p_evid[i], p_cmt[i], p_addl[i], p_ss[i], true, false);
     }
   }
 

@@ -26,35 +26,20 @@ template<typename T_time,
 struct ModelParameters {
   T_time time_;
   std::vector<T_parameters> theta_;
+  int nrow, ncol;
   std::vector<T_biovar> biovar_;
   std::vector<T_tlag> tlag_;
-  Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic> K_;
 
-  ModelParameters() {
-    // FIX ME - this constructor likely does not work
-    time_ = 0;
-    std::vector<T_parameters> theta(0);
-    theta_ = theta;
-    std::vector<T_biovar> biovar(0);
-    biovar_ = biovar;
-    std::vector<T_tlag> tlag(0);
-    tlag_ = tlag;
-    Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic> K;
-    K_ = K;
+  ModelParameters() {}
+
+  ModelParameters(const T_time& time,
+                  const std::vector<T_biovar>& biovar,
+                  const std::vector<T_tlag>& tlag,
+                  const Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic>& K)
+    : time_(time), theta_(K.size()), nrow(K.rows()), ncol(K.cols()), biovar_(biovar), tlag_(tlag)
+  {
+    Eigen::Matrix<T_parameters, -1, -1>::Map(theta_.data(), nrow, ncol) = K;
   }
-
-  ModelParameters(const T_time& time,
-                  const std::vector<T_parameters>& theta,
-                  const std::vector<T_biovar>& biovar,
-                  const std::vector<T_tlag>& tlag,
-                  const Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic>& K)
-    : time_(time), theta_(theta), biovar_(biovar), tlag_(tlag), K_(K) {}
-
-  ModelParameters(const T_time& time,
-                  const std::vector<T_biovar>& biovar,
-                  const std::vector<T_tlag>& tlag,
-                  const Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic>& K)
-    : time_(time), theta_(), biovar_(biovar), tlag_(tlag), K_(K) {}
 
   ModelParameters(const T_time& time,
                   const std::vector<T_parameters>& theta,
@@ -108,7 +93,9 @@ struct ModelParameters {
     return tlag_;
   }
   Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic> get_K() const {
-    return K_;
+    Eigen::Matrix<T_parameters, -1, -1> res(nrow, ncol);
+    res = Eigen::Matrix<T_parameters, -1, -1>::Map(theta_.data(), nrow, ncol);
+    return res;
   }
 };
 
@@ -276,7 +263,8 @@ struct ModelParameterHistory{
         MPV_[i].theta_ = MPV_[0].theta_;
         MPV_[i].biovar_ = MPV_[0].biovar_;
         MPV_[i].tlag_ = MPV_[0].tlag_;
-        MPV_[i].K_ = MPV_[0].K_;
+        MPV_[i].nrow = MPV_[0].nrow;
+        MPV_[i].ncol = MPV_[0].ncol;
         MPV_[i].time_ = events.time(i);
         events.Events[i].isnew = false;
       }
