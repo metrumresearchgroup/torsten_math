@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_PKMODELTWOCPT2_HPP
 
 #include <Eigen/Dense>
+#include <stan/math/prim/scal/err/check_greater_or_equal.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <stan/math/torsten/Pred2.hpp>
 #include <stan/math/torsten/events_manager.hpp>
@@ -329,17 +330,17 @@ template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6>
 std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, // NOLINT
                           Eigen::Dynamic, Eigen::Dynamic> >
-PKModelTwoCpt(const std::vector<std::vector<T0> >& time,
-              const std::vector<std::vector<T1> >& amt,
-              const std::vector<std::vector<T2> >& rate,
-              const std::vector<std::vector<T3> >& ii,
-              const std::vector<std::vector<int> >& evid,
-              const std::vector<std::vector<int> >& cmt,
-              const std::vector<std::vector<int> >& addl,
-              const std::vector<std::vector<int> >& ss,
-              const std::vector<std::vector<std::vector<T4> > >& pMatrix,
-              const std::vector<std::vector<std::vector<T5> > >& biovar,
-              const std::vector<std::vector<std::vector<T6> > >& tlag) {
+popPKModelTwoCpt(const std::vector<std::vector<T0> >& time,
+                 const std::vector<std::vector<T1> >& amt,
+                 const std::vector<std::vector<T2> >& rate,
+                 const std::vector<std::vector<T3> >& ii,
+                 const std::vector<std::vector<int> >& evid,
+                 const std::vector<std::vector<int> >& cmt,
+                 const std::vector<std::vector<int> >& addl,
+                 const std::vector<std::vector<int> >& ss,
+                 const std::vector<std::vector<std::vector<T4> > >& pMatrix,
+                 const std::vector<std::vector<std::vector<T5> > >& biovar,
+                 const std::vector<std::vector<std::vector<T6> > >& tlag) {
 
   int np = time.size();
   int nCmt = refactor::PKTwoCptModel<double, double, double, double>::Ncmt;
@@ -363,6 +364,70 @@ PKModelTwoCpt(const std::vector<std::vector<T0> >& time,
   std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
 
   pr.pred(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag, pred);
+
+  return pred;
+}
+
+  /* 
+   * For population models, we follow the call signature
+   * but add the arrays of the length of each individual's data. 
+   * The size of that vector is the siez of
+   * the population.
+   */
+template <typename T0, typename T1, typename T2, typename T3, typename T4,
+          typename T5, typename T6>
+std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, // NOLINT
+                          Eigen::Dynamic, Eigen::Dynamic> >
+popPKModelTwoCpt(const std::vector<int>& len,
+                 const std::vector<T0>& time,
+                 const std::vector<T1>& amt,
+                 const std::vector<T2>& rate,
+                 const std::vector<T3>& ii,
+                 const std::vector<int>& evid,
+                 const std::vector<int>& cmt,
+                 const std::vector<int>& addl,
+                 const std::vector<int>& ss,
+                 const std::vector<int>& len_pMatrix,
+                 const std::vector<std::vector<T4> >& pMatrix,
+                 const std::vector<int>& len_biovar,
+                 const std::vector<std::vector<T5> >& biovar,
+                 const std::vector<int>& len_tlag,
+                 const std::vector<std::vector<T6> >& tlag) {
+  using stan::math::check_consistent_sizes;
+  using stan::math::check_greater_or_equal;
+
+  int np = len.size();
+  int nCmt = refactor::PKTwoCptModel<double, double, double, double>::Ncmt;
+  static const char* caller("PKModelTwoCpt");
+  check_consistent_sizes(caller, "time", time, "amt",     amt);
+  check_consistent_sizes(caller, "time", time, "rate",    rate);
+  check_consistent_sizes(caller, "time", time, "ii",      ii);
+  check_consistent_sizes(caller, "time", time, "evid",    evid);
+  check_consistent_sizes(caller, "time", time, "cmt",     cmt);
+  check_consistent_sizes(caller, "time", time, "addl",    addl);
+  check_consistent_sizes(caller, "time", time, "ss",      ss);
+  check_consistent_sizes(caller, "population", len, "parameters", len_pMatrix);
+  check_consistent_sizes(caller, "population", len, "biovar", len_biovar);
+  check_consistent_sizes(caller, "population", len, "tlag", len_tlag);
+
+  size_t s;
+  s = 0; for (auto& i : len)         {s += i;} check_greater_or_equal(caller, "time size", time.size(), s);
+  s = 0; for (auto& i : len_pMatrix) {s += i;} check_greater_or_equal(caller, "pMatrix size", pMatrix.size(), s);
+  s = 0; for (auto& i : len_biovar)  {s += i;} check_greater_or_equal(caller, "biovar size", biovar.size(), s);
+  s = 0; for (auto& i : len_tlag)    {s += i;} check_greater_or_equal(caller, "tlag size", tlag.size(), s);
+
+  using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
+
+  using model_type = refactor::PKTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
+  PredWrapper<model_type> pr;
+
+  std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
+
+  pr.pred(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss,
+          len_pMatrix, pMatrix,
+          len_biovar, biovar,
+          len_tlag, tlag,
+          pred);
 
   return pred;
 }

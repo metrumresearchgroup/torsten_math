@@ -94,6 +94,75 @@ struct EventsManager {
     }
   }
 
+  /*
+   * For population models, we need generate events using
+   * ragged arrays.
+   */
+  template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
+  EventsManager(int nCmt,
+                int ibegin, int isize,
+                const std::vector<T0_>& time,
+                const std::vector<T1_>& amt,
+                const std::vector<T2_>& rate,
+                const std::vector<T3_>& ii,
+                const std::vector<int>& evid,
+                const std::vector<int>& cmt,
+                const std::vector<int>& addl,
+                const std::vector<int>& ss,
+                int ibegin_theta, int isize_theta,
+                const std::vector<std::vector<T4_> >& pMatrix,
+                int ibegin_biovar, int isize_biovar,
+                const std::vector<std::vector<T5_> >& biovar,
+                int ibegin_tlag, int isize_tlag,
+                const std::vector<std::vector<T6_> >& tlag) :
+    event_his(ibegin, isize, time, amt, rate, ii, evid, cmt, addl, ss),
+    nKeep(event_his.size()),
+    ncmt(nCmt)
+  {
+    event_his.Sort();
+
+    ModelParameterHistory<T_time, T4, T5, T6>
+      param_his(ibegin, isize, time,
+                ibegin_theta, isize_theta, pMatrix,
+                ibegin_biovar, isize_biovar, biovar,
+                ibegin_tlag, isize_tlag, tlag);
+    param_his.Sort();
+
+    event_his.AddlDoseEvents();
+    param_his.CompleteParameterHistory(event_his);
+
+    event_his.AddLagTimes(param_his, nCmt);
+    RateHistory<T_time, T2> rate_history(event_his, nCmt);
+    param_his.CompleteParameterHistory(event_his);
+
+    int iRate = 0;
+    for (size_t i = 0; i < event_his.size(); i++) {
+
+      // Use index iRate instead of i to find rate at matching time, given there
+      // is one rate per time, not per event.
+      if (rate_history.time(iRate) != event_his.time(i)) iRate++;
+      std::vector<T_rate> rate_i(nCmt);
+      for (int j = 0; j < nCmt; ++j) {
+        rate_i[j] = rate_history.rate(iRate, j) * param_his.GetValueBio(i, j);
+      }
+      rate_v.push_back(rate_i);
+
+      amt_v.push_back(param_his.GetValueBio(i, event_his.cmt(i) - 1) * event_his.amt(i));
+    }
+
+    par_v.resize(event_his.size());
+    for (size_t i = 0; i < event_his.size(); ++i) {
+      auto p = param_his.GetModelParameters(i);
+      par_v[i] = p.get_RealParameters();
+    }
+
+    keep_ev.reserve(nKeep);
+    for (size_t i = 0; i < event_his.size(); ++i) {    
+      if (event_his.keep(i)) keep_ev.push_back(i);
+    }
+  }
+
+
   template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
   EventsManager(int nCmt,
                 const std::vector<T0_>& time,
@@ -204,18 +273,39 @@ struct EventsManager {
                      const std::vector<std::vector<T4_> >& pMatrix,
                      const std::vector<std::vector<T5_> >& biovar,
                      const std::vector<std::vector<T6_> >& tlag) {
+    return nevents(0, time.size(), time, amt, rate, ii, evid, cmt, addl, ss,
+                   0, pMatrix.size(), pMatrix,
+                   0, biovar.size(), biovar,
+                   0, tlag.size(), tlag);
+  }
+
+  template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
+  static int nevents(int ibegin, int isize,
+                     const std::vector<T0_>& time,
+                     const std::vector<T1_>& amt,
+                     const std::vector<T2_>& rate,
+                     const std::vector<T3_>& ii,
+                     const std::vector<int>& evid,
+                     const std::vector<int>& cmt,
+                     const std::vector<int>& addl,
+                     const std::vector<int>& ss,
+                     int ibegin_pMatrix, int isize_pMatrix,
+                     const std::vector<std::vector<T4_> >& pMatrix,
+                     int ibegin_biovar, int isize_biovar,
+                     const std::vector<std::vector<T5_> >& biovar,
+                     int ibegin_tlag, int isize_tlag,
+                     const std::vector<std::vector<T6_> >& tlag) {
     using stan::math::value_of;
 
     int res;
-
-    bool has_lag = std::any_of(tlag.begin(), tlag.end(),
+    bool has_lag = std::any_of(tlag.begin() + ibegin_tlag, tlag.begin() + ibegin_tlag + isize_tlag,
                               [](const std::vector<T6_>& v) {
                                  return std::any_of(v.begin(), v.end(), [](const T6_& x) { return std::abs(value_of(x)) > 1.E-10; });
                               });
 
     if (!has_lag) {
-      int n = time.size();
-      for (size_t i = 0; i < time.size(); i++) {
+      int n = isize;
+      for (int i = ibegin; i < ibegin + isize; ++i) {
         if (evid[i] == 1 || evid[i] == 4) {      // is dosing event
           if (addl[i] > 0 && ii[i] > 0) {        // has addl doses
             if (rate[i] > 0 && amt[i] > 0) {
@@ -230,13 +320,13 @@ struct EventsManager {
         }
       }
       res = n;
-    } else if (tlag.size() == 1) {
-      int n = time.size();
+    } else if (isize_tlag == 1) {
+      int n = isize;
       std::vector<std::tuple<double, int>> dose;
-      dose.reserve(time.size());
-      for (size_t i = 0; i < time.size(); i++) {
+      dose.reserve(isize);
+      for (int i = ibegin; i < ibegin + isize; ++i) {
         if (evid[i] == 1 || evid[i] == 4) {      // is dosing event
-          if (tlag[0][cmt[i] - 1] > 0.0) {       // tlag dose
+          if (tlag[ibegin_tlag][cmt[i] - 1] > 0.0) {       // tlag dose
             n++;
           }
           if (addl[i] > 0 && ii[i] > 0) {        // has addl doses
@@ -246,7 +336,7 @@ struct EventsManager {
             } else {
               n += addl[i];
             }
-            if (tlag[0][cmt[i] - 1] > 0.0) {     // tlag dose
+            if (tlag[ibegin_tlag][cmt[i] - 1] > 0.0) {     // tlag dose
               n += addl[i];
             }
           } else if (rate[i] > 0 && amt[i] > 0) {

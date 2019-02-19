@@ -133,24 +133,26 @@ struct EventHistory {
    * In this constructor we assume @c p_ii.size() > 1 and
    * @c p_ss.size() > 1.
    */
-  template<typename t0, typename t1, typename t2, typename t3>
-  EventHistory(int ibegin, int iend,
-               const std::vector<t0>& p_time, const std::vector<t1>& p_amt,
-               const std::vector<t2>& p_rate, const std::vector<t3>& p_ii,
+  template<typename T0, typename T1, typename T2, typename T3>
+  EventHistory(int ibegin, int isize,
+               const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
+               const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
                const std::vector<int>& p_evid, const std::vector<int>& p_cmt,
                const std::vector<int>& p_addl, const std::vector<int>& p_ss)
-    : Events(iend - ibegin)
+    : Events(isize)
   {
+    const int iend = ibegin + isize;
     using stan::math::check_greater_or_equal;
     static const char* caller = "EventHistory::EventHistory";
-    check_greater_or_equal(caller, "time size", p_time.size(), iend);
-    check_greater_or_equal(caller, "amt size", p_amt.size(), iend);
-    check_greater_or_equal(caller, "rate size", p_rate.size(), iend);
-    check_greater_or_equal(caller, "ii size", p_ii.size(), iend);
-    check_greater_or_equal(caller, "evid size", p_evid.size(), iend);
-    check_greater_or_equal(caller, "cmt size", p_cmt.size(), iend);
-    check_greater_or_equal(caller, "addl size", p_addl.size(), iend);
-    check_greater_or_equal(caller, "ss size", p_ss.size(), iend);
+    check_greater_or_equal(caller, "isize", isize , 1);
+    check_greater_or_equal(caller, "time size", p_time.size() , size_t(iend));
+    check_greater_or_equal(caller, "amt size", p_amt.size()   , size_t(iend));
+    check_greater_or_equal(caller, "rate size", p_rate.size() , size_t(iend));
+    check_greater_or_equal(caller, "ii size", p_ii.size()     , size_t(iend));
+    check_greater_or_equal(caller, "evid size", p_evid.size() , size_t(iend));
+    check_greater_or_equal(caller, "cmt size", p_cmt.size()   , size_t(iend));
+    check_greater_or_equal(caller, "addl size", p_addl.size() , size_t(iend));
+    check_greater_or_equal(caller, "ss size", p_ss.size()     , size_t(iend));
     for (int i = ibegin; i < iend; ++i) {
       Events[i-ibegin] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i], p_amt[i], p_rate[i], p_ii[i], p_evid[i], p_cmt[i], p_addl[i], p_ss[i], true, false);
     }

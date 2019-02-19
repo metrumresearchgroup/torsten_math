@@ -1,14 +1,14 @@
-#ifndef STAN_MATH_TORSTEN_REFACTOR_GENERALODEMODEL_RK45_HPP
-#define STAN_MATH_TORSTEN_REFACTOR_GENERALODEMODEL_RK45_HPP
+#ifndef STAN_MATH_TORSTEN_REFACTOR_GENERALODEMODEL_ADAMS_HPP
+#define STAN_MATH_TORSTEN_REFACTOR_GENERALODEMODEL_ADAMS_HPP
 
 #include <Eigen/Dense>
 #include <stan/math/torsten/events_manager.hpp>
 #include <stan/math/torsten/PKModel/functors/general_functor.hpp>
-#include <stan/math/torsten/Pred2.hpp>
-#include <stan/math/torsten/pk_ode_model.hpp>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_general.hpp>
 #include <stan/math/torsten/PKModel/Pred/PredSS_general.hpp>
+#include <stan/math/torsten/pk_ode_model.hpp>
+#include <stan/math/torsten/Pred2.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <vector>
 
@@ -17,7 +17,7 @@ namespace torsten {
 /**
  * Computes the predicted amounts in each compartment at each event
  * for a general compartment model, defined by a system of ordinary
- * differential equations. Uses the stan::math::integrate_ode_rk45 
+ * differential equations. Uses the stan::math::integrate_ode_adams 
  * function. 
  *
  * <b>Warning:</b> This prototype does not handle steady state events. 
@@ -52,34 +52,34 @@ namespace torsten {
  * @param[in] max_num_steps maximal number of steps to take within 
  *            the Boost ode solver 
  * @return a matrix with predicted amount in each compartment 
- *         at each event. 
+ *         at each event.
  *
  * FIX ME: currently have a dummy msgs argument. Makes it easier
  * to expose to stan grammar files, because I can follow more closely
  * what was done for the ODE integrator. Not ideal.
  */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
-  typename T5, typename T6, typename F>
+          typename T5, typename T6, typename F>
 Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
   typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
   Eigen::Dynamic, Eigen::Dynamic>
-generalOdeModel_rk45(const F& f,
-                     const int nCmt,
-                     const std::vector<T0>& time,
-                     const std::vector<T1>& amt,
-                     const std::vector<T2>& rate,
-                     const std::vector<T3>& ii,
-                     const std::vector<int>& evid,
-                     const std::vector<int>& cmt,
-                     const std::vector<int>& addl,
-                     const std::vector<int>& ss,
-                     const std::vector<std::vector<T4> >& pMatrix,
-                     const std::vector<std::vector<T5> >& biovar,
-                     const std::vector<std::vector<T6> >& tlag,
-                     std::ostream* msgs = 0,
-                     double rel_tol = 1e-6,
-                     double abs_tol = 1e-6,
-                     long int max_num_steps = 1e6) {  // NOLINT(runtime/int)
+generalOdeModel_adams(const F& f,
+                    const int nCmt,
+                    const std::vector<T0>& time,
+                    const std::vector<T1>& amt,
+                    const std::vector<T2>& rate,
+                    const std::vector<T3>& ii,
+                    const std::vector<int>& evid,
+                    const std::vector<int>& cmt,
+                    const std::vector<int>& addl,
+                    const std::vector<int>& ss,
+                    const std::vector<std::vector<T4> >& pMatrix,
+                    const std::vector<std::vector<T5> >& biovar,
+                    const std::vector<std::vector<T6> >& tlag,
+                    std::ostream* msgs = 0,
+                    double rel_tol = 1e-10,
+                    double abs_tol = 1e-10,
+                    long int max_num_steps = 1e8) {  // NOLINT(runtime/int)
   using std::vector;
   using Eigen::Dynamic;
   using Eigen::Matrix;
@@ -87,9 +87,9 @@ generalOdeModel_rk45(const F& f,
   using refactor::PKRec;
 
   // check arguments
-  static const char* function("generalOdeModel_rk45");
+  static const char* function("generalOdeModel_adams");
   torsten::pmetricsCheck(time, amt, rate, ii, evid, cmt, addl, ss,
-    pMatrix, biovar, tlag, function);
+                pMatrix, biovar, tlag, function);
 
   // Construct dummy matrix for last argument of pred
   Matrix<T4, Dynamic, Dynamic> dummy_system;
@@ -98,18 +98,15 @@ generalOdeModel_rk45(const F& f,
 
   typedef general_functor<F> F0;
 
-  PkOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-
   const Pred1_general<F0> pred1(F0(f), rel_tol, abs_tol,
-                                max_num_steps, msgs, "rk45");
+                                max_num_steps, msgs, "adams");
   const PredSS_general<F0> predss (F0(f), rel_tol, abs_tol,
-                                   max_num_steps, msgs, "rk45", nCmt);
+                                   max_num_steps, msgs, "adams", nCmt);
 
 #ifdef OLD_TORSTEN
   return Pred(time, amt, rate, ii, evid, cmt, addl, ss,
               pMatrix, biovar, tlag, nCmt, dummy_systems,
               pred1, predss);
-
 #else
   using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
   EM em(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
@@ -118,11 +115,13 @@ generalOdeModel_rk45(const F& f,
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
 
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
-  PredWrapper<model_type, PkOdeIntegrator<StanRk45>&> pr;
+  PkOdeIntegrator<PkAdams> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PredWrapper<model_type, PkOdeIntegrator<PkAdams>&> pr;
   pr.pred(em, pred, integrator, f);
-      return pred;
+  return pred;
 
 #endif
+
 }
 
 /**
@@ -130,11 +129,11 @@ generalOdeModel_rk45(const F& f,
  * pMatrix.
  */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
-  typename T5, typename T6, typename F>
+          typename T5, typename T6, typename F>
 Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
   typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
   Eigen::Dynamic, Eigen::Dynamic>
-generalOdeModel_rk45(const F& f,
+generalOdeModel_adams(const F& f,
                      const int nCmt,
                      const std::vector<T0>& time,
                      const std::vector<T1>& amt,
@@ -153,22 +152,22 @@ generalOdeModel_rk45(const F& f,
                      long int max_num_steps = 1e6) {  // NOLINT(runtime/int)
   std::vector<std::vector<T4> > vec_pMatrix(1, pMatrix);
 
-  return generalOdeModel_rk45(f, nCmt,
+  return generalOdeModel_adams(f, nCmt,
                               time, amt, rate, ii, evid, cmt, addl, ss,
                               vec_pMatrix, biovar, tlag,
                               msgs, rel_tol, abs_tol, max_num_steps);
 }
 
 /**
- * Overload function to allow user to pass an std::vector for 
- * pMatrix and biovar.
- */
+* Overload function to allow user to pass an std::vector for 
+* pMatrix and biovar.
+*/
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
 Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
   typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
   Eigen::Dynamic, Eigen::Dynamic>
-generalOdeModel_rk45(const F& f,
+generalOdeModel_adams(const F& f,
                      const int nCmt,
                      const std::vector<T0>& time,
                      const std::vector<T1>& amt,
@@ -188,22 +187,22 @@ generalOdeModel_rk45(const F& f,
   std::vector<std::vector<T4> > vec_pMatrix(1, pMatrix);
   std::vector<std::vector<T5> > vec_biovar(1, biovar);
 
-  return generalOdeModel_rk45(f, nCmt,
+  return generalOdeModel_adams(f, nCmt,
                               time, amt, rate, ii, evid, cmt, addl, ss,
                               vec_pMatrix, vec_biovar, tlag,
                               msgs, rel_tol, abs_tol, max_num_steps);
 }
 
 /**
- * Overload function to allow user to pass an std::vector for 
- * pMatrix, biovar, and tlag.
- */
+* Overload function to allow user to pass an std::vector for 
+* pMatrix, biovar, and tlag.
+*/
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
 Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
   typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
   Eigen::Dynamic, Eigen::Dynamic>
-generalOdeModel_rk45(const F& f,
+generalOdeModel_adams(const F& f,
                      const int nCmt,
                      const std::vector<T0>& time,
                      const std::vector<T1>& amt,
@@ -224,22 +223,22 @@ generalOdeModel_rk45(const F& f,
   std::vector<std::vector<T5> > vec_biovar(1, biovar);
   std::vector<std::vector<T6> > vec_tlag(1, tlag);
 
-  return generalOdeModel_rk45(f, nCmt,
+  return generalOdeModel_adams(f, nCmt,
                               time, amt, rate, ii, evid, cmt, addl, ss,
                               vec_pMatrix, vec_biovar, vec_tlag,
                               msgs, rel_tol, abs_tol, max_num_steps);
 }
 
 /**
- * Overload function to allow user to pass an std::vector for 
- * pMatrix and tlag.
- */
+* Overload function to allow user to pass an std::vector for 
+* pMatrix and tlag.
+*/
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
 Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
   typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
   Eigen::Dynamic, Eigen::Dynamic>
-generalOdeModel_rk45(const F& f,
+generalOdeModel_adams(const F& f,
                      const int nCmt,
                      const std::vector<T0>& time,
                      const std::vector<T1>& amt,
@@ -259,22 +258,22 @@ generalOdeModel_rk45(const F& f,
   std::vector<std::vector<T4> > vec_pMatrix(1, pMatrix);
   std::vector<std::vector<T6> > vec_tlag(1, tlag);
 
-  return generalOdeModel_rk45(f, nCmt,
+  return generalOdeModel_adams(f, nCmt,
                               time, amt, rate, ii, evid, cmt, addl, ss,
                               vec_pMatrix, biovar, vec_tlag,
                               msgs, rel_tol, abs_tol, max_num_steps);
 }
 
 /**
- * Overload function to allow user to pass an std::vector for 
- * biovar.
- */
+* Overload function to allow user to pass an std::vector for 
+* biovar.
+*/
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
 Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
   typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
   Eigen::Dynamic, Eigen::Dynamic>
-generalOdeModel_rk45(const F& f,
+generalOdeModel_adams(const F& f,
                      const int nCmt,
                      const std::vector<T0>& time,
                      const std::vector<T1>& amt,
@@ -293,22 +292,22 @@ generalOdeModel_rk45(const F& f,
                      long int max_num_steps = 1e6) {  // NOLINT(runtime/int)
   std::vector<std::vector<T5> > vec_biovar(1, biovar);
 
-  return generalOdeModel_rk45(f, nCmt,
+  return generalOdeModel_adams(f, nCmt,
                               time, amt, rate, ii, evid, cmt, addl, ss,
                               pMatrix, vec_biovar, tlag,
                               msgs, rel_tol, abs_tol, max_num_steps);
 }
 
 /**
- * Overload function to allow user to pass an std::vector for 
- * biovar and tlag.
- */
+* Overload function to allow user to pass an std::vector for 
+* biovar and tlag.
+*/
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
 Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
   typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
   Eigen::Dynamic, Eigen::Dynamic>
-generalOdeModel_rk45(const F& f,
+generalOdeModel_adams(const F& f,
                      const int nCmt,
                      const std::vector<T0>& time,
                      const std::vector<T1>& amt,
@@ -328,7 +327,7 @@ generalOdeModel_rk45(const F& f,
   std::vector<std::vector<T5> > vec_biovar(1, biovar);
   std::vector<std::vector<T6> > vec_tlag(1, tlag);
 
-  return generalOdeModel_rk45(f, nCmt,
+  return generalOdeModel_adams(f, nCmt,
                               time, amt, rate, ii, evid, cmt, addl, ss,
                               pMatrix, vec_biovar, vec_tlag,
                               msgs, rel_tol, abs_tol, max_num_steps);
@@ -343,7 +342,7 @@ template <typename T0, typename T1, typename T2, typename T3, typename T4,
 Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
   typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
   Eigen::Dynamic, Eigen::Dynamic>
-generalOdeModel_rk45(const F& f,
+generalOdeModel_adams(const F& f,
                      const int nCmt,
                      const std::vector<T0>& time,
                      const std::vector<T1>& amt,
@@ -362,7 +361,7 @@ generalOdeModel_rk45(const F& f,
                      long int max_num_steps = 1e6) {  // NOLINT(runtime/int)
   std::vector<std::vector<T6> > vec_tlag(1, tlag);
 
-  return generalOdeModel_rk45(f, nCmt,
+  return generalOdeModel_adams(f, nCmt,
                               time, amt, rate, ii, evid, cmt, addl, ss,
                               pMatrix, biovar, vec_tlag,
                               msgs, rel_tol, abs_tol, max_num_steps);
@@ -372,13 +371,14 @@ generalOdeModel_rk45(const F& f,
    * For population models, more often we use ragged arrays
    * to describe the entire population, so in addition we need the arrays of
    * the length of each individual's data. The size of that
-   * vector is the size of the population.
+   * vector is the size of
+   * the population.
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
 std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, // NOLINT
                           Eigen::Dynamic, Eigen::Dynamic> >
-pop_pk_generalOdeModel_rk45(const F& f,
+pop_pk_generalOdeModel_adams(const F& f,
                            const int nCmt,
                            const std::vector<int>& len,
                            const std::vector<T0>& time,
@@ -396,14 +396,14 @@ pop_pk_generalOdeModel_rk45(const F& f,
                            const std::vector<int>& len_tlag,
                            const std::vector<std::vector<T6> >& tlag,
                            std::ostream* msgs = 0,
-                           double rel_tol = 1e-6,
-                           double abs_tol = 1e-6,
-                           long int max_num_steps = 1e6) {
+                           double rel_tol = 1e-10,
+                           double abs_tol = 1e-10,
+                           long int max_num_steps = 1e8) {
   using stan::math::check_consistent_sizes;
   using stan::math::check_greater_or_equal;
 
   int np = len.size();
-  static const char* caller("generalOdeModel_rk45");
+  static const char* caller("generalOdeModel_adams");
   check_consistent_sizes(caller, "time", time, "amt",     amt);
   check_consistent_sizes(caller, "time", time, "rate",    rate);
   check_consistent_sizes(caller, "time", time, "ii",      ii);
@@ -424,8 +424,8 @@ pop_pk_generalOdeModel_rk45(const F& f,
   using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
 
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
-  PkOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PkOdeIntegrator<StanRk45>&> pr;
+  PkOdeIntegrator<PkAdams> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PredWrapper<model_type, PkOdeIntegrator<PkAdams>&> pr;
 
   std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
 
@@ -439,4 +439,5 @@ pop_pk_generalOdeModel_rk45(const F& f,
 }
 
 }
+
 #endif

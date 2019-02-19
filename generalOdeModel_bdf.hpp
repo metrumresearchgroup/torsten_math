@@ -368,9 +368,10 @@ generalOdeModel_bdf(const F& f,
 }
 
   /*
-   * For population models, we follow the call signature
-   * with the only change that each argument adds an additional
-   * level of vector. The size of that vector is the size of
+   * For population models, more often we use ragged arrays
+   * to describe the entire population, so in addition we need the arrays of
+   * the length of each individual's data. The size of that
+   * vector is the size of
    * the population.
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
@@ -378,35 +379,47 @@ template <typename T0, typename T1, typename T2, typename T3, typename T4,
 std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, // NOLINT
                           Eigen::Dynamic, Eigen::Dynamic> >
 pop_pk_generalOdeModel_bdf(const F& f,
-                    const int nCmt,
-                    const std::vector<std::vector<T0> >& time,
-                    const std::vector<std::vector<T1> >& amt,
-                    const std::vector<std::vector<T2> >& rate,
-                    const std::vector<std::vector<T3> >& ii,
-                    const std::vector<std::vector<int> >& evid,
-                    const std::vector<std::vector<int> >& cmt,
-                    const std::vector<std::vector<int> >& addl,
-                    const std::vector<std::vector<int> >& ss,
-                    const std::vector<std::vector<std::vector<T4> > >& pMatrix,
-                    const std::vector<std::vector<std::vector<T5> > >& biovar,
-                    const std::vector<std::vector<std::vector<T6> > >& tlag,
-                    std::ostream* msgs = 0,
-                    double rel_tol = 1e-10,
-                    double abs_tol = 1e-10,
-                    long int max_num_steps = 1e8) {  // NOLINT(runtime/int)
+                           const int nCmt,
+                           const std::vector<int>& len,
+                           const std::vector<T0>& time,
+                           const std::vector<T1>& amt,
+                           const std::vector<T2>& rate,
+                           const std::vector<T3>& ii,
+                           const std::vector<int>& evid,
+                           const std::vector<int>& cmt,
+                           const std::vector<int>& addl,
+                           const std::vector<int>& ss,
+                           const std::vector<int>& len_pMatrix,
+                           const std::vector<std::vector<T4> >& pMatrix,
+                           const std::vector<int>& len_biovar,
+                           const std::vector<std::vector<T5> >& biovar,
+                           const std::vector<int>& len_tlag,
+                           const std::vector<std::vector<T6> >& tlag,
+                           std::ostream* msgs = 0,
+                           double rel_tol = 1e-10,
+                           double abs_tol = 1e-10,
+                           long int max_num_steps = 1e8) {
+  using stan::math::check_consistent_sizes;
+  using stan::math::check_greater_or_equal;
 
-  int np = time.size();
+  int np = len.size();
   static const char* caller("generalOdeModel_bdf");
-  stan::math::check_consistent_sizes(caller, "time", time, "amt",     amt);
-  stan::math::check_consistent_sizes(caller, "time", time, "rate",    rate);
-  stan::math::check_consistent_sizes(caller, "time", time, "ii",      ii);
-  stan::math::check_consistent_sizes(caller, "time", time, "evid",    evid);
-  stan::math::check_consistent_sizes(caller, "time", time, "cmt",     cmt);
-  stan::math::check_consistent_sizes(caller, "time", time, "addl",    addl);
-  stan::math::check_consistent_sizes(caller, "time", time, "ss",      ss);
-  stan::math::check_consistent_sizes(caller, "time", time, "pMatrix", pMatrix);
-  stan::math::check_consistent_sizes(caller, "time", time, "biovar",  biovar);
-  stan::math::check_consistent_sizes(caller, "time", time, "tlag",    tlag);
+  check_consistent_sizes(caller, "time", time, "amt",     amt);
+  check_consistent_sizes(caller, "time", time, "rate",    rate);
+  check_consistent_sizes(caller, "time", time, "ii",      ii);
+  check_consistent_sizes(caller, "time", time, "evid",    evid);
+  check_consistent_sizes(caller, "time", time, "cmt",     cmt);
+  check_consistent_sizes(caller, "time", time, "addl",    addl);
+  check_consistent_sizes(caller, "time", time, "ss",      ss);
+  check_consistent_sizes(caller, "population", len, "parameters", len_pMatrix);
+  check_consistent_sizes(caller, "population", len, "biovar", len_biovar);
+  check_consistent_sizes(caller, "population", len, "tlag", len_tlag);
+
+  size_t s;
+  s = 0; for (auto& i : len)         {s += i;} check_greater_or_equal(caller, "time size", time.size(), s);
+  s = 0; for (auto& i : len_pMatrix) {s += i;} check_greater_or_equal(caller, "pMatrix size", pMatrix.size(), s);
+  s = 0; for (auto& i : len_biovar)  {s += i;} check_greater_or_equal(caller, "biovar size", biovar.size(), s);
+  s = 0; for (auto& i : len_tlag)    {s += i;} check_greater_or_equal(caller, "tlag size", tlag.size(), s);
 
   using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
 
@@ -416,7 +429,11 @@ pop_pk_generalOdeModel_bdf(const F& f,
 
   std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
 
-  pr.pred(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag, pred, integrator, f);
+  pr.pred(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss,
+          len_pMatrix, pMatrix,
+          len_biovar, biovar,
+          len_tlag, tlag,
+          pred, integrator, f);
 
   return pred;
 }

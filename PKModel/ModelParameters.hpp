@@ -149,6 +149,44 @@ struct ModelParameterHistory{
     }
   }
 
+  /*
+   * For population data in form of ragged array, we need to
+   * generate individual parameter history given the entire
+   * population data and the location of the
+   * inidividual. However, @c theta, @c biovar and @c tlag
+   * could have different lengths, so for each variable we
+   * need an index that points to the range that belongs to the individual.
+   * Note that if all three variables are of size 1, their
+   * time is set to be the first entry of the @c time vector
+   */
+  template<typename T0, typename T1, typename T2, typename T3>
+  ModelParameterHistory(int ibegin, int isize,
+                        std::vector<T0> time,
+                        int ibegin_theta, int isize_theta,
+                        std::vector<std::vector<T1> > theta,
+                        int ibegin_biovar, int isize_biovar,
+                        std::vector<std::vector<T2> > biovar,
+                        int ibegin_tlag, int isize_tlag,
+                        std::vector<std::vector<T3> > tlag) {
+    using std::max;
+    int n1 = isize_theta;
+    int n2 = isize_biovar;
+    int n3 = isize_tlag;
+    int nParameters = max(n1, max(n2, n3));
+    MPV_.resize(nParameters);
+    static const char* caller = "ModelParameterHistory::ModelParameterHistory";
+    stan::math::check_greater_or_equal(caller, "isize", isize, nParameters);
+    stan::math::check_greater_or_equal(caller, "time size", time.size(), size_t(ibegin + nParameters - 1));
+    int j, k, l;
+    for (int i = 0; i < nParameters; i++) {
+      (n1 == 1) ? j = ibegin_theta  : j = ibegin_theta  + i;
+      (n2 == 1) ? k = ibegin_biovar : k = ibegin_biovar + i;
+      (n3 == 1) ? l = ibegin_tlag   : l = ibegin_tlag   + i;
+      MPV_[i] = ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
+        (time[i + ibegin], theta[j], biovar[k], tlag[l]);
+    }
+  }
+
   ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
     GetModelParameters(int i) const {
       return MPV_[i];

@@ -127,16 +127,6 @@ namespace dsolve {
     return res_i;
   }
 
-  // template<typename T>
-  // T pk_ode_assemble_solution(double & sol, std::vector<T>& vars, std::vector<double>& g) { // NOLINT(runtime/int)
-  //   return precomputed_gradients(sol, vars, g);
-  // }
-                             
-  // template<>
-  // double pk_ode_assemble_solution(double & sol, std::vector<double>& vars, std::vector<double>& g) { // NOLINT(runtime/int)
-  //   return sol;
-  // }
-
   /**
    * Solve population ODE model by delegating the population
    * ODE integration task to multiple processors through
