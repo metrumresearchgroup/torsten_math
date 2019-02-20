@@ -581,8 +581,6 @@ namespace torsten{
       using::stan::math::multiply;
       using refactor::PKRec;
 
-      // const double invalid_res_d = -123456789987654321.0;
-
       using EM = EventsManager<double, double, double, double, double, double, double>;
       const int np = time.size();
       bool is_invalid = false;
