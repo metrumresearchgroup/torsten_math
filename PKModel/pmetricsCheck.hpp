@@ -62,52 +62,21 @@ void pmetricsCheck(const std::vector<T0>& time,
   using std::string;
   using Eigen::Dynamic;
   using stan::math::invalid_argument;
+  using stan::math::check_greater_or_equal;
+  using stan::math::check_consistent_sizes;
 
-  if (!(time.size() > 0)) invalid_argument(function,
-    "length of time vector,", time.size(), "",
-    "needs to be positive and greater than 0!");
-
-  std::string message = ", but must be the same as the length of the time array: "  // NOLINT
-    + boost::lexical_cast<string>(time.size()) + "!";
-    const char* length_error = message.c_str();
-
-  if (!(amt.size() == time.size())) invalid_argument(function,
-    "the length of the amount (amt) array is", amt.size(), "",
-    length_error);
-  if (!(rate.size() == time.size())) invalid_argument(function,
-    "the length of the rate array is", rate.size(), "",
-    length_error);
-  if (!(evid.size() == time.size())) invalid_argument(function,
-    "the length of the event ID (evid) array is", evid.size(), "",
-    length_error);
-  if (!(cmt.size() == time.size())) invalid_argument(function,
-    "the length of the compartment (cmt) array is", cmt.size(), "",
-    length_error);
+  check_greater_or_equal(function, "time size", time.size(), size_t(1));
+  check_consistent_sizes(function, "amt",  amt  , "time", time);
+  check_consistent_sizes(function, "rate", rate , "time", time);
+  check_consistent_sizes(function, "evid", evid , "time", time);
+  check_consistent_sizes(function, "cmt",  cmt  , "time", time);
+  check_consistent_sizes(function, "ii",   ii   , "time", time);
+  check_consistent_sizes(function, "addl", addl , "time", time);
+  check_consistent_sizes(function, "ss",   ss   , "time", time);
 
   std::string message2 = ", but must be either 1 or the same as the length of the time array: "  // NOLINT
     + boost::lexical_cast<string>(time.size()) + "!";
     const char* length_error2 = message2.c_str();
-
-  if (!(ii.size() == time.size()) || (ii.size() == 1)) invalid_argument(
-    function,
-    "the length of the interdose interval (ii) array is", ii.size(), "",
-    length_error2);
-  if (!(addl.size() == time.size()) || (addl.size() == 1)) invalid_argument(
-    function,
-    "the length of the additional dosing (addl) array is", ii.size(), "",
-    length_error2);
-  if (!(ss.size() == time.size()) || (ss.size() == 1)) invalid_argument(
-    function,
-    "the length of the steady state approximation (ss) array is", ss.size(),
-    "", length_error2);
-
-  std::string message3 = ", but must be the same as the length of the additional dosing (addl) array: " // NOLINT
-    + boost::lexical_cast<string>(addl.size()) + "!";
-    const char* length_error3 = message3.c_str();
-    if (!(ss.size() == time.size()) || (ss.size() == 1)) invalid_argument(
-      function,
-      "the length of steady state approximation (ss) array is", ss.size(), "",
-      length_error3);
 
   // TEST ARGUMENTS FOR PARAMETERS
   static const char* noCheck("linOdeModel");

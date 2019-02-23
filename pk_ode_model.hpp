@@ -237,7 +237,7 @@ namespace refactor {
       using stan::is_var;
       int n = 0;
       if (is_var<T_time>::value) n++; // t0
-      if (is_var<T_init>::value) n += ncmt; // y0 is fixed for twocpt model
+      if (is_var<T_init>::value) n += ncmt;
       if (is_var<T_rate>::value) {
         n += ncmt + npar;
       } else if (is_var<T_par>::value) {

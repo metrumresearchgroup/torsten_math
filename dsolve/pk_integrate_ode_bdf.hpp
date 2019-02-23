@@ -55,6 +55,22 @@ namespace dsolve {
     const int m = theta.size();
     const int n = y0.size();
 
+    static const char* caller = "pk_integrate_ode_bdf";
+    stan::math::check_finite(caller, "initial state", y0);
+    stan::math::check_finite(caller, "initial time", t0);
+    stan::math::check_finite(caller, "times", ts);
+    stan::math::check_finite(caller, "parameter vector", theta);
+    stan::math::check_finite(caller, "continuous data", x_r);
+
+    stan::math::check_nonzero_size(caller, "times", ts);
+    stan::math::check_nonzero_size(caller, "initial state", y0);
+    stan::math::check_ordered(caller, "times", ts);
+    stan::math::check_less(caller, "initial time", t0, ts[0]);
+
+    if (rtol <= 0) stan::math::invalid_argument(caller, "relative_tolerance,", rtol, "", ", must be greater than 0"); // NOLINT
+    if (atol <= 0) stan::math::invalid_argument(caller, "absolute_tolerance,", atol, "", ", must be greater than 0"); // NOLINT
+    if (max_num_step <= 0) stan::math::invalid_argument(caller, "max_num_step,", max_num_step, "", ", must be greater than 0"); // NOLINT
+
     PKCvodesService<typename Ode::Ode> serv(n, m);
 
     Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};

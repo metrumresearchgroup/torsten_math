@@ -344,6 +344,38 @@ struct EventHistory {
     }
     Sort();
   }
+
+  /*
+   * Overloading the << Operator
+   */
+  friend std::ostream& operator<<(std::ostream& os, const EventHistory& ev) {
+    const int w = 6;
+    os << "\n";
+    os << std::setw(w) << "time" <<
+      std::setw(w) << "amt" <<
+      std::setw(w) << "rate" <<
+      std::setw(w) << "ii" <<
+      std::setw(w) << "evid" <<
+      std::setw(w) << "cmt" <<
+      std::setw(w) << "addl" <<
+      std::setw(w) << "ss" <<
+      std::setw(w) << "keep" <<
+      std::setw(w) << "isnew" << "\n";
+    for (size_t i = 0; i < ev.Events.size(); ++i) {
+      os <<
+        std::setw(w)   << ev.Events[i].time << " " <<
+        std::setw(w-1) << ev.Events[i].amt << " " <<
+        std::setw(w-1) << ev.Events[i].rate << " " <<
+        std::setw(w-1) << ev.Events[i].ii << " " <<
+        std::setw(w-1) << ev.Events[i].evid << " " <<
+        std::setw(w-1) << ev.Events[i].cmt << " " <<
+        std::setw(w-1) << ev.Events[i].addl << " " <<
+        std::setw(w-1) << ev.Events[i].ss << " " <<
+        std::setw(w-1) << ev.Events[i].keep << " " <<
+        std::setw(w-1) << ev.Events[i].isnew << "\n";
+    }
+    return os;
+  }
 };
 
 }    // torsten namespace
