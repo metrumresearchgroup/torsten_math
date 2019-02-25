@@ -13,8 +13,8 @@ namespace torsten {
    */
   template<typename T_model,
            typename std::enable_if_t<!stan::is_var<typename T_model::scalar_type>::value >* = nullptr> //NOLINT
-  Eigen::VectorXd model_solve_d(const T_model& pkmodel, const double& dt) {
-    return pkmodel.solve(dt);
+  Eigen::VectorXd model_solve_d(const T_model& pkmodel, const double& t_next) {
+    return pkmodel.solve(t_next);
   }
 
   /*
@@ -29,8 +29,8 @@ namespace torsten {
    */
   template<typename T_model, typename T_pred,
            typename std::enable_if_t<!stan::is_var<typename T_model::scalar_type>::value >* = nullptr> //NOLINT
-  Eigen::VectorXd model_solve_d(const T_model& pkmodel, const double& dt, const T_pred& pred_par) {
-    return pkmodel.solve(dt, pred_par);
+  Eigen::VectorXd model_solve_d(const T_model& pkmodel, const double& t_next, const T_pred& pred_par) {
+    return pkmodel.solve(t_next, pred_par);
   }
 
   /*
@@ -44,7 +44,7 @@ namespace torsten {
    */
   template<typename T_model>
   Eigen::VectorXd model_solve_d(const T_model& pkmodel,
-                                typename T_model::time_type const& dt) {
+                                typename T_model::time_type const& t_next) {
     using std::vector;
     using Eigen::VectorXd;
     using Eigen::Matrix;
@@ -74,11 +74,10 @@ namespace torsten {
       for (size_t i = 0; i < par_new.size(); ++i) {par_new[i] = value_of(par[i]);}
 
       T_time t0 = value_of(pkmodel.t0());
-      T_time t1 = value_of(pkmodel.t0()) + value_of(dt);
-      T_time dt_new = t1 - t0;
+      T_time t1 = value_of(t_next);
       T_model pkmodel_new(t0, y0_new, rate_new, par_new);
 
-      auto res = pkmodel_new.solve(dt_new);
+      auto res = pkmodel_new.solve(t1);
       vector<var> var_new(pkmodel_new.vars(t1));
       vector<double> g;
       const int nx = res.size();
@@ -114,7 +113,7 @@ namespace torsten {
   template<typename T_model, PkOdeIntegratorId It,
            typename std::enable_if_t<stan::is_var<typename T_model::scalar_type>::value >* = nullptr> //NOLINT
   Eigen::VectorXd model_solve_d(const T_model& pkmodel,
-                                typename T_model::time_type const& dt,
+                                typename T_model::time_type const& t_next,
                                 PkOdeIntegrator<It> const& integrator) {
     using std::vector;
     using Eigen::VectorXd;
@@ -145,11 +144,10 @@ namespace torsten {
       for (size_t i = 0; i < par_new.size(); ++i) {par_new[i] = value_of(par[i]);}
 
       T_time t0 = value_of(pkmodel.t0());
-      T_time t1 = value_of(pkmodel.t0()) + value_of(dt);
-      T_time dt_new = t1 - t0;
+      T_time t1 = value_of(t_next);
       T_model pkmodel_new(t0, y0_new, rate_new, par_new, pkmodel.f());
 
-      auto res = pkmodel_new.solve(dt_new, integrator);
+      auto res = pkmodel_new.solve(t1, integrator);
       vector<var> var_new(pkmodel_new.vars(t1));
       vector<double> g;
       const int nx = res.size();

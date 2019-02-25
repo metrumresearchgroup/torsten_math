@@ -407,12 +407,12 @@ namespace refactor {
     template<PkOdeIntegratorId It>
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     integrate(const std::vector<double> &rate,
-              const T_time& dt,
+              const T_time& t_next,
               const PkOdeIntegrator<It>& integrator) const {
       using stan::math::value_of;
 
       const double t0 = value_of(t0_);
-      std::vector<T_time> ts{t0_ + dt};
+      std::vector<T_time> ts{t_next};
       Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> res;
       if (ts[0] == t0_) {
         res = y0_;
@@ -460,13 +460,13 @@ namespace refactor {
     template<PkOdeIntegratorId It>
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     integrate(const std::vector<stan::math::var> &rate,
-              const T_time& dt,
+              const T_time& t_next,
               const PkOdeIntegrator<It>& integrator) const {
       using stan::math::var;
       using stan::math::value_of;
 
       const double t0 = value_of(t0_);
-      std::vector<T_time> ts{t0_ + dt};
+      std::vector<T_time> ts{t_next};
       Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> res;
       if (ts[0] == t0_) {
         res = y0_;
@@ -487,13 +487,13 @@ namespace refactor {
      * consisting of solution values and gradients.
      */
     Eigen::VectorXd integrate_d(const std::vector<stan::math::var> &rate,
-                                const T_time& dt,
+                                const T_time& t_next,
                                 const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
       using stan::math::var;
       using stan::math::value_of;
 
       const double t0 = value_of(t0_);
-      std::vector<T_time> ts{t0_ + dt};
+      std::vector<T_time> ts{t_next};
       Eigen::VectorXd res(n_sys());
       if (ts[0] == t0_) {
         res = stan::math::value_of(y0_);
@@ -513,13 +513,13 @@ namespace refactor {
      * consisting of solution values and gradients.
      */
     Eigen::VectorXd integrate_d(const std::vector<double> &rate,
-                                const T_time& dt,
+                                const T_time& t_next,
                                 const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
       using stan::math::value_of;
 
       Eigen::VectorXd res(n_sys());
       const double t0 = value_of(t0_);
-      std::vector<T_time> ts{t0_ + dt};
+      std::vector<T_time> ts{t_next};
       if (ts[0] == t0_) {
 
       } else {
@@ -535,7 +535,7 @@ namespace refactor {
      * solve ODE system. The different cases when @c rate is
      * @c var or data are handled by private methods @c integrate.
      *
-     * @parm[in] dt next time point when result is to be *
+     * @parm[in] t_next next time point when result is to be
      *           solved. The actual time point will be @c t0+dt
      * @parm[in] rtol relative tolerance for ODE solver
      * @parm[in] atol absolute tolerance for ODE solver
@@ -547,9 +547,9 @@ namespace refactor {
      */
     template<PkOdeIntegratorId It>
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
-    solve(const T_time& dt,
+    solve(const T_time& t_next,
           const PkOdeIntegrator<It>& integrator) const {
-      return integrate(rate_, dt, integrator);
+      return integrate(rate_, t_next, integrator);
     }
 
     /*
@@ -561,25 +561,25 @@ namespace refactor {
      */
     template<PkOdeIntegratorId It,
              typename std::enable_if_t<It != torsten::PkBdf>* = nullptr>
-    Eigen::VectorXd solve_d(const T_time& dt,
+    Eigen::VectorXd solve_d(const T_time& t_next,
                             const PkOdeIntegrator<It>& integrator) const
     {
       static const char* caller = "PKODEModel::solve";
-      stan::math::check_greater(caller, "time step", dt, 0.0);
+      stan::math::check_greater(caller, "time step", t_next, t0_);
 
-      return torsten::model_solve_d(*this, dt, integrator);
+      return torsten::model_solve_d(*this, t_next, integrator);
     }
 
     /*
      * @c PkBdf can return results in form of data directly,
      * thanks to @c pk_cvodes_integrator implementation.
      */
-    Eigen::VectorXd solve_d(const T_time& dt,
+    Eigen::VectorXd solve_d(const T_time& t_next,
                             const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
-      static const char* caller = "PKODEModel::solve";
-      stan::math::check_greater(caller, "time step", dt, 0.0);
+      static const char* caller = "PKODEModel::solve_d";
+      stan::math::check_greater(caller, "next time", t_next, t0_);
 
-      return integrate_d(rate_, dt, integrator);
+      return integrate_d(rate_, t_next, integrator);
     }
 
     /**

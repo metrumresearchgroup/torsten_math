@@ -109,13 +109,11 @@ namespace torsten{
       auto model_par = em.pars();
 
       using scalar = typename T_em::T_scalar;
-      typename T_em::T_time dt;
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
       Eigen::Matrix<scalar, -1, 1> pred1;
 
       if (events.is_reset(i)) {
-        dt = 0;
         init.setZero();
       } else if (events.is_ss_dosing(i)) {  // steady state event
         typename T_em::T_time model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
@@ -132,12 +130,9 @@ namespace torsten{
         else
           init = pred1;  // steady state with reset (ss = 1)
       } else {           // non-steady dosing event
-        dt = events.time(i) - tprev;
         typename T_em::T_time model_time = tprev;
-
         T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
-
-        pred1 = pkmodel.solve(dt, pred_pars...);
+        pred1 = pkmodel.solve(events.time(i), pred_pars...);
         init = pred1;
       }
 
@@ -159,11 +154,9 @@ namespace torsten{
       auto model_amt = em.amts();
       auto model_par = em.pars();
 
-      typename T_em::T_time dt;
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
       if (events.is_reset(i)) {
-        dt = 0;
         init.setZero();
       } else if (events.is_ss_dosing(i)) {  // steady state event
         typename T_em::T_time model_time = events.time(i);
@@ -175,12 +168,11 @@ namespace torsten{
         else
           init = torsten::mpi::precomputed_gradients(sol_d, v_i);  // steady state with reset (ss = 1)
       } else {
-        dt = events.time(i) - tprev;
-        if (dt > 0) {
+        if (events.time(i) > tprev) {
           typename T_em::T_time model_time = tprev;
           T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
           vector<var> v_i = pkmodel.vars(events.time(i));
-          sol_d = pkmodel.solve_d(dt, pred_pars...);
+          sol_d = pkmodel.solve_d(events.time(i), pred_pars...);
           init = torsten::mpi::precomputed_gradients(sol_d, v_i);
         }
       }
@@ -203,11 +195,9 @@ namespace torsten{
       auto model_amt = em.amts();
       auto model_par = em.pars();
 
-      typename T_em::T_time dt;
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
       if (events.is_reset(i)) {
-        dt = 0;
         init.setZero();
       } else if (events.is_ss_dosing(i)) {  // steady state event
         typename T_em::T_time model_time = events.time(i);
@@ -219,8 +209,7 @@ namespace torsten{
         else
           init = torsten::mpi::precomputed_gradients(sol_d.segment(0, nsys), v_i);  // steady state with reset (ss = 1)
       } else {
-        dt = events.time(i) - tprev;
-        if (dt > 0) {
+        if (events.time(i) > tprev) {
           typename T_em::T_time model_time = tprev;
           T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
           vector<var> v_i = pkmodel.vars(events.time(i));

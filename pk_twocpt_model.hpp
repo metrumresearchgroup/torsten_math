@@ -269,10 +269,12 @@ namespace refactor {
    * Solve two-cpt model: analytical solution
    */
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> 
-    solve(const T_time& dt) const {
+    solve(const T_time& t_next) const {
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using std::vector;
+
+      T_time dt = t_next - t0_;
 
       std::vector<scalar_type> a(Ncmt, 0);
       Matrix<scalar_type, 1, Dynamic> pred = PKRec<scalar_type>::Zero(3);
@@ -323,8 +325,8 @@ namespace refactor {
      * Solve the transient problem and return the result in
      * form of data, arranged as (solution value, grad1, grad2...)
      */
-    Eigen::VectorXd solve_d(const T_time& dt) const {
-      return torsten::model_solve_d(*this, dt);
+    Eigen::VectorXd solve_d(const T_time& t_next) const {
+      return torsten::model_solve_d(*this, t_next);
     }
 
   /**
@@ -460,16 +462,6 @@ namespace refactor {
     to_ode_model() {
       return PKODEModel<T_time, T_init, T_rate, T_par,
                         PKTwoCptODE>(t0_, y0_, rate_, par_, f_);
-    }
-
-    /*
-     * wrapper to fit @c PrepWrapper's call signature
-     */
-    template<PkOdeIntegratorId It>
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
-    solve(const T_time& dt,
-          const PkOdeIntegrator<It>& integrator) const {
-      return solve(dt);
     }
 
     /*

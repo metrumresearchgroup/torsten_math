@@ -91,13 +91,9 @@ namespace refactor {
       for (size_t i = 0; i < nPK; ++i) init_pk(i) = theta[nTheta - nPK + i];
 
       // Last element of x_r contains the initial time
-      T0 dt = t - x_r[x_r.size() - 1];
-
-      T0 t0 = x_r[x_r.size() - 1];
-      T_m<T0, T2, T2, T2> pkmodel(t0, init_pk, ratePK, thetaPK);
-      std::vector<T_pk> y_pk = to_array_1d(pkmodel.solve(dt));
-      // vector<T_pk> y_pk = fOneCpt(dt, thetaPK, init_pk, ratePK);
-      vector<scalar> dydt = f0_(dt, y, y_pk, theta, x_r, x_i, pstream_);
+      T_m<T0, T2, T2, T2> pkmodel(x_r.back(), init_pk, ratePK, thetaPK);
+      std::vector<T_pk> y_pk = to_array_1d(pkmodel.solve(t));
+      vector<scalar> dydt = f0_(t, y, y_pk, theta, x_r, x_i, pstream_);
 
       for (size_t i = 0; i < dydt.size(); i++)
         dydt[i] += ratePD[i];
@@ -147,19 +143,16 @@ namespace refactor {
       int nParmsPK = T_pkmodel::Npar;
       std::vector<T2> thetaPK(theta.begin(), theta.begin() + nParmsPK);
 
-      // Get initial PK states
+      // Get initial PK states stored at the end of @c theta
       int nPK = T_pkmodel::Ncmt;
       refactor::PKRec<T2> init_pk(nPK);
       size_t nTheta = theta.size();
       for (int i = 0; i < nPK; ++i) init_pk(i) = theta[nTheta - nPK + i];
 
       // The last element of x_r contains the absolutime
-      T0 dt = t - x_r[x_r.size() - 1];
-
-      T0 t0 = x_r[x_r.size() - 1];
-      T_m<T0, T2, T3, T2> pkmodel(t0, init_pk, x_r, thetaPK);
-      std::vector<T_pk> y_pk = to_array_1d(pkmodel.solve(dt));
-      std::vector<scalar> dydt = f0_(dt, y, y_pk, theta, x_r, x_i, pstream_);
+      T_m<T0, T2, T3, T2> pkmodel(x_r.back(), init_pk, x_r, thetaPK);
+      std::vector<T_pk> y_pk = to_array_1d(pkmodel.solve(t));
+      std::vector<scalar> dydt = f0_(t, y, y_pk, theta, x_r, x_i, pstream_);
 
       for (size_t i = 0; i < dydt.size(); i++)
         dydt[i] += x_r[nPK + i];
@@ -194,7 +187,7 @@ namespace refactor {
   class PKCoupledModel<T_m<T_time, T_init, T_rate, T_par>,
                        PKODEModel<T_time, T_init, T_rate, T_par,
                                   PKOdeFunctorCouplingAdaptor<T_m, F, T_rate>> > { // NOLINT
-    const refactor::PKRec<T_init>& y0;
+    const refactor::PKRec<T_init>& y0_;
     const refactor::PKRec<T_init> y0_pk;
     const refactor::PKRec<T_init> y0_ode;
     const F& f_;
@@ -230,23 +223,26 @@ namespace refactor {
                    const std::vector<T_par> & par,
                    const F& f0,
                    const int n_ode) :
-      y0(init),
-      y0_pk{ y0.head(y0.size() - n_ode) },
-      y0_ode{ y0.segment(y0_pk.size(), n_ode) },
+      y0_(init),
+      y0_pk{ y0_.head(y0_.size() - n_ode) },
+      y0_ode{ y0_.segment(y0_pk.size(), n_ode) },
       f_(f0),
       f(f0),
-      pk_model({t0, y0_pk, rate, par}),
-      ode_model({t0, y0_ode, rate, par, f})
+      pk_model(t0, y0_pk, rate, par),
+      ode_model(t0, y0_ode, rate, par, f)
     {}
     
   private:
 
+    /*
+     * Solve the transient model with rate being data
+     */
   template<typename T_integrator>
   Eigen::Matrix<typename boost::math::tools::promote_args<T_time,
     T_par, T_init>::type, Eigen::Dynamic, 1>
-  integrate(  const T_time& dt,
-              const std::vector<double>& rate,
-              const T_integrator& integrator) const {
+  integrate(const T_time& t_next,
+            const std::vector<double>& rate,
+            const T_integrator& integrator) const {
     using std::vector;
     using stan::math::to_array_1d;
     using boost::math::tools::promote_args;
@@ -255,48 +251,40 @@ namespace refactor {
     typedef typename promote_args<T_par, T_init>::type T_theta;
 
     auto parameter = ode_model.par();
-    const refactor::PKRec<T_init>& init = y0;
 
-    assert((size_t) init.cols() == rate.size());
+    assert((size_t) y0_.cols() == rate.size());
 
     // pass fixed times to the integrator. FIX ME - see issue #30
     T_time t0 = ode_model.t0();  // time of previous event
-    T_time t = t0 + dt;  // time of current event
-    vector<double> t_dbl(1, torsten::unpromote(t));
-    double t0_dbl = torsten::unpromote(t0);
+    T_time t = t_next;  // time of current event
+    vector<double> t_dbl{stan::math::value_of(t)};
+    double t0_dbl = stan::math::value_of(t0);
 
-    vector<double> x_r = rate;
+    vector<double> x_r(rate);
     x_r.push_back(t0_dbl);  // need to pass the initial time!
-
-    vector<scalar> y0 = to_array_1d(init);
 
     size_t nParm = parameter.size();
     vector<T_theta> theta(nParm);
     for (size_t i = 0; i < nParm; i++)
       theta[i] = parameter[i];
 
-    Eigen::Matrix<scalar, 1, Eigen::Dynamic> pred;
-    if (t_dbl[0] == t0_dbl) { pred = init;
+    refactor::PKRec<scalar> pred;
+    if (t_dbl[0] == t0_dbl) {
+      pred = y0_;
     } else {
-      size_t nPK = pk_model.ncmt();  // two states for 1Cpt with absorption
+      size_t nPK = pk_model.ncmt();
 
-      refactor::PKRec<scalar> xPK = pk_model.solve(dt);
+      refactor::PKRec<scalar> xPK = pk_model.solve(t);
 
       // Add PK inits to theta
-      for (size_t i = 0; i < nPK; i++) theta.push_back(init(i));
+      for (size_t i = 0; i < nPK; i++) theta.push_back(y0_pk(i));
 
-      // create vector with PD initial states
-      size_t nPD = init.size() - nPK;
-      vector<scalar> y0_PD(nPD);
-      for (size_t i = 0; i < nPD; i++) y0_PD[i] = y0[nPK + i];
+      vector<T_init> y0_PD(to_array_1d(y0_ode));
       vector<int> idummy;
-
-      using F_c = PKOdeFunctorCouplingAdaptor<T_m, F, double>;
-      F_c f_coupled(f_);
+      PKOdeFunctorCouplingAdaptor<T_m, F, double> f_coupled(f_);
       vector<vector<scalar> >
-        pred_V = integrator(f_coupled,
-                             y0_PD, t0_dbl, t_dbl,
-                             theta, x_r, idummy);
+        pred_V = integrator(f_coupled, y0_PD, t0_dbl, t_dbl,
+                            theta, x_r, idummy);
       size_t nOde = pred_V[0].size();
 
       pred.resize(nPK + nOde);
@@ -321,51 +309,46 @@ namespace refactor {
            typename T_integrator>
   Eigen::Matrix<typename boost::math::tools::promote_args<T_time,
     T_r, T_par, T_init>::type, Eigen::Dynamic, 1>
-  integrate(  const T_time& dt,
-              const std::vector<T_r>& rate,
-              const T_integrator& integrator) const {
+  integrate(const T_time& t_next,
+            const std::vector<T_r>& rate,
+            const T_integrator& integrator) const {
     using std::vector;
     using stan::math::to_array_1d;
     using boost::math::tools::promote_args;
 
-    typedef typename promote_args<T_time, T_r, T_par,
-                                  T_init>::type scalar;
+    typedef typename promote_args<T_time, T_r, T_par, T_init>::type scalar;
     typedef typename promote_args<T_par, T_init, T_r>::type T_theta;
 
     auto parameter = ode_model.par();
-    const refactor::PKRec<T_init>& init = y0;
 
-    assert((size_t) init.cols() == rate.size());
+    assert((size_t) y0_.cols() == rate.size());
 
     // pass fixed times to the integrator. FIX ME - see issue #30
     T_time t0 = ode_model.t0();
-    T_time t = t0 + dt;
+    T_time t = t_next;
 
-    vector<double> t_dbl(1, torsten::unpromote(t));
-    double t0_dbl = torsten::unpromote(t0);
-
-    vector<scalar> y0 = to_array_1d(init);
+    vector<double> t_dbl{stan::math::value_of(t)};
+    double t0_dbl = stan::math::value_of(t0);
 
     size_t nParm = parameter.size();
     vector<T_theta> theta(nParm);
     for (size_t i = 0; i < nParm; i++)
       theta[i] = parameter[i];
 
-    Eigen::Matrix<scalar, 1, Eigen::Dynamic> pred;
-    if (t_dbl[0] == t0_dbl) { pred = init;
+    refactor::PKRec<scalar> pred;
+    if (t_dbl[0] == t0_dbl) {
+      pred = y0_;
     } else {
-      size_t nPK = pk_model.ncmt();  // two states for 1Cpt with absorption
+      size_t nPK = pk_model.ncmt();
 
-      refactor::PKRec<scalar> xPK = pk_model.solve(dt);
+      refactor::PKRec<scalar> xPK = pk_model.solve(t);
 
       // Add rate and PK inits IN THIS ORDER to theta
       for (size_t i = 0; i < rate.size(); i++) theta.push_back(rate[i]);
-      for (size_t i = 0; i < nPK; i++) theta.push_back(init(i));
+      for (size_t i = 0; i < nPK; i++) theta.push_back(y0_pk(i));
 
       // create vector with PD initial states
-      size_t nPD = init.size() - nPK;
-      vector<scalar> y0_PD(nPD);
-      for (size_t i = 0; i < nPD; i++) y0_PD[i] = y0[nPK + i];
+      vector<T_init> y0_PD(to_array_1d(y0_ode));
       vector<int> idummy;
 
       vector<double> x_r(2);
@@ -375,9 +358,8 @@ namespace refactor {
       using F_c = PKOdeFunctorCouplingAdaptor<T_m, F, T_r>;
       F_c f_coupled(f_);
       vector<vector<scalar> >
-        pred_V = integrator(f_coupled,
-                             y0_PD, t0_dbl, t_dbl,
-                             theta, x_r, idummy);
+        pred_V = integrator(f_coupled, y0_PD, t0_dbl, t_dbl,
+                            theta, x_r, idummy);
 
       size_t nOde = pred_V[0].size();
       pred.resize(nPK + nOde);
@@ -660,9 +642,9 @@ namespace refactor {
      */
     template<PkOdeIntegratorId It>
     Eigen::Matrix<scalar_type, Dynamic, 1>
-    solve(const T_time& dt,
+    solve(const T_time& t_next,
           const PkOdeIntegrator<It>& integrator) const {
-      return integrate(dt, ode_model.rate(), integrator);
+      return integrate(t_next, ode_model.rate(), integrator);
     }
 
     /* 

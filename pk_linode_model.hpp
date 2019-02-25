@@ -141,9 +141,11 @@ namespace refactor {
 
     /*
      * solve linear ODE model using matrix exponential function
+     *
+     * @param t_next the time when the solution is to be solved.
      */
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
-    solve(const T_time& dt) const {
+    solve(const T_time& t_next) const {
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using stan::math::value_of;
@@ -153,6 +155,8 @@ namespace refactor {
       using stan::math::scale_matrix_exp_multiply;
 
       auto system = coef();
+
+      T_time dt = t_next - t0_;
 
       const int nCmt = system.cols();
       Matrix<scalar_type, Dynamic, 1> y0t(nCmt);
@@ -180,8 +184,8 @@ namespace refactor {
      * Solve the transient problem and return the result in
      * form of data, arranged as (solution value, grad1, grad2...)
      */
-    Eigen::VectorXd solve_d(const T_time& dt) const {
-      return torsten::model_solve_d(*this, dt);
+    Eigen::VectorXd solve_d(const T_time& t_next) const {
+      return torsten::model_solve_d(*this, t_next);
     }
 
     /*
