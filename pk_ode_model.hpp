@@ -399,6 +399,21 @@ namespace refactor {
 
   private:
     /*
+     * When time is data, the time step is trivial
+     */
+    std::vector<double> time_step(const double t_next) const {
+      return {t_next};
+    }
+
+    /*
+     * When time is param, the time step needs to
+     * incorporate information of initial time.
+     */
+    std::vector<stan::math::var> time_step(const stan::math::var& t_next) const {
+      return {stan::math::value_of(t0_) + t_next - t0_};
+    }
+
+    /*
      * We overload @c integrate so that we can pass @c rate
      * with different types, due to limit of c++ of partial
      * spec of member functions. The first version is for
@@ -412,7 +427,7 @@ namespace refactor {
       using stan::math::value_of;
 
       const double t0 = value_of(t0_);
-      std::vector<T_time> ts{t_next};
+      std::vector<T_time> ts(time_step(t_next));
       Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> res;
       if (ts[0] == t0_) {
         res = y0_;
@@ -466,7 +481,7 @@ namespace refactor {
       using stan::math::value_of;
 
       const double t0 = value_of(t0_);
-      std::vector<T_time> ts{t_next};
+      std::vector<T_time> ts(time_step(t_next));
       Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> res;
       if (ts[0] == t0_) {
         res = y0_;
@@ -493,7 +508,7 @@ namespace refactor {
       using stan::math::value_of;
 
       const double t0 = value_of(t0_);
-      std::vector<T_time> ts{t_next};
+      std::vector<T_time> ts(time_step(t_next));
       Eigen::VectorXd res(n_sys());
       if (ts[0] == t0_) {
         res = stan::math::value_of(y0_);
@@ -519,7 +534,7 @@ namespace refactor {
 
       Eigen::VectorXd res(n_sys());
       const double t0 = value_of(t0_);
-      std::vector<T_time> ts{t_next};
+      std::vector<T_time> ts(time_step(t_next));
       if (ts[0] == t0_) {
 
       } else {
