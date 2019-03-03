@@ -77,9 +77,9 @@ generalOdeModel_bdf(const F& f,
                     const std::vector<std::vector<T5> >& biovar,
                     const std::vector<std::vector<T6> >& tlag,
                     std::ostream* msgs = 0,
-                    double rel_tol = 1e-10,
-                    double abs_tol = 1e-10,
-                    long int max_num_steps = 1e8) {  // NOLINT(runtime/int)
+                    double rel_tol = 1e-6,
+                    double abs_tol = 1e-6,
+                    long int max_num_steps = 1e6) {  // NOLINT(runtime/int)
   using std::vector;
   using Eigen::Dynamic;
   using Eigen::Matrix;
@@ -396,9 +396,9 @@ pop_pk_generalOdeModel_bdf(const F& f,
                            const std::vector<int>& len_tlag,
                            const std::vector<std::vector<T6> >& tlag,
                            std::ostream* msgs = 0,
-                           double rel_tol = 1e-10,
-                           double abs_tol = 1e-10,
-                           long int max_num_steps = 1e8) {
+                           double rel_tol = 1e-6,
+                           double abs_tol = 1e-6,
+                           long int max_num_steps = 1e6) {
   using stan::math::check_consistent_sizes;
   using stan::math::check_greater_or_equal;
 
