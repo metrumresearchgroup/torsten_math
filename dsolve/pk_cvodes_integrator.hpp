@@ -160,6 +160,8 @@ namespace dsolve {
         CHECK_SUNDIALS_CALL(CVodeSStolerances(mem, rtol_, atol_));
         CHECK_SUNDIALS_CALL(CVodeSetUserData(mem, ode.to_user_data()));
         CHECK_SUNDIALS_CALL(CVodeSetMaxNumSteps(mem, max_num_steps_));
+        CHECK_SUNDIALS_CALL(CVodeSetMaxErrTestFails(mem, 20));
+        CHECK_SUNDIALS_CALL(CVodeSetMaxConvFails(mem, 30));
 
         /** if y0 is parameter, the first n sensitivity vector
          * are regarding y0, thus they form a unit matrix.

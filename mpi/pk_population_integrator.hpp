@@ -4,7 +4,7 @@
 #include <stan/math/torsten/dsolve/pk_cvodes_fwd_system.hpp>
 #include <stan/math/torsten/dsolve/pk_cvodes_integrator.hpp>
 #include <stan/math/torsten/mpi.hpp>
-#include <mpi.h>
+#include <boost/mpi.hpp>
 
 namespace torsten {
   namespace mpi {
