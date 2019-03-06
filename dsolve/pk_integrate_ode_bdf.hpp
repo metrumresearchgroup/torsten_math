@@ -4,9 +4,7 @@
 #include <stan/math/prim/scal/err/check_greater.hpp>
 #include <stan/math/torsten/dsolve/pk_cvodes_integrator.hpp>
 #include <stan/math/torsten/mpi.hpp>
-#include <stan/math/torsten/mpi/pk_population_integrator.hpp>
 
-#include <mpi.h>
 #include <ostream>
 #include <vector>
 

@@ -1,7 +1,9 @@
 #ifndef STAN_MATH_TORSTEN_MPI_INIT_HPP
 #define STAN_MATH_TORSTEN_MPI_INIT_HPP
 
+#ifdef TORSTEN_MPI
 #include <boost/mpi.hpp>
+#endif
 
 namespace torsten {
   namespace mpi {

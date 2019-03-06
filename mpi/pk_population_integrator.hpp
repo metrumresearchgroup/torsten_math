@@ -3,8 +3,7 @@
 
 #include <stan/math/torsten/dsolve/pk_cvodes_fwd_system.hpp>
 #include <stan/math/torsten/dsolve/pk_cvodes_integrator.hpp>
-#include <stan/math/torsten/mpi.hpp>
-#include <boost/mpi.hpp>
+#include <stan/math/torsten//mpi/init.hpp>
 
 namespace torsten {
   namespace mpi {
