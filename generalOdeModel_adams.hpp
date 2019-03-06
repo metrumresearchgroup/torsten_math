@@ -115,8 +115,15 @@ generalOdeModel_adams(const F& f,
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
 
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
+
+#ifdef TORSTEN_USE_STAN_ODE
+  PkOdeIntegrator<StanAdams> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PredWrapper<model_type, PkOdeIntegrator<StanAdams>&> pr;
+#else
   PkOdeIntegrator<PkAdams> integrator(rel_tol, abs_tol, max_num_steps, msgs);
   PredWrapper<model_type, PkOdeIntegrator<PkAdams>&> pr;
+#endif
+
   pr.pred(em, pred, integrator, f);
   return pred;
 
@@ -424,8 +431,14 @@ pop_pk_generalOdeModel_adams(const F& f,
   using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
 
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
+
+#ifdef TORSTEN_USE_STAN_ODE
+  PkOdeIntegrator<StanAdams> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PredWrapper<model_type, PkOdeIntegrator<StanAdams>&> pr;
+#else
   PkOdeIntegrator<PkAdams> integrator(rel_tol, abs_tol, max_num_steps, msgs);
   PredWrapper<model_type, PkOdeIntegrator<PkAdams>&> pr;
+#endif
 
   std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
 
