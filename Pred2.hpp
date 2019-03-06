@@ -5,11 +5,6 @@
 #include <vector>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
-#include <stan/math/torsten/duplicate.hpp>
-#include <stan/math/torsten/pk_twocpt_model.hpp>
-#include <stan/math/torsten/pk_onecpt_model.hpp>
-#include <stan/math/torsten/pk_linode_model.hpp>
-
 
 namespace torsten{
   /*
@@ -118,7 +113,7 @@ namespace torsten{
       } else if (events.is_ss_dosing(i)) {  // steady state event
         typename T_em::T_time model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
         T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
-        pred1 = stan::math::multiply(pkmodel.solve(model_amt[i], //NOLINT
+        pred1 = stan::math::multiply(pkmodel.solve(model_amt[i],
                                                    events.rate(i),
                                                    events.ii(i),
                                                    events.cmt(i),
@@ -224,157 +219,15 @@ namespace torsten{
     }
 
 #ifdef TORSTEN_MPI
-    /*
-     * MPI solution when @c amt is data
-     */
-    template<typename T0, typename T1, typename T2, typename T3, typename T4,
-             typename T5, typename T6, typename... Ts,
-             typename std::enable_if_t<!stan::is_var<T1>::value >* = nullptr>
-    static void pred(int nCmt,
-                     const std::vector<std::vector<T0> >& time,
-                     const std::vector<std::vector<T1> >& amt,
-                     const std::vector<std::vector<T2> >& rate,
-                     const std::vector<std::vector<T3> >& ii,
-                     const std::vector<std::vector<int> >& evid,
-                     const std::vector<std::vector<int> >& cmt,
-                     const std::vector<std::vector<int> >& addl,
-                     const std::vector<std::vector<int> >& ss,
-                     const std::vector<std::vector<std::vector<T4> > >& pMatrix,
-                     const std::vector<std::vector<std::vector<T5> > >& biovar,
-                     const std::vector<std::vector<std::vector<T6> > >& tlag,
-                     std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, -1, -1> >& res,
-                     const T_pred... pred_pars,
-                     const Ts... model_pars) {
-      using Eigen::Matrix;
-      using Eigen::MatrixXd;
-      using Eigen::VectorXd;
-      using Eigen::Dynamic;
-      using std::vector;
-      using::stan::math::var;
-      using::stan::math::multiply;
-      using refactor::PKRec;
-
-      using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
-      using scalar = typename EM::T_scalar;
-
-      // const double invalid_res_d = -123456789987654321.0;
-
-      const int np = time.size();
-      bool is_invalid = false;
-      std::ostringstream rank_fail_msg;
-
-      torsten::mpi::init();
-
-      // make sure MPI is on
-      int intialized;
-      MPI_Initialized(&intialized);
-      stan::math::check_greater("PredWrapper::pred", "MPI_Intialized", intialized, 0);
-
-      MPI_Comm comm;
-      comm = MPI_COMM_WORLD;
-      int rank, size;
-      MPI_Comm_size(comm, &size);
-      MPI_Comm_rank(comm, &rank);
-
-      MPI_Request req[np];
-      vector<MatrixXd> res_d(np);
-      
-      res.resize(np);
-      std::vector<int> nvars(np);
-
-      for (int id = 0; id < np; ++id) {
-
-        /* For every rank */
-
-        int nKeep = evid[id].size();
-
-        res[id].resize(nKeep, nCmt);
-
-        int nvar = T_model::nvars(nCmt, pMatrix[id][0].size());
-        int nvar_ss = T_model::template nvars<typename EM::T_amt, T2, T3>(pMatrix[id][0].size());
-        int nev = EM::nevents(time[id], amt[id], rate[id], ii[id], evid[id], cmt[id], addl[id], ss[id], pMatrix[id], biovar[id], tlag[id]);
-        res_d[id].resize(nev, EM::has_ss_dosing(evid[id], ss[id]) ? torsten::pk_nsys(nCmt, nvar, nvar_ss) : torsten::pk_nsys(nCmt, nvar));
-
-        int my_worker_id = torsten::mpi::my_worker(id, np, size);
-
-        /* only solver rank */
-
-        if (rank == my_worker_id) {
-          if (is_invalid) {
-            res_d[id].setConstant(invalid_res_d);
-          } else {
-            EM em(nCmt, time[id], amt[id], rate[id], ii[id], evid[id], cmt[id], addl[id], ss[id], pMatrix[id], biovar[id], tlag[id]);
-            auto events = em.events();
-            assert(nev == events.size());
-            assert(nKeep == em.nKeep);
-
-            PKRec<scalar> init(em.ncmt); init.setZero();
-            PKRec<double> pred1;
-            int ikeep = 0;
-
-            try {
-              for (size_t i = 0; i < events.size(); i++) {
-                stepper_solve(i, init, pred1, em, pred_pars..., model_pars...);
-                res_d[id].row(i).segment(0, pred1.size()) = pred1;
-                if (events.keep(i)) {
-                  res[id].row(ikeep) = init;
-                  ikeep++;
-                }
-              }
-            } catch (const std::exception& e) {
-              is_invalid = true;
-              res_d[id].setConstant(invalid_res_d);
-              rank_fail_msg << "Rank " << rank << " failed solve id " << id << ": " << e.what();
-            }
-          }
-        }
-        MPI_Ibcast(res_d[id].data(), res_d[id].size(), MPI_DOUBLE, my_worker_id, comm, &req[id]);
-      }
-
-      int finished = 0;
-      int flag = 0;
-      int index;
-      while (finished != np && size > 1) {
-        MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
-        if(flag) {
-          finished++;
-          if (is_invalid) continue;
-          int id = index;
-          if (res_d[id].isApproxToConstant(invalid_res_d)) {
-            is_invalid = true;
-            rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
-          } else {
-            if (rank != torsten::mpi::my_worker(id, np, size)) {
-              EM em(nCmt, time[id], amt[id], rate[id], ii[id], evid[id], cmt[id], addl[id], ss[id], pMatrix[id], biovar[id], tlag[id]);
-              PKRec<scalar> init(nCmt); init.setZero();
-              PKRec<double> pred1 = VectorXd::Zero(res_d[id].cols());
-              int ikeep = 0;
-              for (size_t i = 0; i < em.events().size(); i++) {
-                pred1 = res_d[id].row(i);
-                stepper_sync(i, init, pred1, em, pred_pars..., model_pars...);
-                if (em.events().keep(i)) {
-                  res[id].row(ikeep) = init;
-                  ikeep++;
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // std::cout << "Torsten MPI rank: " << rank << " done" << "\n";
-      if(is_invalid) {
-        throw std::runtime_error(rank_fail_msg.str());
-      }
-    }
 
     /*
-     * MPI solution when @c amt is data, and the population
+     * MPI solution when the population
      * information passed in as ragged arrays.
+     *
      */
     template<typename T0, typename T1, typename T2, typename T3, typename T4,
              typename T5, typename T6, typename... Ts,
-             typename std::enable_if_t<!stan::is_var<T1>::value >* = nullptr>
+             typename std::enable_if_t<stan::is_var<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar>::value >* = nullptr> //NOLINT
     static void pred(int nCmt,
                      const std::vector<int>& len,
                      const std::vector<T0>& time,
@@ -543,117 +396,6 @@ namespace torsten{
     }
 
     /*
-     * MPI, data-only version
-     */
-    template<typename... Ts>
-    static void pred(int nCmt,
-                     const std::vector<std::vector<double> >& time,
-                     const std::vector<std::vector<double> >& amt,
-                     const std::vector<std::vector<double> >& rate,
-                     const std::vector<std::vector<double> >& ii,
-                     const std::vector<std::vector<int> >& evid,
-                     const std::vector<std::vector<int> >& cmt,
-                     const std::vector<std::vector<int> >& addl,
-                     const std::vector<std::vector<int> >& ss,
-                     const std::vector<std::vector<std::vector<double> > >& pMatrix,
-                     const std::vector<std::vector<std::vector<double> > >& biovar,
-                     const std::vector<std::vector<std::vector<double> > >& tlag,
-                     std::vector<Eigen::MatrixXd>& res,
-                     const T_pred... pred_pars,
-                     const Ts... model_pars) {
-      using Eigen::Matrix;
-      using Eigen::MatrixXd;
-      using Eigen::VectorXd;
-      using Eigen::Dynamic;
-      using std::vector;
-      using::stan::math::var;
-      using::stan::math::multiply;
-      using refactor::PKRec;
-
-      using EM = EventsManager<double, double, double, double, double, double, double>;
-      const int np = time.size();
-      bool is_invalid = false;
-      std::ostringstream rank_fail_msg;
-
-      torsten::mpi::init();
-
-      // make sure MPI is on
-      int intialized;
-      MPI_Initialized(&intialized);
-      stan::math::check_greater("PredWrapper::pred", "MPI_Intialized", intialized, 0);
-
-      MPI_Comm comm;
-      comm = MPI_COMM_WORLD;
-      int rank, size;
-      MPI_Comm_size(comm, &size);
-      MPI_Comm_rank(comm, &rank);
-
-      MPI_Request req[np];
-      
-      res.resize(np);
-
-      for (int id = 0; id < np; ++id) {
-
-        /* For every rank */
-
-        res[id].resize(evid[id].size(), nCmt);
-        int my_worker_id = torsten::mpi::my_worker(id, np, size);
-
-        /* only solver rank */
-
-        if (rank == my_worker_id) {
-
-          EM em(nCmt, time[id], amt[id], rate[id], ii[id], evid[id], cmt[id], addl[id], ss[id], pMatrix[id], biovar[id], tlag[id]);
-          auto events = em.events();
-          auto model_rate = em.rates();
-          auto model_amt = em.amts();
-          auto model_par = em.pars();
-          PKRec<double> init(nCmt); init.setZero();
-
-          PKRec<double> pred1 = VectorXd::Zero(em.ncmt);
-
-          try {
-            for (int ik = 0; ik < em.nKeep; ik++) {
-              int ibegin = ik == 0 ? 0 : em.keep_ev[ik-1] + 1;
-              int iend = em.keep_ev[ik] + 1;
-              for (int i = ibegin; i < iend; ++i) {
-                stepper(i, init, em, pred_pars..., model_pars...);
-              }
-              res[id].row(ik) = init;
-            }
-          } catch (const std::exception& e) {
-            is_invalid = true;
-            res[id].setConstant(invalid_res_d);
-            rank_fail_msg << "Rank " << rank << " failed solve id " << id << ": " << e.what();
-          }
-        }
-        MPI_Ibcast(res[id].data(), res[id].size(), MPI_DOUBLE, my_worker_id, comm, &req[id]);
-      }
-
-      // make sure every rank throws in case any rank fails
-      int finished = 0;
-      int flag = 0;
-      int index;
-      while (finished != np && size > 1) {
-        MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
-        if(flag) {
-          finished++;
-          if(is_invalid) continue;
-          int id = index;
-          if (res[id].isApproxToConstant(invalid_res_d)) {
-            is_invalid = true;
-            rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
-          }
-        }
-      }
-
-      // std::cout << "Torsten MPI rank: " << rank << " done" << "\n";
-      if(is_invalid) {
-        throw std::runtime_error(rank_fail_msg.str());
-      }
-    }
-    
-    /*
      * Data-only MPI solver that takes ragged arrays as input.
      */
     template<typename... Ts>
@@ -684,8 +426,6 @@ namespace torsten{
       using::stan::math::var;
       using::stan::math::multiply;
       using refactor::PKRec;
-
-      // const double invalid_res_d = -123456789987654321.0;
 
       using EM = EventsManager<double, double, double, double, double, double, double>;
       const int np = len.size();
@@ -778,40 +518,6 @@ namespace torsten{
       }
     }
 #else
-    template<typename T0, typename T1, typename T2, typename T3, typename T4,
-             typename T5, typename T6, typename... Ts>
-    static void pred(int nCmt,
-                     const std::vector<std::vector<T0> >& time,
-                     const std::vector<std::vector<T1> >& amt,
-                     const std::vector<std::vector<T2> >& rate,
-                     const std::vector<std::vector<T3> >& ii,
-                     const std::vector<std::vector<int> >& evid,
-                     const std::vector<std::vector<int> >& cmt,
-                     const std::vector<std::vector<int> >& addl,
-                     const std::vector<std::vector<int> >& ss,
-                     const std::vector<std::vector<std::vector<T4> > >& pMatrix,
-                     const std::vector<std::vector<std::vector<T5> > >& biovar,
-                     const std::vector<std::vector<std::vector<T6> > >& tlag,
-                     std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, -1, -1>>& res,
-                     const T_pred... pred_pars,
-                     const Ts... model_pars) {
-      using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
-      const int np = time.size();
-      
-      res.resize(np);
-
-      static bool has_warning = false;
-      if (!has_warning) {
-        std::cout << "Torsten Population PK solver " << "running sequentially" << "\n";
-        has_warning = true;
-      }
-
-      for (int i = 0; i < np; ++i) {
-        EM em(nCmt, time[i], amt[i], rate[i], ii[i], evid[i], cmt[i], addl[i], ss[i], pMatrix[i], biovar[i], tlag[i]);
-        res[i].resize(em.nKeep, em.ncmt);
-        pred(em, res[i], pred_pars..., model_pars...);
-      }
-    }
 
     /*
      * For population input in the form of ragged arrays,
