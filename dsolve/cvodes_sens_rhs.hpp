@@ -1,7 +1,9 @@
-#ifndef TORSTEN_DSOLVE_CVODES_SENS_RHS_HPP
-#define TORSTEN_DSOLVE_CVODES_SENS_RHS_HPP
+#ifndef STAN_MATH_TORSTEN_DSOLVE_CVODES_SENS_RHS_HPP
+#define STAN_MATH_TORSTEN_DSOLVE_CVODES_SENS_RHS_HPP
 
-#include <stan/math/torsten/dsolve/cvodes_service.hpp>
+#include <cvodes/cvodes.h>
+#include <cvodes/cvodes_direct.h>
+#include <nvector/nvector_serial.h>
 
 namespace torsten {
   namespace dsolve {

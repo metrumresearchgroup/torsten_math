@@ -1,5 +1,5 @@
-#ifndef STAN_MATH_TORSTEN_DSOLVE_CVODES_RHS_HPP
-#define STAN_MATH_TORSTEN_DSOLVE_CVODES_RHS_HPP
+#ifndef STAN_MATH_TORSTEN_DSOLVE_CVODES_JAC_HPP
+#define STAN_MATH_TORSTEN_DSOLVE_CVODES_JAC_HPP
 
 #include <cvodes/cvodes.h>
 #include <cvodes/cvodes_direct.h>
@@ -15,10 +15,11 @@ namespace torsten {
      * @return RHS function for Cvodes
      */
     template <typename Ode>
-    inline CVRhsFn cvodes_rhs() {
-      return [](double t, N_Vector y, N_Vector ydot, void* user_data) -> int {
+    inline CVDlsJacFn cvodes_jac() {
+      return [](realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void* user_data, // NOLINT
+                N_Vector tmp1, N_Vector tmp2, N_Vector tmp3) -> int {
         Ode* ode = static_cast<Ode*>(user_data);
-        ode -> eval_rhs(t, y, ydot);
+        ode -> eval_jac(t, y, fy, J);
         return 0;
       };
     }

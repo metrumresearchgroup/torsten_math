@@ -227,18 +227,63 @@ namespace torsten {
       }
 
       /**
+       * evaluate Jacobian matrix using current state, store
+       * the result in @c SUNMatrix J.
+       *
+       * @param t current time
+       * @param y current y
+       * @param fy current f(y)
+       * @param J Jacobian matrix J(i,j) = df_i/dy_j
+       */
+      inline void eval_jac(double t, N_Vector& y, N_Vector& fy, SUNMatrix& J) {
+        using stan::math::var;
+
+        const int n = N_;
+        for (int i = 0; i < n; ++i) y_vec_[i] = NV_Ith_S(y, i);
+
+        try {
+          stan::math::start_nested();
+
+          std::vector<var> yv(y_vec_.begin(), y_vec_.end());
+          std::vector<stan::math::var> fyv(N_);
+          fyv = f_(t, yv, theta_dbl_, x_r_, x_i_, msgs_);
+
+          std::vector<double> g;
+          for (int i = 0; i < n; ++i) {
+            stan::math::set_zero_all_adjoints_nested();
+            fyv[i].grad(yv, g);
+
+            for (int j = 0; j < n; ++j) {
+              SM_ELEMENT_D(J, i, j) = g[j];
+            }
+          }
+        } catch (const std::exception& e) {
+          stan::math::recover_memory_nested();
+          throw;
+        }
+        stan::math::recover_memory_nested();
+      }
+
+      /**
        * return reference to initial condition
        *
        * @return reference to initial condition
        */
-      const std::vector<Ty0>& y0() const { return y0_; }
+      inline const std::vector<Ty0>& y0() const { return y0_; }
+
+      /**
+       * return reference to initial condition data
+       *
+       * @return reference to initial condition data
+       */
+      inline const std::vector<double>& y0_d() const { return y0_dbl_; }
 
       /**
        * return reference to parameter
        *
        * @return reference to parameter
        */
-      const std::vector<Tpar>& theta() const { return theta_; }
+      inline const std::vector<Tpar>& theta() const { return theta_; }
 
       /**
        * return a vector of vars for that contains the initial
@@ -291,12 +336,6 @@ namespace torsten {
        * return reference to ODE functor
        */
       const F& f() { return f_; }
-      /**
-       * return a closure for CVODES residual callback using a non-capture lambda
-       */
-      static CVRhsFn rhs() {
-        return cvodes_rhs<PKCvodesSystem<F, Tts, Ty0, Tpar, Lmm>>();
-      }
     };
 
     // // TODO(yizhang): adjoint system construction

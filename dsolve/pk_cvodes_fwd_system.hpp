@@ -156,7 +156,6 @@ namespace torsten {
       using Ode = PKCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
     private:
       N_Vector* nv_ys_;
-      std::vector<stan::math::var> ysv;
     public:
       /**
        * Construct CVODES ODE system from initial condition and parameters
@@ -178,8 +177,7 @@ namespace torsten {
                            const std::vector<int>& x_i,
                            std::ostream* msgs) :
         Ode(serv, f, t0, ts, y0, theta, x_r, x_i, msgs),
-        nv_ys_(Ode::serv_.nv_ys),
-        ysv(Ode::N_)
+        nv_ys_(Ode::serv_.nv_ys)
       {}
 
       /**
@@ -226,20 +224,15 @@ namespace torsten {
         const std::vector<int>    & x_i       = B::x_i_;
         std::ostream* msgs              = B::msgs_;
 
-        static std::vector<double> g;
-        std::vector<double>& yv_{B::y_vec_};
-        for (int i = 0; i < n; ++i) yv_[i] = NV_Ith_S(y, i);
+        for (int i = 0; i < n; ++i) B::y_vec_[i] = NV_Ith_S(y, i);
 
         // initialize ysdot
-        for (int i = 0; i < ns; ++i) {
-          auto nvp = N_VGetArrayPointer(ysdot[i]);
-          for (int j = 0; j < n; ++j) nvp[j] = 0.0;
-        }
+        for (int i = 0; i < ns; ++i) N_VConst(0.0, ysdot[i]);
 
         try {
           stan::math::start_nested();
 
-          for (int j = 0; j < n; ++j) ysv[j] = yv_[j];
+          std::vector<var> ysv(B::y_vec_.begin(), B::y_vec_.end());
           std::vector<stan::math::var> pars;
           std::vector<stan::math::var> fy(n);
 
@@ -255,7 +248,7 @@ namespace torsten {
             fy = f(t, ysv, theta_dbl, x_r, x_i, msgs);
           }
 
-
+          std::vector<double> g;
           for (int j = 0; j < n; ++j) {
             stan::math::set_zero_all_adjoints_nested();
             fy[j].grad(pars, g);

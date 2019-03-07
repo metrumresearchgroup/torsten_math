@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_DSOLVE_CVODES_INTEGRATOR_HPP
 
 #include <stan/math/torsten/dsolve/pk_cvodes_fwd_system.hpp>
+#include <stan/math/torsten/dsolve/cvodes_jac.hpp>
 
 namespace torsten {
 namespace dsolve {
@@ -23,19 +24,6 @@ namespace dsolve {
     const double rtol_;
     const double atol_;
     const int64_t max_num_steps_;
-
-    // /**
-    //  *  ode adjoint sens calculation requires different initialization
-    //  *
-    //  * @tparam F type of ODE RHS functor
-    //  * @tparam Ty0 type of ODE primary unknowns
-    //  * @tparam Tpar type of ODE parameters.
-    //  * @param[out] ode ODE system
-    //  * @param[out] res_y ODE solutions
-    //  */
-    // template <typename F, typename Ty0, typename Tpar>
-    //   // TODO(yizhang): adjoint sensitivity initialization
-    // }
 
     // Seqential
     template <typename F, int Lmm, PkCvodesSensMethod Sm>
@@ -125,15 +113,9 @@ namespace dsolve {
       using Eigen::Dynamic;
       using Eigen::Matrix;
       using Eigen::MatrixXd;
-      using Eigen::VectorXd;
-      using stan::math::check_finite;
-      using stan::math::check_ordered;
-      using stan::math::check_nonzero_size;
-      using stan::math::check_less;
 
       auto mem       = ode.mem();
       auto y         = ode.nv_y();
-      auto y0        = ode.y0();
       auto ys        = ode.nv_ys();
       const size_t n = ode.n();
       const size_t ns= ode.ns();
@@ -149,7 +131,7 @@ namespace dsolve {
       // from previous solution, we need to reset it. Likewise
       // we also reset ys.
       for (size_t i = 0; i < n; ++i) {
-        NV_Ith_S(y, i) = stan::math::value_of(y0[i]);
+        NV_Ith_S(y, i) = ode.y0_d()[i];
       }
       for (size_t is = 0; is < ns; ++is) {
         N_VConst(RCONST(0.0), ys[is]);
@@ -162,6 +144,7 @@ namespace dsolve {
         CHECK_SUNDIALS_CALL(CVodeSetMaxNumSteps(mem, max_num_steps_));
         CHECK_SUNDIALS_CALL(CVodeSetMaxErrTestFails(mem, 20));
         CHECK_SUNDIALS_CALL(CVodeSetMaxConvFails(mem, 30));
+        CHECK_SUNDIALS_CALL(CVDlsSetJacFn(mem, cvodes_jac<Ode>()));
 
         /** if y0 is parameter, the first n sensitivity vector
          * are regarding y0, thus they form a unit matrix.

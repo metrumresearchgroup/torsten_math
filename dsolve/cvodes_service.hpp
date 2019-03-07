@@ -3,15 +3,12 @@
 
 #include <stan/math/rev/scal/meta/is_var.hpp>
 #include <stan/math/torsten/dsolve/sundials_check.hpp>
-#include <cvodes/cvodes.h>
-#include <cvodes/cvodes_direct.h>
+#include <stan/math/torsten/dsolve/cvodes_rhs.hpp>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
 #include <ostream>
 #include <vector>
 #include <algorithm>
-
-#include <nvector/nvector_serial.h>
 
 namespace torsten {
   namespace dsolve {
@@ -72,7 +69,7 @@ namespace torsten {
         /*
          * initialize cvodes system and allocate linear solver mem
          */ 
-        CHECK_SUNDIALS_CALL(CVodeInit(mem, Ode::rhs(), t0, nv_y));
+        CHECK_SUNDIALS_CALL(CVodeInit(mem, cvodes_rhs<Ode>(), t0, nv_y));
         A = SUNDenseMatrix(n, n);
         LS = SUNDenseLinearSolver(nv_y, A);
         CHECK_SUNDIALS_CALL(CVDlsSetLinearSolver(mem, LS, A));
