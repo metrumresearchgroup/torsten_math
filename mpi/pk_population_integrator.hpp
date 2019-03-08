@@ -182,7 +182,6 @@ namespace torsten {
         MPI_Comm_rank(comm, &rank);
 
         vector<Eigen::MatrixXd> res_i(np);
-        vector<vector<vector<double>> > res(np);
         int nsys, nt;
         MPI_Request req[np];
 
@@ -230,11 +229,9 @@ namespace torsten {
         return res_i;
       }
 #else
-      template <typename Tt, typename T_initial, typename T_param,
-                typename std::enable_if_t<stan::is_var<typename stan::return_type<Tt, T_initial, T_param>::type>::value >* = nullptr> // NOLINT
-      inline
-      std::vector<Eigen::Matrix<typename stan::return_type<Tt, T_initial, T_param>::type, // NOLINT
-                                Eigen::Dynamic, Eigen::Dynamic> >
+      template <typename Tt, typename T_initial, typename T_param>
+      inline std::vector<Eigen::Matrix<typename stan::return_type<Tt, T_initial, T_param>::type, // NOLINT
+                                       Eigen::Dynamic, Eigen::Dynamic> >
       operator()(const F& f,
                  const std::vector<std::vector<T_initial> >& y0,
                  double t0,
@@ -268,7 +265,7 @@ namespace torsten {
 
         for (int i = 0; i < np; ++i) {
           Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
-          res[i] = solver.integrate(ode);
+          res[i] = stan::math::to_matrix(solver.integrate(ode));
         }
 
         return res;

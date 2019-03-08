@@ -151,7 +151,7 @@ namespace dsolve {
          **/
         if (Ode::need_fwd_sens) {
           if (Ode::is_var_y0) for (size_t i = 0; i < n; ++i) NV_Ith_S(ys[i], i) = 1.0;
-          CHECK_SUNDIALS_CALL(CVodeSensInit(mem, ode.ns(), CV_SIMULTANEOUS, cvodes_sens_rhs<Ode>(), ys));  // NOLINT
+          CHECK_SUNDIALS_CALL(CVodeSensInit(mem, ode.ns(), CV_STAGGERED, cvodes_sens_rhs<Ode>(), ys));  // NOLINT
           CHECK_SUNDIALS_CALL(CVodeSensEEtolerances(mem));
         }
 

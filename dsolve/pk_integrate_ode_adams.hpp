@@ -105,11 +105,10 @@ namespace dsolve {
     stan::math::check_consistent_sizes(caller, "y0", y0, "x_r",    x_r);
     stan::math::check_consistent_sizes(caller, "y0", y0, "x_i",    x_i);
 
-    PKCvodesIntegrator solver(rtol, atol, max_num_step);
+    PKCvodesIntegrator integrator(rtol, atol, max_num_step);
+    torsten::mpi::PkPopulationIntegrator<F, CV_ADAMS> solver(integrator);
 
-    torsten::mpi::PkPopulationIntegrator<F, CV_ADAMS> pop_solver(solver);
-
-    return pop_solver(f, y0, t0, ts, theta, x_r, x_i, msgs);
+    return solver(f, y0, t0, ts, theta, x_r, x_i, msgs);
   }
 
 }
