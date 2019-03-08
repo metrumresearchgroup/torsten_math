@@ -78,8 +78,9 @@ namespace torsten {
       ~PKCvodesService() {
         SUNLinSolFree(LS);
         SUNMatDestroy(A);
-        N_VDestroy(nv_y);
         CVodeFree(&mem);
+        N_VDestroyVectorArray(nv_ys, ns);
+        N_VDestroy(nv_y);
       }
     };
 
