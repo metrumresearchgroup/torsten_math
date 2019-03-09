@@ -280,7 +280,6 @@ namespace torsten{
       vector<MatrixXd> res_d(np);
       
       res.resize(np);
-      std::vector<int> nvars(np);
 
       int i0 = 0, i0_pMatrix = 0, i0_biovar = 0, i0_tlag = 0;
       std::vector<int> j0(np), j0_pMatrix(np), j0_biovar(np), j0_tlag(np);

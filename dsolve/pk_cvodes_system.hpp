@@ -58,6 +58,10 @@ namespace torsten {
       SUNLinearSolver& LS_;
       std::ostream* msgs_;
 
+      // workspace
+      std::vector<stan::math::var> yv_work_;
+      std::vector<stan::math::var> fyv_work_;
+
     public:
       static constexpr bool is_var_y0 = stan::is_var<Ty0>::value;
       static constexpr bool is_var_par = stan::is_var<Tpar>::value;
@@ -111,7 +115,9 @@ namespace torsten {
           mem_(serv_.mem),
           A_(serv_.A),
           LS_(serv.LS),
-          msgs_(msgs) {
+          msgs_(msgs),
+          yv_work_(N_),
+          fyv_work_(N_) {
         using stan::math::system_error;
 
         if (nv_y_ == NULL)
@@ -239,19 +245,23 @@ namespace torsten {
         using stan::math::var;
 
         const int n = N_;
-        for (int i = 0; i < n; ++i) y_vec_[i] = NV_Ith_S(y, i);
 
         try {
           stan::math::start_nested();
 
-          std::vector<var> yv(y_vec_.begin(), y_vec_.end());
-          std::vector<stan::math::var> fyv(N_);
-          fyv = f_(t, yv, theta_dbl_, x_r_, x_i_, msgs_);
+          for (int i = 0; i < n; ++i) {
+            yv_work_[i] = NV_Ith_S(y, i);
+            yv_work_[i].vi_ -> set_zero_adjoint();
+          }
+
+          fyv_work_ = f_(t, yv_work_, theta_dbl_, x_r_, x_i_, msgs_);
 
           std::vector<double> g;
           for (int i = 0; i < n; ++i) {
             stan::math::set_zero_all_adjoints_nested();
-            fyv[i].grad(yv, g);
+            fyv_work_[i].grad(yv_work_, g);
+            std::for_each(yv_work_.begin(), yv_work_.end(),
+                          [](var& v) { v.vi_ -> set_zero_adjoint(); });
 
             for (int j = 0; j < n; ++j) {
               SM_ELEMENT_D(J, i, j) = g[j];
