@@ -62,7 +62,7 @@ namespace torsten{
      * at each event.
      */
     template<typename T_em, typename... Ts>
-    static void pred(const T_em& em,
+    void pred(const T_em& em,
                      Eigen::Matrix<typename T_em::T_scalar, -1, -1>& res,
                      const T_pred... pred_pars,
                      const Ts... model_pars) {
@@ -96,7 +96,7 @@ namespace torsten{
      * Step through a range of events.
      */
     template<typename T_em, typename... Ts>
-    static void stepper(int i, refactor::PKRec<typename T_em::T_scalar>& init,
+    void stepper(int i, refactor::PKRec<typename T_em::T_scalar>& init,
                         const T_em& em, const T_pred... pred_pars, const Ts... model_pars) {
       auto events = em.events();
       auto model_rate = em.rates();
@@ -138,7 +138,7 @@ namespace torsten{
     }
 
     template<typename T_em, typename... Ts>
-    static void stepper_solve(int i, refactor::PKRec<typename T_em::T_scalar>& init,
+    void stepper_solve(int i, refactor::PKRec<typename T_em::T_scalar>& init,
                         refactor::PKRec<double>& sol_d,
                         const T_em& em, const T_pred... pred_pars, const Ts... model_pars) {
       using std::vector;
@@ -179,7 +179,7 @@ namespace torsten{
     }
 
     template<typename T_em, typename... Ts>
-    static void stepper_sync(int i, refactor::PKRec<typename T_em::T_scalar>& init,
+    void stepper_sync(int i, refactor::PKRec<typename T_em::T_scalar>& init,
                         refactor::PKRec<double>& sol_d,
                              const T_em& em, const T_pred... pred_pars, const Ts... model_pars) {
       using std::vector;
@@ -228,7 +228,7 @@ namespace torsten{
     template<typename T0, typename T1, typename T2, typename T3, typename T4,
              typename T5, typename T6, typename... Ts,
              typename std::enable_if_t<stan::is_var<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar>::value >* = nullptr> //NOLINT
-    static void pred(int nCmt,
+    void pred(int nCmt,
                      const std::vector<int>& len,
                      const std::vector<T0>& time,
                      const std::vector<T1>& amt,
@@ -265,11 +265,6 @@ namespace torsten{
 
       torsten::mpi::init();
 
-      // make sure MPI is on
-      int intialized;
-      MPI_Initialized(&intialized);
-      stan::math::check_greater("PredWrapper::pred", "MPI_Intialized", intialized, 0);
-
       MPI_Comm comm;
       comm = MPI_COMM_WORLD;
       int rank, size;
@@ -283,8 +278,9 @@ namespace torsten{
 
       int i0 = 0, i0_pMatrix = 0, i0_biovar = 0, i0_tlag = 0;
       std::vector<int> j0(np), j0_pMatrix(np), j0_biovar(np), j0_tlag(np);
+      PKRec<scalar> init(nCmt);
+      PKRec<double> pred1;
       for (int id = 0; id < np; ++id) {
-
         /* For every rank */
 
         j0[id]         = i0;
@@ -315,19 +311,17 @@ namespace torsten{
           if (is_invalid) {
             res_d[id].setConstant(invalid_res_d);
           } else {
-            EM em(nCmt, i0, len[id], time, amt, rate, ii, evid, cmt, addl, ss,
-                  i0_pMatrix, len_pMatrix[id], pMatrix,
-                  i0_biovar, len_biovar[id], biovar,
-                  i0_tlag, len_tlag[id], tlag);
-            auto events = em.events();
-            assert(nev == events.size());
-            assert(nKeep == em.nKeep);
-
-            PKRec<scalar> init(em.ncmt); init.setZero();
-            PKRec<double> pred1;
-            int ikeep = 0;
-
             try {
+              EM em(nCmt, i0, len[id], time, amt, rate, ii, evid, cmt, addl, ss,
+                    i0_pMatrix, len_pMatrix[id], pMatrix,
+                    i0_biovar, len_biovar[id], biovar,
+                    i0_tlag, len_tlag[id], tlag);
+              auto events = em.events();
+              assert(nev == events.size());
+              assert(nKeep == em.nKeep);
+
+              init.setZero();
+              int ikeep = 0;
               for (size_t i = 0; i < events.size(); i++) {
                 stepper_solve(i, init, pred1, em, pred_pars..., model_pars...);
                 res_d[id].row(i).segment(0, pred1.size()) = pred1;
@@ -339,7 +333,7 @@ namespace torsten{
             } catch (const std::exception& e) {
               is_invalid = true;
               res_d[id].setConstant(invalid_res_d);
-              rank_fail_msg << "Rank " << rank << " failed solve id " << id << ": " << e.what();
+              rank_fail_msg << "Rank " << rank << " failed to solve id " << id << ": " << e.what();
             }
           }
         }
@@ -389,6 +383,8 @@ namespace torsten{
         }
       }
 
+      MPI_Barrier(comm);
+
       if(is_invalid) {
         throw std::runtime_error(rank_fail_msg.str());
       }
@@ -398,7 +394,7 @@ namespace torsten{
      * Data-only MPI solver that takes ragged arrays as input.
      */
     template<typename... Ts>
-    static void pred(int nCmt,
+    void pred(int nCmt,
                      const std::vector<int>& len,
                      const std::vector<double>& time,
                      const std::vector<double>& amt,
@@ -433,10 +429,6 @@ namespace torsten{
 
       torsten::mpi::init();
 
-      int intialized;
-      MPI_Initialized(&intialized);
-      stan::math::check_greater("PredWrapper::pred", "MPI_Intialized", intialized, 0);
-
       MPI_Comm comm;
       comm = MPI_COMM_WORLD;
       int rank, size;
@@ -448,6 +440,7 @@ namespace torsten{
       res.resize(np);
 
       int i0 = 0, i0_pMatrix = 0, i0_biovar = 0, i0_tlag = 0;
+      PKRec<double> init(nCmt);
       for (int id = 0; id < np; ++id) {
 
         /* For every rank */
@@ -458,20 +451,16 @@ namespace torsten{
         /* only solver rank */
 
         if (rank == my_worker_id) {
-
-          EM em(nCmt, i0, len[id], time, amt, rate, ii, evid, cmt, addl, ss,
-                i0_pMatrix, len_pMatrix[id], pMatrix,
-                i0_biovar, len_biovar[id], biovar,
-                i0_tlag, len_tlag[id], tlag);
-          auto events = em.events();
-          auto model_rate = em.rates();
-          auto model_amt = em.amts();
-          auto model_par = em.pars();
-          PKRec<double> init(nCmt); init.setZero();
-
-          PKRec<double> pred1 = VectorXd::Zero(em.ncmt);
-
           try {
+            EM em(nCmt, i0, len[id], time, amt, rate, ii, evid, cmt, addl, ss,
+                  i0_pMatrix, len_pMatrix[id], pMatrix,
+                  i0_biovar, len_biovar[id], biovar,
+                  i0_tlag, len_tlag[id], tlag);
+            auto events = em.events();
+            auto model_rate = em.rates();
+            auto model_amt = em.amts();
+            auto model_par = em.pars();
+            init.setZero();
             for (int ik = 0; ik < em.nKeep; ik++) {
               int ibegin = ik == 0 ? 0 : em.keep_ev[ik-1] + 1;
               int iend = em.keep_ev[ik] + 1;
@@ -483,7 +472,7 @@ namespace torsten{
           } catch (const std::exception& e) {
             is_invalid = true;
             res[id].setConstant(invalid_res_d);
-            rank_fail_msg << "Rank " << rank << " failed solve id " << id << ": " << e.what();
+            rank_fail_msg << "Rank " << rank << " failed to solve id " << id << ": " << e.what();
           }
         }
         MPI_Ibcast(res[id].data(), res[id].size(), MPI_DOUBLE, my_worker_id, comm, &req[id]);
@@ -496,20 +485,19 @@ namespace torsten{
 
       // make sure every rank throws in case any rank fails
       int finished = 0;
-      int flag = 0;
       int index;
       while (finished != np && size > 1) {
-        MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
-        if(flag) {
-          finished++;
-          if(is_invalid) continue;
-          int id = index;
-          if (res[id].isApproxToConstant(invalid_res_d)) {
-            is_invalid = true;
-            rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
-          }
+        MPI_Waitany(np, req, &index, MPI_STATUS_IGNORE);
+        finished++;
+        if(is_invalid) continue;
+        int id = index;
+        if (res[id].isApproxToConstant(invalid_res_d)) {
+          is_invalid = true;
+          rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
         }
       }
+
+      MPI_Barrier(comm);
 
       // std::cout << "Torsten MPI rank: " << rank << " done" << "\n";
       if(is_invalid) {
@@ -525,7 +513,7 @@ namespace torsten{
      */
     template<typename T0, typename T1, typename T2, typename T3, typename T4,
              typename T5, typename T6, typename... Ts>
-    static void pred(int nCmt,
+    void pred(int nCmt,
                      const std::vector<int>& len,
                      const std::vector<T0>& time,
                      const std::vector<T1>& amt,

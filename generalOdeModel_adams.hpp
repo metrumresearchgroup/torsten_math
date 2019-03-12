@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <stan/math/torsten/events_manager.hpp>
+#include <stan/math/torsten/pmx_population_check.hpp>
 #include <stan/math/torsten/PKModel/functors/general_functor.hpp>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_general.hpp>
@@ -410,14 +411,9 @@ pop_pk_generalOdeModel_adams(const F& f,
   using stan::math::check_greater_or_equal;
 
   int np = len.size();
-  static const char* caller("generalOdeModel_adams");
-  check_consistent_sizes(caller, "time", time, "amt",     amt);
-  check_consistent_sizes(caller, "time", time, "rate",    rate);
-  check_consistent_sizes(caller, "time", time, "ii",      ii);
-  check_consistent_sizes(caller, "time", time, "evid",    evid);
-  check_consistent_sizes(caller, "time", time, "cmt",     cmt);
-  check_consistent_sizes(caller, "time", time, "addl",    addl);
-  check_consistent_sizes(caller, "time", time, "ss",      ss);
+  static const char* caller("pop_pk_generalOdeModel_bdf");
+  torsten::pmx_population_check(time, amt, rate, ii, evid, cmt, addl, ss,
+                                pMatrix, biovar, tlag, caller);
   check_consistent_sizes(caller, "population", len, "parameters", len_pMatrix);
   check_consistent_sizes(caller, "population", len, "biovar", len_biovar);
   check_consistent_sizes(caller, "population", len, "tlag", len_tlag);

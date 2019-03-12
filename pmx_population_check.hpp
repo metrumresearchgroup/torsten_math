@@ -1,5 +1,5 @@
-#ifndef STAN_MATH_TORSTEN_PKMODEL_PMETRICSCHECK_HPP
-#define STAN_MATH_TORSTEN_PKMODEL_PMETRICSCHECK_HPP
+#ifndef STAN_MATH_TORSTEN_MPI_PMX_POPULATION_CHECK_HPP
+#define STAN_MATH_TORSTEN_MPI_PMX_POPULATION_CHECK_HPP
 
 #include <Eigen/Dense>
 #include <stan/math/torsten/PKModel/pmxModel.hpp>
@@ -46,18 +46,18 @@ namespace torsten {
  */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
   typename T5, typename T6>
-void pmetricsCheck(const std::vector<T0>& time,
-                   const std::vector<T1>& amt,
-                   const std::vector<T2>& rate,
-                   const std::vector<T3>& ii,
-                   const std::vector<int>& evid,
-                   const std::vector<int>& cmt,
-                   const std::vector<int>& addl,
-                   const std::vector<int>& ss,
-                   const std::vector<std::vector<T4> >& pMatrix,
-                   const std::vector<std::vector<T5> >& biovar,
-                   const std::vector<std::vector<T6> >& tlag,
-                   const char* function) {
+void pmx_population_check(const std::vector<T0>& time,
+                          const std::vector<T1>& amt,
+                          const std::vector<T2>& rate,
+                          const std::vector<T3>& ii,
+                          const std::vector<int>& evid,
+                          const std::vector<int>& cmt,
+                          const std::vector<int>& addl,
+                          const std::vector<int>& ss,
+                          const std::vector<std::vector<T4> >& pMatrix,
+                          const std::vector<std::vector<T5> >& biovar,
+                          const std::vector<std::vector<T6> >& tlag,
+                          const char* function) {
   using std::vector;
   using std::string;
   using Eigen::Dynamic;
@@ -93,34 +93,22 @@ void pmetricsCheck(const std::vector<T0>& time,
   check_nonnegative(function, "rate", rate);
   check_nonnegative(function, "ii",   ii  );
 
-  std::string message2 = ", but must be either 1 or the same as the length of the time array: "  // NOLINT
-    + boost::lexical_cast<string>(time.size()) + "!";
-    const char* length_error2 = message2.c_str();
-
-  // TEST ARGUMENTS FOR PARAMETERS
-  static const char* noCheck("linOdeModel");
-  if (strcmp(function, noCheck) != 0) {
-    if (!((pMatrix.size() == time.size()) || (pMatrix.size() == 1)))
-      invalid_argument(function, "length of the parameter (2d) array,",
-        pMatrix.size(), "", length_error2);
-    if (!(pMatrix[0].size() > 0)) invalid_argument(function,
-      "the number of parameters per event is", pMatrix[0].size(),
-      "", " but must be greater than 0!");
+  for (auto&& p : pMatrix) {
+    check_finite(function, "parameters", p);
+    check_not_nan(function, "parameters", p);
   }
 
-  if (!((biovar.size() == time.size()) || (biovar.size() == 1)))
-    invalid_argument(function, "length of the biovariability parameter (2d) array,",  // NOLINT
-      biovar.size(), "", length_error2);
-  if (!(biovar[0].size() > 0)) invalid_argument(function,
-    "the number of biovariability parameters per event is", biovar[0].size(),
-    "", " but must be greater than 0!");
+  for (auto&& p : biovar) {
+    check_nonnegative(function, "bioavailability", p);
+    check_finite(function, "bioavailability", p);
+    check_not_nan(function, "bioavailability", p);
+  }
 
-  if (!((tlag.size() == time.size()) || (tlag.size() == 1)))
-    invalid_argument(function, "length of the lag times (2d) array,",  // NOLINT
-                     tlag.size(), "", length_error2);
-  if (!(tlag[0].size() > 0)) invalid_argument(function,
-      "the number of lagtimes parameters per event is", tlag[0].size(),
-      "", " but must be greater than 0!");
+  for (auto&& p : tlag) {
+    check_nonnegative(function, "lag time", p);
+    check_finite(function, "lag time", p);
+    check_not_nan(function, "lag time", p);
+  }
 }
 
 }    // torsten namespace
