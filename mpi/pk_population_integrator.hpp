@@ -82,24 +82,39 @@ namespace torsten {
         bool is_invalid = false;
         std::ostringstream rank_fail_msg;
 
+        // n_req will be updated to contain the number of
+        // active requests. These are the requests that we
+        // need to make sure to finish.
+        int n_req = np;
+
         for (int i = 0; i < np; ++i) {
           int my_worker_id = torsten::mpi::my_worker(i, np, size);
-          Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
-          vars = ode.vars();
-          ns   = ode.ns();
-          nsys = ode.n_sys();
-          nt   = ode.ts().size();
-          nsol = ode.n_sol();
-          res_i[i].resize(nt, nsys);
-          if(rank == my_worker_id) {
-            try {
-              res_i[i] = solver.integrate<Ode, false>(ode);
-            } catch (const std::exception& e) {
-              is_invalid = true;
-              res_i[i].setConstant(invalid_res_d);
-              rank_fail_msg << "Rank " << rank << " failed solve id " << i << ": " << e.what();
+          try {
+            Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
+            vars = ode.vars();
+            ns   = ode.ns();
+            nsys = ode.n_sys();
+            nt   = ode.ts().size();
+            nsol = ode.n_sol();
+            res_i[i].resize(nt, nsys);
+
+            // success in creating ODE, solve it
+            if(rank == my_worker_id) {
+              try {
+                res_i[i] = solver.integrate<Ode, false>(ode);
+              } catch (const std::exception& e) {
+                is_invalid = true;
+                res_i[i].setConstant(invalid_res_d);
+                rank_fail_msg << "Rank " << rank << " failed to solve ODEs for id " << i << ": " << e.what();
+              }
             }
-          }
+          } catch (const std::exception& e) {
+            is_invalid = true;
+            rank_fail_msg << "Rank " << rank << " failed to create ODEs for id " << i << ": " << e.what();
+            n_req = i;
+            break;
+          } 
+
           MPI_Ibcast(res_i[i].data(), res_i[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
           g.resize(ns);
           res[i].resize(nt, n);
@@ -116,8 +131,8 @@ namespace torsten {
         int finished = 0;
         int flag = 0;
         int index;
-        while(finished != np) {
-          MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
+        while(finished != n_req) {
+          MPI_Testany(n_req, req, &index, &flag, MPI_STATUS_IGNORE);
           if(flag) {
             finished++;
             if(is_invalid) continue;
@@ -186,31 +201,42 @@ namespace torsten {
         MPI_Request req[np];
 
         bool is_invalid = false;
+        int n_req = np;
         std::ostringstream rank_fail_msg;
 
         for (int i = 0; i < np; ++i) {
           int my_worker_id = torsten::mpi::my_worker(i, np, size);
-          Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
-          nsys = ode.n_sys();
-          nt   = ode.ts().size();
-          res_i[i].resize(nt, nsys);
-          if(rank == my_worker_id) {
-            try {
-              res_i[i] = solver.integrate<Ode, false>(ode);
-            } catch (const std::exception& e) {
-              is_invalid = true;
-              res_i[i].setConstant(invalid_res_d);
-              rank_fail_msg << "Rank " << rank << " failed solve id " << i << ": " << e.what();
+          try {
+            Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
+            nsys = ode.n_sys();
+            nt   = ode.ts().size();
+            res_i[i].resize(nt, nsys);
+
+            // success in creating ODE, solve it
+            if(rank == my_worker_id) {
+              try {
+                res_i[i] = solver.integrate<Ode, false>(ode);
+              } catch (const std::exception& e) {
+                is_invalid = true;
+                res_i[i].setConstant(invalid_res_d);
+                rank_fail_msg << "Rank " << rank << " failed to solve ODEs for id " << i << ": " << e.what();
+              }
             }
+          } catch (const std::exception& e) {
+            is_invalid = true;
+            rank_fail_msg << "Rank " << rank << " failed to create ODEs for id " << i << ": " << e.what();
+            n_req = i;
+            break;
           }
+
           MPI_Ibcast(res_i[i].data(), res_i[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
         }
 
         int finished = 0;
         int flag = 0;
         int index;
-        while(finished != np) {
-          MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
+        while(finished != n_req) {
+          MPI_Testany(n_req, req, &index, &flag, MPI_STATUS_IGNORE);
           if(flag) {
             finished++;
             if(is_invalid) continue;

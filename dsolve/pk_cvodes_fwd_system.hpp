@@ -157,7 +157,6 @@ namespace torsten {
     private:
       N_Vector* nv_ys_;
       std::vector<stan::math::var> theta_work_;
-      std::vector<stan::math::var> par_work_;
     public:
       /**
        * Construct CVODES ODE system from initial condition and parameters
@@ -180,13 +179,8 @@ namespace torsten {
                            std::ostream* msgs) :
         Ode(serv, f, t0, ts, y0, theta, x_r, x_i, msgs),
         nv_ys_(Ode::serv_.nv_ys),
-        theta_work_(Ode::theta_dbl_.begin(), Ode::theta_dbl_.end()),
-        par_work_(Ode::yv_work_.begin(), Ode::yv_work_.end())
-      {
-        if (Ode::is_var_par) {
-            par_work_.insert(par_work_.end(), theta_work_.begin(), theta_work_.end());
-        }
-      }
+        theta_work_(Ode::theta_dbl_.begin(), Ode::theta_dbl_.end())
+      {}
 
       /**
        * Dummy destructor. Deallocation of CVODES memory is done
