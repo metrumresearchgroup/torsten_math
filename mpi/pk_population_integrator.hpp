@@ -26,7 +26,7 @@ namespace torsten {
     struct PkPopulationIntegrator {
 
       torsten::dsolve::PKCvodesIntegrator& solver;
-      static constexpr double invalid_res_d = -123456789987654321.0;
+      static constexpr double invalid_res_d = std::numeric_limits<double>::quiet_NaN();
 
       PkPopulationIntegrator(torsten::dsolve::PKCvodesIntegrator& solver0) : solver(solver0)
       {}
@@ -65,7 +65,7 @@ namespace torsten {
         torsten::mpi::init();
 
         MPI_Comm comm;
-        comm = MPI_COMM_WORLD;
+        MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         int rank, size;
         MPI_Comm_size(comm, &size);
         MPI_Comm_rank(comm, &rank);
@@ -137,7 +137,7 @@ namespace torsten {
             finished++;
             if(is_invalid) continue;
             int i = index;
-            if (res_i[i].isApproxToConstant(invalid_res_d)) {
+            if (std::isnan(res_i[i](0))) {
               is_invalid = true;
               rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
             } else {
@@ -155,6 +155,8 @@ namespace torsten {
           }
         }
         
+        MPI_Comm_free(&comm);
+
         if(is_invalid) {
           throw std::runtime_error(rank_fail_msg.str());
         }
@@ -191,7 +193,7 @@ namespace torsten {
         torsten::mpi::init();
 
         MPI_Comm comm;
-        comm = MPI_COMM_WORLD;
+        MPI_Comm_dup(MPI_COMM_WORLD, &comm);
         int rank, size;
         MPI_Comm_size(comm, &size);
         MPI_Comm_rank(comm, &rank);
@@ -241,12 +243,14 @@ namespace torsten {
             finished++;
             if(is_invalid) continue;
             int i = index;
-            if (res_i[i].isApproxToConstant(invalid_res_d)) {
+            if (std::isnan(res_i[i](0))) {
               is_invalid = true;
               rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
             }        
           }
         }
+
+        MPI_Comm_free(&comm);
 
         if(is_invalid) {
           throw std::runtime_error(rank_fail_msg.str());

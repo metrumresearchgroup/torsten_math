@@ -17,7 +17,7 @@ namespace torsten{
     /*
      * Data used to fill the results when computation throws exception.
      */
-    static constexpr double invalid_res_d = -123456789987654321.0;
+    static constexpr double invalid_res_d = std::numeric_limits<double>::quiet_NaN();
 
     /**
      * Every Torsten function calls Pred.
@@ -266,10 +266,12 @@ namespace torsten{
       torsten::mpi::init();
 
       MPI_Comm comm;
-      comm = MPI_COMM_WORLD;
+      MPI_Comm_dup(MPI_COMM_WORLD, &comm);
       int rank, size;
       MPI_Comm_size(comm, &size);
       MPI_Comm_rank(comm, &rank);
+
+      MPI_Barrier(comm);
 
       MPI_Request req[np];
       vector<MatrixXd> res_d(np);
@@ -354,7 +356,7 @@ namespace torsten{
           finished++;
           if (is_invalid) continue;
           int id = index;
-          if (res_d[id].isApproxToConstant(invalid_res_d)) {
+          if (std::isnan(res_d[id](0))) {
             is_invalid = true;
             rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
           } else {
@@ -383,7 +385,7 @@ namespace torsten{
         }
       }
 
-      MPI_Barrier(comm);
+      MPI_Comm_free(&comm);
 
       if(is_invalid) {
         throw std::runtime_error(rank_fail_msg.str());
@@ -430,10 +432,12 @@ namespace torsten{
       torsten::mpi::init();
 
       MPI_Comm comm;
-      comm = MPI_COMM_WORLD;
+      MPI_Comm_dup(MPI_COMM_WORLD, &comm);
       int rank, size;
       MPI_Comm_size(comm, &size);
       MPI_Comm_rank(comm, &rank);
+
+      MPI_Barrier(comm);
 
       MPI_Request req[np];
 
@@ -491,13 +495,13 @@ namespace torsten{
         finished++;
         if(is_invalid) continue;
         int id = index;
-        if (res[id].isApproxToConstant(invalid_res_d)) {
+        if (std::isnan(res[id](0))) {
           is_invalid = true;
           rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
         }
       }
 
-      MPI_Barrier(comm);
+      MPI_Comm_free(&comm);
 
       // std::cout << "Torsten MPI rank: " << rank << " done" << "\n";
       if(is_invalid) {
