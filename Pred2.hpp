@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <vector>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
+#include <stan/math/torsten/mpi/communicator.hpp>
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
 
 namespace torsten{
@@ -263,13 +264,10 @@ namespace torsten{
       bool is_invalid = false;
       std::ostringstream rank_fail_msg;
 
-      torsten::mpi::init();
-
-      MPI_Comm comm;
-      MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-      int rank, size;
-      MPI_Comm_size(comm, &size);
-      MPI_Comm_rank(comm, &rank);
+      static torsten::mpi::Communicator pmx_parm_comm(MPI_COMM_WORLD);
+      MPI_Comm comm = pmx_parm_comm.comm;
+      int rank = pmx_parm_comm.rank;
+      int size = pmx_parm_comm.size;
 
       MPI_Barrier(comm);
 
@@ -385,7 +383,7 @@ namespace torsten{
         }
       }
 
-      MPI_Comm_free(&comm);
+      MPI_Barrier(comm);
 
       if(is_invalid) {
         throw std::runtime_error(rank_fail_msg.str());
@@ -429,13 +427,10 @@ namespace torsten{
       bool is_invalid = false;
       std::ostringstream rank_fail_msg;
 
-      torsten::mpi::init();
-
-      MPI_Comm comm;
-      MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-      int rank, size;
-      MPI_Comm_size(comm, &size);
-      MPI_Comm_rank(comm, &rank);
+      static torsten::mpi::Communicator pmx_data_comm(MPI_COMM_WORLD);
+      MPI_Comm comm = pmx_data_comm.comm;
+      int rank = pmx_data_comm.rank;
+      int size = pmx_data_comm.size;
 
       MPI_Barrier(comm);
 
@@ -501,7 +496,7 @@ namespace torsten{
         }
       }
 
-      MPI_Comm_free(&comm);
+      MPI_Barrier(comm);
 
       // std::cout << "Torsten MPI rank: " << rank << " done" << "\n";
       if(is_invalid) {

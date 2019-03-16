@@ -3,7 +3,7 @@
 
 #include <stan/math/torsten/dsolve/pk_cvodes_fwd_system.hpp>
 #include <stan/math/torsten/dsolve/pk_cvodes_integrator.hpp>
-#include <stan/math/torsten//mpi/init.hpp>
+#include <stan/math/torsten//mpi/communicator.hpp>
 
 namespace torsten {
   namespace mpi {
@@ -62,13 +62,12 @@ namespace torsten {
 
         torsten::dsolve::PKCvodesService<typename Ode::Ode> serv(n, m);
     
-        torsten::mpi::init();
+        static torsten::mpi::Communicator ode_parm_comm(MPI_COMM_WORLD);
+        MPI_Comm comm = ode_parm_comm.comm;
+        int rank = ode_parm_comm.rank;
+        int size = ode_parm_comm.size;
 
-        MPI_Comm comm;
-        MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        int rank, size;
-        MPI_Comm_size(comm, &size);
-        MPI_Comm_rank(comm, &rank);
+        MPI_Barrier(comm);
 
         using scalar_type = typename stan::return_type<Tt, T_initial, T_param>::type;
 
@@ -155,7 +154,8 @@ namespace torsten {
           }
         }
         
-        MPI_Comm_free(&comm);
+
+        MPI_Barrier(comm);
 
         if(is_invalid) {
           throw std::runtime_error(rank_fail_msg.str());
@@ -190,13 +190,11 @@ namespace torsten {
 
         torsten::dsolve::PKCvodesService<typename Ode::Ode> serv(n, m);
     
-        torsten::mpi::init();
-
-        MPI_Comm comm;
-        MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-        int rank, size;
-        MPI_Comm_size(comm, &size);
-        MPI_Comm_rank(comm, &rank);
+        static torsten::mpi::Communicator ode_data_comm(MPI_COMM_WORLD);
+        MPI_Comm comm = ode_data_comm.comm;
+        int rank = ode_data_comm.rank;
+        int size = ode_data_comm.size;
+        MPI_Barrier(comm);
 
         vector<Eigen::MatrixXd> res_i(np);
         int nsys, nt;
@@ -250,7 +248,7 @@ namespace torsten {
           }
         }
 
-        MPI_Comm_free(&comm);
+        MPI_Barrier(comm);
 
         if(is_invalid) {
           throw std::runtime_error(rank_fail_msg.str());
