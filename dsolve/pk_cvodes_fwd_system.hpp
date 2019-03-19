@@ -156,7 +156,6 @@ namespace torsten {
       using Ode = PKCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
     private:
       N_Vector* nv_ys_;
-      std::vector<stan::math::var> theta_work_;
     public:
       /**
        * Construct CVODES ODE system from initial condition and parameters
@@ -178,8 +177,7 @@ namespace torsten {
                            const std::vector<int>& x_i,
                            std::ostream* msgs) :
         Ode(serv, f, t0, ts, y0, theta, x_r, x_i, msgs),
-        nv_ys_(Ode::serv_.nv_ys),
-        theta_work_(Ode::theta_dbl_.begin(), Ode::theta_dbl_.end())
+        nv_ys_(Ode::serv_.nv_ys)
       {}
 
       /**
@@ -235,33 +233,35 @@ namespace torsten {
           stan::math::start_nested();
 
           std::vector<stan::math::var> pars;
+          std::vector<stan::math::var> yv_work(n), fyv_work(n),
+            theta_work(Ode::theta_dbl_.begin(), Ode::theta_dbl_.end());
 
           for (int i = 0; i < n; ++i) {
-            B::yv_work_[i] = NV_Ith_S(y, i);
-            B::yv_work_[i].vi_ -> set_zero_adjoint();
+            yv_work[i] = NV_Ith_S(y, i);
+            yv_work[i].vi_ -> set_zero_adjoint();
           }
 
-          std::for_each(theta_work_.begin(), theta_work_.end(),
+          std::for_each(theta_work.begin(), theta_work.end(),
                         [](var& v) { v.vi_ -> set_zero_adjoint(); });
 
           if (B::is_var_par) {
             pars.reserve(n + m);
-            pars.insert(pars.end(), B::yv_work_.begin(), B::yv_work_.end());
-            pars.insert(pars.end(), theta_work_.begin(), theta_work_.end());
-            B::fyv_work_ = f(t, B::yv_work_, theta_work_, x_r, x_i, msgs);
+            pars.insert(pars.end(), yv_work.begin(), yv_work.end());
+            pars.insert(pars.end(), theta_work.begin(), theta_work.end());
+            fyv_work = f(t, yv_work, theta_work, x_r, x_i, msgs);
           } else {
             pars.reserve(n);
-            pars.insert(pars.end(), B::yv_work_.begin(), B::yv_work_.end());
-            B::fyv_work_ = f(t, B::yv_work_, theta_dbl, x_r, x_i, msgs);
+            pars.insert(pars.end(), yv_work.begin(), yv_work.end());
+            fyv_work = f(t, yv_work, theta_dbl, x_r, x_i, msgs);
           }
 
           std::vector<double> g;
           for (int j = 0; j < n; ++j) {
             stan::math::set_zero_all_adjoints_nested();
-            B::fyv_work_[j].grad(pars, g);
-            std::for_each(theta_work_.begin(), theta_work_.end(),
+            fyv_work[j].grad(pars, g);
+            std::for_each(theta_work.begin(), theta_work.end(),
                           [](var& v) { v.vi_ -> set_zero_adjoint(); });
-            std::for_each(B::yv_work_.begin(), B::yv_work_.end(),
+            std::for_each(yv_work.begin(), yv_work.end(),
                         [](var& v) { v.vi_ -> set_zero_adjoint(); });
 
             // df/dy*s_i term, for i = 1...ns
