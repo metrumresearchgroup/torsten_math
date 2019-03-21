@@ -269,8 +269,6 @@ namespace torsten{
       int rank = pmx_parm_comm.rank;
       int size = pmx_parm_comm.size;
 
-      MPI_Barrier(comm);
-
       MPI_Request req[np];
       vector<MatrixXd> res_d(np);
       
@@ -345,39 +343,32 @@ namespace torsten{
         i0_tlag    += len_tlag[id];
       }
 
-      int finished = 0;
-      int flag = 0;
-      int index;
-      while (finished != np && size > 1) {
-        MPI_Testany(np, req, &index, &flag, MPI_STATUS_IGNORE);
-        if(flag) {
-          finished++;
-          if (is_invalid) continue;
-          int id = index;
-          if (std::isnan(res_d[id](0))) {
-            is_invalid = true;
-            rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
-          } else {
-            if (rank != torsten::mpi::my_worker(id, np, size)) {
-              i0         = j0[id];
-              i0_pMatrix = j0_pMatrix[id];
-              i0_biovar  = j0_biovar[id];
-              i0_tlag    = j0_tlag[id];
-              EM em(nCmt, i0, len[id], time, amt, rate, ii, evid, cmt, addl, ss,
-                    i0_pMatrix, len_pMatrix[id], pMatrix,
-                    i0_biovar, len_biovar[id], biovar,
-                    i0_tlag, len_tlag[id], tlag);
-              PKRec<scalar> init(nCmt); init.setZero();
-              PKRec<double> pred1 = VectorXd::Zero(res_d[id].cols());
-              int ikeep = 0;
-              for (size_t i = 0; i < em.events().size(); i++) {
-                pred1 = res_d[id].row(i);
-                stepper_sync(i, init, pred1, em, pred_pars..., model_pars...);
-                if (em.events().keep(i)) {
-                  res[id].row(ikeep) = init;
-                  ikeep++;
-                }
-              }
+      for(int id = 0; id < np; ++id) {
+        MPI_Wait(&req[id], MPI_STATUS_IGNORE);
+        if (is_invalid) continue;
+        int id = index;
+        if (std::isnan(res_d[id](0))) {
+          assert(rank != torsten::mpi::my_worker(id, np, size));
+          is_invalid = true;
+          rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
+        } else {
+          i0         = j0[id];
+          i0_pMatrix = j0_pMatrix[id];
+          i0_biovar  = j0_biovar[id];
+          i0_tlag    = j0_tlag[id];
+          EM em(nCmt, i0, len[id], time, amt, rate, ii, evid, cmt, addl, ss,
+                i0_pMatrix, len_pMatrix[id], pMatrix,
+                i0_biovar, len_biovar[id], biovar,
+                i0_tlag, len_tlag[id], tlag);
+          PKRec<scalar> init(nCmt); init.setZero();
+          PKRec<double> pred1 = VectorXd::Zero(res_d[id].cols());
+          int ikeep = 0;
+          for (size_t i = 0; i < em.events().size(); i++) {
+            pred1 = res_d[id].row(i);
+            stepper_sync(i, init, pred1, em, pred_pars..., model_pars...);
+            if (em.events().keep(i)) {
+              res[id].row(ikeep) = init;
+              ikeep++;
             }
           }
         }
@@ -386,6 +377,7 @@ namespace torsten{
       MPI_Barrier(comm);
 
       if(is_invalid) {
+        MPI_Barrier(comm);
         throw std::runtime_error(rank_fail_msg.str());
       }
     }
@@ -431,8 +423,6 @@ namespace torsten{
       MPI_Comm comm = pmx_data_comm.comm;
       int rank = pmx_data_comm.rank;
       int size = pmx_data_comm.size;
-
-      MPI_Barrier(comm);
 
       MPI_Request req[np];
 
@@ -498,8 +488,8 @@ namespace torsten{
 
       MPI_Barrier(comm);
 
-      // std::cout << "Torsten MPI rank: " << rank << " done" << "\n";
       if(is_invalid) {
+        MPI_Barrier(comm);
         throw std::runtime_error(rank_fail_msg.str());
       }
     }
