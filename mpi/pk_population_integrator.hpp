@@ -112,9 +112,19 @@ namespace torsten {
           } 
 
           MPI_Ibcast(res_d[i].data(), res_d[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
-          g.resize(ns);
           res[i].resize(nt, n);
-          if(rank == my_worker_id && !is_invalid) {
+        }
+
+        for (int i = 0; i < n_req; ++i) {
+          MPI_Wait(&req[i], MPI_STATUS_IGNORE);
+          if(is_invalid) continue;
+          if (std::isnan(res_d[i](0))) {
+            is_invalid = true;
+            rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
+          } else {
+            Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
+            g.resize(ode.ns());
+            vars = ode.vars();
             for (int j = 0 ; j < nt; ++j) {
               for (int k = 0; k < n; ++k) {
                 for (int l = 0 ; l < ns; ++l) g[l] = res_d[i](j, k * nsol + l + 1);
@@ -123,36 +133,7 @@ namespace torsten {
             }
           }
         }
-
-        int finished = 0;
-        int flag = 0;
-        int index;
-        while(finished != n_req) {
-          MPI_Testany(n_req, req.data(), &index, &flag, MPI_STATUS_IGNORE);
-          if(flag) {
-            finished++;
-            if(is_invalid) continue;
-            int i = index;
-            if (std::isnan(res_d[i](0))) {
-              is_invalid = true;
-              rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
-            } else {
-              if (rank != torsten::mpi::my_worker(i, np, size)) {
-                Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
-                vars = ode.vars();
-                for (int j = 0 ; j < nt; ++j) {
-                  for (int k = 0; k < n; ++k) {
-                    for (int l = 0 ; l < ns; ++l) g[l] = res_d[i](j, k * nsol + l + 1);
-                    res[i](j, k) = precomputed_gradients(res_d[i](j, k * nsol), vars, g);
-                  }
-                }
-              }
-            }
-          }
-        }
         
-        MPI_Barrier(comm);
-
         if(is_invalid) {
           throw std::runtime_error(rank_fail_msg.str());
         }
@@ -227,22 +208,17 @@ namespace torsten {
         }
 
         int finished = 0;
-        int flag = 0;
         int index;
         while(finished != n_req) {
-          MPI_Testany(n_req, req.data(), &index, &flag, MPI_STATUS_IGNORE);
-          if(flag) {
-            finished++;
-            if(is_invalid) continue;
-            int i = index;
-            if (std::isnan(res[i](0))) {
-              is_invalid = true;
-              rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
-            }        
+          MPI_Waitany(n_req, req.data(), &index, MPI_STATUS_IGNORE);
+          finished++;
+          if(is_invalid) continue;
+          int i = index;
+          if (std::isnan(res[i](0))) {
+            is_invalid = true;
+            rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
           }
         }
-
-        MPI_Barrier(comm);
 
         if(is_invalid) {
           throw std::runtime_error(rank_fail_msg.str());
