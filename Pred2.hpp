@@ -239,11 +239,8 @@ namespace torsten{
                      const std::vector<int>& cmt,
                      const std::vector<int>& addl,
                      const std::vector<int>& ss,
-                     const std::vector<int>& len_pMatrix,
                      const std::vector<std::vector<T4> >& pMatrix,
-                     const std::vector<int>& len_biovar,
                      const std::vector<std::vector<T5> >& biovar,
-                     const std::vector<int>& len_tlag,
                      const std::vector<std::vector<T6> >& tlag,
                      std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, -1, -1> >& res,
                      const T_pred... pred_pars,
@@ -262,6 +259,9 @@ namespace torsten{
 
       const int np = len.size();
       bool is_invalid = false;
+      bool constant_param  = pMatrix.size() == np;
+      bool constant_biovar = biovar.size() == np;
+      bool constant_tlag   = tlag.size() == np;
       std::ostringstream rank_fail_msg;
 
       MPI_Comm comm = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_PARM].comm;
@@ -274,16 +274,16 @@ namespace torsten{
       res.resize(np);
 
       int i0 = 0, i0_pMatrix = 0, i0_biovar = 0, i0_tlag = 0;
-      std::vector<int> j0(np), j0_pMatrix(np), j0_biovar(np), j0_tlag(np);
+      int len_pMatrix, len_biovar, len_tlag;
       PKRec<scalar> init(nCmt);
       PKRec<double> pred1;
       for (int id = 0; id < np; ++id) {
+
         /* For every rank */
 
-        j0[id]         = i0;
-        j0_pMatrix[id] = i0_pMatrix;
-        j0_biovar[id]  = i0_biovar;
-        j0_tlag[id]    = i0_tlag;
+        len_pMatrix = constant_param  ? 1 : len[id];
+        len_biovar  = constant_biovar ? 1 : len[id];
+        len_tlag    = constant_tlag   ? 1 : len[id];
 
         int nKeep = len[id];
 
@@ -292,9 +292,9 @@ namespace torsten{
         int nvar = T_model::nvars(nCmt, pMatrix[i0_pMatrix].size());
         int nvar_ss = T_model::template nvars<typename EM::T_amt, T2, T3>(pMatrix[i0_pMatrix].size());
         int nev = EM::nevents(i0, len[id], time, amt, rate, ii, evid, cmt, addl, ss,
-                              i0_pMatrix, len_pMatrix[id], pMatrix,
-                              i0_biovar, len_biovar[id], biovar,
-                              i0_tlag, len_tlag[id], tlag);
+                              i0_pMatrix, len_pMatrix, pMatrix,
+                              i0_biovar, len_biovar, biovar,
+                              i0_tlag, len_tlag, tlag);
 
         // FIXME: has_ss_dosing shouldn't test the entire
         // population but only the individual
@@ -311,9 +311,9 @@ namespace torsten{
           } else {
             try {
               EM em(nCmt, i0, len[id], time, amt, rate, ii, evid, cmt, addl, ss,
-                    i0_pMatrix, len_pMatrix[id], pMatrix,
-                    i0_biovar, len_biovar[id], biovar,
-                    i0_tlag, len_tlag[id], tlag);
+                    i0_pMatrix, len_pMatrix, pMatrix,
+                    i0_biovar, len_biovar, biovar,
+                    i0_tlag, len_tlag, tlag);
               auto events = em.events();
               assert(nev == events.size());
               assert(nKeep == em.nKeep);
@@ -338,27 +338,29 @@ namespace torsten{
         MPI_Ibcast(res_d[id].data(), res_d[id].size(), MPI_DOUBLE, my_worker_id, comm, &req[id]);
 
         i0         += len[id];
-        i0_pMatrix += len_pMatrix[id];
-        i0_biovar  += len_biovar[id];
-        i0_tlag    += len_tlag[id];
+        i0_pMatrix += len_pMatrix;
+        i0_biovar  += len_biovar;
+        i0_tlag    += len_tlag;
       }
 
+      i0 = 0; i0_pMatrix = 0; i0_biovar = 0; i0_tlag = 0;
       for(int id = 0; id < np; ++id) {
+        len_pMatrix = constant_param  ? 1 : len[id];
+        len_biovar  = constant_biovar ? 1 : len[id];
+        len_tlag    = constant_tlag   ? 1 : len[id];
+
         MPI_Wait(&req[id], MPI_STATUS_IGNORE);
+
         if (is_invalid) continue;
         if (std::isnan(res_d[id](0))) {
           assert(rank != torsten::mpi::my_worker(id, np, size));
           is_invalid = true;
           rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
         } else {
-          i0         = j0[id];
-          i0_pMatrix = j0_pMatrix[id];
-          i0_biovar  = j0_biovar[id];
-          i0_tlag    = j0_tlag[id];
           EM em(nCmt, i0, len[id], time, amt, rate, ii, evid, cmt, addl, ss,
-                i0_pMatrix, len_pMatrix[id], pMatrix,
-                i0_biovar, len_biovar[id], biovar,
-                i0_tlag, len_tlag[id], tlag);
+                i0_pMatrix, len_pMatrix, pMatrix,
+                i0_biovar, len_biovar, biovar,
+                i0_tlag, len_tlag, tlag);
           PKRec<scalar> init(nCmt); init.setZero();
           PKRec<double> pred1 = VectorXd::Zero(res_d[id].cols());
           int ikeep = 0;
@@ -371,6 +373,11 @@ namespace torsten{
             }
           }
         }
+
+        i0         += len[id];
+        i0_pMatrix += len_pMatrix;
+        i0_biovar  += len_biovar;
+        i0_tlag    += len_tlag;
       }
 
       // MPI_Barrier(comm);
@@ -395,11 +402,8 @@ namespace torsten{
                      const std::vector<int>& cmt,
                      const std::vector<int>& addl,
                      const std::vector<int>& ss,
-                     const std::vector<int>& len_pMatrix,
                      const std::vector<std::vector<double> >& pMatrix,
-                     const std::vector<int>& len_biovar,
                      const std::vector<std::vector<double> >& biovar,
-                     const std::vector<int>& len_tlag,
                      const std::vector<std::vector<double> >& tlag,
                      std::vector<Eigen::MatrixXd>& res,
                      const T_pred... pred_pars,
@@ -416,6 +420,9 @@ namespace torsten{
       using EM = EventsManager<double, double, double, double, double, double, double>;
       const int np = len.size();
       bool is_invalid = false;
+      bool constant_param  = pMatrix.size() == np;
+      bool constant_biovar = biovar.size() == np;
+      bool constant_tlag   = tlag.size() == np;
       std::ostringstream rank_fail_msg;
 
       MPI_Comm comm = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_DATA].comm;
@@ -427,10 +434,16 @@ namespace torsten{
       res.resize(np);
 
       int i0 = 0, i0_pMatrix = 0, i0_biovar = 0, i0_tlag = 0;
+      int len_pMatrix, len_biovar, len_tlag;
       PKRec<double> init(nCmt);
       for (int id = 0; id < np; ++id) {
 
         /* For every rank */
+
+        len_pMatrix = constant_param  ? 1 : len[id];
+        len_biovar  = constant_biovar ? 1 : len[id];
+        len_tlag    = constant_tlag   ? 1 : len[id];
+
 
         res[id].resize(len[id], nCmt);
         res[id].setConstant(0.0);
@@ -442,9 +455,9 @@ namespace torsten{
         if (rank == my_worker_id) {
           try {
             EM em(nCmt, i0, len[id], time, amt, rate, ii, evid, cmt, addl, ss,
-                  i0_pMatrix, len_pMatrix[id], pMatrix,
-                  i0_biovar, len_biovar[id], biovar,
-                  i0_tlag, len_tlag[id], tlag);
+                  i0_pMatrix, len_pMatrix, pMatrix,
+                  i0_biovar, len_biovar, biovar,
+                  i0_tlag, len_tlag, tlag);
             auto events = em.events();
             auto model_rate = em.rates();
             auto model_amt = em.amts();
@@ -467,9 +480,9 @@ namespace torsten{
         MPI_Ibcast(res[id].data(), res[id].size(), MPI_DOUBLE, my_worker_id, comm, &req[id]);
 
         i0         += len[id];
-        i0_pMatrix += len_pMatrix[id];
-        i0_biovar  += len_biovar[id];
-        i0_tlag    += len_tlag[id];
+        i0_pMatrix += len_pMatrix;
+        i0_biovar  += len_biovar;
+        i0_tlag    += len_tlag;
       }
 
       // make sure every rank throws in case any rank fails

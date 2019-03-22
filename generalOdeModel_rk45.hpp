@@ -389,11 +389,8 @@ pop_pk_generalOdeModel_rk45(const F& f,
                            const std::vector<int>& cmt,
                            const std::vector<int>& addl,
                            const std::vector<int>& ss,
-                           const std::vector<int>& len_pMatrix,
                            const std::vector<std::vector<T4> >& pMatrix,
-                           const std::vector<int>& len_biovar,
                            const std::vector<std::vector<T5> >& biovar,
-                           const std::vector<int>& len_tlag,
                            const std::vector<std::vector<T6> >& tlag,
                            std::ostream* msgs = 0,
                            double rel_tol = 1e-6,
@@ -403,23 +400,9 @@ pop_pk_generalOdeModel_rk45(const F& f,
   using stan::math::check_greater_or_equal;
 
   int np = len.size();
-  static const char* caller("generalOdeModel_rk45");
-  check_consistent_sizes(caller, "time", time, "amt",     amt);
-  check_consistent_sizes(caller, "time", time, "rate",    rate);
-  check_consistent_sizes(caller, "time", time, "ii",      ii);
-  check_consistent_sizes(caller, "time", time, "evid",    evid);
-  check_consistent_sizes(caller, "time", time, "cmt",     cmt);
-  check_consistent_sizes(caller, "time", time, "addl",    addl);
-  check_consistent_sizes(caller, "time", time, "ss",      ss);
-  check_consistent_sizes(caller, "population", len, "parameters", len_pMatrix);
-  check_consistent_sizes(caller, "population", len, "biovar", len_biovar);
-  check_consistent_sizes(caller, "population", len, "tlag", len_tlag);
-
-  size_t s;
-  s = 0; for (auto& i : len)         {s += i;} check_greater_or_equal(caller, "time size", time.size(), s);
-  s = 0; for (auto& i : len_pMatrix) {s += i;} check_greater_or_equal(caller, "pMatrix size", pMatrix.size(), s);
-  s = 0; for (auto& i : len_biovar)  {s += i;} check_greater_or_equal(caller, "biovar size", biovar.size(), s);
-  s = 0; for (auto& i : len_tlag)    {s += i;} check_greater_or_equal(caller, "tlag size", tlag.size(), s);
+  static const char* caller("pop_pk_generalOdeModel_bdf");
+  torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
+                                pMatrix, biovar, tlag, caller);
 
   using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
 
@@ -430,10 +413,7 @@ pop_pk_generalOdeModel_rk45(const F& f,
   std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
 
   pr.pred(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss,
-          len_pMatrix, pMatrix,
-          len_biovar, biovar,
-          len_tlag, tlag,
-          pred, integrator, f);
+          pMatrix, biovar, tlag, pred, integrator, f);
 
   return pred;
 }

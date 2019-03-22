@@ -46,7 +46,8 @@ namespace torsten {
  */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
   typename T5, typename T6>
-void pmx_population_check(const std::vector<T0>& time,
+void pmx_population_check(const std::vector<int>& len,
+                          const std::vector<T0>& time,
                           const std::vector<T1>& amt,
                           const std::vector<T2>& rate,
                           const std::vector<T3>& ii,
@@ -93,17 +94,37 @@ void pmx_population_check(const std::vector<T0>& time,
   check_nonnegative(function, "rate", rate);
   check_nonnegative(function, "ii",   ii  );
 
+  // total size should be match
+  size_t s = 0;
+  for (auto& i : len) s += i;
+  check_greater_or_equal(function, "time size", time.size(), s);  
+
+  if (pMatrix.size() > len.size()) {
+    check_consistent_sizes(function, "parameters", pMatrix, "time", time);
+  } else {
+    check_consistent_sizes(function, "parameters", pMatrix, "len", len);
+  }
   for (auto&& p : pMatrix) {
     check_finite(function, "parameters", p);
     check_not_nan(function, "parameters", p);
   }
 
+  if (biovar.size() > len.size()) {
+    check_consistent_sizes(function, "bioavailability", biovar, "time", time);
+  } else {
+    check_consistent_sizes(function, "bioavailability", biovar, "len", len);
+  }
   for (auto&& p : biovar) {
     check_nonnegative(function, "bioavailability", p);
     check_finite(function, "bioavailability", p);
     check_not_nan(function, "bioavailability", p);
   }
 
+  if (tlag.size() > len.size()) {
+    check_consistent_sizes(function, "lag time", tlag, "time", time);
+  } else {
+    check_consistent_sizes(function, "lag time", tlag, "len", len);
+  }
   for (auto&& p : tlag) {
     check_nonnegative(function, "lag time", p);
     check_finite(function, "lag time", p);
