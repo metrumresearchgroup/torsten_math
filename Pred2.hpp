@@ -4,7 +4,7 @@
 #include <Eigen/Dense>
 #include <vector>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
-#include <stan/math/torsten/mpi/communicator.hpp>
+#include <stan/math/torsten/mpi/session.hpp>
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
 
 namespace torsten{
@@ -264,12 +264,11 @@ namespace torsten{
       bool is_invalid = false;
       std::ostringstream rank_fail_msg;
 
-      static torsten::mpi::Communicator pmx_parm_comm(MPI_COMM_WORLD);
-      MPI_Comm comm = pmx_parm_comm.comm;
-      int rank = pmx_parm_comm.rank;
-      int size = pmx_parm_comm.size;
+      MPI_Comm comm = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_PARM].comm;
+      int rank = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_PARM].rank;
+      int size = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_PARM].size;
 
-      MPI_Request req[np];
+      std::vector<MPI_Request> req(np);
       vector<MatrixXd> res_d(np);
       
       res.resize(np);
@@ -300,6 +299,7 @@ namespace torsten{
         // FIXME: has_ss_dosing shouldn't test the entire
         // population but only the individual
         res_d[id].resize(nev, EM::has_ss_dosing(evid, ss) ? torsten::pk_nsys(nCmt, nvar, nvar_ss) : torsten::pk_nsys(nCmt, nvar));
+        res_d[id].setConstant(0.0);
 
         int my_worker_id = torsten::mpi::my_worker(id, np, size);
 
@@ -346,7 +346,6 @@ namespace torsten{
       for(int id = 0; id < np; ++id) {
         MPI_Wait(&req[id], MPI_STATUS_IGNORE);
         if (is_invalid) continue;
-        int id = index;
         if (std::isnan(res_d[id](0))) {
           assert(rank != torsten::mpi::my_worker(id, np, size));
           is_invalid = true;
@@ -374,10 +373,10 @@ namespace torsten{
         }
       }
 
-      MPI_Barrier(comm);
+      // MPI_Barrier(comm);
 
       if(is_invalid) {
-        MPI_Barrier(comm);
+        // MPI_Barrier(comm);
         throw std::runtime_error(rank_fail_msg.str());
       }
     }
@@ -419,12 +418,11 @@ namespace torsten{
       bool is_invalid = false;
       std::ostringstream rank_fail_msg;
 
-      static torsten::mpi::Communicator pmx_data_comm(MPI_COMM_WORLD);
-      MPI_Comm comm = pmx_data_comm.comm;
-      int rank = pmx_data_comm.rank;
-      int size = pmx_data_comm.size;
+      MPI_Comm comm = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_DATA].comm;
+      int rank = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_DATA].rank;
+      int size = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_DATA].size;
 
-      MPI_Request req[np];
+      std::vector<MPI_Request> req(np);
 
       res.resize(np);
 
@@ -435,6 +433,8 @@ namespace torsten{
         /* For every rank */
 
         res[id].resize(len[id], nCmt);
+        res[id].setConstant(0.0);
+
         int my_worker_id = torsten::mpi::my_worker(id, np, size);
 
         /* only solver rank */
@@ -476,7 +476,7 @@ namespace torsten{
       int finished = 0;
       int index;
       while (finished != np && size > 1) {
-        MPI_Waitany(np, req, &index, MPI_STATUS_IGNORE);
+        MPI_Waitany(np, req.data(), &index, MPI_STATUS_IGNORE);
         finished++;
         if(is_invalid) continue;
         int id = index;

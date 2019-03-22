@@ -3,7 +3,7 @@
 
 #include <stan/math/torsten/dsolve/pk_cvodes_fwd_system.hpp>
 #include <stan/math/torsten/dsolve/pk_cvodes_integrator.hpp>
-#include <stan/math/torsten//mpi/communicator.hpp>
+#include <stan/math/torsten/mpi/session.hpp>
 
 namespace torsten {
   namespace mpi {
@@ -62,21 +62,18 @@ namespace torsten {
 
         torsten::dsolve::PKCvodesService<typename Ode::Ode> serv(n, m);
     
-        static torsten::mpi::Communicator ode_parm_comm(MPI_COMM_WORLD);
-        MPI_Comm comm = ode_parm_comm.comm;
-        int rank = ode_parm_comm.rank;
-        int size = ode_parm_comm.size;
-
-        MPI_Barrier(comm);
+        MPI_Comm comm = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM].comm;
+        int rank = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM].rank;
+        int size = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM].size;
 
         using scalar_type = typename stan::return_type<Tt, T_initial, T_param>::type;
 
-        vector<MatrixXd> res_i(np);
+        vector<MatrixXd> res_d(np);
         vector<Matrix<scalar_type, Dynamic, Dynamic> > res(np);
         vector<scalar_type> vars;
         std::vector<double> g;
         int ns, nsol, nsys, nt;
-        MPI_Request req[np];
+        std::vector<MPI_Request> req(np);
 
         bool is_invalid = false;
         std::ostringstream rank_fail_msg;
@@ -95,15 +92,15 @@ namespace torsten {
             nsys = ode.n_sys();
             nt   = ode.ts().size();
             nsol = ode.n_sol();
-            res_i[i].resize(nt, nsys);
+            res_d[i].resize(nt, nsys);
 
             // success in creating ODE, solve it
             if(rank == my_worker_id) {
               try {
-                res_i[i] = solver.integrate<Ode, false>(ode);
+                res_d[i] = solver.integrate<Ode, false>(ode);
               } catch (const std::exception& e) {
                 is_invalid = true;
-                res_i[i].setConstant(invalid_res_d);
+                res_d[i].setConstant(invalid_res_d);
                 rank_fail_msg << "Rank " << rank << " failed to solve ODEs for id " << i << ": " << e.what();
               }
             }
@@ -114,14 +111,14 @@ namespace torsten {
             break;
           } 
 
-          MPI_Ibcast(res_i[i].data(), res_i[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
+          MPI_Ibcast(res_d[i].data(), res_d[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
           g.resize(ns);
           res[i].resize(nt, n);
           if(rank == my_worker_id && !is_invalid) {
             for (int j = 0 ; j < nt; ++j) {
               for (int k = 0; k < n; ++k) {
-                for (int l = 0 ; l < ns; ++l) g[l] = res_i[i](j, k * nsol + l + 1);
-                res[i](j, k) = precomputed_gradients(res_i[i](j, k * nsol), vars, g);
+                for (int l = 0 ; l < ns; ++l) g[l] = res_d[i](j, k * nsol + l + 1);
+                res[i](j, k) = precomputed_gradients(res_d[i](j, k * nsol), vars, g);
               }
             }
           }
@@ -131,12 +128,12 @@ namespace torsten {
         int flag = 0;
         int index;
         while(finished != n_req) {
-          MPI_Testany(n_req, req, &index, &flag, MPI_STATUS_IGNORE);
+          MPI_Testany(n_req, req.data(), &index, &flag, MPI_STATUS_IGNORE);
           if(flag) {
             finished++;
             if(is_invalid) continue;
             int i = index;
-            if (std::isnan(res_i[i](0))) {
+            if (std::isnan(res_d[i](0))) {
               is_invalid = true;
               rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
             } else {
@@ -145,8 +142,8 @@ namespace torsten {
                 vars = ode.vars();
                 for (int j = 0 ; j < nt; ++j) {
                   for (int k = 0; k < n; ++k) {
-                    for (int l = 0 ; l < ns; ++l) g[l] = res_i[i](j, k * nsol + l + 1);
-                    res[i](j, k) = precomputed_gradients(res_i[i](j, k * nsol), vars, g);
+                    for (int l = 0 ; l < ns; ++l) g[l] = res_d[i](j, k * nsol + l + 1);
+                    res[i](j, k) = precomputed_gradients(res_d[i](j, k * nsol), vars, g);
                   }
                 }
               }
@@ -154,7 +151,6 @@ namespace torsten {
           }
         }
         
-
         MPI_Barrier(comm);
 
         if(is_invalid) {
@@ -190,15 +186,13 @@ namespace torsten {
 
         torsten::dsolve::PKCvodesService<typename Ode::Ode> serv(n, m);
     
-        static torsten::mpi::Communicator ode_data_comm(MPI_COMM_WORLD);
-        MPI_Comm comm = ode_data_comm.comm;
-        int rank = ode_data_comm.rank;
-        int size = ode_data_comm.size;
-        MPI_Barrier(comm);
+        MPI_Comm comm = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_DATA].comm;
+        int rank = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_DATA].rank;
+        int size = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_DATA].size;
 
-        vector<Eigen::MatrixXd> res_i(np);
+        vector<Eigen::MatrixXd> res(np);
         int nsys, nt;
-        MPI_Request req[np];
+        std::vector<MPI_Request> req(np);
 
         bool is_invalid = false;
         int n_req = np;
@@ -210,15 +204,15 @@ namespace torsten {
             Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
             nsys = ode.n_sys();
             nt   = ode.ts().size();
-            res_i[i].resize(nt, nsys);
+            res[i].resize(nt, nsys);
 
             // success in creating ODE, solve it
             if(rank == my_worker_id) {
               try {
-                res_i[i] = solver.integrate<Ode, false>(ode);
+                res[i] = solver.integrate<Ode, false>(ode);
               } catch (const std::exception& e) {
                 is_invalid = true;
-                res_i[i].setConstant(invalid_res_d);
+                res[i].setConstant(invalid_res_d);
                 rank_fail_msg << "Rank " << rank << " failed to solve ODEs for id " << i << ": " << e.what();
               }
             }
@@ -229,19 +223,19 @@ namespace torsten {
             break;
           }
 
-          MPI_Ibcast(res_i[i].data(), res_i[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
+          MPI_Ibcast(res[i].data(), res[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
         }
 
         int finished = 0;
         int flag = 0;
         int index;
         while(finished != n_req) {
-          MPI_Testany(n_req, req, &index, &flag, MPI_STATUS_IGNORE);
+          MPI_Testany(n_req, req.data(), &index, &flag, MPI_STATUS_IGNORE);
           if(flag) {
             finished++;
             if(is_invalid) continue;
             int i = index;
-            if (std::isnan(res_i[i](0))) {
+            if (std::isnan(res[i](0))) {
               is_invalid = true;
               rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
             }        
@@ -254,7 +248,7 @@ namespace torsten {
           throw std::runtime_error(rank_fail_msg.str());
         }
 
-        return res_i;
+        return res;
       }
 #else
       template <typename Tt, typename T_initial, typename T_param>
