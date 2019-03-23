@@ -444,7 +444,6 @@ namespace torsten{
         len_biovar  = constant_biovar ? 1 : len[id];
         len_tlag    = constant_tlag   ? 1 : len[id];
 
-
         res[id].resize(len[id], nCmt);
         res[id].setConstant(0.0);
 
@@ -525,17 +524,17 @@ namespace torsten{
                      const std::vector<int>& cmt,
                      const std::vector<int>& addl,
                      const std::vector<int>& ss,
-                     const std::vector<int>& len_pMatrix,
                      const std::vector<std::vector<T4> >& pMatrix,
-                     const std::vector<int>& len_biovar,
                      const std::vector<std::vector<T5> >& biovar,
-                     const std::vector<int>& len_tlag,
                      const std::vector<std::vector<T6> >& tlag,
                      std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, -1, -1>>& res,
                      const T_pred... pred_pars,
                      const Ts... model_pars) {
       using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
       const int np = len.size();
+      bool constant_param  = pMatrix.size() == np;
+      bool constant_biovar = biovar.size() == np;
+      bool constant_tlag   = tlag.size() == np;
       
       res.resize(np);
 
@@ -546,17 +545,24 @@ namespace torsten{
       }
 
       int i0 = 0, i0_pMatrix = 0, i0_biovar = 0, i0_tlag = 0;
+      int len_pMatrix, len_biovar, len_tlag;
       for (int i = 0; i < np; ++i) {
+
+        len_pMatrix = constant_param  ? 1 : len[i];
+        len_biovar  = constant_biovar ? 1 : len[i];
+        len_tlag    = constant_tlag   ? 1 : len[i];
+
         EM em(nCmt, i0, len[i], time, amt, rate, ii, evid, cmt, addl, ss,
-              i0_pMatrix, len_pMatrix[i], pMatrix,
-              i0_biovar, len_biovar[i], biovar,
-              i0_tlag, len_tlag[i], tlag);
+              i0_pMatrix, len_pMatrix, pMatrix,
+              i0_biovar, len_biovar, biovar,
+              i0_tlag, len_tlag, tlag);
         res[i].resize(em.nKeep, em.ncmt);
         pred(em, res[i], pred_pars..., model_pars...);
+
         i0         += len[i];
-        i0_pMatrix += len_pMatrix[i];
-        i0_biovar  += len_biovar[i];
-        i0_tlag    += len_tlag[i];
+        i0_pMatrix += len_pMatrix;
+        i0_biovar  += len_biovar;
+        i0_tlag    += len_tlag;
       }
     }
 #endif
