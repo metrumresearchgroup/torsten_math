@@ -48,11 +48,11 @@ struct Pred1_twoCpt {
     typedef typename boost::math::tools::promote_args<T_time, T_init,
       T_rate, T_parameters>::type scalar;
 
-    T_parameters CL = parameter.get_RealParameters()[0],
-      Q = parameter.get_RealParameters()[1],
-      V2 = parameter.get_RealParameters()[2],
-      V3 = parameter.get_RealParameters()[3],
-      ka = parameter.get_RealParameters()[4];
+    T_parameters CL = parameter.get_RealParameters(false)[0],
+      Q = parameter.get_RealParameters(false)[1],
+      V2 = parameter.get_RealParameters(false)[2],
+      V3 = parameter.get_RealParameters(false)[3],
+      ka = parameter.get_RealParameters(false)[4];
 
     T_parameters k10 = CL / V2,
       k12 = Q / V2,

@@ -51,9 +51,9 @@ struct PredSS_oneCpt {
 
     double inf = std::numeric_limits<double>::max();  // "infinity"
 
-    T_parameters CL = parameter.get_RealParameters()[0],
-      V2 = parameter.get_RealParameters()[1],
-      ka = parameter.get_RealParameters()[2],
+    T_parameters CL = parameter.get_RealParameters(false)[0],
+      V2 = parameter.get_RealParameters(false)[1],
+      ka = parameter.get_RealParameters(false)[2],
       k10 = CL/V2;
 
     std::vector<scalar> alpha(2, 0);

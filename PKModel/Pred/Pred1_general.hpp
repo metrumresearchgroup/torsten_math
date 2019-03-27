@@ -86,7 +86,7 @@ struct Pred1_general {
     vector<double> EventTime_d(1, unpromote(EventTime));
     double InitTime_d = unpromote(InitTime);
 
-    vector<T_parameters> theta = parameter.get_RealParameters();
+    vector<T_parameters> theta = parameter.get_RealParameters(false);
     vector<scalar> init_vector = to_array_1d(init);
 
     Eigen::Matrix<scalar, 1, Eigen::Dynamic> pred;
@@ -143,7 +143,7 @@ struct Pred1_general {
     double InitTime_d = unpromote(InitTime);
 
     // Construct theta with ode parameters and rates.
-    vector<T_parameters> odeParameters = parameter.get_RealParameters();
+    vector<T_parameters> odeParameters = parameter.get_RealParameters(false);
     size_t nOdeParm = odeParameters.size();
     vector<typename promote_args<T_parameters, T_rate, T_time>::type>
       theta(nOdeParm + rate.size());

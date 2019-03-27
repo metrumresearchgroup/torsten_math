@@ -84,10 +84,10 @@ struct Pred1_mix2 {
 
     vector<scalar> y0 = to_array_1d(init);
 
-    size_t nParm = parameter.get_RealParameters().size();
+    size_t nParm = parameter.get_RealParameters(false).size();
     vector<T_theta> theta(nParm);
     for (size_t i = 0; i < nParm; i++)
-      theta[i] = parameter.get_RealParameters()[i];
+      theta[i] = parameter.get_RealParameters(false)[i];
 
     Eigen::Matrix<scalar, 1, Eigen::Dynamic> pred;
     if (t_dbl[0] == t0_dbl) { pred = init;
@@ -173,10 +173,10 @@ struct Pred1_mix2 {
 
     vector<scalar> y0 = to_array_1d(init);
 
-    size_t nParm = parameter.get_RealParameters().size();
+    size_t nParm = parameter.get_RealParameters(false).size();
     vector<T_theta> theta(nParm);
     for (size_t i = 0; i < nParm; i++)
-      theta[i] = parameter.get_RealParameters()[i];
+      theta[i] = parameter.get_RealParameters(false)[i];
 
     Eigen::Matrix<scalar, 1, Eigen::Dynamic> pred;
     if (t_dbl[0] == t0_dbl) { pred = init;

@@ -116,8 +116,10 @@ mixOde2CptModel_bdf(const F& f,
 #else
   const int nCmt = nPK + nOde;
 
-  using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
-  EM em(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  using EM = EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >;
+  const NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>
+    events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  EM em(events_rec);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);

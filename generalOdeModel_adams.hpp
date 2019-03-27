@@ -109,8 +109,10 @@ generalOdeModel_adams(const F& f,
               pMatrix, biovar, tlag, nCmt, dummy_systems,
               pred1, predss);
 #else
-  using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
-  EM em(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+  using EM = EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >;
+  const NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>
+    events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+  EM em(events_rec);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
@@ -384,7 +386,7 @@ generalOdeModel_adams(const F& f,
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
-std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, // NOLINT
+std::vector<Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
                           Eigen::Dynamic, Eigen::Dynamic> >
 pop_pk_generalOdeModel_adams(const F& f,
                            const int nCmt,
@@ -412,9 +414,11 @@ pop_pk_generalOdeModel_adams(const F& f,
   torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
                                 pMatrix, biovar, tlag, caller);
 
-  using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
-
+  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
+  using EM = EventsManager<ER>;
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
+
+  ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
 #ifdef TORSTEN_USE_STAN_ODE
   PkOdeIntegrator<StanAdams> integrator(rel_tol, abs_tol, max_num_steps, msgs);
@@ -426,8 +430,9 @@ pop_pk_generalOdeModel_adams(const F& f,
 
   std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
 
-  pr.pred(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss,
-          pMatrix, biovar, tlag, pred, integrator, f);
+  // pr.pred(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss,
+  //         pMatrix, biovar, tlag, pred, integrator, f);
+  pr.pred(events_rec, pred, integrator, f);
 
   return pred;
 }

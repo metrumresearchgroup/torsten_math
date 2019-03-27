@@ -226,23 +226,10 @@ namespace torsten{
      * information passed in as ragged arrays.
      *
      */
-    template<typename T0, typename T1, typename T2, typename T3, typename T4,
-             typename T5, typename T6, typename... Ts,
-             typename std::enable_if_t<stan::is_var<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar>::value >* = nullptr> //NOLINT
-    void pred(int nCmt,
-                     const std::vector<int>& len,
-                     const std::vector<T0>& time,
-                     const std::vector<T1>& amt,
-                     const std::vector<T2>& rate,
-                     const std::vector<T3>& ii,
-                     const std::vector<int>& evid,
-                     const std::vector<int>& cmt,
-                     const std::vector<int>& addl,
-                     const std::vector<int>& ss,
-                     const std::vector<std::vector<T4> >& pMatrix,
-                     const std::vector<std::vector<T5> >& biovar,
-                     const std::vector<std::vector<T6> >& tlag,
-                     std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, -1, -1> >& res,
+    template<typename T_events_record, typename... Ts,
+             typename std::enable_if_t<stan::is_var<typename EventsManager<T_events_record>::T_scalar>::value >* = nullptr> //NOLINT
+    void pred(const T_events_record& events_rec,
+                     std::vector<Eigen::Matrix<typename EventsManager<T_events_record>::T_scalar, -1, -1> >& res,
                      const T_pred... pred_pars,
                      const Ts... model_pars) {
       using Eigen::Matrix;
@@ -254,14 +241,13 @@ namespace torsten{
       using::stan::math::multiply;
       using refactor::PKRec;
 
-      using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
+      using ER = T_events_record;
+      using EM = EventsManager<ER>;
       using scalar = typename EM::T_scalar;
 
-      const int np = len.size();
+      const int nCmt = EM::nCmt(events_rec);
+      const int np = EM::population_size(events_rec);
       bool is_invalid = false;
-      bool constant_param  = pMatrix.size() == np;
-      bool constant_biovar = biovar.size() == np;
-      bool constant_tlag   = tlag.size() == np;
       std::ostringstream rank_fail_msg;
 
       MPI_Comm comm = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_PARM].comm;
@@ -273,32 +259,23 @@ namespace torsten{
       
       res.resize(np);
 
-      int i0 = 0, i0_pMatrix = 0, i0_biovar = 0, i0_tlag = 0;
-      int len_pMatrix, len_biovar, len_tlag;
       PKRec<scalar> init(nCmt);
       PKRec<double> pred1;
       for (int id = 0; id < np; ++id) {
 
         /* For every rank */
 
-        len_pMatrix = constant_param  ? 1 : len[id];
-        len_biovar  = constant_biovar ? 1 : len[id];
-        len_tlag    = constant_tlag   ? 1 : len[id];
-
-        int nKeep = len[id];
+        const int nKeep = EM::solution_size(id, events_rec);
 
         res[id].resize(nKeep, nCmt);
 
-        int nvar = T_model::nvars(nCmt, pMatrix[i0_pMatrix].size());
-        int nvar_ss = T_model::template nvars<typename EM::T_amt, T2, T3>(pMatrix[i0_pMatrix].size());
-        int nev = EM::nevents(i0, len[id], time, amt, rate, ii, evid, cmt, addl, ss,
-                              i0_pMatrix, len_pMatrix, pMatrix,
-                              i0_biovar, len_biovar, biovar,
-                              i0_tlag, len_tlag, tlag);
+        int nvar = T_model::nvars(nCmt, EM::parameter_size(events_rec));
+        int nvar_ss = T_model::template nvars<typename EM::T_amt, typename EM::T_par_rate, typename EM::T_par_ii>(EM::parameter_size(events_rec));
+        int nev = EM::nevents(id, events_rec);
 
         // FIXME: has_ss_dosing shouldn't test the entire
         // population but only the individual
-        res_d[id].resize(nev, EM::has_ss_dosing(evid, ss) ? torsten::pk_nsys(nCmt, nvar, nvar_ss) : torsten::pk_nsys(nCmt, nvar));
+        res_d[id].resize(nev, EM::has_ss_dosing(events_rec) ? torsten::pk_nsys(nCmt, nvar, nvar_ss) : torsten::pk_nsys(nCmt, nvar));
         res_d[id].setConstant(0.0);
 
         int my_worker_id = torsten::mpi::my_worker(id, np, size);
@@ -310,10 +287,7 @@ namespace torsten{
             res_d[id].setConstant(invalid_res_d);
           } else {
             try {
-              EM em(nCmt, i0, len[id], time, amt, rate, ii, evid, cmt, addl, ss,
-                    i0_pMatrix, len_pMatrix, pMatrix,
-                    i0_biovar, len_biovar, biovar,
-                    i0_tlag, len_tlag, tlag);
+            EM em(id, events_rec);
               auto events = em.events();
               assert(nev == events.size());
               assert(nKeep == em.nKeep);
@@ -336,19 +310,9 @@ namespace torsten{
           }
         }
         MPI_Ibcast(res_d[id].data(), res_d[id].size(), MPI_DOUBLE, my_worker_id, comm, &req[id]);
-
-        i0         += len[id];
-        i0_pMatrix += len_pMatrix;
-        i0_biovar  += len_biovar;
-        i0_tlag    += len_tlag;
       }
 
-      i0 = 0; i0_pMatrix = 0; i0_biovar = 0; i0_tlag = 0;
       for(int id = 0; id < np; ++id) {
-        len_pMatrix = constant_param  ? 1 : len[id];
-        len_biovar  = constant_biovar ? 1 : len[id];
-        len_tlag    = constant_tlag   ? 1 : len[id];
-
         MPI_Wait(&req[id], MPI_STATUS_IGNORE);
 
         if (is_invalid) continue;
@@ -357,10 +321,7 @@ namespace torsten{
           is_invalid = true;
           rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
         } else {
-          EM em(nCmt, i0, len[id], time, amt, rate, ii, evid, cmt, addl, ss,
-                i0_pMatrix, len_pMatrix, pMatrix,
-                i0_biovar, len_biovar, biovar,
-                i0_tlag, len_tlag, tlag);
+          EM em(id, events_rec);
           PKRec<scalar> init(nCmt); init.setZero();
           PKRec<double> pred1 = VectorXd::Zero(res_d[id].cols());
           int ikeep = 0;
@@ -373,11 +334,6 @@ namespace torsten{
             }
           }
         }
-
-        i0         += len[id];
-        i0_pMatrix += len_pMatrix;
-        i0_biovar  += len_biovar;
-        i0_tlag    += len_tlag;
       }
 
       // MPI_Barrier(comm);
@@ -391,21 +347,9 @@ namespace torsten{
     /*
      * Data-only MPI solver that takes ragged arrays as input.
      */
-    template<typename... Ts>
-    void pred(int nCmt,
-                     const std::vector<int>& len,
-                     const std::vector<double>& time,
-                     const std::vector<double>& amt,
-                     const std::vector<double>& rate,
-                     const std::vector<double>& ii,
-                     const std::vector<int>& evid,
-                     const std::vector<int>& cmt,
-                     const std::vector<int>& addl,
-                     const std::vector<int>& ss,
-                     const std::vector<std::vector<double> >& pMatrix,
-                     const std::vector<std::vector<double> >& biovar,
-                     const std::vector<std::vector<double> >& tlag,
-                     std::vector<Eigen::MatrixXd>& res,
+    template<typename T_events_record, typename... Ts>
+    void pred(const T_events_record& events_rec,
+                     std::vector<Eigen::Matrix<double, -1, -1> >& res,
                      const T_pred... pred_pars,
                      const Ts... model_pars) {
       using Eigen::Matrix;
@@ -417,12 +361,12 @@ namespace torsten{
       using::stan::math::multiply;
       using refactor::PKRec;
 
-      using EM = EventsManager<double, double, double, double, double, double, double>;
-      const int np = len.size();
+      using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
+      using EM = EventsManager<ER>;
+
+      const int nCmt = EM::nCmt(events_rec);
+      const int np = EM::population_size(events_rec);
       bool is_invalid = false;
-      bool constant_param  = pMatrix.size() == np;
-      bool constant_biovar = biovar.size() == np;
-      bool constant_tlag   = tlag.size() == np;
       std::ostringstream rank_fail_msg;
 
       MPI_Comm comm = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_DATA].comm;
@@ -433,18 +377,12 @@ namespace torsten{
 
       res.resize(np);
 
-      int i0 = 0, i0_pMatrix = 0, i0_biovar = 0, i0_tlag = 0;
-      int len_pMatrix, len_biovar, len_tlag;
       PKRec<double> init(nCmt);
       for (int id = 0; id < np; ++id) {
 
         /* For every rank */
 
-        len_pMatrix = constant_param  ? 1 : len[id];
-        len_biovar  = constant_biovar ? 1 : len[id];
-        len_tlag    = constant_tlag   ? 1 : len[id];
-
-        res[id].resize(len[id], nCmt);
+        res[id].resize(EM::solution_size(id, events_rec), nCmt);
         res[id].setConstant(0.0);
 
         int my_worker_id = torsten::mpi::my_worker(id, np, size);
@@ -453,10 +391,7 @@ namespace torsten{
 
         if (rank == my_worker_id) {
           try {
-            EM em(nCmt, i0, len[id], time, amt, rate, ii, evid, cmt, addl, ss,
-                  i0_pMatrix, len_pMatrix, pMatrix,
-                  i0_biovar, len_biovar, biovar,
-                  i0_tlag, len_tlag, tlag);
+            EM em(id, events_rec);
             auto events = em.events();
             auto model_rate = em.rates();
             auto model_amt = em.amts();
@@ -477,11 +412,6 @@ namespace torsten{
           }
         }
         MPI_Ibcast(res[id].data(), res[id].size(), MPI_DOUBLE, my_worker_id, comm, &req[id]);
-
-        i0         += len[id];
-        i0_pMatrix += len_pMatrix;
-        i0_biovar  += len_biovar;
-        i0_tlag    += len_tlag;
       }
 
       // make sure every rank throws in case any rank fails
@@ -512,29 +442,15 @@ namespace torsten{
      * addional information of the size of each individual
      * is required to locate the data in a single array for population.
      */
-    template<typename T0, typename T1, typename T2, typename T3, typename T4,
-             typename T5, typename T6, typename... Ts>
-    void pred(int nCmt,
-                     const std::vector<int>& len,
-                     const std::vector<T0>& time,
-                     const std::vector<T1>& amt,
-                     const std::vector<T2>& rate,
-                     const std::vector<T3>& ii,
-                     const std::vector<int>& evid,
-                     const std::vector<int>& cmt,
-                     const std::vector<int>& addl,
-                     const std::vector<int>& ss,
-                     const std::vector<std::vector<T4> >& pMatrix,
-                     const std::vector<std::vector<T5> >& biovar,
-                     const std::vector<std::vector<T6> >& tlag,
-                     std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, -1, -1>>& res,
+    template<typename T_events_record, typename... Ts> //NOLINT
+    void pred(const T_events_record& events_rec,
+                     std::vector<Eigen::Matrix<typename EventsManager<T_events_record>::T_scalar, -1, -1> >& res,
                      const T_pred... pred_pars,
                      const Ts... model_pars) {
-      using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
-      const int np = len.size();
-      bool constant_param  = pMatrix.size() == np;
-      bool constant_biovar = biovar.size() == np;
-      bool constant_tlag   = tlag.size() == np;
+      using ER = T_events_record;
+      using EM = EventsManager<ER>;
+
+      const int np = EM::population_size(events_rec);
       
       res.resize(np);
 
@@ -547,22 +463,9 @@ namespace torsten{
       int i0 = 0, i0_pMatrix = 0, i0_biovar = 0, i0_tlag = 0;
       int len_pMatrix, len_biovar, len_tlag;
       for (int i = 0; i < np; ++i) {
-
-        len_pMatrix = constant_param  ? 1 : len[i];
-        len_biovar  = constant_biovar ? 1 : len[i];
-        len_tlag    = constant_tlag   ? 1 : len[i];
-
-        EM em(nCmt, i0, len[i], time, amt, rate, ii, evid, cmt, addl, ss,
-              i0_pMatrix, len_pMatrix, pMatrix,
-              i0_biovar, len_biovar, biovar,
-              i0_tlag, len_tlag, tlag);
+        EM em(id, events_rec);
         res[i].resize(em.nKeep, em.ncmt);
         pred(em, res[i], pred_pars..., model_pars...);
-
-        i0         += len[i];
-        i0_pMatrix += len_pMatrix;
-        i0_biovar  += len_biovar;
-        i0_tlag    += len_tlag;
       }
     }
 #endif

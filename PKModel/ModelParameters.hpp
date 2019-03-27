@@ -81,10 +81,17 @@ struct ModelParameters {
     return theta_.size();
   }
 
-  // access functions
+  // access functions   // FIX ME - name should be get_theta.
   T_time get_time() const { return time_; }
-  std::vector<T_parameters> get_RealParameters() const {
-    return theta_;  // FIX ME - name should be get_theta.
+  std::vector<T_parameters> get_RealParameters(bool return_matrix) const {
+    if (return_matrix) {
+      auto k = get_K();
+      std::vector<T_parameters> par(k.size());
+      for (size_t j = 0; j < par.size(); ++j) par[j] = k(j);
+      return par;
+    } else {
+      return theta_;
+    }
   }
   std::vector<T_biovar> get_biovar() const {
     return biovar_;
@@ -109,16 +116,19 @@ template<typename T_time,
          typename T_biovar,
          typename T_tlag>
 struct ModelParameterHistory{
+  const bool has_matrix_param;
   std::vector<ModelParameters<T_time, T_parameters, T_biovar, T_tlag> > MPV_;
 
   template<typename T0, typename T1, typename T2, typename T3>
   ModelParameterHistory(std::vector<T0> time,
                         std::vector<std::vector<T1> > theta,
                         std::vector<std::vector<T2> > biovar,
-                        std::vector<std::vector<T3> > tlag) {
+                        std::vector<std::vector<T3> > tlag) :
+    has_matrix_param(false),
+    MPV_(std::max(theta.size(), std::max(biovar.size(), tlag.size())))
+  {
     using std::max;
     int nParameters = max(theta.size(), max(biovar.size(), tlag.size()));
-    MPV_.resize(nParameters);
     int j, k, l;
     // FIX ME - is this the most efficient way of storing data?
     for (int i = 0; i < nParameters; i++) {
@@ -132,12 +142,14 @@ struct ModelParameterHistory{
 
   template<typename T0, typename T1, typename T2, typename T3>
   ModelParameterHistory(std::vector<T0> time,
+                        std::vector< Eigen::Matrix<T1, Eigen::Dynamic, Eigen::Dynamic> > K,
                         std::vector<std::vector<T2> > biovar,
-                        std::vector<std::vector<T3> > tlag,
-                        std::vector< Eigen::Matrix<T1, Eigen::Dynamic, Eigen::Dynamic> > K) {
+                        std::vector<std::vector<T3> > tlag) :
+    has_matrix_param(true),
+    MPV_(std::max(K.size(), std::max(biovar.size(), tlag.size())))
+  {
     using std::max;
     int nParameters = max(K.size(), max(biovar.size(), tlag.size()));
-    MPV_.resize(nParameters);
     int k, l, m;
     // FIX ME - is this the most efficient way of storing data?
     for (int i = 0; i < nParameters; i++) {
@@ -146,6 +158,42 @@ struct ModelParameterHistory{
       (K.size() == 1) ? m = 0 : m = i;
        MPV_[i] = ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
          (time[i], biovar[k], tlag[l], K[m]);
+    }
+  }
+
+  template<typename T0, typename T1, typename T2, typename T3>
+  ModelParameterHistory(std::vector<T0> time,
+                        std::vector<std::vector<T1> > theta,
+                        std::vector< Eigen::Matrix<T1, Eigen::Dynamic, Eigen::Dynamic> > K,
+                        std::vector<std::vector<T2> > biovar,
+                        std::vector<std::vector<T3> > tlag) :
+    has_matrix_param(theta.empty()),
+    MPV_(has_matrix_param ? std::max(K.size(), std::max(biovar.size(), tlag.size()))
+         : std::max(theta.size(), std::max(biovar.size(), tlag.size())))
+  {
+    using std::max;
+    if (has_matrix_param) {
+      int nParameters = max(K.size(), max(biovar.size(), tlag.size()));
+      int k, l, m;
+      // FIX ME - is this the most efficient way of storing data?
+      for (int i = 0; i < nParameters; i++) {
+        (biovar.size() == 1) ? k = 0 : k = i;
+        (tlag.size() == 1) ? l = 0 : l = i;
+        (K.size() == 1) ? m = 0 : m = i;
+        MPV_[i] = ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
+          (time[i], biovar[k], tlag[l], K[m]);
+      }      
+    } else {
+      int nParameters = max(theta.size(), max(biovar.size(), tlag.size()));
+      int j, k, l;
+      // FIX ME - is this the most efficient way of storing data?
+      for (int i = 0; i < nParameters; i++) {
+        (theta.size() == 1) ? j = 0 : j = i;
+        (biovar.size() == 1) ? k = 0 : k = i;
+        (tlag.size() == 1) ? l = 0 : l = i;
+        MPV_[i] = ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
+          (time[i], theta[j], biovar[k], tlag[l]);
+      }
     }
   }
 
@@ -164,16 +212,19 @@ struct ModelParameterHistory{
                         std::vector<T0> time,
                         int ibegin_theta, int isize_theta,
                         std::vector<std::vector<T1> > theta,
+                        std::vector< Eigen::Matrix<T1, Eigen::Dynamic, Eigen::Dynamic> > K,
                         int ibegin_biovar, int isize_biovar,
                         std::vector<std::vector<T2> > biovar,
                         int ibegin_tlag, int isize_tlag,
-                        std::vector<std::vector<T3> > tlag) {
+                        std::vector<std::vector<T3> > tlag) :
+    has_matrix_param(theta.empty()),
+    MPV_(std::max(isize_theta, std::max(isize_biovar, isize_tlag)))
+  {
     using std::max;
     int n1 = isize_theta;
     int n2 = isize_biovar;
     int n3 = isize_tlag;
     int nParameters = max(n1, max(n2, n3));
-    MPV_.resize(nParameters);
     static const char* caller = "ModelParameterHistory::ModelParameterHistory";
     stan::math::check_greater_or_equal(caller, "isize", isize, nParameters);
     stan::math::check_greater_or_equal(caller, "time size", time.size(), size_t(ibegin + nParameters - 1));
@@ -182,8 +233,13 @@ struct ModelParameterHistory{
       (n1 == 1) ? j = ibegin_theta  : j = ibegin_theta  + i;
       (n2 == 1) ? k = ibegin_biovar : k = ibegin_biovar + i;
       (n3 == 1) ? l = ibegin_tlag   : l = ibegin_tlag   + i;
-      MPV_[i] = ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
-        (time[i + ibegin], theta[j], biovar[k], tlag[l]);
+      if (has_matrix_param) {
+        MPV_[i] = ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
+          (time[i + ibegin], biovar[k], tlag[l], K[j]);
+      } else {
+        MPV_[i] = ModelParameters<T_time, T_parameters, T_biovar, T_tlag>
+          (time[i + ibegin], theta[j], biovar[k], tlag[l]);
+      }
     }
   }
 

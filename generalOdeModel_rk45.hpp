@@ -111,8 +111,10 @@ generalOdeModel_rk45(const F& f,
               pred1, predss);
 
 #else
-  using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
-  EM em(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+  using EM = EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >;
+  const NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>
+    events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+  EM em(events_rec);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
@@ -376,7 +378,7 @@ generalOdeModel_rk45(const F& f,
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
-std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, // NOLINT
+std::vector<Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
                           Eigen::Dynamic, Eigen::Dynamic> >
 pop_pk_generalOdeModel_rk45(const F& f,
                            const int nCmt,
@@ -400,11 +402,13 @@ pop_pk_generalOdeModel_rk45(const F& f,
   using stan::math::check_greater_or_equal;
 
   int np = len.size();
-  static const char* caller("pop_pk_generalOdeModel_bdf");
+  static const char* caller("pop_pk_generalOdeModel_rk45");
   torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
                                 pMatrix, biovar, tlag, caller);
 
-  using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
+  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
+  using EM = EventsManager<ER>;
+  ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
   PkOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
@@ -412,8 +416,9 @@ pop_pk_generalOdeModel_rk45(const F& f,
 
   std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
 
-  pr.pred(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss,
-          pMatrix, biovar, tlag, pred, integrator, f);
+  // pr.pred(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss,
+  //         pMatrix, biovar, tlag, pred, integrator, f);
+  pr.pred(events_rec, pred, integrator, f);
 
   return pred;
 }

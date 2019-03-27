@@ -122,8 +122,10 @@ PKModelTwoCpt(const std::vector<T0>& time,
               nCmt, dummy_systems,
               Pred1_twoCpt(), PredSS_twoCpt());
 #else
-  using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
-  EM em(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+  using EM = EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >;
+  const NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>
+    events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+  EM em(events_rec);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, em.ncmt);
@@ -328,7 +330,7 @@ PKModelTwoCpt(const std::vector<T0>& time,
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6>
-std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, // NOLINT
+std::vector<Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
                           Eigen::Dynamic, Eigen::Dynamic> >
 popPKModelTwoCpt(const std::vector<std::vector<T0> >& time,
                  const std::vector<std::vector<T1> >& amt,
@@ -356,7 +358,7 @@ popPKModelTwoCpt(const std::vector<std::vector<T0> >& time,
   stan::math::check_consistent_sizes(caller, "time", time, "biovar",  biovar);
   stan::math::check_consistent_sizes(caller, "time", time, "tlag",    tlag);
 
-  using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
+  using EM = EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >;
 
   using model_type = refactor::PKTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;
@@ -376,7 +378,7 @@ popPKModelTwoCpt(const std::vector<std::vector<T0> >& time,
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6>
-std::vector<Eigen::Matrix<typename EventsManager<T0, T1, T2, T3, T4, T5, T6>::T_scalar, // NOLINT
+std::vector<Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
                           Eigen::Dynamic, Eigen::Dynamic> >
 popPKModelTwoCpt(const std::vector<int>& len,
                  const std::vector<T0>& time,
@@ -393,21 +395,25 @@ popPKModelTwoCpt(const std::vector<int>& len,
   using stan::math::check_consistent_sizes;
   using stan::math::check_greater_or_equal;
 
-  int np = len.size();
+  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
+  using EM = EventsManager<ER>;
+
   int nCmt = refactor::PKTwoCptModel<double, double, double, double>::Ncmt;
+  ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+
+  int np = len.size();
   static const char* caller("PKModelTwoCpt");
   torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
                                 pMatrix, biovar, tlag, caller);
-
-  using EM = EventsManager<T0, T1, T2, T3, T4, T5, T6>;
 
   using model_type = refactor::PKTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;
 
   std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
 
-  pr.pred(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss,
-          pMatrix, biovar, tlag, pred);
+  // pr.pred(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss,
+  //         pMatrix, biovar, tlag, pred);
+  pr.pred(events_rec, pred);
 
   return pred;
 }
