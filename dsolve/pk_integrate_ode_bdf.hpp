@@ -1,10 +1,8 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_BDF_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_BDF_HPP
 
-#include <stan/math/prim/scal/err/check_greater.hpp>
 #include <stan/math/torsten/dsolve/pk_cvodes_integrator.hpp>
 #include <stan/math/torsten/mpi.hpp>
-
 #include <ostream>
 #include <vector>
 

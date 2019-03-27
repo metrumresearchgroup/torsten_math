@@ -6,8 +6,6 @@
 #include <boost/math/tools/promotion.hpp>
 #include <stan/math/torsten/Pred2.hpp>
 #include <stan/math/torsten/pk_linode_model.hpp>
-// #include <stan/math/torsten/pk_linode_solver.hpp>
-// #include <stan/math/torsten/pk_linode_solver_ss.hpp>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_linOde.hpp>
 #include <stan/math/torsten/PKModel/Pred/PredSS_linOde.hpp>

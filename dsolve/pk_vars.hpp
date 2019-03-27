@@ -1,7 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_PK_VARS_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_PK_VARS_HPP
 
-#include <stan/math/rev/scal/meta/is_var.hpp>
+#include <stan/math/torsten/torsten_def.hpp>
 
 namespace torsten {
   namespace dsolve {

@@ -1,15 +1,10 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_CVODES_FWD_SYSTEM_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_CVODES_FWD_SYSTEM_HPP
 
-#include <stan/math/prim/arr/fun/value_of.hpp>
 #include <stan/math/prim/scal/err/check_greater.hpp>
-#include <stan/math/prim/mat/fun/typedefs.hpp>
-#include <stan/math/rev/mat/fun/typedefs.hpp>
 #include <stan/math/torsten/dsolve/pk_cvodes_system.hpp>
 #include <stan/math/torsten/dsolve/cvodes_sens_rhs.hpp>
 #include <stan/math/torsten/pk_csda.hpp>
-#include <stan/math/rev/mat/functor/jacobian.hpp>
-#include <stan/math/torsten/dsolve/cvodes_service.hpp>
 
 namespace torsten {
 

@@ -1,5 +1,5 @@
-#ifndef PK_LINODE_MODEL_HPP
-#define PK_LINODE_MODEL_HPP
+#ifndef STAN_MATH_PK_LINODE_MODEL_HPP
+#define STAN_MATH_PK_LINODE_MODEL_HPP
 
 #include <stan/math/torsten/torsten_def.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>

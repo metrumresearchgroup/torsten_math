@@ -1,8 +1,12 @@
-#ifndef TORSTEN_ODE_INTEGRATOR_HPP
-#define TORSTEN_ODE_INTEGRATOR_HPP
+#ifndef STAN_MATH_TORSTEN_ODE_INTEGRATOR_HPP
+#define STAN_MATH_TORSTEN_ODE_INTEGRATOR_HPP
 
+#include <stan/math/prim/scal/meta/return_type.hpp>
+#include <stan/math/prim/arr/fun/value_of.hpp>
+#include <stan/math/prim/arr/functor/integrate_ode_rk45.hpp>
+#include <stan/math/rev/mat/functor/integrate_ode_adams.hpp>
+#include <stan/math/rev/mat/functor/integrate_ode_bdf.hpp>
 #include <stan/math/torsten/dsolve/dsolve.hpp>
-#include <stan/math/rev/mat.hpp>
 #include <ostream>
 #include <vector>
 

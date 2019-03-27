@@ -1,6 +1,8 @@
 #ifndef STAN_MATH_TORSTEN_PK_NVARS_HPP
 #define STAN_MATH_TORSTEN_PK_NVARS_HPP
 
+#include <stan/math/torsten/torsten_def.hpp>
+
 namespace torsten {
   /*
    * Calculate the number of @c var for transient dosing event

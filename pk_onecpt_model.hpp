@@ -1,10 +1,11 @@
 #ifndef STAN_MATH_TORSTEN_ONECPT_MODEL_HPP
 #define STAN_MATH_TORSTEN_ONECPT_MODEL_HPP
 
-#include <stan/math/torsten/torsten_def.hpp>
+#include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
-#include <stan/math/torsten/model_solve_d.hpp>
+#include <stan/math/prim/scal/err/check_positive.hpp>
+#include <stan/math/prim/scal/err/check_finite.hpp>
 
 namespace refactor {
 
@@ -106,7 +107,18 @@ namespace refactor {
       k10_(CL / V2),
       alpha_{k10_, ka_},
       par_{CL_, V2_, ka_}
-    {}
+    {
+      using stan::math::check_positive;
+      using stan::math::check_finite;
+      const char* fun = "PKOneCptModel";
+      check_positive(fun, "CL", CL_);
+      check_positive(fun, "V2", V2_);
+      check_positive(fun, "ka", ka_);
+
+      check_finite(fun, "CL", CL_);
+      check_finite(fun, "V2", V2_);
+      check_finite(fun, "ka", ka_);      
+    }
 
   /**
    * One-compartment PK model constructor

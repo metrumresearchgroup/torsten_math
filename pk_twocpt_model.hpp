@@ -1,11 +1,9 @@
 #ifndef STAN_MATH_TORSTEN_TWOCPT_MODEL_HPP
 #define STAN_MATH_TORSTEN_TWOCPT_MODEL_HPP
 
-#include <stan/math/torsten/torsten_def.hpp>
-#include <stan/math/torsten/pk_ode_model.hpp>
+#include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
-#include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/prim/scal/err/check_positive.hpp>
 #include <stan/math/prim/scal/err/check_finite.hpp>
 
@@ -137,12 +135,19 @@ namespace refactor {
       par_{CL_, Q_, V2_, V3_, ka_}
     {
       using stan::math::check_positive;
+      using stan::math::check_finite;
       const char* fun = "PKTwoCptModel";
       check_positive(fun, "CL", CL_);
       check_positive(fun, "Q", Q_);
       check_positive(fun, "V2", V2_);
       check_positive(fun, "V3", V3_);
       check_positive(fun, "ka", ka_);
+
+      check_finite(fun, "CL", CL_);
+      check_finite(fun, "Q", Q_);
+      check_finite(fun, "V2", V2_);
+      check_finite(fun, "V3", V3_);
+      check_finite(fun, "ka", ka_);
     }
 
   /**
@@ -456,12 +461,6 @@ namespace refactor {
     template<typename T_amt, typename T_r, typename T_ii>
     Eigen::VectorXd solve_d(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt) const {
       return torsten::model_solve_d(*this, amt, rate, ii, cmt);
-    }
-
-    PKODEModel<T_time, T_init, T_rate, T_par, PKTwoCptODE>
-    to_ode_model() {
-      return PKODEModel<T_time, T_init, T_rate, T_par,
-                        PKTwoCptODE>(t0_, y0_, rate_, par_, f_);
     }
 
     /*

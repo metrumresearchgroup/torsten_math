@@ -9,8 +9,6 @@
 #include <stan/math/torsten/PKModel/Pred/Pred1_oneCpt.hpp>
 #include <stan/math/torsten/PKModel/Pred/PredSS_oneCpt.hpp>
 #include <stan/math/torsten/pk_onecpt_model.hpp>
-// #include <stan/math/torsten/pk_onecpt_solver.hpp>
-// #include <stan/math/torsten/pk_onecpt_solver_ss.hpp>
 #include <string>
 #include <vector>
 

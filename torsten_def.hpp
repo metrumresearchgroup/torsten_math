@@ -1,7 +1,10 @@
-#ifndef TORSTEN_DEF_HPP
-#define TORSTEN_DEF_HPP
+#ifndef STAN_MATH_TORSTEN_DEF_HPP
+#define STAN_MATH_TORSTEN_DEF_HPP
 
-#include <stan/math/rev/core.hpp>
+#include <Eigen/Dense>
+#include <stan/math/prim/scal/meta/return_type.hpp>
+#include <stan/math/prim/scal/meta/is_var.hpp>
+#include <stan/math/rev/scal/meta/is_var.hpp>
 #include <stan/math/torsten/is_detected.hpp>
 
 namespace refactor {
@@ -10,7 +13,6 @@ namespace refactor {
 
     template<typename T>
     using PKLin = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
-
 }
 
 namespace torsten {

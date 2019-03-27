@@ -1,11 +1,11 @@
 #ifndef STAN_MATH_TORSTEN_PKMODEL_REFACTOR_PRED_HPP
 #define STAN_MATH_TORSTEN_PKMODEL_REFACTOR_PRED_HPP
 
-#include <Eigen/Dense>
-#include <vector>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/mpi/session.hpp>
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
+#include <Eigen/Dense>
+#include <vector>
 
 namespace torsten{
   /*

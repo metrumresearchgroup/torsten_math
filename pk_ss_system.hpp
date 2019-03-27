@@ -4,8 +4,6 @@
 #include <stan/math/torsten/PKModel/Pred/Pred1_general.hpp>
 #include <stan/math/torsten/PKModel/functors/check_mti.hpp>
 #include <stan/math/torsten/pk_ode_integrator.hpp>
-#include <stan/math/rev/core.hpp>
-#include <stan/math/fwd/core.hpp>
 #include <vector>
 #include <iostream>
 
