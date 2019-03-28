@@ -1,7 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_ADAMS_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_ADAMS_HPP
 
-#include <stan/math/torsten/dsolve/pk_cvodes_integrator.hpp>
+#include <stan/math/torsten/dsolve/pmx_cvodes_integrator.hpp>
 #include <stan/math/torsten/mpi.hpp>
 #include <ostream>
 #include <vector>
@@ -33,7 +33,7 @@ namespace dsolve {
   std::vector<std::vector<typename stan::return_type<Tt,
                                                      T_initial,
                                                      T_param>::type> >
-  pk_integrate_ode_adams(const F& f,
+  pmx_integrate_ode_adams(const F& f,
                          const std::vector<T_initial>& y0,
                          double t0,
                          const std::vector<Tt>& ts,
@@ -44,17 +44,17 @@ namespace dsolve {
                          double rtol = 1e-10,
                          double atol = 1e-10,
                          long int max_num_step = 1e8) {
-    using torsten::dsolve::PKCvodesFwdSystem;
-    using torsten::dsolve::PKCvodesIntegrator;
-    using torsten::PkCvodesSensMethod;
-    using Ode = PKCvodesFwdSystem<F, Tt, T_initial, T_param, CV_ADAMS, AD>;
+    using torsten::dsolve::PMXCvodesFwdSystem;
+    using torsten::dsolve::PMXCvodesIntegrator;
+    using torsten::PMXCvodesSensMethod;
+    using Ode = PMXCvodesFwdSystem<F, Tt, T_initial, T_param, CV_ADAMS, AD>;
     const int n = y0.size();
     const int m = theta.size();
 
-    static PKCvodesService<typename Ode::Ode> serv(n, m);
+    static PMXCvodesService<typename Ode::Ode> serv(n, m);
 
     Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
-    PKCvodesIntegrator solver(rtol, atol, max_num_step);
+    PMXCvodesIntegrator solver(rtol, atol, max_num_step);
     return solver.integrate(ode);
 }
 
@@ -86,7 +86,7 @@ namespace dsolve {
   template <typename F, typename Tt, typename T_initial, typename T_param>
   std::vector<Eigen::Matrix<typename stan::return_type<Tt, T_initial, T_param>::type, // NOLINT
                             Eigen::Dynamic, Eigen::Dynamic> >
-  pk_integrate_ode_adams(const F& f,
+  pmx_integrate_ode_adams(const F& f,
                          const std::vector<std::vector<T_initial> >& y0,
                          double t0,
                          const std::vector<std::vector<Tt> >& ts,
@@ -97,14 +97,14 @@ namespace dsolve {
                          double rtol = 1e-10,
                          double atol = 1e-10,
                          long int max_num_step = 1e6) {  // NOLINT(runtime/int)
-    static const char* caller("pk_integrate_ode_adams");
+    static const char* caller("pmx_integrate_ode_adams");
     stan::math::check_consistent_sizes(caller, "y0", y0, "ts",     ts);
     stan::math::check_consistent_sizes(caller, "y0", y0, "theta",  theta);
     stan::math::check_consistent_sizes(caller, "y0", y0, "x_r",    x_r);
     stan::math::check_consistent_sizes(caller, "y0", y0, "x_i",    x_i);
 
-    PKCvodesIntegrator integrator(rtol, atol, max_num_step);
-    torsten::mpi::PkPopulationIntegrator<F, CV_ADAMS> solver(integrator);
+    PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
+    torsten::mpi::PMXPopulationIntegrator<F, CV_ADAMS> solver(integrator);
 
     return solver(f, y0, t0, ts, theta, x_r, x_i, msgs);
   }

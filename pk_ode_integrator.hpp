@@ -127,7 +127,7 @@ namespace torsten {
                  double rtol,
                  double atol,
                  long int max_num_step) {  // NOLINT(runtime/int)                   
-        return torsten::dsolve::pk_integrate_ode_adams(f, y0, t0, ts, theta,
+        return torsten::dsolve::pmx_integrate_ode_adams(f, y0, t0, ts, theta,
                                                        x_r, x_i, msgs, rtol,
                                                        atol, max_num_step);
       }
@@ -153,7 +153,7 @@ namespace torsten {
                  double rtol,
                  double atol,
                  long int max_num_step) {  // NOLINT(runtime/int)                   
-        return torsten::dsolve::pk_integrate_ode_bdf(f, y0, t0, ts, theta,
+        return torsten::dsolve::pmx_integrate_ode_bdf(f, y0, t0, ts, theta,
                                                      x_r, x_i, msgs, rtol,
                                                      atol, max_num_step);
       }
@@ -244,15 +244,15 @@ namespace torsten {
             const std::vector<T_param>& theta,
             const std::vector<double>& x_r,
             const std::vector<int>& x_i) const {
-      using Ode = torsten::dsolve::PKCvodesFwdSystem<F, Tt, T_initial, T_param, CV_BDF, AD>;
+      using Ode = torsten::dsolve::PMXCvodesFwdSystem<F, Tt, T_initial, T_param, CV_BDF, AD>;
       const int m = theta.size();
       const int n = y0.size();
 
-      dsolve::PKCvodesService<typename Ode::Ode> serv(n, m);
+      dsolve::PMXCvodesService<typename Ode::Ode> serv(n, m);
 
       Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
 
-      torsten::dsolve::PKCvodesIntegrator solver(rtol, atol, max_num_step);
+      torsten::dsolve::PMXCvodesIntegrator solver(rtol, atol, max_num_step);
       Eigen::MatrixXd res = solver.integrate<Ode, false>(ode);
 
       return res;
@@ -307,15 +307,15 @@ namespace torsten {
             const std::vector<T_param>& theta,
             const std::vector<double>& x_r,
             const std::vector<int>& x_i) const {
-      using Ode = torsten::dsolve::PKCvodesFwdSystem<F, Tt, T_initial, T_param, CV_ADAMS, AD>;
+      using Ode = torsten::dsolve::PMXCvodesFwdSystem<F, Tt, T_initial, T_param, CV_ADAMS, AD>;
       const int m = theta.size();
       const int n = y0.size();
 
-      dsolve::PKCvodesService<typename Ode::Ode> serv(n, m);
+      dsolve::PMXCvodesService<typename Ode::Ode> serv(n, m);
 
       Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
 
-      torsten::dsolve::PKCvodesIntegrator solver(rtol, atol, max_num_step);
+      torsten::dsolve::PMXCvodesIntegrator solver(rtol, atol, max_num_step);
       Eigen::MatrixXd res = solver.integrate<Ode, false>(ode);
 
       return res;

@@ -6,7 +6,7 @@
 #include <stan/math/prim/arr/err/check_nonzero_size.hpp>
 #include <stan/math/prim/arr/err/check_ordered.hpp>
 #include <stan/math/rev/scal/meta/is_var.hpp>
-#include <stan/math/torsten/dsolve/pk_idas_fwd_system.hpp>
+#include <stan/math/torsten/dsolve/pmx_idas_fwd_system.hpp>
 #include <stan/math/torsten/dsolve/sundials_check.hpp>
 #include <idas/idas.h>
 #include <idas/idas_direct.h>

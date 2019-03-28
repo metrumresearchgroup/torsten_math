@@ -1,8 +1,8 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_DAE_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_DAE_HPP
 
-#include <stan/math/torsten/dsolve/pk_idas_fwd_system.hpp>
-#include <stan/math/torsten/dsolve/pk_idas_integrator.hpp>
+#include <stan/math/torsten/dsolve/pmx_idas_fwd_system.hpp>
+#include <stan/math/torsten/dsolve/pmx_idas_integrator.hpp>
 #include <ostream>
 #include <vector>
 
@@ -33,7 +33,7 @@ namespace dsolve {
  * same size as the state variable, corresponding to a time in ts.
  */
 template <typename F, typename Tpar>
-std::vector<std::vector<Tpar> > integrate_dae(
+std::vector<std::vector<Tpar> > pmx_integrate_dae(
     const F& f, const std::vector<double>& yy0, const std::vector<double>& yp0,
     double t0, const std::vector<double>& ts, const std::vector<Tpar>& theta,
     const std::vector<double>& x_r, const std::vector<int>& x_i,

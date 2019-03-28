@@ -5,7 +5,7 @@
 #include <stan/math/prim/scal/err/check_greater.hpp>
 #include <stan/math/prim/mat/fun/typedefs.hpp>
 #include <stan/math/rev/mat/fun/typedefs.hpp>
-#include <stan/math/torsten/dsolve/pk_idas_system.hpp>
+#include <stan/math/torsten/dsolve/pmx_idas_system.hpp>
 #include <stan/math/rev/mat/functor/jacobian.hpp>
 #include <idas/idas.h>
 #include <nvector/nvector_serial.h>

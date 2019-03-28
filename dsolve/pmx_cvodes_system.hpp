@@ -32,12 +32,12 @@ namespace torsten {
      */
     template <typename F, typename Tts,
               typename Ty0, typename Tpar, int Lmm>
-    class PKCvodesSystem {
+    class PMXCvodesSystem {
     public:
-      using Ode = PKCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
+      using Ode = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
 
     protected:
-      PKCvodesService<Ode>& serv_;
+      PMXCvodesService<Ode>& serv_;
       const F& f_;
       const double t0_;
       const std::vector<Tts>& ts_;
@@ -83,7 +83,7 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE.
        * @param[in] msgs stream to which messages are printed.
        */
-      PKCvodesSystem(PKCvodesService<Ode>& serv,
+      PMXCvodesSystem(PMXCvodesService<Ode>& serv,
                        const F& f,
                        double t0,
                        const std::vector<Tts>& ts,
@@ -123,7 +123,7 @@ namespace torsten {
         auto t0_data = stan::math::value_of(t0);
         auto ts_data = stan::math::value_of(ts);
         
-        static const char* caller = "PKCvodesSystem";
+        static const char* caller = "PMXCvodesSystem";
         stan::math::check_finite(caller, "initial time", t0_data);
         stan::math::check_finite(caller, "times", ts_data);
         stan::math::check_ordered(caller, "times", ts_data);
@@ -152,9 +152,9 @@ namespace torsten {
 
       /**
        * destructor is empty as all CVODES resources are
-       * handled by @c PKCvodesService
+       * handled by @c PMXCvodesService
        */
-      ~PKCvodesSystem() {
+      ~PMXCvodesSystem() {
       }
 
       /**

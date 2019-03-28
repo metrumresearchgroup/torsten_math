@@ -2,7 +2,7 @@
 #define STAN_MATH_TORSTEN_DSOLVE_CVODES_FWD_SYSTEM_HPP
 
 #include <stan/math/prim/scal/err/check_greater.hpp>
-#include <stan/math/torsten/dsolve/pk_cvodes_system.hpp>
+#include <stan/math/torsten/dsolve/pmx_cvodes_system.hpp>
 #include <stan/math/torsten/dsolve/cvodes_sens_rhs.hpp>
 #include <stan/math/torsten/pk_csda.hpp>
 
@@ -15,7 +15,7 @@ namespace torsten {
    * AD: automatic differentiation by Stan
    * differential quotient provided by CVODES
    **/
-  enum PkCvodesSensMethod {
+  enum PMXCvodesSensMethod {
     CSDA, AD, DQ
   };
 }
@@ -30,10 +30,10 @@ namespace torsten {
      * @tparam Ty0 type of initial unknown values.
      * @tparam Tpar type of parameters.
      * @tparam Lmm method of integration(CV_ADAMS or CV_BDF)
-     * @tparam Sm method of sensitivity calculatioin, choose among @c PkCvodesSensMethod.
+     * @tparam Sm method of sensitivity calculatioin, choose among @c PMXCvodesSensMethod.
      */
-    template <typename F, typename Tts, typename Ty0, typename Tpar, int Lmm, PkCvodesSensMethod Sm>  // NOLINT
-    class PKCvodesFwdSystem;
+    template <typename F, typename Tts, typename Ty0, typename Tpar, int Lmm, PMXCvodesSensMethod Sm>  // NOLINT
+    class PMXCvodesFwdSystem;
 
     /**
      * when use CSDA to calculate sensitivity, the
@@ -42,9 +42,9 @@ namespace torsten {
      * math functions do not support this.
      */
     template <typename F, typename Tts, typename Ty0, typename Tpar, int Lmm>
-    class PKCvodesFwdSystem<F, Tts, Ty0, Tpar, Lmm, CSDA> : public PKCvodesSystem<F, Tts, Ty0, Tpar, Lmm> {  // NOLINT
+    class PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, Lmm, CSDA> : public PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm> {  // NOLINT
     public:
-      using Ode = PKCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
+      using Ode = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
     private:
       N_Vector* nv_ys_;
       std::vector<std::complex<double> >& yy_cplx_;
@@ -61,7 +61,7 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE
        * @param[in] msgs stream to which messages are printed
        */
-      PKCvodesFwdSystem(PKCvodesService<Ode>& serv,
+      PMXCvodesFwdSystem(PMXCvodesService<Ode>& serv,
                            const F& f,
                            double t0,
                            const std::vector<Tts>& ts,
@@ -79,9 +79,9 @@ namespace torsten {
 
       /**
        * Dummy destructor. Deallocation of CVODES memory is done
-       * in @c PKCvodesService.
+       * in @c PMXCvodesService.
        */
-      ~PKCvodesFwdSystem() {
+      ~PMXCvodesFwdSystem() {
       }
 
       /**
@@ -98,7 +98,7 @@ namespace torsten {
 
       /**
        * Calculate sensitivity rhs using CVODES vectors. The
-       * internal workspace is allocated by @c PKCvodesService.
+       * internal workspace is allocated by @c PMXCvodesService.
        * We use CSDA to compute senstivity, so we need to
        * generate complex version of parameters.
        */
@@ -107,7 +107,7 @@ namespace torsten {
                          N_Vector temp1, N_Vector temp2) {
         using std::complex;
         using cplx = complex<double>;
-        using B = PKCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
+        using B = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
         const int n = B::N_;
         const double h = 1.E-20;
         for (int i = 0; i < ns; ++i) {
@@ -146,9 +146,9 @@ namespace torsten {
      * use autodiff to calculate sensitivity
      */
     template <typename F, typename Tts, typename Ty0, typename Tpar, int Lmm>
-    class PKCvodesFwdSystem<F, Tts, Ty0, Tpar, Lmm, AD> : public PKCvodesSystem<F, Tts, Ty0, Tpar, Lmm> {  // NOLINT
+    class PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, Lmm, AD> : public PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm> {  // NOLINT
     public:
-      using Ode = PKCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
+      using Ode = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
     private:
       N_Vector* nv_ys_;
     public:
@@ -162,7 +162,7 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE
        * @param[in] msgs stream to which messages are printed
        */
-      PKCvodesFwdSystem(PKCvodesService<Ode>& serv,
+      PMXCvodesFwdSystem(PMXCvodesService<Ode>& serv,
                            const F& f,
                            double t0,
                            const std::vector<Tts>& ts,
@@ -177,9 +177,9 @@ namespace torsten {
 
       /**
        * Dummy destructor. Deallocation of CVODES memory is done
-       * in @c PKCvodesService.
+       * in @c PMXCvodesService.
        */
-      ~PKCvodesFwdSystem() {
+      ~PMXCvodesFwdSystem() {
       }
 
       /**
@@ -196,7 +196,7 @@ namespace torsten {
 
       /**
        * Calculate sensitivity rhs using CVODES vectors. The
-       * internal workspace is allocated by @c PKCvodesService.
+       * internal workspace is allocated by @c PMXCvodesService.
        */
       void eval_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
                          N_Vector* ys, N_Vector* ysdot,
@@ -209,7 +209,7 @@ namespace torsten {
         using stan::math::vector_v;
         using stan::math::var;
 
-        using B = PKCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
+        using B = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
 
         const int& n = B::N_;
         const int& m = B::M_;
