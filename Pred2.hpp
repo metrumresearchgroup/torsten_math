@@ -197,8 +197,8 @@ namespace torsten{
 
     template<typename T_em, typename... Ts>
     void stepper_sync(int i, refactor::PKRec<typename T_em::T_scalar>& init,
-                        refactor::PKRec<double>& sol_d,
-                             const T_em& em, const T_pred... pred_pars, const Ts... model_pars) {
+                      refactor::PKRec<double>& sol_d,
+                      const T_em& em, const T_pred... pred_pars, const Ts... model_pars) {
       using std::vector;
       using stan::math::var;
 

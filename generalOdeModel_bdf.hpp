@@ -428,8 +428,6 @@ pop_pk_generalOdeModel_bdf(const F& f,
 
   std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
 
-  // pr.pred(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss,
-  //         pMatrix, biovar, tlag, pred, integrator, f);
   pr.pred(events_rec, pred, integrator, f);
 
   return pred;

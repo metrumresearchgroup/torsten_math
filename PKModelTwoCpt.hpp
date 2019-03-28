@@ -409,8 +409,6 @@ popPKModelTwoCpt(const std::vector<int>& len,
 
   std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
 
-  // pr.pred(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss,
-  //         pMatrix, biovar, tlag, pred);
   pr.pred(events_rec, pred);
 
   return pred;
