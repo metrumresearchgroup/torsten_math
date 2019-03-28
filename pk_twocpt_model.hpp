@@ -1,15 +1,20 @@
 #ifndef STAN_MATH_TORSTEN_TWOCPT_MODEL_HPP
 #define STAN_MATH_TORSTEN_TWOCPT_MODEL_HPP
 
+#include <stan/math/torsten/PKModel/functors/check_mti.hpp>
+#include <stan/math/torsten/PKModel/Pred/unpromote.hpp>
+#include <stan/math/torsten/PKModel/Pred/PolyExp.hpp>
 #include <stan/math/torsten/model_solve_d.hpp>
+#include <stan/math/torsten/pk_ode_integrator.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
-#include <stan/math/prim/scal/err/check_positive.hpp>
+#include <stan/math/prim/scal/err/check_positive_finite.hpp>
 #include <stan/math/prim/scal/err/check_finite.hpp>
 
 namespace refactor {
 
   using boost::math::tools::promote_args;
+  using torsten::PkOdeIntegrator;
 
   /**
    * standard two compartment PK ODE functor.
@@ -134,20 +139,14 @@ namespace refactor {
         ka_},
       par_{CL_, Q_, V2_, V3_, ka_}
     {
-      using stan::math::check_positive;
+      using stan::math::check_positive_finite;
       using stan::math::check_finite;
       const char* fun = "PKTwoCptModel";
-      check_positive(fun, "CL", CL_);
-      check_positive(fun, "Q", Q_);
-      check_positive(fun, "V2", V2_);
-      check_positive(fun, "V3", V3_);
-      check_positive(fun, "ka", ka_);
-
-      check_finite(fun, "CL", CL_);
-      check_finite(fun, "Q", Q_);
-      check_finite(fun, "V2", V2_);
-      check_finite(fun, "V3", V3_);
-      check_finite(fun, "ka", ka_);
+      check_positive_finite(fun, "CL", CL_);
+      check_positive_finite(fun, "Q", Q_);
+      check_positive_finite(fun, "V2", V2_);
+      check_positive_finite(fun, "V3", V3_);
+      check_positive_finite(fun, "ka", ka_);
     }
 
   /**
@@ -354,7 +353,7 @@ namespace refactor {
 
       const double inf = std::numeric_limits<double>::max();
 
-      stan::math::check_positive("steady state two-cpt solver", "cmt", cmt);
+      stan::math::check_positive_finite("steady state two-cpt solver", "cmt", cmt);
       stan::math::check_less("steady state two-cpt solver", "cmt", cmt, 4);
 
       std::vector<ss_scalar_type> a(3, 0);
@@ -466,7 +465,7 @@ namespace refactor {
     /*
      * wrapper to fit @c PrepWrapper's call signature
      */
-    template<PkOdeIntegratorId It, typename T_amt, typename T_r, typename T_ii>
+    template<torsten::PkOdeIntegratorId It, typename T_amt, typename T_r, typename T_ii>
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     solve(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
           const PkOdeIntegrator<It>& integrator) const {

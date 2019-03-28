@@ -1,6 +1,9 @@
 #ifndef STAN_MATH_TORSTEN_MPI_PRECOMPUTED_GRADIENTS_HPP
 #define STAN_MATH_TORSTEN_MPI_PRECOMPUTED_GRADIENTS_HPP
 
+#include <stan/math/torsten/model_solve_d.hpp>
+#include <stan/math/prim/mat/fun/typedefs.hpp>
+
 namespace torsten {
   namespace mpi {
 

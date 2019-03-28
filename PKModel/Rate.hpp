@@ -1,8 +1,9 @@
 #ifndef STAN_MATH_TORSTEN_PKMODEL_RATE_HPP
 #define STAN_MATH_TORSTEN_PKMODEL_RATE_HPP
 
-#include <Eigen/Dense>
+#include <stan/math/torsten/PKModel/Event.hpp>
 #include <stan/math/torsten/PKModel/functions.hpp>
+#include <Eigen/Dense>
 #include <algorithm>
 #include <vector>
 

@@ -1,9 +1,10 @@
 #ifndef STAN_MATH_TORSTEN_NONMEN_EVENTS_RECORD_HPP
 #define STAN_MATH_TORSTEN_NONMEN_EVENTS_RECORD_HPP
 
-#include <Eigen/Dense>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <boost/math/tools/promotion.hpp>
+#include <Eigen/Dense>
+#include <numeric>
 #include <string>
 #include <vector>
 

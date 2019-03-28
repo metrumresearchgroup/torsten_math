@@ -1,6 +1,11 @@
 #ifndef STAN_MATH_TORSTEN_PKMODEL_PRED_HPP
 #define STAN_MATH_TORSTEN_PKMODEL_PRED_HPP
 
+#include <stan/math/prim/mat/fun/Eigen.hpp>
+#include <stan/math/torsten/PKModel/ModelParameters.hpp>
+#include <stan/math/torsten/PKModel/Rate.hpp>
+#include <stan/math/rev/mat/fun/multiply.hpp>
+#include <boost/math/tools/promotion.hpp>
 #include <Eigen/Dense>
 #include <vector>
 

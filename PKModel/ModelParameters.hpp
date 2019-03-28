@@ -1,10 +1,11 @@
 #ifndef STAN_MATH_TORSTEN_PKMODEL_MODELPARAMETERS_HPP
 #define STAN_MATH_TORSTEN_PKMODEL_MODELPARAMETERS_HPP
 
-#include <Eigen/Dense>
+#include <stan/math/prim/mat/fun/to_array_1d.hpp>
 #include <stan/math/torsten/PKModel/Event.hpp>
 #include <stan/math/torsten/PKModel/ExtractVector.hpp>
 #include <stan/math/torsten/PKModel/SearchReal.hpp>
+#include <Eigen/Dense>
 #include <algorithm>
 #include <vector>
 

@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <boost/math/tools/promotion.hpp>
+#include <stan/math/prim/scal/err/check_positive_finite.hpp>
 #include <stan/math/torsten/Pred2.hpp>
 #include <stan/math/torsten/events_manager.hpp>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
@@ -111,17 +112,16 @@ PKModelOneCpt(const std::vector<T0>& time,
               nCmt, dummy_systems,
               Pred1_oneCpt(), PredSS_oneCpt());
 #else
-  using EM = EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >;
-  const NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>
-    events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
-  EM em(events_rec);
+  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
+  using EM = EventsManager<ER>;
+  const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
-    Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
+    Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(EM::solution_size(events_rec), EM::nCmt(events_rec));
 
   using model_type = refactor::PKOneCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;
-  pr.pred(em, pred);
+  pr.pred(events_rec, pred);
   return pred;
 #endif
 }

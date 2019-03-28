@@ -41,6 +41,10 @@ namespace torsten {
       return rec.len_.size();
     }
 
+    static int solution_size(const ER& rec) {
+      return solution_size(0, rec);
+    }
+
     static int solution_size(int id, const ER& rec) {
       return rec.len_[id];
     }

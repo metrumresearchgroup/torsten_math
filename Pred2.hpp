@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_PKMODEL_REFACTOR_PRED_HPP
 #define STAN_MATH_TORSTEN_PKMODEL_REFACTOR_PRED_HPP
 
+#include <stan/math/torsten/events_manager.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/mpi/session.hpp>
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
@@ -62,22 +63,26 @@ namespace torsten{
      * @return a matrix with predicted amount in each compartment
      * at each event.
      */
-    template<typename T_em, typename... Ts>
-    void pred(const T_em& em,
-                     Eigen::Matrix<typename T_em::T_scalar, -1, -1>& res,
-                     const T_pred... pred_pars,
-                     const Ts... model_pars) {
+    template<typename T_events_record, typename... Ts>
+    void pred(int id,
+              const T_events_record& events_rec,
+              Eigen::Matrix<typename EventsManager<T_events_record>::T_scalar, -1, -1>& res,
+              const T_pred... pred_pars,
+              const Ts... model_pars) {
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using std::vector;
       using::stan::math::multiply;
       using refactor::PKRec;
+      using EM = EventsManager<T_events_record>;
 
-      using scalar = typename T_em::T_scalar;
+      using scalar = typename EM::T_scalar;
 
-      res.resize(em.nKeep, em.ncmt);
-      PKRec<scalar> init(em.ncmt);
+      res.resize(EM::solution_size(events_rec), EM::nCmt(events_rec));
+      PKRec<scalar> init(EM::nCmt(events_rec));
       init.setZero();
+
+      EM em(id, events_rec);
 
       try {
         for (int ik = 0; ik < em.nKeep; ik++) {
@@ -91,6 +96,17 @@ namespace torsten{
       } catch (const std::exception& e) {
         throw;
       }
+    }
+
+    /*
+     * For input for a single individual, the call can be simplified.
+     */
+    template<typename T_events_record, typename... Ts>
+    void pred(const T_events_record& events_rec,
+              Eigen::Matrix<typename EventsManager<T_events_record>::T_scalar, -1, -1>& res,
+              const T_pred... pred_pars,
+              const Ts... model_pars) {
+      pred(0, events_rec, res, pred_pars..., model_pars...);
     }
 
     /*
@@ -460,12 +476,9 @@ namespace torsten{
         has_warning = true;
       }
 
-      int i0 = 0, i0_pMatrix = 0, i0_biovar = 0, i0_tlag = 0;
-      int len_pMatrix, len_biovar, len_tlag;
-      for (int i = 0; i < np; ++i) {
-        EM em(id, events_rec);
-        res[i].resize(em.nKeep, em.ncmt);
-        pred(em, res[i], pred_pars..., model_pars...);
+      for (int id = 0; id < np; ++id) {
+        res[id].resize(EM::solution_size(id, events_rec), EM::nCmt(events_rec));
+        pred(id, events_rec, res[id], pred_pars..., model_pars...);
       }
     }
 #endif

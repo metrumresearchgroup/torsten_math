@@ -1,7 +1,12 @@
 #ifndef STAN_MATH_PK_LINODE_MODEL_HPP
 #define STAN_MATH_PK_LINODE_MODEL_HPP
 
-#include <stan/math/torsten/torsten_def.hpp>
+#include <stan/math/rev/mat/fun/multiply.hpp>
+#include <stan/math/prim/mat/fun/matrix_exp.hpp>
+#include <stan/math/prim/mat/fun/mdivide_left.hpp>
+#include <stan/math/rev/mat/fun/mdivide_left.hpp>
+#include <stan/math/torsten/model_solve_d.hpp>
+#include <stan/math/torsten/PKModel/functors/check_mti.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 
 namespace refactor {
@@ -152,7 +157,7 @@ namespace refactor {
       using stan::math::matrix_exp;
       using stan::math::mdivide_left;
       using stan::math::multiply;
-      using stan::math::scale_matrix_exp_multiply;
+      // using stan::math::scale_matrix_exp_multiply;
 
       auto system = coef();
 

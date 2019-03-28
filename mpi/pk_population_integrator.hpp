@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_PK_POPULATION_INTEGRATOR_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_PK_POPULATION_INTEGRATOR_HPP
 
+#include <stan/math/prim/mat/fun/to_matrix.hpp>
 #include <stan/math/torsten/dsolve/pk_cvodes_fwd_system.hpp>
 #include <stan/math/torsten/dsolve/pk_cvodes_integrator.hpp>
 #include <stan/math/torsten/mpi/session.hpp>

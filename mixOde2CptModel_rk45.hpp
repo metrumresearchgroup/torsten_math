@@ -118,17 +118,16 @@ mixOde2CptModel_rk45(const F& f,
 #else
   const int nCmt = nPK + nOde;
 
-  using EM = EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >;
-  const NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>
-    events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
-  EM em(events_rec);
+  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
+  using EM = EventsManager<ER>;
+  const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
-    Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(em.nKeep, nCmt);
+    Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(EM::solution_size(events_rec), EM::nCmt(events_rec));
 
   using model_type = refactor::PkTwoCptOdeModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
   PredWrapper<model_type, PkOdeIntegrator<StanRk45>&> pr;
-  pr.pred(em, pred, integrator, f, nOde);
+  pr.pred(events_rec, pred, integrator, f, nOde);
   return pred;
 #endif
 }

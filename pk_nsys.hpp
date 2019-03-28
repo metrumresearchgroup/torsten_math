@@ -1,6 +1,8 @@
 #ifndef STAN_MATH_TORSTEN_PK_NSYS_HPP
 #define STAN_MATH_TORSTEN_PK_NSYS_HPP
 
+#include <algorithm>
+
 namespace torsten {
   /*
    * Calculate the size of the ODE system, accounting for sensitivity 

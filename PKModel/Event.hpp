@@ -1,10 +1,11 @@
 #ifndef STAN_MATH_TORSTEN_PKMODEL_EVENT_HPP
 #define STAN_MATH_TORSTEN_PKMODEL_EVENT_HPP
 
-#include <Eigen/Dense>
+#include <iomanip>
 #include <stan/math/prim/scal/err/check_greater_or_equal.hpp>
 #include <stan/math/torsten/PKModel/functions.hpp>
 #include <stan/math/torsten/pk_nsys.hpp>
+#include <Eigen/Dense>
 #include <iostream>
 #include <algorithm>
 #include <vector>

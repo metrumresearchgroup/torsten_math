@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_PKMODEL_SEARCHREAL_HPP
 #define STAN_MATH_TORSTEN_PKMODEL_SEARCHREAL_HPP
 
+#include <cassert>
 #include <iostream>
 #include <vector>
 #include <algorithm>

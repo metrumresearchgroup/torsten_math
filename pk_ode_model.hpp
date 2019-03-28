@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_REFACTOR_ODE_MODEL_HPP
 #define STAN_MATH_TORSTEN_REFACTOR_ODE_MODEL_HPP
 
+#include <stan/math/rev/mat/functor/algebra_solver.hpp>
 #include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
 #include <stan/math/torsten/pk_ss_system.hpp>

@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_PKMODEL_PRED_PRED1_MIX1_HPP
 #define STAN_MATH_TORSTEN_PKMODEL_PRED_PRED1_MIX1_HPP
 
+#include <stan/math/torsten/PKModel/functors/functor.hpp>
 #include <stan/math/torsten/PKModel/integrator.hpp>
 #include <stan/math/torsten/PKModel/functors/functor.hpp>
 #include <stan/math/torsten/PKModel/Pred/unpromote.hpp>

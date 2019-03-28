@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_COUPLED_MODEL_HPP
 #define STAN_MATH_TORSTEN_COUPLED_MODEL_HPP
 
+#include <stan/math/torsten/pk_ode_integrator.hpp>
 #include <stan/math/torsten/pk_onecpt_model.hpp>
 #include <stan/math/torsten/pk_twocpt_model.hpp>
 #include <stan/math/torsten/pk_ode_model.hpp>
@@ -13,6 +14,7 @@ namespace refactor {
   using boost::math::tools::promote_args;
   using Eigen::Matrix;
   using Eigen::Dynamic;
+  using torsten::PkOdeIntegrator;
 
   template<template<typename...> class T>
   struct PredSelector;

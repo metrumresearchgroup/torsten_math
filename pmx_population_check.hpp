@@ -1,9 +1,16 @@
 #ifndef STAN_MATH_TORSTEN_MPI_PMX_POPULATION_CHECK_HPP
 #define STAN_MATH_TORSTEN_MPI_PMX_POPULATION_CHECK_HPP
 
-#include <Eigen/Dense>
+#include <stan/math/prim/scal/err/check_greater_or_equal.hpp>
+#include <stan/math/prim/scal/err/check_finite.hpp>
+#include <stan/math/prim/scal/err/check_not_nan.hpp>
+#include <stan/math/prim/scal/err/check_nonnegative.hpp>
+#include <stan/math/prim/scal/err/check_consistent_sizes.hpp>
+#include <stan/math/prim/arr/err/check_nonzero_size.hpp>
+#include <stan/math/prim/arr/err/check_ordered.hpp>
 #include <stan/math/torsten/PKModel/pmxModel.hpp>
 #include <stan/math/prim/scal/err/invalid_argument.hpp>
+#include <Eigen/Dense>
 #include <boost/lexical_cast.hpp>
 #include <vector>
 #include <string>

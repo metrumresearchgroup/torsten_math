@@ -1,6 +1,9 @@
 #ifndef STAN_MATH_TORSTEN_PKMODEL_PRED_PRED1_TWOCPT_HPP
 #define STAN_MATH_TORSTEN_PKMODEL_PRED_PRED1_TWOCPT_HPP
 
+#include <stan/math/prim/scal/err/check_finite.hpp>
+#include <stan/math/torsten/PKModel/ModelParameters.hpp>
+#include <stan/math/prim/mat/fun/Eigen.hpp>
 #include <stan/math/torsten/PKModel/Pred/PolyExp.hpp>
 #include <iostream>
 #include <vector>
