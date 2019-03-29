@@ -1,10 +1,11 @@
-#ifndef STAN_MATH_TORSTEN_DSOLVE_PK_POPULATION_INTEGRATOR_HPP
-#define STAN_MATH_TORSTEN_DSOLVE_PK_POPULATION_INTEGRATOR_HPP
+#ifndef STAN_MATH_TORSTEN_DSOLVE_PMX_POPULATION_INTEGRATOR_HPP
+#define STAN_MATH_TORSTEN_DSOLVE_PMX_POPULATION_INTEGRATOR_HPP
 
 #include <stan/math/prim/mat/fun/to_matrix.hpp>
 #include <stan/math/torsten/dsolve/pmx_cvodes_fwd_system.hpp>
 #include <stan/math/torsten/dsolve/pmx_cvodes_integrator.hpp>
 #include <stan/math/torsten/mpi/session.hpp>
+#include <stan/math/torsten/mpi/my_worker.hpp>
 
 namespace torsten {
   namespace mpi {

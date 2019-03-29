@@ -6,7 +6,7 @@
 #include <stan/math/torsten/pmx_population_check.hpp>
 #include <stan/math/torsten/PKModel/functors/general_functor.hpp>
 #include <stan/math/torsten/Pred2.hpp>
-#include <stan/math/torsten/pk_ode_model.hpp>
+#include <stan/math/torsten/pmx_ode_model.hpp>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_general.hpp>
 #include <stan/math/torsten/PKModel/Pred/PredSS_general.hpp>
@@ -99,7 +99,7 @@ generalOdeModel_rk45(const F& f,
 
   typedef general_functor<F> F0;
 
-  PkOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PMXOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
 
   const Pred1_general<F0> pred1(F0(f), rel_tol, abs_tol,
                                 max_num_steps, msgs, "rk45");
@@ -120,7 +120,7 @@ generalOdeModel_rk45(const F& f,
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(EM::solution_size(events_rec), EM::nCmt(events_rec));
 
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
-  PredWrapper<model_type, PkOdeIntegrator<StanRk45>&> pr;
+  PredWrapper<model_type, PMXOdeIntegrator<StanRk45>&> pr;
   pr.pred(events_rec, pred, integrator, f);
   return pred;
 
@@ -411,8 +411,8 @@ pop_pk_generalOdeModel_rk45(const F& f,
   ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
-  PkOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PkOdeIntegrator<StanRk45>&> pr;
+  PMXOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PredWrapper<model_type, PMXOdeIntegrator<StanRk45>&> pr;
 
   std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
 

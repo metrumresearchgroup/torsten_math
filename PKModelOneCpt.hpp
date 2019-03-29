@@ -9,7 +9,7 @@
 #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_oneCpt.hpp>
 #include <stan/math/torsten/PKModel/Pred/PredSS_oneCpt.hpp>
-#include <stan/math/torsten/pk_onecpt_model.hpp>
+#include <stan/math/torsten/pmx_onecpt_model.hpp>
 #include <string>
 #include <vector>
 
@@ -119,7 +119,7 @@ PKModelOneCpt(const std::vector<T0>& time,
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(EM::solution_size(events_rec), EM::nCmt(events_rec));
 
-  using model_type = refactor::PKOneCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
+  using model_type = refactor::PMXOneCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;
   pr.pred(events_rec, pred);
   return pred;

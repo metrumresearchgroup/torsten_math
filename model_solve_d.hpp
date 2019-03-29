@@ -2,7 +2,7 @@
 #define STAN_MATH_TORSTEN_MODEL_SOLVE_D_HPP
 
 #include <stan/math/torsten/torsten_def.hpp>
-#include <stan/math/torsten/pk_ode_integrator.hpp>
+#include <stan/math/torsten/pmx_ode_integrator.hpp>
 
 namespace torsten {
   /*
@@ -113,11 +113,11 @@ namespace torsten {
    * integrator to solve. When the solution is @c var
    * type, we take gradient using autodiff.
    */
-  template<typename T_model, PkOdeIntegratorId It,
+  template<typename T_model, PMXOdeIntegratorId It,
            typename std::enable_if_t<stan::is_var<typename T_model::scalar_type>::value >* = nullptr> //NOLINT
   Eigen::VectorXd model_solve_d(const T_model& pkmodel,
                                 typename T_model::time_type const& t_next,
-                                PkOdeIntegrator<It> const& integrator) {
+                                PMXOdeIntegrator<It> const& integrator) {
     using std::vector;
     using Eigen::VectorXd;
     using Eigen::Matrix;
@@ -270,10 +270,10 @@ namespace torsten {
    * integrator to solve. When the solution is @c var
    * type, we take gradient using autodiff.
    */
-  template<typename T_model, typename T_amt, typename T_ii, PkOdeIntegratorId It,
+  template<typename T_model, typename T_amt, typename T_ii, PMXOdeIntegratorId It,
            typename std::enable_if_t<stan::is_var<typename stan::return_type<typename T_model::par_type, T_amt, T_ii>::type>::value >* = nullptr> // NOLINT
   Eigen::VectorXd model_solve_d(const T_model& pkmodel, const T_amt& amt, const double& r, const T_ii& ii, const int& cmt, // NOLINT
-                                PkOdeIntegrator<It> const& integrator) {
+                                PMXOdeIntegrator<It> const& integrator) {
       using std::vector;
       using Eigen::VectorXd;
       using Eigen::Matrix;

@@ -5,7 +5,7 @@
 #include <stan/math/torsten/PKModel/Pred/unpromote.hpp>
 #include <stan/math/torsten/PKModel/Pred/PolyExp.hpp>
 #include <stan/math/torsten/model_solve_d.hpp>
-#include <stan/math/torsten/pk_ode_integrator.hpp>
+#include <stan/math/torsten/pmx_ode_integrator.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
 #include <stan/math/prim/scal/err/check_positive_finite.hpp>
@@ -14,12 +14,12 @@
 namespace refactor {
 
   using boost::math::tools::promote_args;
-  using torsten::PkOdeIntegrator;
+  using torsten::PMXOdeIntegrator;
 
   /**
    * standard two compartment PK ODE functor.
    */
-  struct PKTwoCptODE {
+  struct PMXTwoCptODE {
   /**
    * standard two compartment PK ODE RHS function
    * @tparam T0 t type
@@ -65,7 +65,7 @@ namespace refactor {
    * two-compartment PK model. The static memebers provide
    * universal information, i.e. nb. of compartments,
    * nb. of parameters, and the RHS functor. Containing RHS
-   * functor @c PKTwoCptODE makes @c PKTwoCptModel solvable
+   * functor @c PMXTwoCptODE makes @c PMXTwoCptModel solvable
    * using general ODE solvers, which makes testing easier.
    *
    * @tparam T_time t type
@@ -74,7 +74,7 @@ namespace refactor {
    * @tparam T_par PK parameters type
    */
   template<typename T_time, typename T_init, typename T_rate, typename T_par>
-  class PKTwoCptModel {
+  class PMXTwoCptModel {
     const T_time &t0_;
     const refactor::PKRec<T_init>& y0_;
     const std::vector<T_rate> &rate_;
@@ -93,7 +93,7 @@ namespace refactor {
   public:
     static constexpr int Ncmt = 3;
     static constexpr int Npar = 5;
-    static constexpr PKTwoCptODE f_ = PKTwoCptODE();
+    static constexpr PMXTwoCptODE f_ = PMXTwoCptODE();
 
     using scalar_type = typename stan::return_type<T_time, T_init, T_rate, T_par>::type;
     using init_type   = T_init;
@@ -114,7 +114,7 @@ namespace refactor {
    * @param V3 peri cpt vol
    * @param ka absorption
    */
-    PKTwoCptModel(const T_time& t0,
+    PMXTwoCptModel(const T_time& t0,
                   const refactor::PKRec<T_init>& y0,
                   const std::vector<T_rate> &rate,
                   const T_par& CL,
@@ -141,7 +141,7 @@ namespace refactor {
     {
       using stan::math::check_positive_finite;
       using stan::math::check_finite;
-      const char* fun = "PKTwoCptModel";
+      const char* fun = "PMXTwoCptModel";
       check_positive_finite(fun, "CL", CL_);
       check_positive_finite(fun, "Q", Q_);
       check_positive_finite(fun, "V2", V2_);
@@ -162,12 +162,12 @@ namespace refactor {
    * @param parameter ModelParameter type
    */
     template<template<typename...> class T_mp, typename... Ts>
-    PKTwoCptModel(const T_time& t0,
+    PMXTwoCptModel(const T_time& t0,
                   const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0,
                   const std::vector<T_rate> &rate,
                   const std::vector<T_par> & par,
                   const T_mp<Ts...> &parameter) :
-      PKTwoCptModel(t0, y0, rate, par[0], par[1], par[2], par[3], par[4])
+      PMXTwoCptModel(t0, y0, rate, par[0], par[1], par[2], par[3], par[4])
     {}
 
   /**
@@ -178,11 +178,11 @@ namespace refactor {
    * @param rate dosing rate
    * @param par model parameters
    */
-    PKTwoCptModel(const T_time& t0,
+    PMXTwoCptModel(const T_time& t0,
                   const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0,
                   const std::vector<T_rate> &rate,
                   const std::vector<T_par> & par) :
-      PKTwoCptModel(t0, y0, rate, par[0], par[1], par[2], par[3], par[4])
+      PMXTwoCptModel(t0, y0, rate, par[0], par[1], par[2], par[3], par[4])
     {}
 
 
@@ -265,7 +265,7 @@ namespace refactor {
     const T_par               & k21()     const { return k21_;   }
     const std::vector<T_par>  & par()     const { return par_;   }
     const std::vector<T_par>  & alpha()   const { return alpha_; }
-    const PKTwoCptODE         & f()       const { return f_;     }
+    const PMXTwoCptODE         & f()       const { return f_;     }
     const int                 & ncmt ()   const { return Ncmt;   }
     const int                 & npar ()   const { return Npar;   }
 
@@ -465,23 +465,23 @@ namespace refactor {
     /*
      * wrapper to fit @c PrepWrapper's call signature
      */
-    template<torsten::PkOdeIntegratorId It, typename T_amt, typename T_r, typename T_ii>
+    template<torsten::PMXOdeIntegratorId It, typename T_amt, typename T_r, typename T_ii>
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     solve(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
-          const PkOdeIntegrator<It>& integrator) const {
+          const PMXOdeIntegrator<It>& integrator) const {
       return solve(amt, rate, ii, cmt);
     }
 
   };
 
   template<typename T_time, typename T_init, typename T_rate, typename T_par>
-  constexpr int PKTwoCptModel<T_time, T_init, T_rate, T_par>::Ncmt;
+  constexpr int PMXTwoCptModel<T_time, T_init, T_rate, T_par>::Ncmt;
 
   template<typename T_time, typename T_init, typename T_rate, typename T_par>
-  constexpr int PKTwoCptModel<T_time, T_init, T_rate, T_par>::Npar;
+  constexpr int PMXTwoCptModel<T_time, T_init, T_rate, T_par>::Npar;
 
   template<typename T_time, typename T_init, typename T_rate, typename T_par>
-  constexpr PKTwoCptODE PKTwoCptModel<T_time, T_init, T_rate, T_par>::f_;
+  constexpr PMXTwoCptODE PMXTwoCptModel<T_time, T_init, T_rate, T_par>::f_;
 
 }
 

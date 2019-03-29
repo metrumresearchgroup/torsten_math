@@ -12,9 +12,9 @@
 #include <string>
 
 #include <stan/math/torsten/Pred2.hpp>
-#include <stan/math/torsten/pk_ode_model.hpp>
-#include <stan/math/torsten/pk_coupled_model.hpp>
-#include <stan/math/torsten/pk_onecpt_model.hpp>
+#include <stan/math/torsten/pmx_ode_model.hpp>
+#include <stan/math/torsten/pmx_coupled_model.hpp>
+#include <stan/math/torsten/pmx_onecpt_model.hpp>
 
 namespace torsten {
 
@@ -103,9 +103,9 @@ mixOde1CptModel_rk45(const F& f,
 
   typedef mix1_functor<F> F0;
 
-  const int &nPK = refactor::PKOneCptModel<double, double, double, double>::Ncmt;
+  const int &nPK = refactor::PMXOneCptModel<double, double, double, double>::Ncmt;
 
-  PkOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PMXOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
 
   Pred1_mix1<F0> pred1(F0(f), rel_tol, abs_tol, max_num_steps, msgs,
                        "rk45");
@@ -127,7 +127,7 @@ mixOde1CptModel_rk45(const F& f,
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(EM::solution_size(events_rec), EM::nCmt(events_rec));
 
   using model_type = refactor::PkOneCptOdeModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
-  PredWrapper<model_type, PkOdeIntegrator<StanRk45>& > pr;
+  PredWrapper<model_type, PMXOdeIntegrator<StanRk45>& > pr;
   pr.pred(events_rec, pred, integrator, f, nOde);
   return pred;
 #endif

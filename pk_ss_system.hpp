@@ -4,13 +4,13 @@
 #include <stan/math/prim/mat/fun/to_vector.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_general.hpp>
 #include <stan/math/torsten/PKModel/functors/check_mti.hpp>
-#include <stan/math/torsten/pk_ode_integrator.hpp>
+#include <stan/math/torsten/pmx_ode_integrator.hpp>
 #include <vector>
 #include <iostream>
 
 namespace torsten {
 
-  template <PkOdeIntegratorId It, typename T_amt, typename T_rate, typename F, typename F2> // NOLINT
+  template <PMXOdeIntegratorId It, typename T_amt, typename T_rate, typename F, typename F2> // NOLINT
     struct SSFunctor;
 
 /**
@@ -21,12 +21,12 @@ namespace torsten {
  * In this structure, both amt and rate are fixed
  * variables.
  */
-  template <PkOdeIntegratorId It, typename F, typename F2>
+  template <PMXOdeIntegratorId It, typename F, typename F2>
     struct SSFunctor<It, double, double, F, F2> {
     F f_;
     double ii_;
     int cmt_;  // dosing compartment
-    const PkOdeIntegrator<It> integrator_;
+    const PMXOdeIntegrator<It> integrator_;
     int nPK_;
 
     SSFunctor() {}
@@ -34,14 +34,14 @@ namespace torsten {
     SSFunctor(const F& f,
                       double ii,
                       int cmt,
-                      const PkOdeIntegrator<It>& integrator) :
+                      const PMXOdeIntegrator<It>& integrator) :
       f_(f), ii_(ii), cmt_(cmt), integrator_(integrator), nPK_(0)
     {}
 
     SSFunctor(const F& f,
                       double ii,
                       int cmt,
-                      const PkOdeIntegrator<It>& integrator,
+                      const PMXOdeIntegrator<It>& integrator,
                       int nPK) :
       f_(f), ii_(ii), cmt_(cmt), integrator_(integrator), nPK_(nPK)
     {}
@@ -170,12 +170,12 @@ namespace torsten {
  * In this structure, amt is a random variable
  * and rate a fixed variable (vd regime).
  */
-  template <PkOdeIntegratorId It, typename F>
+  template <PMXOdeIntegratorId It, typename F>
     struct SSFunctor<It, stan::math::var, double, F, void> {
     F f_;
     double ii_;
     int cmt_;  // dosing compartment
-    const PkOdeIntegrator<It> integrator_;
+    const PMXOdeIntegrator<It> integrator_;
     int nPK_;
 
     SSFunctor() {}
@@ -183,14 +183,14 @@ namespace torsten {
   SSFunctor(const F& f,
                     double ii,
                     int cmt,
-                    const PkOdeIntegrator<It>& integrator) :
+                    const PMXOdeIntegrator<It>& integrator) :
     f_(f), ii_(ii), cmt_(cmt), integrator_(integrator), nPK_(0)
   {}
 
   SSFunctor(const F& f,
                     double ii,
                     int cmt,
-                    const PkOdeIntegrator<It>& integrator,
+                    const PMXOdeIntegrator<It>& integrator,
                     int nPK) :
     f_(f), ii_(ii), cmt_(cmt), integrator_(integrator), nPK_(nPK)
   {}

@@ -1,10 +1,10 @@
 #ifndef STAN_MATH_TORSTEN_COUPLED_MODEL_HPP
 #define STAN_MATH_TORSTEN_COUPLED_MODEL_HPP
 
-#include <stan/math/torsten/pk_ode_integrator.hpp>
-#include <stan/math/torsten/pk_onecpt_model.hpp>
-#include <stan/math/torsten/pk_twocpt_model.hpp>
-#include <stan/math/torsten/pk_ode_model.hpp>
+#include <stan/math/torsten/pmx_ode_integrator.hpp>
+#include <stan/math/torsten/pmx_onecpt_model.hpp>
+#include <stan/math/torsten/pmx_twocpt_model.hpp>
+#include <stan/math/torsten/pmx_ode_model.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_oneCpt.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_twoCpt.hpp>
 #include <stan/math/torsten/PKModel/Pred/SS_system2.hpp>
@@ -14,16 +14,16 @@ namespace refactor {
   using boost::math::tools::promote_args;
   using Eigen::Matrix;
   using Eigen::Dynamic;
-  using torsten::PkOdeIntegrator;
+  using torsten::PMXOdeIntegrator;
 
   template<template<typename...> class T>
   struct PredSelector;
 
   template<>
-  struct PredSelector<PKOneCptModel> {using type = torsten::Pred1_oneCpt;};
+  struct PredSelector<PMXOneCptModel> {using type = torsten::Pred1_oneCpt;};
 
   template<>
-  struct PredSelector<PKTwoCptModel> {using type = torsten::Pred1_twoCpt;};
+  struct PredSelector<PMXTwoCptModel> {using type = torsten::Pred1_twoCpt;};
 
   /**
    * In a coupled model's ODE functor, we first solve the PK
@@ -37,12 +37,12 @@ namespace refactor {
    * @tparam T_rate type of dosing rate.
    */
   template <template<typename...> class T_m, typename F0, typename T_rate>
-  struct PKOdeFunctorCouplingAdaptor {
+  struct PMXOdeFunctorCouplingAdaptor {
     F0 f0_;
 
-    PKOdeFunctorCouplingAdaptor() { }
+    PMXOdeFunctorCouplingAdaptor() { }
 
-    explicit PKOdeFunctorCouplingAdaptor(const F0& f0) : f0_(f0) { }
+    explicit PMXOdeFunctorCouplingAdaptor(const F0& f0) : f0_(f0) { }
 
     /**
      *  Case 2: rate is a parameter, stored in theta.
@@ -105,12 +105,12 @@ namespace refactor {
   };
 
   template <template<typename...> class T_m, typename F0>
-  struct PKOdeFunctorCouplingAdaptor<T_m, F0, double> {
+  struct PMXOdeFunctorCouplingAdaptor<T_m, F0, double> {
     F0 f0_;
 
-    PKOdeFunctorCouplingAdaptor() { }
+    PMXOdeFunctorCouplingAdaptor() { }
 
-    explicit PKOdeFunctorCouplingAdaptor(const F0& f0) : f0_(f0) { }
+    explicit PMXOdeFunctorCouplingAdaptor(const F0& f0) : f0_(f0) { }
 
     /**
      *  Returns the derivative of the base ODE system. The base 1 PK
@@ -177,7 +177,7 @@ namespace refactor {
    * being @c PKODEModel.
    *
    * @tparam T_m type of 1st model, choose among
-   *             @c PKOneCptmodel, @c PKTwoCptmodel, @c PKLinODEModel.
+   *             @c PMXOneCptmodel, @c PMXTwoCptmodel, @c PMXLinODEModel.
    * @tparam T_time type of time
    * @tparam T_init type of initial condition
    * @tparam T_rate type of dosing rate.
@@ -188,15 +188,15 @@ namespace refactor {
             typename T_time, typename T_init, typename T_rate, typename T_par, typename F> // NOLINT
   class PKCoupledModel<T_m<T_time, T_init, T_rate, T_par>,
                        PKODEModel<T_time, T_init, T_rate, T_par,
-                                  PKOdeFunctorCouplingAdaptor<T_m, F, T_rate>> > { // NOLINT
+                                  PMXOdeFunctorCouplingAdaptor<T_m, F, T_rate>> > { // NOLINT
     const refactor::PKRec<T_init>& y0_;
     const refactor::PKRec<T_init> y0_pk;
     const refactor::PKRec<T_init> y0_ode;
     const F& f_;
-    PKOdeFunctorCouplingAdaptor<T_m, F, T_rate> f;
+    PMXOdeFunctorCouplingAdaptor<T_m, F, T_rate> f;
 
   public:
-    using Fa = PKOdeFunctorCouplingAdaptor<T_m, F, T_rate>;
+    using Fa = PMXOdeFunctorCouplingAdaptor<T_m, F, T_rate>;
     const T_m<T_time, T_init, T_rate, T_par> pk_model;
     const PKODEModel<T_time, T_init, T_rate, T_par, Fa> ode_model;
 
@@ -283,7 +283,7 @@ namespace refactor {
 
       vector<T_init> y0_PD(to_array_1d(y0_ode));
       vector<int> idummy;
-      PKOdeFunctorCouplingAdaptor<T_m, F, double> f_coupled(f_);
+      PMXOdeFunctorCouplingAdaptor<T_m, F, double> f_coupled(f_);
       vector<vector<scalar> >
         pred_V = integrator(f_coupled, y0_PD, t0_dbl, t_dbl,
                             theta, x_r, idummy);
@@ -357,7 +357,7 @@ namespace refactor {
       x_r[0] = nPK;
       x_r[1] = t0_dbl;
 
-      using F_c = PKOdeFunctorCouplingAdaptor<T_m, F, T_r>;
+      using F_c = PMXOdeFunctorCouplingAdaptor<T_m, F, T_r>;
       F_c f_coupled(f_);
       vector<vector<scalar> >
         pred_V = integrator(f_coupled, y0_PD, t0_dbl, t_dbl,
@@ -447,7 +447,7 @@ namespace refactor {
     double f_tol = 1e-4;  // empirical
     long int max_num_steps = 1e3;  // default // NOLINT
 
-    using F_c = PKOdeFunctorCouplingAdaptor<T_m, F, double>;
+    using F_c = PMXOdeFunctorCouplingAdaptor<T_m, F, double>;
     F_c f_coupled(f_);
 
     // construct algebraic system functor: note we adjust cmt
@@ -589,7 +589,7 @@ namespace refactor {
     double f_tol = 1e-4;  // empirical
     long int max_num_steps = 1e3;  // default // NOLINT
 
-    using F_c = PKOdeFunctorCouplingAdaptor<T_m, F, double>;
+    using F_c = PMXOdeFunctorCouplingAdaptor<T_m, F, double>;
     F_c f_coupled(f_);
 
     torsten::SS_system2_vd<F_c, T_integrator >
@@ -642,10 +642,10 @@ namespace refactor {
     /* 
      * solve the coupled model.
      */
-    template<PkOdeIntegratorId It>
+    template<PMXOdeIntegratorId It>
     Eigen::Matrix<scalar_type, Dynamic, 1>
     solve(const T_time& t_next,
-          const PkOdeIntegrator<It>& integrator) const {
+          const PMXOdeIntegrator<It>& integrator) const {
       return integrate(t_next, ode_model.rate(), integrator);
     }
 
@@ -654,25 +654,25 @@ namespace refactor {
      * the solution to @c integrate, in which the type of @c
      * amt will be used for template partial specification.
      */
-    template<PkOdeIntegratorId It, typename T_ii, typename T_amt>
+    template<PMXOdeIntegratorId It, typename T_ii, typename T_amt>
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     solve(const T_amt& amt, const double& rate, const T_ii& ii, const int& cmt,
-          const PkOdeIntegrator<It>& integrator) const {
+          const PMXOdeIntegrator<It>& integrator) const {
       return integrate(amt, rate, ii, cmt, integrator);
     }
   };
 
   template<typename T_time, typename T_init, typename T_rate, typename T_par, typename F> // NOLINT
   using PkOneCptOdeModel =
-    PKCoupledModel< PKOneCptModel<T_time, T_init, T_rate, T_par>,
+    PKCoupledModel< PMXOneCptModel<T_time, T_init, T_rate, T_par>,
                     PKODEModel<T_time, T_init, T_rate, T_par,
-                               PKOdeFunctorCouplingAdaptor<PKOneCptModel, F, T_rate>> >; // NOLINT
+                               PMXOdeFunctorCouplingAdaptor<PMXOneCptModel, F, T_rate>> >; // NOLINT
 
   template<typename T_time, typename T_init, typename T_rate, typename T_par, typename F> // NOLINT
   using PkTwoCptOdeModel =
-    PKCoupledModel< PKTwoCptModel<T_time, T_init, T_rate, T_par>,
+    PKCoupledModel< PMXTwoCptModel<T_time, T_init, T_rate, T_par>,
                     PKODEModel<T_time, T_init, T_rate, T_par,
-                               PKOdeFunctorCouplingAdaptor<PKTwoCptModel, F, T_rate>> >; // NOLINT
+                               PMXOdeFunctorCouplingAdaptor<PMXTwoCptModel, F, T_rate>> >; // NOLINT
 }
 
 

@@ -4,7 +4,7 @@
 #include <stan/math/prim/scal/err/check_greater.hpp>
 #include <stan/math/torsten/dsolve/pmx_cvodes_system.hpp>
 #include <stan/math/torsten/dsolve/cvodes_sens_rhs.hpp>
-#include <stan/math/torsten/pk_csda.hpp>
+#include <stan/math/torsten/pmx_csda.hpp>
 
 namespace torsten {
 

@@ -12,7 +12,7 @@ namespace refactor {
     using PKRec = Eigen::Matrix<T, 1, Eigen::Dynamic>;
 
     template<typename T>
-    using PKLin = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
+    using PMXLin = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
 }
 
 namespace torsten {

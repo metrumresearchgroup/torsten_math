@@ -12,8 +12,8 @@ namespace refactor {
   using boost::math::tools::promote_args;
   using Eigen::Matrix;
   using Eigen::Dynamic;
-  using torsten::PkOdeIntegrator;
-  using torsten::PkOdeIntegratorId;
+  using torsten::PMXOdeIntegrator;
+  using torsten::PMXOdeIntegratorId;
 
   /*
    * when solving ODE with @c var rate, we append it to
@@ -40,18 +40,18 @@ namespace refactor {
   }
 
   template<typename F, typename T_rate>
-  struct PKOdeFunctorRateAdaptor;
+  struct PMXOdeFunctorRateAdaptor;
 
   /*
    * Adaptor for ODE functor when rate is data. In this
    * case rate should be passed in by @c x_r. 
    */
   template<typename F>
-  struct PKOdeFunctorRateAdaptor<F, double> {
+  struct PMXOdeFunctorRateAdaptor<F, double> {
     const F f;
     const int dummy = -1;
-    explicit PKOdeFunctorRateAdaptor(const F& f0) : f(f0) {}
-    PKOdeFunctorRateAdaptor(const F& f0, const int i) : f(f0), dummy(i) {}
+    explicit PMXOdeFunctorRateAdaptor(const F& f0) : f(f0) {}
+    PMXOdeFunctorRateAdaptor(const F& f0, const int i) : f(f0), dummy(i) {}
 
     /*
      * @c algebra_solver requires a default constructor for
@@ -60,7 +60,7 @@ namespace refactor {
      * we add a default value of @c dummy, as it is not
      * relevant when @c rate is data anyway.
      */
-    PKOdeFunctorRateAdaptor() : f() {}
+    PMXOdeFunctorRateAdaptor() : f() {}
 
     /*
      * Evaluate ODE functor and add @c rate data afterwards.
@@ -89,10 +89,10 @@ namespace refactor {
    * theta is always a @c var vector.
    */
   template<typename F>
-  struct PKOdeFunctorRateAdaptor<F, stan::math::var> {
+  struct PMXOdeFunctorRateAdaptor<F, stan::math::var> {
     const F f;
     const int index_rate = -1;
-    PKOdeFunctorRateAdaptor(const F& f0, int i) : f(f0), index_rate(i) {}
+    PMXOdeFunctorRateAdaptor(const F& f0, int i) : f(f0), index_rate(i) {}
 
     /*
      * @c algebra_solver requires a default constructor. In
@@ -100,7 +100,7 @@ namespace refactor {
      * calculated by assumption that @c theta is laid out as
      * @c [theta, rate]
      */
-    PKOdeFunctorRateAdaptor() {}
+    PMXOdeFunctorRateAdaptor() {}
 
     /*
      * Evaluate ODE functor, with @c theta contains original
@@ -146,7 +146,7 @@ namespace refactor {
     const std::vector<T_rate> &rate_;
     const std::vector<T_par> &par_;
     const F &f_;
-    const PKOdeFunctorRateAdaptor<F, T_rate> f1;
+    const PMXOdeFunctorRateAdaptor<F, T_rate> f1;
     const int ncmt_;
   public:
     using scalar_type = typename promote_args<T_time, T_rate, T_par, T_init>::type; // NOLINT
@@ -418,11 +418,11 @@ namespace refactor {
      * spec of member functions. The first version is for
      * rate being data.
      */
-    template<PkOdeIntegratorId It>
+    template<PMXOdeIntegratorId It>
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     integrate(const std::vector<double> &rate,
               const T_time& t_next,
-              const PkOdeIntegrator<It>& integrator) const {
+              const PMXOdeIntegrator<It>& integrator) const {
       using stan::math::value_of;
 
       const double t0 = value_of(t0_);
@@ -443,12 +443,12 @@ namespace refactor {
     /*
      * For steady-state. Same as the first version but with given @c init.
      */
-    template<PkOdeIntegratorId It>
+    template<PMXOdeIntegratorId It>
     Eigen::Matrix<double, Eigen::Dynamic, 1>
     integrate(const std::vector<double> &rate,
               const Eigen::Matrix<double, 1, Eigen::Dynamic>& y0,
               const double& dt,
-              const PkOdeIntegrator<It>& integrator) const {
+              const PMXOdeIntegrator<It>& integrator) const {
       using stan::math::value_of;
 
       const double t0 = value_of(t0_) - dt;
@@ -458,7 +458,7 @@ namespace refactor {
         res = y0;
       } else {
         auto y = stan::math::to_array_1d(y0);
-        PKOdeFunctorRateAdaptor<F, double> f(f_);
+        PMXOdeFunctorRateAdaptor<F, double> f(f_);
         std::vector<int> x_i;
         const std::vector<double> pars{value_of(par_)};
         std::vector<std::vector<double> > res_v =
@@ -471,11 +471,11 @@ namespace refactor {
     /*
      * When @c rate is a parameter, we append it to @c theta.
      */
-    template<PkOdeIntegratorId It>
+    template<PMXOdeIntegratorId It>
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     integrate(const std::vector<stan::math::var> &rate,
               const T_time& t_next,
-              const PkOdeIntegrator<It>& integrator) const {
+              const PMXOdeIntegrator<It>& integrator) const {
       using stan::math::var;
       using stan::math::value_of;
 
@@ -502,7 +502,7 @@ namespace refactor {
      */
     Eigen::VectorXd integrate_d(const std::vector<stan::math::var> &rate,
                                 const T_time& t_next,
-                                const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
+                                const PMXOdeIntegrator<torsten::PkBdf>& integrator) const {
       using stan::math::var;
       using stan::math::value_of;
 
@@ -528,7 +528,7 @@ namespace refactor {
      */
     Eigen::VectorXd integrate_d(const std::vector<double> &rate,
                                 const T_time& t_next,
-                                const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
+                                const PMXOdeIntegrator<torsten::PkBdf>& integrator) const {
       using stan::math::value_of;
 
       Eigen::VectorXd res(n_sys());
@@ -559,10 +559,10 @@ namespace refactor {
      *         solution at certain time step. Hence the returned
      *         matrix is of dim (numer of time steps) x (siez of ODE system).
      */
-    template<PkOdeIntegratorId It>
+    template<PMXOdeIntegratorId It>
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     solve(const T_time& t_next,
-          const PkOdeIntegrator<It>& integrator) const {
+          const PMXOdeIntegrator<It>& integrator) const {
       return integrate(rate_, t_next, integrator);
     }
 
@@ -573,10 +573,10 @@ namespace refactor {
      * Some integrators, such as @c PkBdf, have their own implementation
      * that can return data directly, so we skip them.
      */
-    template<PkOdeIntegratorId It,
+    template<PMXOdeIntegratorId It,
              typename std::enable_if_t<It != torsten::PkBdf>* = nullptr>
     Eigen::VectorXd solve_d(const T_time& t_next,
-                            const PkOdeIntegrator<It>& integrator) const
+                            const PMXOdeIntegrator<It>& integrator) const
     {
       static const char* caller = "PKODEModel::solve";
       stan::math::check_greater(caller, "time step", t_next, t0_);
@@ -589,8 +589,8 @@ namespace refactor {
      * thanks to @c pk_cvodes_integrator implementation.
      */
     Eigen::VectorXd solve_d(const T_time& t_next,
-                            const PkOdeIntegrator<torsten::PkBdf>& integrator) const {
-      static const char* caller = "PKODEModel::solve_d";
+                            const PMXOdeIntegrator<torsten::PkBdf>& integrator) const {
+      static const char* caller = "PMXOdeModel::solve_d";
       stan::math::check_greater(caller, "next time", t_next, t0_);
 
       return integrate_d(rate_, t_next, integrator);
@@ -612,13 +612,13 @@ namespace refactor {
      * @param msgs @c ostream output of ODE integrator.
      * @return col vector of the steady state ODE solution
      */
-    template<PkOdeIntegratorId It, typename T_ii>
+    template<PMXOdeIntegratorId It, typename T_ii>
     Eigen::Matrix<typename promote_args<T_ii, par_type>::type, Eigen::Dynamic, 1> // NOLINT
     solve(const double& amt,
           const double& rate,
           const T_ii& ii,
           const int& cmt,
-          const PkOdeIntegrator<It>& integrator) const {
+          const PMXOdeIntegrator<It>& integrator) const {
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using Eigen::VectorXd;
@@ -647,7 +647,7 @@ namespace refactor {
       const double f_tol = 1e-4;  // empirical
       const long int alge_max_steps = 1e3;  // default
 
-      using F_ss = PKOdeFunctorRateAdaptor<F, double>;
+      using F_ss = PMXOdeFunctorRateAdaptor<F, double>;
       torsten::SSFunctor<It, double, double, F_ss, void> system(f1, ii_dbl, cmt, integrator); // NOLINT
 
       if (rate == 0) {  // bolus dose
@@ -700,13 +700,13 @@ namespace refactor {
      * @param msgs @c ostream output of ODE integrator.
      * @return col vector of the steady state ODE solution
      */
-    template<PkOdeIntegratorId It, typename T_amt, typename T_ii>
+    template<PMXOdeIntegratorId It, typename T_amt, typename T_ii>
     Eigen::Matrix<typename promote_args<T_amt, T_ii, T_par>::type, Eigen::Dynamic, 1> // NOLINT
     solve(const T_amt& amt,
           const double& rate,
           const T_ii& ii,
           const int& cmt,
-          const PkOdeIntegrator<It>& integrator) const {
+          const PMXOdeIntegrator<It>& integrator) const {
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using Eigen::VectorXd;
@@ -736,7 +736,7 @@ namespace refactor {
       const long int alge_max_steps = 1e4;  // default  // NOLINT
 
       // construct algebraic function
-      using F_ss = PKOdeFunctorRateAdaptor<F, double>;
+      using F_ss = PMXOdeFunctorRateAdaptor<F, double>;
       torsten::SSFunctor<It, T_amt, double, F_ss, void> system(F_ss(f_), ii_dbl, cmt, integrator); // NOLINT
 
       int npar = pars.size();
@@ -766,12 +766,12 @@ namespace refactor {
      * return steady state solution in form of data, use
      * default behavior, namely take gradients using autodiff.
      */
-    template<PkOdeIntegratorId It, typename T_amt, typename T_ii>
+    template<PMXOdeIntegratorId It, typename T_amt, typename T_ii>
     Eigen::VectorXd solve_d(const T_amt& amt,
                             const double& rate,
                             const T_ii& ii,
                             const int& cmt,
-                            const PkOdeIntegrator<It>& integrator) const {
+                            const PMXOdeIntegrator<It>& integrator) const {
       return torsten::model_solve_d(*this, amt, rate, ii, cmt, integrator);
     }
 

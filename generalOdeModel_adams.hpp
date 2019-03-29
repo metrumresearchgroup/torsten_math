@@ -8,7 +8,7 @@
 #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_general.hpp>
 #include <stan/math/torsten/PKModel/Pred/PredSS_general.hpp>
-#include <stan/math/torsten/pk_ode_model.hpp>
+#include <stan/math/torsten/pmx_ode_model.hpp>
 #include <stan/math/torsten/Pred2.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <vector>
@@ -119,11 +119,11 @@ generalOdeModel_adams(const F& f,
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
 
 #ifdef TORSTEN_USE_STAN_ODE
-  PkOdeIntegrator<StanAdams> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PkOdeIntegrator<StanAdams>&> pr;
+  PMXOdeIntegrator<StanAdams> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PredWrapper<model_type, PMXOdeIntegrator<StanAdams>&> pr;
 #else
-  PkOdeIntegrator<PkAdams> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PkOdeIntegrator<PkAdams>&> pr;
+  PMXOdeIntegrator<PkAdams> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PredWrapper<model_type, PMXOdeIntegrator<PkAdams>&> pr;
 #endif
 
   pr.pred(events_rec, pred, integrator, f);
@@ -420,11 +420,11 @@ pop_pk_generalOdeModel_adams(const F& f,
   ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
 #ifdef TORSTEN_USE_STAN_ODE
-  PkOdeIntegrator<StanAdams> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PkOdeIntegrator<StanAdams>&> pr;
+  PMXOdeIntegrator<StanAdams> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PredWrapper<model_type, PMXOdeIntegrator<StanAdams>&> pr;
 #else
-  PkOdeIntegrator<PkAdams> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PkOdeIntegrator<PkAdams>&> pr;
+  PMXOdeIntegrator<PkAdams> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PredWrapper<model_type, PMXOdeIntegrator<PkAdams>&> pr;
 #endif
 
   std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);

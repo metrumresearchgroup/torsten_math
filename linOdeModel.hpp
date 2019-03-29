@@ -5,7 +5,7 @@
 #include <stan/math/torsten/events_manager.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <stan/math/torsten/Pred2.hpp>
-#include <stan/math/torsten/pk_linode_model.hpp>
+#include <stan/math/torsten/pmx_linode_model.hpp>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_linOde.hpp>
 #include <stan/math/torsten/PKModel/Pred/PredSS_linOde.hpp>
@@ -91,7 +91,7 @@ linOdeModel(const std::vector<T0>& time,
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(EM::solution_size(events_rec), EM::nCmt(events_rec));
 
-  using model_type = refactor::PKLinODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
+  using model_type = refactor::PMXLinODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;
   pr.pred(events_rec, pred);
   return pred;

@@ -9,7 +9,7 @@
 #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_twoCpt.hpp>
 #include <stan/math/torsten/PKModel/Pred/PredSS_twoCpt.hpp>
-#include <stan/math/torsten/pk_twocpt_model.hpp>
+#include <stan/math/torsten/pmx_twocpt_model.hpp>
 #include <stan/math/torsten/pmx_population_check.hpp>
 #include <string>
 #include <vector>
@@ -66,8 +66,8 @@ PKModelTwoCpt(const std::vector<T0>& time,
   using stan::math::check_positive_finite;
   using refactor::PKRec;
 
-  int nCmt = refactor::PKTwoCptModel<double, double, double, double>::Ncmt;
-  int nParms = refactor::PKTwoCptModel<double, double, double, double>::Npar;
+  int nCmt = refactor::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int nParms = refactor::PMXTwoCptModel<double, double, double, double>::Npar;
   static const char* function("PKModelTwoCpt");
 
   // Check arguments
@@ -128,7 +128,7 @@ PKModelTwoCpt(const std::vector<T0>& time,
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(EM::solution_size(events_rec), EM::nCmt(events_rec));
 
-  using model_type = refactor::PKTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
+  using model_type = refactor::PMXTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;
   pr.pred(events_rec, pred);
   return pred;
@@ -343,7 +343,7 @@ popPKModelTwoCpt(const std::vector<std::vector<T0> >& time,
                  const std::vector<std::vector<std::vector<T6> > >& tlag) {
 
   int np = time.size();
-  int nCmt = refactor::PKTwoCptModel<double, double, double, double>::Ncmt;
+  int nCmt = refactor::PMXTwoCptModel<double, double, double, double>::Ncmt;
   static const char* caller("PKModelTwoCpt");
   stan::math::check_consistent_sizes(caller, "time", time, "amt",     amt);
   stan::math::check_consistent_sizes(caller, "time", time, "rate",    rate);
@@ -358,7 +358,7 @@ popPKModelTwoCpt(const std::vector<std::vector<T0> >& time,
 
   using EM = EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >;
 
-  using model_type = refactor::PKTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
+  using model_type = refactor::PMXTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;
 
   std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
@@ -396,7 +396,7 @@ popPKModelTwoCpt(const std::vector<int>& len,
   using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
   using EM = EventsManager<ER>;
 
-  int nCmt = refactor::PKTwoCptModel<double, double, double, double>::Ncmt;
+  int nCmt = refactor::PMXTwoCptModel<double, double, double, double>::Ncmt;
   ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
   int np = len.size();
@@ -404,7 +404,7 @@ popPKModelTwoCpt(const std::vector<int>& len,
   torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
                                 pMatrix, biovar, tlag, caller);
 
-  using model_type = refactor::PKTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
+  using model_type = refactor::PMXTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;
 
   std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);

@@ -1,17 +1,17 @@
-#ifndef STAN_MATH_TORSTEN_ODE_INTEGRATOR_HPP
-#define STAN_MATH_TORSTEN_ODE_INTEGRATOR_HPP
+#ifndef STAN_MATH_TORSTEN_PMX_ODE_INTEGRATOR_HPP
+#define STAN_MATH_TORSTEN_PMX_ODE_INTEGRATOR_HPP
 
 #include <stan/math/prim/scal/meta/return_type.hpp>
 #include <stan/math/prim/arr/fun/value_of.hpp>
 #include <stan/math/prim/arr/functor/integrate_ode_rk45.hpp>
 #include <stan/math/rev/mat/functor/integrate_ode_adams.hpp>
 #include <stan/math/rev/mat/functor/integrate_ode_bdf.hpp>
-#include <stan/math/torsten/dsolve/dsolve.hpp>
+#include <stan/math/torsten/dsolve.hpp>
 #include <ostream>
 #include <vector>
 
 namespace torsten {
-  enum PkOdeIntegratorId {
+  enum PMXOdeIntegratorId {
     Analytical,
     StanRk45, StanAdams, StanBdf,
     PkAdams, PkBdf
@@ -20,8 +20,8 @@ namespace torsten {
 
 namespace torsten {
   namespace internal {
-    template<PkOdeIntegratorId It>
-    struct PkOdeIntegratorDispatcher;
+    template<PMXOdeIntegratorId It>
+    struct PMXOdeIntegratorDispatcher;
 
     /* 
      * specification for a Stan's ODE integrator. Since @c
@@ -29,7 +29,7 @@ namespace torsten {
      * it to data first.
      */
     template<>
-    struct PkOdeIntegratorDispatcher<StanRk45> {
+    struct PMXOdeIntegratorDispatcher<StanRk45> {
 
       template <typename F, typename Tt, typename T_initial, typename T_param>
       std::vector<std::vector<typename stan::return_type<T_initial, T_param>::type> > // NOLINT
@@ -57,7 +57,7 @@ namespace torsten {
      * it to data first.
      */
     template<>
-    struct PkOdeIntegratorDispatcher<StanAdams> {
+    struct PMXOdeIntegratorDispatcher<StanAdams> {
       template <typename F, typename Tt, typename T_initial, typename T_param>
       std::vector<std::vector<typename stan::return_type<T_initial,
                                                          T_param>::type> >
@@ -85,7 +85,7 @@ namespace torsten {
      * it to data first.
      */
     template<>
-    struct PkOdeIntegratorDispatcher<StanBdf> {
+    struct PMXOdeIntegratorDispatcher<StanBdf> {
       template <typename F, typename Tt, typename T_initial, typename T_param>
       std::vector<std::vector<typename stan::return_type<T_initial,
                                                          T_param>::type> >
@@ -112,7 +112,7 @@ namespace torsten {
      * which @c ts can be a param.
      */
     template<>
-    struct PkOdeIntegratorDispatcher<PkAdams> {
+    struct PMXOdeIntegratorDispatcher<PkAdams> {
       template <typename F, typename Tt, typename T_initial, typename T_param>
       std::vector<std::vector<typename stan::return_type<Tt, T_initial,
                                                          T_param>::type> >
@@ -138,7 +138,7 @@ namespace torsten {
      * which @c ts can be a param.
      */
     template<>
-    struct PkOdeIntegratorDispatcher<PkBdf> {
+    struct PMXOdeIntegratorDispatcher<PkBdf> {
       template <typename F, typename Tt, typename T_initial, typename T_param>
       std::vector<std::vector<typename stan::return_type<Tt, T_initial,
                                                          T_param>::type> >
@@ -162,16 +162,16 @@ namespace torsten {
 }
 
 namespace torsten {
-  template<PkOdeIntegratorId It>
-  struct PkOdeIntegrator {
+  template<PMXOdeIntegratorId It>
+  struct PMXOdeIntegrator {
     const double rtol;
     const double atol;
     const long int max_num_step;
     std::ostream* msgs;
 
-    PkOdeIntegrator() : rtol(1e-10), atol(1e-10), max_num_step(1e8), msgs(0) {}
+    PMXOdeIntegrator() : rtol(1e-10), atol(1e-10), max_num_step(1e8), msgs(0) {}
 
-    PkOdeIntegrator(const double rtol0, const double atol0,
+    PMXOdeIntegrator(const double rtol0, const double atol0,
                     const long int max_num_step0,
                     std::ostream* msgs0) :
       rtol(rtol0), atol(atol0), max_num_step(max_num_step0), msgs(msgs0)
@@ -190,8 +190,8 @@ namespace torsten {
                const std::vector<T_param>& theta,
                const std::vector<double>& x_r,
                const std::vector<int>& x_i) const {
-      using internal::PkOdeIntegratorDispatcher;
-      return PkOdeIntegratorDispatcher<It>()(f, y0, t0, ts, theta, x_r, x_i,
+      using internal::PMXOdeIntegratorDispatcher;
+      return PMXOdeIntegratorDispatcher<It>()(f, y0, t0, ts, theta, x_r, x_i,
                                              msgs, rtol, atol, max_num_step);
     }
   };
@@ -200,15 +200,15 @@ namespace torsten {
    * specialization for @c PkBdf
    */
   template<>
-  struct PkOdeIntegrator<PkBdf> {
+  struct PMXOdeIntegrator<PkBdf> {
     const double rtol;
     const double atol;
     const long int max_num_step;
     std::ostream* msgs;
 
-    PkOdeIntegrator() : rtol(1e-10), atol(1e-10), max_num_step(1e8), msgs(0) {}
+    PMXOdeIntegrator() : rtol(1e-10), atol(1e-10), max_num_step(1e8), msgs(0) {}
 
-    PkOdeIntegrator(const double rtol0, const double atol0,
+    PMXOdeIntegrator(const double rtol0, const double atol0,
                     const long int max_num_step0,
                     std::ostream* msgs0) :
       rtol(rtol0), atol(atol0), max_num_step(max_num_step0), msgs(msgs0)
@@ -226,8 +226,8 @@ namespace torsten {
                const std::vector<T_param>& theta,
                const std::vector<double>& x_r,
                const std::vector<int>& x_i) const {
-      using internal::PkOdeIntegratorDispatcher;
-      return PkOdeIntegratorDispatcher<PkBdf>()(f, y0, t0, ts, theta, x_r, x_i,
+      using internal::PMXOdeIntegratorDispatcher;
+      return PMXOdeIntegratorDispatcher<PkBdf>()(f, y0, t0, ts, theta, x_r, x_i,
                                                 msgs, rtol, atol, max_num_step);
     }
 
@@ -263,15 +263,15 @@ namespace torsten {
    * specialization for @c PkAdams
    */
   template<>
-  struct PkOdeIntegrator<PkAdams> {
+  struct PMXOdeIntegrator<PkAdams> {
     const double rtol;
     const double atol;
     const long int max_num_step;
     std::ostream* msgs;
 
-    PkOdeIntegrator() : rtol(1e-10), atol(1e-10), max_num_step(1e8), msgs(0) {}
+    PMXOdeIntegrator() : rtol(1e-10), atol(1e-10), max_num_step(1e8), msgs(0) {}
 
-    PkOdeIntegrator(const double rtol0, const double atol0,
+    PMXOdeIntegrator(const double rtol0, const double atol0,
                     const long int max_num_step0,
                     std::ostream* msgs0) :
       rtol(rtol0), atol(atol0), max_num_step(max_num_step0), msgs(msgs0)
@@ -289,8 +289,8 @@ namespace torsten {
                const std::vector<T_param>& theta,
                const std::vector<double>& x_r,
                const std::vector<int>& x_i) const {
-      using internal::PkOdeIntegratorDispatcher;
-      return PkOdeIntegratorDispatcher<PkAdams>()(f, y0, t0, ts, theta, x_r, x_i,
+      using internal::PMXOdeIntegratorDispatcher;
+      return PMXOdeIntegratorDispatcher<PkAdams>()(f, y0, t0, ts, theta, x_r, x_i,
                                                 msgs, rtol, atol, max_num_step);
     }
 
