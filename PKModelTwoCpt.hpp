@@ -322,77 +322,26 @@ PKModelTwoCpt(const std::vector<T0>& time,
 
   /* 
    * For population models, we follow the call signature
-   * with the only change that each argument adds an additional
-   * level of vector. The size of that vector is the siez of
-   * the population.
-   */
-template <typename T0, typename T1, typename T2, typename T3, typename T4,
-          typename T5, typename T6>
-std::vector<Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
-                          Eigen::Dynamic, Eigen::Dynamic> >
-popPKModelTwoCpt(const std::vector<std::vector<T0> >& time,
-                 const std::vector<std::vector<T1> >& amt,
-                 const std::vector<std::vector<T2> >& rate,
-                 const std::vector<std::vector<T3> >& ii,
-                 const std::vector<std::vector<int> >& evid,
-                 const std::vector<std::vector<int> >& cmt,
-                 const std::vector<std::vector<int> >& addl,
-                 const std::vector<std::vector<int> >& ss,
-                 const std::vector<std::vector<std::vector<T4> > >& pMatrix,
-                 const std::vector<std::vector<std::vector<T5> > >& biovar,
-                 const std::vector<std::vector<std::vector<T6> > >& tlag) {
-
-  int np = time.size();
-  int nCmt = refactor::PMXTwoCptModel<double, double, double, double>::Ncmt;
-  static const char* caller("PKModelTwoCpt");
-  stan::math::check_consistent_sizes(caller, "time", time, "amt",     amt);
-  stan::math::check_consistent_sizes(caller, "time", time, "rate",    rate);
-  stan::math::check_consistent_sizes(caller, "time", time, "ii",      ii);
-  stan::math::check_consistent_sizes(caller, "time", time, "evid",    evid);
-  stan::math::check_consistent_sizes(caller, "time", time, "cmt",     cmt);
-  stan::math::check_consistent_sizes(caller, "time", time, "addl",    addl);
-  stan::math::check_consistent_sizes(caller, "time", time, "ss",      ss);
-  stan::math::check_consistent_sizes(caller, "time", time, "pMatrix", pMatrix);
-  stan::math::check_consistent_sizes(caller, "time", time, "biovar",  biovar);
-  stan::math::check_consistent_sizes(caller, "time", time, "tlag",    tlag);
-
-  using EM = EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >;
-
-  using model_type = refactor::PMXTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
-  PredWrapper<model_type> pr;
-
-  std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
-
-  pr.pred(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag, pred);
-
-  return pred;
-}
-
-  /* 
-   * For population models, we follow the call signature
    * but add the arrays of the length of each individual's data. 
-   * The size of that vector is the siez of
+   * The size of that vector is the size of
    * the population.
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6>
 std::vector<Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
                           Eigen::Dynamic, Eigen::Dynamic> >
-popPKModelTwoCpt(const std::vector<int>& len,
-                 const std::vector<T0>& time,
-                 const std::vector<T1>& amt,
-                 const std::vector<T2>& rate,
-                 const std::vector<T3>& ii,
-                 const std::vector<int>& evid,
-                 const std::vector<int>& cmt,
-                 const std::vector<int>& addl,
-                 const std::vector<int>& ss,
-                 const std::vector<std::vector<T4> >& pMatrix,
-                 const std::vector<std::vector<T5> >& biovar,
-                 const std::vector<std::vector<T6> >& tlag) {
-  using stan::math::check_consistent_sizes;
-  using stan::math::check_greater_or_equal;
-
+pmx_solve_group_twocpt(const std::vector<int>& len,
+                       const std::vector<T0>& time,
+                       const std::vector<T1>& amt,
+                       const std::vector<T2>& rate,
+                       const std::vector<T3>& ii,
+                       const std::vector<int>& evid,
+                       const std::vector<int>& cmt,
+                       const std::vector<int>& addl,
+                       const std::vector<int>& ss,
+                       const std::vector<std::vector<T4> >& pMatrix,
+                       const std::vector<std::vector<T5> >& biovar,
+                       const std::vector<std::vector<T6> >& tlag) {
   using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
   using EM = EventsManager<ER>;
 
@@ -400,7 +349,7 @@ popPKModelTwoCpt(const std::vector<int>& len,
   ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
   int np = len.size();
-  static const char* caller("PKModelTwoCpt");
+  static const char* caller("pmx_solve_group_twocpt");
   torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
                                 pMatrix, biovar, tlag, caller);
 

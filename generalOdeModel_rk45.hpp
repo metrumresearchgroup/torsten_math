@@ -380,7 +380,7 @@ template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
 std::vector<Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
                           Eigen::Dynamic, Eigen::Dynamic> >
-pop_pk_generalOdeModel_rk45(const F& f,
+pmx_solve_group_rk45(const F& f,
                            const int nCmt,
                            const std::vector<int>& len,
                            const std::vector<T0>& time,
@@ -398,11 +398,8 @@ pop_pk_generalOdeModel_rk45(const F& f,
                            double rel_tol = 1e-6,
                            double abs_tol = 1e-6,
                            long int max_num_steps = 1e6) {
-  using stan::math::check_consistent_sizes;
-  using stan::math::check_greater_or_equal;
-
   int np = len.size();
-  static const char* caller("pop_pk_generalOdeModel_rk45");
+  static const char* caller("pmx_solve_group_rk45");
   torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
                                 pMatrix, biovar, tlag, caller);
 
