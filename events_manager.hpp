@@ -132,21 +132,8 @@ namespace torsten {
     /*
      * check the exisitence of SS dosing events
      */
-    static bool has_ss_dosing(const ER& rec) {
-      const std::vector<int>& evid = rec.evid_;
-      const std::vector<int>& ss = rec.ss_;
-      if (ss.size() == 1) {
-        return false;
-      } else {
-        bool res = false;
-        for (size_t i = 0; i < evid.size(); ++i) {
-          if ((evid[i] == 1 || evid[i] == 4) && ss[i] != 0) {
-            res = true;
-            break;
-          }
-        }
-        return res;
-      }
+    static bool has_ss_dosing(int id, const ER& rec) {
+      return rec.has_ss_dosing(id);
     }
 
     /*
@@ -157,12 +144,12 @@ namespace torsten {
       return rec.pMatrix_.empty() ? rec.systems_[0].size() : rec.pMatrix_[0].size();
     }
 
-    static int nevents(int id, const ER& rec) {
+    static int num_events(int id, const ER& rec) {
       if (rec.pMatrix_.empty()) {
         // TODO
         return 0;
       } else {
-        return nevents(rec.begin_[id], rec.len_[id],
+        return num_events(rec.begin_[id], rec.len_[id],
                        rec.time_, rec.amt_, rec.rate_, rec.ii_, rec.evid_, rec.cmt_, rec.addl_, rec.ss_,
                        rec.begin_param(id), rec.len_param(id), rec.pMatrix_, 
                        rec.begin_biovar(id), rec.len_biovar(id), rec.biovar_, 
@@ -175,7 +162,7 @@ namespace torsten {
      * events history.
      */
     template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
-    static int nevents(const std::vector<T0_>& time,
+    static int num_events(const std::vector<T0_>& time,
                        const std::vector<T1_>& amt,
                        const std::vector<T2_>& rate,
                        const std::vector<T3_>& ii,
@@ -186,14 +173,14 @@ namespace torsten {
                        const std::vector<std::vector<T4_> >& pMatrix,
                        const std::vector<std::vector<T5_> >& biovar,
                        const std::vector<std::vector<T6_> >& tlag) {
-      return nevents(0, time.size(), time, amt, rate, ii, evid, cmt, addl, ss,
+      return num_events(0, time.size(), time, amt, rate, ii, evid, cmt, addl, ss,
                      0, pMatrix.size(), pMatrix,
                      0, biovar.size(), biovar,
                      0, tlag.size(), tlag);
     }
 
     template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
-    static int nevents(int ibegin, int isize,
+    static int num_events(int ibegin, int isize,
                        const std::vector<T0_>& time,
                        const std::vector<T1_>& amt,
                        const std::vector<T2_>& rate,

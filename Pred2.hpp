@@ -1,8 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_PKMODEL_REFACTOR_PRED_HPP
 #define STAN_MATH_TORSTEN_PKMODEL_REFACTOR_PRED_HPP
 
-#include <stan/math/torsten/events_manager.hpp>
-#include <stan/math/torsten/dsolve/pk_vars.hpp>
+#include <stan/math/torsten/events_solver.hpp>
 #include <stan/math/torsten/mpi/session.hpp>
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
 #include <Eigen/Dense>
@@ -259,6 +258,7 @@ namespace torsten{
 
       using ER = T_events_record;
       using EM = EventsManager<ER>;
+      using ES = EventsSolver<ER, T_model>;
       using scalar = typename EM::T_scalar;
 
       const int nCmt = EM::nCmt(events_rec);
@@ -285,13 +285,10 @@ namespace torsten{
 
         res[id].resize(nKeep, nCmt);
 
-        int nvar = T_model::nvars(nCmt, EM::parameter_size(events_rec));
-        int nvar_ss = T_model::template nvars<typename EM::T_amt, typename EM::T_par_rate, typename EM::T_par_ii>(EM::parameter_size(events_rec));
-        int nev = EM::nevents(id, events_rec);
-
         // FIXME: has_ss_dosing shouldn't test the entire
         // population but only the individual
-        res_d[id].resize(nev, EM::has_ss_dosing(events_rec) ? torsten::pk_nsys(nCmt, nvar, nvar_ss) : torsten::pk_nsys(nCmt, nvar));
+        int nev = EM::num_events(id, events_rec);
+        res_d[id].resize(nev, ES::system_size(id, events_rec));
         res_d[id].setConstant(0.0);
 
         int my_worker_id = torsten::mpi::my_worker(id, np, size);

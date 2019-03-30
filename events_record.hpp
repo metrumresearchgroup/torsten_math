@@ -318,6 +318,26 @@ public:
   int len_tlag(int id) const {
     return tlag_.size()  == len_.size() ? 1 : len_[id];
   }
+
+  static bool has_ss_dosing() {
+    return has_ss_dosing(0);
+  }
+    /*
+     * check the exisitence of steady state dosing events
+     */
+  bool has_ss_dosing(int id) const {
+    bool res = false;
+    int begin = begin_[id];
+    int end = size_t(id + 1) == len_.size() ? time_.size() : begin_[id + 1];
+    for (int i = begin; i < end; ++i) {
+      if ((evid_[i] == 1 || evid_[i] == 4) && ss_[i] != 0) {
+        res = true;
+        break;
+      }
+    }
+    return res;
+  }
+
 };
 
 template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>

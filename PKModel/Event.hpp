@@ -159,38 +159,38 @@ struct EventHistory {
     }
   }
 
-  /*
-   * calculate the size of the ODE system for the event history
-   */
-  int nsys(int ncmt, int nvar, int nvar_ss) {
-    using torsten::pk_nsys;
+  // /*
+  //  * calculate the size of the ODE system for the event history
+  //  */
+  // int nsys(int ncmt, int nvar, int nvar_ss) {
+  //   using torsten::pk_nsys;
 
-    // has transient dosing events?
-    bool has_trans_dose = false;
-    for (size_t i = 0; i < this -> size(); ++i) {
-      if (is_dosing(i) && (!is_ss_dosing(i))) {
-        has_trans_dose = true;
-        break;
-      }
-    }
+  //   // has transient dosing events?
+  //   bool has_trans_dose = false;
+  //   for (size_t i = 0; i < this -> size(); ++i) {
+  //     if (is_dosing(i) && (!is_ss_dosing(i))) {
+  //       has_trans_dose = true;
+  //       break;
+  //     }
+  //   }
 
-    // has SS dosing events?
-    bool has_ss_dose = false;
-    for (size_t i = 0; i < this -> size(); ++i) {
-      if (is_ss_dosing(i)) {
-        has_ss_dose = true;
-        break;
-      }
-    }
+  //   // has SS dosing events?
+  //   bool has_ss_dose = false;
+  //   for (size_t i = 0; i < this -> size(); ++i) {
+  //     if (is_ss_dosing(i)) {
+  //       has_ss_dose = true;
+  //       break;
+  //     }
+  //   }
 
-    if (has_trans_dose && (!has_ss_dose)) {
-      return pk_nsys(ncmt, nvar);
-    } else if((!has_trans_dose) && has_ss_dose) {
-      return pk_nsys(ncmt, nvar_ss);
-    } else {
-      return pk_nsys(ncmt, nvar, nvar_ss);
-    }
-  }
+  //   if (has_trans_dose && (!has_ss_dose)) {
+  //     return pk_nsys(ncmt, nvar);
+  //   } else if((!has_trans_dose) && has_ss_dose) {
+  //     return pk_nsys(ncmt, nvar_ss);
+  //   } else {
+  //     return pk_nsys(ncmt, nvar, nvar_ss);
+  //   }
+  // }
 
   /*
    * Check if the events are in chronological order
