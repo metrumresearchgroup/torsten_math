@@ -285,8 +285,6 @@ namespace torsten{
 
         res[id].resize(nKeep, nCmt);
 
-        // FIXME: has_ss_dosing shouldn't test the entire
-        // population but only the individual
         int nev = EM::num_events(id, events_rec);
         res_d[id].resize(nev, ES::system_size(id, events_rec));
         res_d[id].setConstant(0.0);
@@ -300,7 +298,7 @@ namespace torsten{
             res_d[id].setConstant(invalid_res_d);
           } else {
             try {
-            EM em(id, events_rec);
+              EM em(id, events_rec);
               auto events = em.events();
               assert(nev == events.size());
               assert(nKeep == em.nKeep);
@@ -349,7 +347,7 @@ namespace torsten{
         }
       }
 
-      // MPI_Barrier(comm);
+      MPI_Barrier(comm);
 
       if(is_invalid) {
         // MPI_Barrier(comm);
