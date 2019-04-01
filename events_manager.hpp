@@ -1,11 +1,11 @@
 #ifndef STAN_MATH_TORSTEN_EVENTS_MANAGER_HPP
 #define STAN_MATH_TORSTEN_EVENTS_MANAGER_HPP
 
-#include <Eigen/Dense>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/events_record.hpp>
 #include <boost/math/tools/promotion.hpp>
+#include <Eigen/Dense>
 #include <string>
 #include <vector>
 
