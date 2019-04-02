@@ -77,7 +77,7 @@ namespace torsten{
 
       using scalar = typename EM::T_scalar;
 
-      res.resize(EM::solution_size(events_rec), EM::nCmt(events_rec));
+      res.resize(EM::solution_size(id, events_rec), EM::nCmt(events_rec));
       PKRec<scalar> init(EM::nCmt(events_rec));
       init.setZero();
 
