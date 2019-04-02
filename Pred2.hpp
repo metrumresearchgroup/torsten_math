@@ -81,16 +81,17 @@ namespace torsten{
       PKRec<scalar> init(EM::nCmt(events_rec));
       init.setZero();
 
-      EM em(id, events_rec);
-
       try {
-        for (int ik = 0; ik < em.nKeep; ik++) {
-          int ibegin = ik == 0 ? 0 : em.keep_ev[ik-1] + 1;
-          int iend = em.keep_ev[ik] + 1;
-          for (int i = ibegin; i < iend; ++i) {
-            stepper(i, init, em, pred_pars..., model_pars...);
+        EM em(id, events_rec);
+        auto events = em.events();
+        int ikeep = 0, iev = 0;
+        while(ikeep < em.nKeep) {
+          stepper(iev, init, em, pred_pars..., model_pars...);
+          if(events.keep(iev)) {
+            res.row(ikeep) = init;
+            ikeep++;
           }
-          res.row(ik) = init;
+          iev++;
         }
       } catch (const std::exception& e) {
         throw;
@@ -302,16 +303,17 @@ namespace torsten{
               auto events = em.events();
               assert(nev == events.size());
               assert(nKeep == em.nKeep);
-
               init.setZero();
-              int ikeep = 0;
-              for (size_t i = 0; i < events.size(); i++) {
-                stepper_solve(i, init, pred1, em, pred_pars..., model_pars...);
-                res_d[id].row(i).segment(0, pred1.size()) = pred1;
-                if (events.keep(i)) {
+
+              int ikeep = 0, iev = 0;
+              while(ikeep < em.nKeep) {
+                stepper_solve(iev, init, pred1, em, pred_pars..., model_pars...);
+                res_d[id].row(iev).segment(0, pred1.size()) = pred1;
+                if(events.keep(iev)) {
                   res[id].row(ikeep) = init;
                   ikeep++;
                 }
+                iev++;
               }
             } catch (const std::exception& e) {
               is_invalid = true;
@@ -333,16 +335,19 @@ namespace torsten{
           rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
         } else {
           EM em(id, events_rec);
+          auto events = em.events();
           PKRec<scalar> init(nCmt); init.setZero();
           PKRec<double> pred1 = VectorXd::Zero(res_d[id].cols());
-          int ikeep = 0;
-          for (size_t i = 0; i < em.events().size(); i++) {
-            pred1 = res_d[id].row(i);
-            stepper_sync(i, init, pred1, em, pred_pars..., model_pars...);
-            if (em.events().keep(i)) {
+
+          int ikeep = 0, iev = 0;
+          while(ikeep < em.nKeep) {
+            pred1 = res_d[id].row(iev);
+            stepper_sync(iev, init, pred1, em, pred_pars..., model_pars...);
+            if(events.keep(iev)) {
               res[id].row(ikeep) = init;
               ikeep++;
             }
+            iev++;
           }
         }
       }
@@ -404,17 +409,15 @@ namespace torsten{
           try {
             EM em(id, events_rec);
             auto events = em.events();
-            auto model_rate = em.rates();
-            auto model_amt = em.amts();
-            auto model_par = em.pars();
             init.setZero();
-            for (int ik = 0; ik < em.nKeep; ik++) {
-              int ibegin = ik == 0 ? 0 : em.keep_ev[ik-1] + 1;
-              int iend = em.keep_ev[ik] + 1;
-              for (int i = ibegin; i < iend; ++i) {
-                stepper(i, init, em, pred_pars..., model_pars...);
+            int ikeep = 0, iev = 0;
+            while(ikeep < em.nKeep) {
+              stepper(iev, init, em, pred_pars..., model_pars...);
+              if(events.keep(iev)) {
+                res[id].row(ikeep) = init;
+                ikeep++;
               }
-              res[id].row(ik) = init;
+              iev++;
             }
           } catch (const std::exception& e) {
             is_invalid = true;

@@ -28,7 +28,6 @@ namespace torsten {
     std::vector<std::vector<T_rate> > rate_v;
     std::vector<T_amt> amt_v;
     std::vector<std::vector<T_par> > par_v;
-    std::vector<int> keep_ev;
 
     const int nKeep;
     const int ncmt;
@@ -105,11 +104,6 @@ namespace torsten {
       for (size_t i = 0; i < event_his.size(); ++i) {
         auto p = param_his.GetModelParameters(i);
         par_v[i] = p.get_RealParameters(param_his.has_matrix_param);
-      }
-
-      keep_ev.reserve(nKeep);
-      for (size_t i = 0; i < event_his.size(); ++i) {    
-        if (event_his.keep(i)) keep_ev.push_back(i);
       }
     }
 
