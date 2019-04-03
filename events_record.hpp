@@ -322,9 +322,10 @@ public:
   static bool has_ss_dosing() {
     return has_ss_dosing(0);
   }
-    /*
-     * check the exisitence of steady state dosing events
-     */
+
+  /*
+   * check the exisitence of steady state dosing events
+   */
   bool has_ss_dosing(int id) const {
     bool res = false;
     int begin = begin_[id];
@@ -336,6 +337,24 @@ public:
       }
     }
     return res;
+  }
+
+  /*
+   * check for the exisitence of lag time
+   */
+  bool has_lag(int id) const {
+    using stan::math::value_of;
+    return std::any_of(tlag_.begin() + begin_tlag(id), tlag_.begin() + begin_tlag(id) + len_tlag(id),
+                       [](const std::vector<T6>& v) {
+                         return std::any_of(v.begin(), v.end(), [](const T6& x) { return std::abs(value_of(x)) > 1.E-10; });
+                       });
+  }
+
+  /*
+   * check for the exisitence of lag time
+   */
+  bool has_lag() const {
+    return has_lag(0);
   }
 
 };
