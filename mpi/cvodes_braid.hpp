@@ -40,15 +40,18 @@ namespace torsten {
      */
     struct CVBraidApp : BraidApp {
       void* mem;
+      void* user_data;
       const N_Vector& y0;
       const int n;
       const int buf_size;
       CVBraidVec y0_v;
       CVBraidVec y_v;
 
-      CVBraidApp(void* mem_in, const N_Vector& y0_in, MPI_Comm comm_in, double t0, double t1, int nt)
+      CVBraidApp(void* mem_in, void* user_data_in,
+                 const N_Vector& y0_in, MPI_Comm comm_in, double t0, double t1, int nt)
         : BraidApp(comm_in, t0, t1, nt),
-          mem(mem_in), y0(y0_in), n(NV_LENGTH_S(y0_in)), buf_size(sizeof(double) * n),
+          mem(mem_in), user_data(user_data_in),
+          y0(y0_in), n(NV_LENGTH_S(y0_in)), buf_size(sizeof(double) * n),
           y0_v(y0), y_v(n)
       {}
 
@@ -62,9 +65,16 @@ namespace torsten {
         status.GetTstartTstop(&t0, &t1);
         status.GetLevel(&braid_level);
         CVBraidVec* vec = (CVBraidVec*) u;
-        int rank;
-        MPI_Comm_rank(comm_t, &rank);
+
+        CHECK_SUNDIALS_CALL(CVodeReInit(mem, t0, vec -> y));
+        CHECK_SUNDIALS_CALL(CVodeSStolerances(mem, 1.e-6, 1.e-6));
+        CHECK_SUNDIALS_CALL(CVodeSetUserData(mem, user_data));
+        CHECK_SUNDIALS_CALL(CVodeSetMaxNumSteps(mem, 10000));
+        CHECK_SUNDIALS_CALL(CVodeSetMaxErrTestFails(mem, 20));
+        CHECK_SUNDIALS_CALL(CVodeSetMaxConvFails(mem, 30));
+
         CHECK_SUNDIALS_CALL(CVode(mem, t1, vec -> y, &t0, CV_NORMAL));
+
         return 0;
       }
 
@@ -89,6 +99,7 @@ namespace torsten {
       {
         CVBraidVec* vec = (CVBraidVec*) u;
         N_VDestroy_Serial(vec -> y);
+
         return 0;    
       }
 
@@ -101,7 +112,7 @@ namespace torsten {
       }
 
       virtual int SpatialNorm(braid_Vector u, double *norm_ptr) {
-        CVBraidVec* up = (CVBraidVec*) u;
+        const CVBraidVec* const up = (CVBraidVec*) u;
         *norm_ptr = N_VWrmsNorm(up -> y, up -> y);
         return 0;     
       }
@@ -114,19 +125,30 @@ namespace torsten {
 
       virtual int BufPack(braid_Vector u, void *buffer, BraidBufferStatus &status)
       {
-        CVBraidVec* up = (CVBraidVec*) u;
-        double *dbuf = (double *) buffer;
-        N_Vector v = N_VMake_Serial(n, dbuf);
-        N_VScale(1.0, up -> y, v);
+        try {
+          const CVBraidVec* const up = (CVBraidVec*) u;
+          double *dbuf = (double *) buffer;
+          N_Vector v = N_VMake_Serial(n, dbuf);
+          N_VScale(1.0, up -> y, v);
+        } catch (...) {
+          throw;
+        }
+
         return 0;
       }
 
       virtual int BufUnpack(void *buffer, braid_Vector *u_ptr, BraidBufferStatus &status)
       {
-        CVBraidVec* up = (CVBraidVec*) *u_ptr;
-        double *dbuf = (double *) buffer;
-        N_Vector v = N_VMake_Serial(n, dbuf);
-        N_VScale(1.0, v, up -> y);
+        try {
+          *u_ptr = (braid_Vector) new CVBraidVec(n);
+          CVBraidVec* const up = (CVBraidVec*) *u_ptr;
+          double *dbuf = (double *) buffer;
+          N_Vector v = N_VMake_Serial(n, dbuf);
+          N_VScale(1.0, v, up -> y);
+        } catch (...) {
+          throw;
+        }
+
         return 0;    
       }
 
