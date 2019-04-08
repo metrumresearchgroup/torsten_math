@@ -46,14 +46,30 @@ namespace torsten {
       const int buf_size;
       CVBraidVec y0_v;
       CVBraidVec y_v;
+      int rank;
+      std::vector<MPI_Request> req;
+      std::vector<std::vector<double> > result;
 
+      /*
+       * The constructor also initializes master to receive results
+       * from the others.
+       */
       CVBraidApp(void* mem_in, void* user_data_in,
                  const N_Vector& y0_in, MPI_Comm comm_in, double t0, double t1, int nt)
         : BraidApp(comm_in, t0, t1, nt),
           mem(mem_in), user_data(user_data_in),
           y0(y0_in), n(NV_LENGTH_S(y0_in)), buf_size(sizeof(double) * n),
-          y0_v(y0), y_v(n)
-      {}
+          y0_v(y0), y_v(n), rank(-1), req(nt)
+      {
+        MPI_Comm_rank(comm_t, &rank);
+        if (rank == 0) {
+          result.resize(nt);
+          for (int it = 0; it < nt; ++it) {
+            result[it] = std::vector<double>(n, 0.0);
+            MPI_Irecv(result[it].data(), n, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, comm_t, &req[it]);
+          }
+        }
+      }
 
       virtual ~CVBraidApp() {}
 
@@ -162,8 +178,17 @@ namespace torsten {
         return 0;    
       }
 
-      virtual int Access(braid_Vector u_, BraidAccessStatus &astatus)
+      /*
+       * Assume access level = 1 
+       */
+      virtual int Access(braid_Vector u, BraidAccessStatus &astatus)
       {
+        const CVBraidVec* const up = (CVBraidVec*) u;
+        int it;
+        astatus.GetTIndex(&it);
+        if (it > 0) {
+          MPI_Send(NV_DATA_S(up -> y), n, MPI_DOUBLE, 0, it - 1, comm_t);
+        }
         return 0;
       }
 
@@ -171,6 +196,23 @@ namespace torsten {
       {
         return 0;
       }
+
+      virtual std::vector<std::vector<double> > get_result() {
+        if (rank == 0) {
+          int nt = ntime;
+          std::vector<std::vector<double> > res;
+          res.resize(nt);
+          for (int it = 0; it < nt; ++it) {
+            MPI_Status status; 
+            MPI_Wait(&req[it], &status);
+            res[status.MPI_TAG] = result[it];
+          }
+          return res;
+        } else {
+          throw std::runtime_error("braid result collection is performed by non-zero rank");
+        }
+      }
+
     };
 
   }
