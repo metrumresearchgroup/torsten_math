@@ -206,7 +206,7 @@ namespace dsolve {
 
     for (size_t i = 0; i < ts.size(); ++i) {
       CHECK_SUNDIALS_CALL(CVode(mem, ts[i], y, &t1, CV_NORMAL));
-      for (size_t j = 0; j < ode.n(); ++j) res_y(i, j) = NV_Ith_S(y, j);
+      for (size_t j = 0; j < ode.n(); ++j) res_y(j, i) = NV_Ith_S(y, j);
     };
   }
 
@@ -287,8 +287,8 @@ namespace dsolve {
       CHECK_SUNDIALS_CALL(CVode(mem, time, y, &t1, CV_NORMAL));
       for (size_t j = 0; j < ode.n(); ++j) {
         ode.eval_rhs(time, y);
-        res_y(i, (1 + ts.size()) * j) = NV_Ith_S(y, j);
-        res_y(i, (1 + ts.size()) * j + i + 1) = ode.fval()[j];
+        res_y((1 + ts.size()) * j, i) = NV_Ith_S(y, j);
+        res_y((1 + ts.size()) * j + i + 1, i) = ode.fval()[j];
       }
     }
   }
@@ -362,9 +362,9 @@ namespace dsolve {
       if (ode.need_fwd_sens) {
         CHECK_SUNDIALS_CALL(CVodeGetSens(mem, &t1, ys));
         for (size_t k = 0; k < n; ++k) {
-          res_y(i, k * ode.n_sol()) = NV_Ith_S(y, k);
+          res_y(k * ode.n_sol(), i) = NV_Ith_S(y, k);
           for (size_t j = 0; j < ns; ++j) {
-            res_y(i, k * ode.n_sol() + j + 1) = NV_Ith_S(ys[j], k);
+            res_y(k * ode.n_sol() + j + 1, i) = NV_Ith_S(ys[j], k);
           }
         }
       }
@@ -447,11 +447,11 @@ namespace dsolve {
         ode.eval_rhs(time, y);
         for (int k = 0; k < n; ++k) {
           int j0 = k * nsol;
-          res_y(i, j0) = NV_Ith_S(y, k);
+          res_y(j0, i) = NV_Ith_S(y, k);
           for (int j = 0; j < ns; ++j) {
-              res_y(i, j0 + j + 1) = NV_Ith_S(ys[j], k);
+            res_y(j0 + j + 1, i) = NV_Ith_S(ys[j], k);
           }
-          res_y(i, j0 + ns + 1 + i) = ode.fval()[k];
+          res_y(j0 + ns + 1 + i, i) = ode.fval()[k];
         }
       }
     }

@@ -158,14 +158,22 @@ namespace torsten {
       }
 
       /**
-       * intialize solution to ensure right size.
+       * intialize solution to ensure right size for a matrix
+       * output. Since @c Eigen::Matrix is column-major we
+       * designate each col for one time step.
+       *
+       * @param sol solution to be outputed
        */
       void initialize_solution(Eigen::MatrixXd& sol) {
-        sol = Eigen::MatrixXd::Zero(ts_.size(), n_sys());
+        sol = Eigen::MatrixXd::Zero(n_sys(), ts_.size());
       }
 
       /**
-       * intialize solution to ensure right size.
+       * intialize solution to ensure right size for
+       * a vector of vectors output, with each vector for
+       * each time step.
+       *
+       * @param sol solution to be outputed
        */
       void initialize_solution(std::vector<std::vector<scalar_type> >& sol) {
         sol.resize(ts_.size());

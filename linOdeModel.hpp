@@ -93,7 +93,7 @@ linOdeModel(const std::vector<T0>& time,
 
   using model_type = refactor::PMXLinODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;
-  pr.pred(events_rec, pred);
+  pr.pred(0, events_rec, pred);
   return pred;
 
 #endif

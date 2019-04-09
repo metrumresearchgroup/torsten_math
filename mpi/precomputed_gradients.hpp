@@ -57,11 +57,11 @@ namespace torsten {
       const int nrec = operands.size() + 1;
       if (d.size() % nrec != 0) {
         std::stringstream msg;
-        static const char* expr("n * operands.size()");
+        static const char* expr("n * (1 + size of operands)");
         msg << "; column number expression = " << expr;
         static const char* caller("torten::mpi::precomputed_gradients");
         std::string msg_str(msg.str());
-        stan::math::invalid_argument(caller, "d", d.size(), "must have size = n * operands.size(), but is ",
+        stan::math::invalid_argument(caller, "d", d.size(), "must have size = n * (1 + size of operands), but is ",
                                      msg_str.c_str());
       }
 

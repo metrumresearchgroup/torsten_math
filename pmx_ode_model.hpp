@@ -517,7 +517,7 @@ namespace refactor {
         std::vector<double> x_r;
         std::vector<int> x_i;
         std::vector<stan::math::var> theta(parameters_with_rate(par_, rate));
-        res = integrator.solve_d(f1, y, t0, ts, theta, x_r, x_i).row(0);
+        res = integrator.solve_d(f1, y, t0, ts, theta, x_r, x_i).col(0);
       }
       return res;
     }
@@ -539,7 +539,7 @@ namespace refactor {
       } else {
         auto y = stan::math::to_array_1d(y0_);
         std::vector<int> x_i;
-        res = integrator.solve_d(f1, y, t0, ts, par_, rate, x_i).row(0);
+        res = integrator.solve_d(f1, y, t0, ts, par_, rate, x_i).col(0);
       }
       return res;
     }

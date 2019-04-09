@@ -103,16 +103,16 @@ namespace dsolve {
   std::vector<Eigen::Matrix<typename stan::return_type<Tt, T_initial, T_param>::type, // NOLINT
                             Eigen::Dynamic, Eigen::Dynamic> >
   pmx_integrate_ode_bdf(const F& f,
-                       const std::vector<std::vector<T_initial> >& y0,
-                       double t0,
-                       const std::vector<std::vector<Tt> >& ts,
-                       const std::vector<std::vector<T_param> >& theta,
-                       const std::vector<std::vector<double> >& x_r,
-                       const std::vector<std::vector<int> >& x_i,
-                       std::ostream* msgs = nullptr,
-                       double rtol = 1e-10,
-                       double atol = 1e-10,
-                       long int max_num_step = 1e8) {  // NOLINT(runtime/int)
+                        const std::vector<std::vector<T_initial> >& y0,
+                        double t0,
+                        const std::vector<std::vector<Tt> >& ts,
+                        const std::vector<std::vector<T_param> >& theta,
+                        const std::vector<std::vector<double> >& x_r,
+                        const std::vector<std::vector<int> >& x_i,
+                        std::ostream* msgs = nullptr,
+                        double rtol = 1e-10,
+                        double atol = 1e-10,
+                        long int max_num_step = 1e8) {  // NOLINT(runtime/int)
     static const char* caller("pmx_integrate_ode_bdf");
     stan::math::check_consistent_sizes(caller, "y0", y0, "ts",     ts);
     stan::math::check_consistent_sizes(caller, "y0", y0, "theta",  theta);

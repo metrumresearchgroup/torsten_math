@@ -130,7 +130,7 @@ PKModelTwoCpt(const std::vector<T0>& time,
 
   using model_type = refactor::PMXTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;
-  pr.pred(events_rec, pred);
+  pr.pred(0, events_rec, pred);
   return pred;
 
 #endif
@@ -328,8 +328,8 @@ PKModelTwoCpt(const std::vector<T0>& time,
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6>
-std::vector<Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
-                          Eigen::Dynamic, Eigen::Dynamic> >
+Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
+              Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_group_twocpt(const std::vector<int>& len,
                        const std::vector<T0>& time,
                        const std::vector<T1>& amt,
@@ -348,7 +348,6 @@ pmx_solve_group_twocpt(const std::vector<int>& len,
   int nCmt = refactor::PMXTwoCptModel<double, double, double, double>::Ncmt;
   ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
-  int np = len.size();
   static const char* caller("pmx_solve_group_twocpt");
   torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
                                 pMatrix, biovar, tlag, caller);
@@ -356,7 +355,7 @@ pmx_solve_group_twocpt(const std::vector<int>& len,
   using model_type = refactor::PMXTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   PredWrapper<model_type> pr;
 
-  std::vector<Eigen::Matrix<typename EM::T_scalar, -1, -1>> pred(np);
+  Eigen::Matrix<typename EM::T_scalar, -1, -1> pred(EM::population_solution_size(events_rec), nCmt);
 
   pr.pred(events_rec, pred);
 

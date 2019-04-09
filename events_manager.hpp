@@ -36,6 +36,13 @@ namespace torsten {
       return rec.ncmt;
     }
 
+    /*
+     * the index in the result/input where subject @c id begins.
+     */
+    static int begin(int id, const ER& rec) {
+      return rec.begin_.at(id);
+    }
+
     static int population_size(const ER& rec) {
       return rec.len_.size();
     }
@@ -45,7 +52,11 @@ namespace torsten {
     }
 
     static int solution_size(int id, const ER& rec) {
-      return rec.len_[id];
+      return rec.len_.at(id);
+    }
+
+    static int population_solution_size(const ER& rec) {
+      return rec.total_result_size;
     }
 
     EventsManager(const ER& rec) : EventsManager(0, rec) {}

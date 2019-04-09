@@ -94,7 +94,7 @@ namespace torsten {
             nsys = ode.n_sys();
             nt   = ode.ts().size();
             nsol = ode.n_sol();
-            res_d[i].resize(nt, nsys);
+            res_d[i].resize(nsys, nt);
             res_d[i].setConstant(0.0);
 
             // success in creating ODE, solve it
@@ -115,7 +115,7 @@ namespace torsten {
           }
 
           MPI_Ibcast(res_d[i].data(), res_d[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
-          res[i].resize(nt, n);
+          res[i].resize(n, nt);
         }
 
         for (int i = 0; i < n_req; ++i) {
@@ -130,8 +130,8 @@ namespace torsten {
             vars = ode.vars();
             for (int j = 0 ; j < nt; ++j) {
               for (int k = 0; k < n; ++k) {
-                for (int l = 0 ; l < ns; ++l) g[l] = res_d[i](j, k * nsol + l + 1);
-                res[i](j, k) = precomputed_gradients(res_d[i](j, k * nsol), vars, g);
+                for (int l = 0 ; l < ns; ++l) g[l] = res_d[i](k * nsol + l + 1, j);
+                res[i](k, j) = precomputed_gradients(res_d[i](k * nsol, j), vars, g);
               }
             }
           }
@@ -188,7 +188,7 @@ namespace torsten {
             Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
             nsys = ode.n_sys();
             nt   = ode.ts().size();
-            res[i].resize(nt, nsys);
+            res[i].resize(nsys, nt);
             res[i].setConstant(0.0);
 
             // success in creating ODE, solve it

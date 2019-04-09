@@ -128,7 +128,7 @@ mixOde1CptModel_rk45(const F& f,
 
   using model_type = refactor::PkOneCptOdeModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
   PredWrapper<model_type, PMXOdeIntegrator<StanRk45>& > pr;
-  pr.pred(events_rec, pred, integrator, f, nOde);
+  pr.pred(0, events_rec, pred, integrator, f, nOde);
   return pred;
 #endif
 }
