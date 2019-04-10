@@ -265,9 +265,14 @@ namespace torsten {
         using scalar_type = typename stan::return_type<Tt, T_initial, T_param>::type;
         vector<Matrix<scalar_type, Dynamic, Dynamic> > res(np);
 
+        vector<vector<scalar_type> > res_i;
         for (int i = 0; i < np; ++i) {
           Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
-          res[i] = stan::math::to_matrix(solver.integrate(ode));
+          res_i = solver.integrate(ode);
+          res[i].resize(res_i[0].size(), res_i.size());
+          for (size_t j = 0; j < res_i.size(); ++j) {
+            res[i].col(j) = stan::math::to_vector(res_i[j]);
+          }
         }
 
         return res;

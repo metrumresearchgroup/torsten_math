@@ -240,8 +240,7 @@ namespace refactor {
      * Solve the transient model with rate being data
      */
   template<typename T_integrator>
-  Eigen::Matrix<typename boost::math::tools::promote_args<T_time,
-    T_par, T_init>::type, Eigen::Dynamic, 1>
+  refactor::PKRec<typename boost::math::tools::promote_args<T_time, T_par, T_init>::type> // NOLINT
   integrate(const T_time& t_next,
             const std::vector<double>& rate,
             const T_integrator& integrator) const {
@@ -267,8 +266,7 @@ namespace refactor {
 
     size_t nParm = parameter.size();
     vector<T_theta> theta(nParm);
-    for (size_t i = 0; i < nParm; i++)
-      theta[i] = parameter[i];
+    for (size_t i = 0; i < nParm; i++) theta[i] = parameter[i];
 
     refactor::PKRec<scalar> pred;
     if (t_dbl[0] == t0_dbl) {
@@ -307,10 +305,8 @@ namespace refactor {
   * call the mix_rate_var_functor, which will know where rate
   * is located inside theta.
   */
-  template<typename T_r,
-           typename T_integrator>
-  Eigen::Matrix<typename boost::math::tools::promote_args<T_time,
-    T_r, T_par, T_init>::type, Eigen::Dynamic, 1>
+  template<typename T_r, typename T_integrator>
+  refactor::PKRec<typename boost::math::tools::promote_args<T_time, T_r, T_par, T_init>::type> // NOLINT
   integrate(const T_time& t_next,
             const std::vector<T_r>& rate,
             const T_integrator& integrator) const {
@@ -397,8 +393,7 @@ namespace refactor {
    *           compartment at the current event.
    */
   template<typename T_ii, typename T_integrator>
-  Eigen::Matrix<typename boost::math::tools::promote_args<T_ii,
-    T_par>::type, Eigen::Dynamic, 1>
+  refactor::PKRec<typename boost::math::tools::promote_args<T_ii, T_par>::type>
   integrate(const double& amt,
               const double& rate,
               const T_ii& ii,
@@ -519,7 +514,7 @@ namespace refactor {
                               0, rel_tol, f_tol, max_num_steps);
     }
 
-    Matrix<scalar, Dynamic, 1> pred(nPK + nOde_);
+    refactor::PKRec<scalar> pred(nPK + nOde_);
     for (int i = 0; i < nPK; i++) pred(i) = predPK(i);
     for (int i = 0; i < nOde_; i++) pred(nPK + i) = predPD(i);
 
@@ -529,15 +524,13 @@ namespace refactor {
   /**
    * Case 2 (vd): amt is random, rate is fixed.
    */
-  template<typename T_ii,
-           typename T_amt,
-           typename T_integrator>
-  Eigen::Matrix<typename stan::return_type<T_ii, T_amt, T_par>::type, Eigen::Dynamic, 1>
+  template<typename T_ii, typename T_amt, typename T_integrator>
+  refactor::PKRec<typename stan::return_type<T_ii, T_amt, T_par>::type>
   integrate(const T_amt& amt,
-              const double& rate,
-              const T_ii& ii,
-              const int& cmt,
-              const T_integrator& integrator) const {
+            const double& rate,
+            const T_ii& ii,
+            const int& cmt,
+            const T_integrator& integrator) const {
     using Eigen::Matrix;
     using Eigen::Dynamic;
     using Eigen::VectorXd;
@@ -643,7 +636,7 @@ namespace refactor {
      * solve the coupled model.
      */
     template<PMXOdeIntegratorId It>
-    Eigen::Matrix<scalar_type, Dynamic, 1>
+    refactor::PKRec<scalar_type>
     solve(const T_time& t_next,
           const PMXOdeIntegrator<It>& integrator) const {
       return integrate(t_next, ode_model.rate(), integrator);
@@ -655,7 +648,7 @@ namespace refactor {
      * amt will be used for template partial specification.
      */
     template<PMXOdeIntegratorId It, typename T_ii, typename T_amt>
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
+    refactor::PKRec<scalar_type>
     solve(const T_amt& amt, const double& rate, const T_ii& ii, const int& cmt,
           const PMXOdeIntegrator<It>& integrator) const {
       return integrate(amt, rate, ii, cmt, integrator);
