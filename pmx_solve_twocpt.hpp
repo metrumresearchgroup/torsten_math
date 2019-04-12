@@ -48,7 +48,7 @@ template <typename T0, typename T1, typename T2, typename T3, typename T4,
 Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
   typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
   Eigen::Dynamic, Eigen::Dynamic>
-PKModelTwoCpt(const std::vector<T0>& time,
+pmx_solve_twocpt(const std::vector<T0>& time,
               const std::vector<T1>& amt,
               const std::vector<T2>& rate,
               const std::vector<T3>& ii,
@@ -68,7 +68,7 @@ PKModelTwoCpt(const std::vector<T0>& time,
 
   int nCmt = refactor::PMXTwoCptModel<double, double, double, double>::Ncmt;
   int nParms = refactor::PMXTwoCptModel<double, double, double, double>::Npar;
-  static const char* function("PKModelTwoCpt");
+  static const char* function("pmx_solve_twocpt");
 
   // Check arguments
   torsten::pmetricsCheck(time, amt, rate, ii, evid, cmt, addl, ss,
@@ -137,188 +137,77 @@ PKModelTwoCpt(const std::vector<T0>& time,
 }
 
 /**
- * Overload function to allow user to pass an std::vector for pMatrix.
+ * Overload function to allow user to pass an std::vector for 
+ * pMatrix/bioavailability/tlag
  */
-template <typename T0, typename T1, typename T2, typename T3, typename T4,
-          typename T5, typename T6>
-Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
-  typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
-  Eigen::Dynamic, Eigen::Dynamic>
-PKModelTwoCpt(const std::vector<T0>& time,
-              const std::vector<T1>& amt,
-              const std::vector<T2>& rate,
-              const std::vector<T3>& ii,
-              const std::vector<int>& evid,
-              const std::vector<int>& cmt,
-              const std::vector<int>& addl,
-              const std::vector<int>& ss,
-              const std::vector<T4>& pMatrix,
-              const std::vector<std::vector<T5> >& biovar,
-              const std::vector<std::vector<T6> >& tlag) {
-  std::vector<std::vector<T4> > vec_pMatrix(1, pMatrix);
+  template <typename T0, typename T1, typename T2, typename T3,
+            typename T_par, typename T_biovar, typename T_tlag,
+               typename
+            std::enable_if_t<
+              !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
+  auto
+  pmx_solve_twocpt(const std::vector<T0>& time,
+                   const std::vector<T1>& amt,
+                   const std::vector<T2>& rate,
+                   const std::vector<T3>& ii,
+                   const std::vector<int>& evid,
+                   const std::vector<int>& cmt,
+                   const std::vector<int>& addl,
+                   const std::vector<int>& ss,
+                   const std::vector<T_par>& pMatrix,
+                   const std::vector<T_biovar>& biovar,
+                   const std::vector<T_tlag>& tlag) {
+    auto param_ = torsten::to_nested_vector(pMatrix);
+    auto biovar_ = torsten::to_nested_vector(biovar);
+    auto tlag_ = torsten::to_nested_vector(tlag);
 
-  return PKModelTwoCpt(time, amt, rate, ii, evid, cmt, addl, ss,
-                       vec_pMatrix, biovar, tlag);
-}
+    return pmx_solve_twocpt(time, amt, rate, ii, evid, cmt, addl, ss,
+                            param_, biovar_, tlag_);
+  }
 
-/**
-* Overload function to allow user to pass an std::vector for pMatrix,
-* and biovar.
-*/
-template <typename T0, typename T1, typename T2, typename T3, typename T4,
-          typename T5, typename T6>
-Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
-  typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
-  Eigen::Dynamic, Eigen::Dynamic>
-PKModelTwoCpt(const std::vector<T0>& time,
-              const std::vector<T1>& amt,
-              const std::vector<T2>& rate,
-              const std::vector<T3>& ii,
-              const std::vector<int>& evid,
-              const std::vector<int>& cmt,
-              const std::vector<int>& addl,
-              const std::vector<int>& ss,
-              const std::vector<T4>& pMatrix,
-              const std::vector<T5>& biovar,
-              const std::vector<std::vector<T6> >& tlag) {
-  std::vector<std::vector<T4> > vec_pMatrix(1, pMatrix);
-  std::vector<std::vector<T5> > vec_biovar(1, biovar);
+  // old version
+  template <typename T0, typename T1, typename T2, typename T3, typename T4,
+            typename T5, typename T6>
+  Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
+                                                           typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
+                 Eigen::Dynamic, Eigen::Dynamic>
+  PKModelTwoCpt(const std::vector<T0>& time,
+                const std::vector<T1>& amt,
+                const std::vector<T2>& rate,
+                const std::vector<T3>& ii,
+                const std::vector<int>& evid,
+                const std::vector<int>& cmt,
+                const std::vector<int>& addl,
+                const std::vector<int>& ss,
+                const std::vector<std::vector<T4> >& pMatrix,
+                const std::vector<std::vector<T5> >& biovar,
+                const std::vector<std::vector<T6> >& tlag) {
+    auto x = pmx_solve_twocpt(time, amt, rate, ii, evid, cmt, addl, ss,
+                              pMatrix, biovar, tlag);
+    return x.transpose();
+  }
 
-  return PKModelTwoCpt(time, amt, rate, ii, evid, cmt, addl, ss,
-                       vec_pMatrix, vec_biovar, tlag);
-}
-
-/**
-* Overload function to allow user to pass an std::vector for pMatrix,
-* and tlag.
-*/
-template <typename T0, typename T1, typename T2, typename T3, typename T4,
-          typename T5, typename T6>
-Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
-  typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
-  Eigen::Dynamic, Eigen::Dynamic>
-PKModelTwoCpt(const std::vector<T0>& time,
-              const std::vector<T1>& amt,
-              const std::vector<T2>& rate,
-              const std::vector<T3>& ii,
-              const std::vector<int>& evid,
-              const std::vector<int>& cmt,
-              const std::vector<int>& addl,
-              const std::vector<int>& ss,
-              const std::vector<T4>& pMatrix,
-              const std::vector<std::vector<T5> >& biovar,
-              const std::vector<T6>& tlag) {
-  std::vector<std::vector<T4> > vec_pMatrix(1, pMatrix);
-  std::vector<std::vector<T6> > vec_tlag(1, tlag);
-
-  return PKModelTwoCpt(time, amt, rate, ii, evid, cmt, addl, ss,
-                       vec_pMatrix, biovar, vec_tlag);
-}
-
-/**
-* Overload function to allow user to pass an std::vector for pMatrix,
-* biovar, and tlag.
-*/
-template <typename T0, typename T1, typename T2, typename T3, typename T4,
-          typename T5, typename T6>
-Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
-  typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
-  Eigen::Dynamic, Eigen::Dynamic>
-PKModelTwoCpt(const std::vector<T0>& time,
-              const std::vector<T1>& amt,
-              const std::vector<T2>& rate,
-              const std::vector<T3>& ii,
-              const std::vector<int>& evid,
-              const std::vector<int>& cmt,
-              const std::vector<int>& addl,
-              const std::vector<int>& ss,
-              const std::vector<T4>& pMatrix,
-              const std::vector<T5>& biovar,
-              const std::vector<T6>& tlag) {
-  std::vector<std::vector<T4> > vec_pMatrix(1, pMatrix);
-  std::vector<std::vector<T5> > vec_biovar(1, biovar);
-  std::vector<std::vector<T6> > vec_tlag(1, tlag);
-
-  return PKModelTwoCpt(time, amt, rate, ii, evid, cmt, addl, ss,
-                       vec_pMatrix, vec_biovar, vec_tlag);
-}
-
-/**
-* Overload function to allow user to pass an std::vector for biovar.
-*/
-template <typename T0, typename T1, typename T2, typename T3, typename T4,
-          typename T5, typename T6>
-Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
-  typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
-  Eigen::Dynamic, Eigen::Dynamic>
-PKModelTwoCpt(const std::vector<T0>& time,
-              const std::vector<T1>& amt,
-              const std::vector<T2>& rate,
-              const std::vector<T3>& ii,
-              const std::vector<int>& evid,
-              const std::vector<int>& cmt,
-              const std::vector<int>& addl,
-              const std::vector<int>& ss,
-              const std::vector<std::vector<T4> >& pMatrix,
-              const std::vector<T5>& biovar,
-              const std::vector<std::vector<T6> >& tlag) {
-  std::vector<std::vector<T5> > vec_biovar(1, biovar);
-
-  return PKModelTwoCpt(time, amt, rate, ii, evid, cmt, addl, ss,
-                       pMatrix, vec_biovar, tlag);
-}
-
-/**
-* Overload function to allow user to pass an std::vector for biovar,
-* and tlag.
-*/
-template <typename T0, typename T1, typename T2, typename T3, typename T4,
-          typename T5, typename T6>
-Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
-  typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
-  Eigen::Dynamic, Eigen::Dynamic>
-PKModelTwoCpt(const std::vector<T0>& time,
-              const std::vector<T1>& amt,
-              const std::vector<T2>& rate,
-              const std::vector<T3>& ii,
-              const std::vector<int>& evid,
-              const std::vector<int>& cmt,
-              const std::vector<int>& addl,
-              const std::vector<int>& ss,
-              const std::vector<std::vector<T4> >& pMatrix,
-              const std::vector<T5>& biovar,
-              const std::vector<T6>& tlag) {
-  std::vector<std::vector<T5> > vec_biovar(1, biovar);
-  std::vector<std::vector<T6> >vec_tlag(1, tlag);
-
-  return PKModelTwoCpt(time, amt, rate, ii, evid, cmt, addl, ss,
-                       pMatrix, vec_biovar, vec_tlag);
-}
-
-/**
-* Overload function to allow user to pass an std::vector for tlag.
-*/
-template <typename T0, typename T1, typename T2, typename T3, typename T4,
-          typename T5, typename T6>
-Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
-  typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
-  Eigen::Dynamic, Eigen::Dynamic>
-PKModelTwoCpt(const std::vector<T0>& time,
-              const std::vector<T1>& amt,
-              const std::vector<T2>& rate,
-              const std::vector<T3>& ii,
-              const std::vector<int>& evid,
-              const std::vector<int>& cmt,
-              const std::vector<int>& addl,
-              const std::vector<int>& ss,
-              const std::vector<std::vector<T4> >& pMatrix,
-              const std::vector<std::vector<T5> >& biovar,
-              const std::vector<T6>& tlag) {
-  std::vector<std::vector<T6> > vec_tlag(1, tlag);
-
-  return PKModelTwoCpt(time, amt, rate, ii, evid, cmt, addl, ss,
-                       pMatrix, biovar, vec_tlag);
-}
+  template <typename T0, typename T1, typename T2, typename T3,
+            typename T_par, typename T_biovar, typename T_tlag,
+               typename
+            std::enable_if_t<
+              !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
+  auto
+  PKModelTwoCpt(const std::vector<T0>& time,
+                   const std::vector<T1>& amt,
+                   const std::vector<T2>& rate,
+                   const std::vector<T3>& ii,
+                   const std::vector<int>& evid,
+                   const std::vector<int>& cmt,
+                   const std::vector<int>& addl,
+                   const std::vector<int>& ss,
+                   const std::vector<T_par>& pMatrix,
+                   const std::vector<T_biovar>& biovar,
+                   const std::vector<T_tlag>& tlag) {
+    auto x = pmx_solve_twocpt(time, amt, rate, ii, evid, cmt, addl, ss,
+                            pMatrix, biovar, tlag);
+    return x.transpose();
+  }
 
   /* 
    * For population models, we follow the call signature

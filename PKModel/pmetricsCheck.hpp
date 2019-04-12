@@ -106,7 +106,7 @@ void pmetricsCheck(const std::vector<T0>& time,
     const char* length_error2 = message2.c_str();
 
   // TEST ARGUMENTS FOR PARAMETERS
-  static const char* noCheck("linOdeModel");
+  static const char* noCheck("pmx_solve_linode");
   if (strcmp(function, noCheck) != 0) {
     if (!((pMatrix.size() == time.size()) || (pMatrix.size() == 1)))
       invalid_argument(function, "length of the parameter (2d) array,",

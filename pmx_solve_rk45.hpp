@@ -1,16 +1,16 @@
-#ifndef STAN_MATH_TORSTEN_REFACTOR_GENERALODEMODEL_BDF_HPP
-#define STAN_MATH_TORSTEN_REFACTOR_GENERALODEMODEL_BDF_HPP
+#ifndef STAN_MATH_TORSTEN_REFACTOR_GENERALODEMODEL_RK45_HPP
+#define STAN_MATH_TORSTEN_REFACTOR_GENERALODEMODEL_RK45_HPP
 
 #include <Eigen/Dense>
 #include <stan/math/torsten/to_nested_vector.hpp>
 #include <stan/math/torsten/events_manager.hpp>
 #include <stan/math/torsten/pmx_population_check.hpp>
 #include <stan/math/torsten/PKModel/functors/general_functor.hpp>
+#include <stan/math/torsten/Pred2.hpp>
+#include <stan/math/torsten/pmx_ode_model.hpp>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_general.hpp>
 #include <stan/math/torsten/PKModel/Pred/PredSS_general.hpp>
-#include <stan/math/torsten/pmx_ode_model.hpp>
-#include <stan/math/torsten/Pred2.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <vector>
 
@@ -19,7 +19,7 @@ namespace torsten {
 /**
  * Computes the predicted amounts in each compartment at each event
  * for a general compartment model, defined by a system of ordinary
- * differential equations. Uses the stan::math::integrate_ode_bdf 
+ * differential equations. Uses the stan::math::integrate_ode_rk45 
  * function. 
  *
  * <b>Warning:</b> This prototype does not handle steady state events. 
@@ -54,43 +54,44 @@ namespace torsten {
  * @param[in] max_num_steps maximal number of steps to take within 
  *            the Boost ode solver 
  * @return a matrix with predicted amount in each compartment 
- *         at each event.
+ *         at each event. 
  *
  * FIX ME: currently have a dummy msgs argument. Makes it easier
  * to expose to stan grammar files, because I can follow more closely
  * what was done for the ODE integrator. Not ideal.
  */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
-          typename T5, typename T6, typename F>
+  typename T5, typename T6, typename F>
 Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
   typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
   Eigen::Dynamic, Eigen::Dynamic>
-generalOdeModel_bdf(const F& f,
-                    const int nCmt,
-                    const std::vector<T0>& time,
-                    const std::vector<T1>& amt,
-                    const std::vector<T2>& rate,
-                    const std::vector<T3>& ii,
-                    const std::vector<int>& evid,
-                    const std::vector<int>& cmt,
-                    const std::vector<int>& addl,
-                    const std::vector<int>& ss,
-                    const std::vector<std::vector<T4> >& pMatrix,
-                    const std::vector<std::vector<T5> >& biovar,
-                    const std::vector<std::vector<T6> >& tlag,
-                    std::ostream* msgs = 0,
-                    double rel_tol = 1e-6,
-                    double abs_tol = 1e-6,
-                    long int max_num_steps = 1e6) {  // NOLINT(runtime/int)
+pmx_solve_rk45(const F& f,
+                     const int nCmt,
+                     const std::vector<T0>& time,
+                     const std::vector<T1>& amt,
+                     const std::vector<T2>& rate,
+                     const std::vector<T3>& ii,
+                     const std::vector<int>& evid,
+                     const std::vector<int>& cmt,
+                     const std::vector<int>& addl,
+                     const std::vector<int>& ss,
+                     const std::vector<std::vector<T4> >& pMatrix,
+                     const std::vector<std::vector<T5> >& biovar,
+                     const std::vector<std::vector<T6> >& tlag,
+                     std::ostream* msgs = 0,
+                     double rel_tol = 1e-6,
+                     double abs_tol = 1e-6,
+                     long int max_num_steps = 1e6) {  // NOLINT(runtime/int)
   using std::vector;
   using Eigen::Dynamic;
   using Eigen::Matrix;
   using boost::math::tools::promote_args;
   using refactor::PKRec;
 
-  static const char* function("generalOdeModel_bdf");
+  // check arguments
+  static const char* function("pmx_solve_rk45");
   torsten::pmetricsCheck(time, amt, rate, ii, evid, cmt, addl, ss,
-                pMatrix, biovar, tlag, function);
+    pMatrix, biovar, tlag, function);
 
   // Construct dummy matrix for last argument of pred
   Matrix<T4, Dynamic, Dynamic> dummy_system;
@@ -99,15 +100,18 @@ generalOdeModel_bdf(const F& f,
 
   typedef general_functor<F> F0;
 
+  PMXOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+
   const Pred1_general<F0> pred1(F0(f), rel_tol, abs_tol,
-                                max_num_steps, msgs, "bdf");
+                                max_num_steps, msgs, "rk45");
   const PredSS_general<F0> predss (F0(f), rel_tol, abs_tol,
-                                   max_num_steps, msgs, "bdf", nCmt);
+                                   max_num_steps, msgs, "rk45", nCmt);
 
 #ifdef OLD_TORSTEN
   return Pred(time, amt, rate, ii, evid, cmt, addl, ss,
               pMatrix, biovar, tlag, nCmt, dummy_systems,
               pred1, predss);
+
 #else
   using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
   using EM = EventsManager<ER>;
@@ -117,26 +121,17 @@ generalOdeModel_bdf(const F& f,
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(EM::solution_size(events_rec), EM::nCmt(events_rec));
 
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
-
-#ifdef TORSTEN_USE_STAN_ODE
-  PMXOdeIntegrator<StanBdf> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PMXOdeIntegrator<StanBdf>&> pr;
-#else
-  PMXOdeIntegrator<PkBdf> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PMXOdeIntegrator<PkBdf>&> pr;
-#endif
-
+  PredWrapper<model_type, PMXOdeIntegrator<StanRk45>&> pr;
   pr.pred(0, events_rec, pred, integrator, f);
   return pred;
 
 #endif
-
 }
 
-/**
- * Overload function to allow user to pass an std::vector for 
- * pMatrix/bioavailability/tlag
- */
+  /**
+   * Overload function to allow user to pass an std::vector for 
+   * pMatrix/bioavailability/tlag
+   */
   template <typename T0, typename T1, typename T2, typename T3,
             typename T_par, typename T_biovar, typename T_tlag,
             typename F,
@@ -144,7 +139,43 @@ generalOdeModel_bdf(const F& f,
             std::enable_if_t<
               !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
   auto
-  generalOdeModel_bdf(const F& f,
+  pmx_solve_rk45(const F& f,
+                       const int nCmt,
+                       const std::vector<T0>& time,
+                       const std::vector<T1>& amt,
+                       const std::vector<T2>& rate,
+                       const std::vector<T3>& ii,
+                       const std::vector<int>& evid,
+                       const std::vector<int>& cmt,
+                       const std::vector<int>& addl,
+                       const std::vector<int>& ss,
+                       const std::vector<T_par>& pMatrix,
+                       const std::vector<T_biovar>& biovar,
+                       const std::vector<T_tlag>& tlag,
+                       std::ostream* msgs = 0,
+                       double rel_tol = 1e-6,
+                       double abs_tol = 1e-6,
+                       long int max_num_steps = 1e6) {
+    auto param_ = torsten::to_nested_vector(pMatrix);
+    auto biovar_ = torsten::to_nested_vector(biovar);
+    auto tlag_ = torsten::to_nested_vector(tlag);
+
+    return pmx_solve_rk45(f, nCmt,
+                                time, amt, rate, ii, evid, cmt, addl, ss,
+                                param_, biovar_, tlag_,
+                                msgs, rel_tol, abs_tol, max_num_steps);
+  }
+
+  /*
+   * For backward compatibility we keep old version of
+   * return type using transpose. This is less efficient and
+   * will be decomissioned in formal release.
+   */
+  template <typename T0, typename T1, typename T2, typename T3,
+            typename T_par, typename T_biovar, typename T_tlag,
+            typename F>
+  auto
+  generalOdeModel_rk45(const F& f,
                       const int nCmt,
                       const std::vector<T0>& time,
                       const std::vector<T1>& amt,
@@ -161,28 +192,24 @@ generalOdeModel_bdf(const F& f,
                       double rel_tol = 1e-6,
                       double abs_tol = 1e-6,
                       long int max_num_steps = 1e6) {
-    auto param_ = torsten::to_nested_vector(pMatrix);
-    auto biovar_ = torsten::to_nested_vector(biovar);
-    auto tlag_ = torsten::to_nested_vector(tlag);
-
-    return generalOdeModel_bdf(f, nCmt,
-                               time, amt, rate, ii, evid, cmt, addl, ss,
-                               param_, biovar_, tlag_,
-                               msgs, rel_tol, abs_tol, max_num_steps);
+    auto x = pmx_solve_rk45(f, nCmt,
+                           time, amt, rate, ii, evid, cmt, addl, ss,
+                           pMatrix, biovar, tlag,
+                           msgs, rel_tol, abs_tol, max_num_steps);
+    return x.transpose();
   }
 
   /*
    * For population models, more often we use ragged arrays
    * to describe the entire population, so in addition we need the arrays of
    * the length of each individual's data. The size of that
-   * vector is the size of
-   * the population.
+   * vector is the size of the population.
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
 Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
               Eigen::Dynamic, Eigen::Dynamic>
-pmx_solve_group_bdf(const F& f,
+pmx_solve_group_rk45(const F& f,
                            const int nCmt,
                            const std::vector<int>& len,
                            const std::vector<T0>& time,
@@ -200,23 +227,17 @@ pmx_solve_group_bdf(const F& f,
                            double rel_tol = 1e-6,
                            double abs_tol = 1e-6,
                            long int max_num_steps = 1e6) {
-  static const char* caller("pmx_solve_group_bdf");
+  static const char* caller("pmx_solve_group_rk45");
   torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
                                 pMatrix, biovar, tlag, caller);
 
   using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
   using EM = EventsManager<ER>;
-  using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
-
   ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
-#ifdef TORSTEN_USE_STAN_ODE
-  PMXOdeIntegrator<StanBdf> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PMXOdeIntegrator<StanBdf>&> pr;
-#else
-  PMXOdeIntegrator<PkBdf> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PMXOdeIntegrator<PkBdf>&> pr;
-#endif
+  using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
+  PMXOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PredWrapper<model_type, PMXOdeIntegrator<StanRk45>&> pr;
 
   Eigen::Matrix<typename EM::T_scalar, -1, -1> pred(nCmt, EM::population_solution_size(events_rec));
 
@@ -226,5 +247,4 @@ pmx_solve_group_bdf(const F& f,
 }
 
 }
-
 #endif
