@@ -286,9 +286,6 @@ namespace torsten{
 
         const int nKeep = EM::solution_size(id, events_rec);
 
-        // res[id].resize(nKeep, nCmt);
-        // auto& res_i = res.block(EM::begin(id),0, nKeep, nCmt);
-
         int nev = EM::num_events(id, events_rec);
         res_d[id].resize(ES::system_size(id, events_rec), nev);
         res_d[id].setConstant(0.0);
@@ -367,8 +364,7 @@ namespace torsten{
      * Data-only MPI solver that takes ragged arrays as input.
      */
     template<typename T_events_record, typename... Ts>
-    void pred(const T_events_record& events_rec,
-                     Eigen::Matrix<double, -1, -1>& res,
+    void pred(const T_events_record& events_rec, Eigen::MatrixXd& res,
                      const T_pred... pred_pars,
                      const Ts... model_pars) {
       using Eigen::Matrix;

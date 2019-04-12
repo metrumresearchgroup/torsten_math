@@ -117,13 +117,7 @@ struct EventHistory {
     : Events(p_evid.size())
   {
     for (size_t i = 0; i < p_evid.size(); ++i) {
-      T3 ii_i;
-      int addl_i;
-      int ss_i;
-      p_ii.size() == 1 ? ii_i = 0.0 : ii_i = p_ii[i];
-      p_ii.size() == 1 ? addl_i = 0 : addl_i = p_addl[i];
-      p_ss.size() == 1 ? ss_i = 0 : ss_i = p_ss[i];
-      Events[i] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i], p_amt[i], p_rate[i], ii_i, p_evid[i], p_cmt[i], addl_i, ss_i, true, false);
+      Events[i] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i], p_amt[i], p_rate[i], p_ii[i], p_evid[i], p_cmt[i], p_addl[i], p_ss[i], true, false);
     }
   }
 

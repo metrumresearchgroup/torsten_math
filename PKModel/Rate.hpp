@@ -43,7 +43,7 @@ struct RateHistory {
         Rates.push_back(newRate);
       }
 
-    if (!std::is_sorted(Rates.begin(), Rates.end(), by_time())) sort();
+    sort();
 
     // Create time vector for rates
     vector<T_time> RateTimes(Rates.size(), 0);

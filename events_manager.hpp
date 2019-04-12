@@ -282,6 +282,7 @@ namespace torsten {
         }
         res = n;
       } else {
+        // FIXME
         res = EventsManager(id, rec).events().size();
       }
 

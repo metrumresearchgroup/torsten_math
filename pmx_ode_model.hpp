@@ -598,7 +598,26 @@ namespace refactor {
 
     /**
      * Solve steady state ODE-based PKPD model with @c amt
-     * and @c rate both being data.
+     * and @c rate both being data. Specifically for
+     * constant rate we solve ODEs of the form
+     *
+     * x′(t)=F(x,t,θ)+ Rate,
+     *
+     * and solution x satisfies
+     *
+     * F(x,t,θ) + Rate = 0.
+     *
+     * For the periodic steady-state resulting from a
+     * periodic input D into one or more cpts at a constant
+     * interval τ, the root finder is combined with the ODE
+     * solver to solve
+     *
+     * x(t0 + τ) − x(t0) = 0.
+     *
+     * Denote x(t0) by x0, it is equivalent to solve x0 in
+     *
+     * x(t0 + τ) = x0, where in the interval (t0, t0 + τ)
+     * x(t) satisfies the ODE with x0 as init condition.
      *
      * @tparam It ODE numerical integrator ID.
      * @tparam T_ii dosing interval type
@@ -650,7 +669,7 @@ namespace refactor {
       using F_ss = PMXOdeFunctorRateAdaptor<F, double>;
       torsten::SSFunctor<It, double, double, F_ss, void> system(f1, ii_dbl, cmt, integrator); // NOLINT
 
-      if (rate == 0) {  // bolus dose
+      if (rate == 0) {          // multiple bolus dose: AMT>0, RATE=0, SS=1, and II>0.
         // compute initial guess
         init_dbl(cmt - 1) = amt;
         y = integrate(x_r, init_dbl, ii_dbl, integrator); // NOLINT
@@ -661,7 +680,7 @@ namespace refactor {
                               0, alge_rtol, f_tol, alge_max_steps);
         // DEV - what tuning parameters should we use for the algebra solver?
         // DEV - update initial guess or tuning parameters if result not good?
-      }  else if (ii > 0) {  // multiple truncated infusions
+      }  else if (ii > 0) {     // multiple infusion: AMT>0, RATE>0, SS=1, and II>0.
         x_r[cmt - 1] = rate;
         // compute initial guess
         y = integrate(x_r, init_dbl, ii_dbl, integrator); // NOLINT
@@ -671,7 +690,7 @@ namespace refactor {
                               x_r, x_i,
                               0, alge_rtol, 1e-3, alge_max_steps);  // FIX ME
         // use ftol
-      } else {  // constant infusion
+      } else {                  // constant infusion: AMT=0, RATE>0, SS=1, and II=0.
         x_r[cmt - 1] = rate;
         y = integrate(x_r, init_dbl, 100.0, integrator); // NOLINT
         x_r.push_back(amt);
