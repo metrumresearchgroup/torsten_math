@@ -168,5 +168,66 @@ pmx_solve_twocpt_bdf(const F& f,
                                  msgs, rel_tol, abs_tol, max_num_steps);
   }
 
+  // old version
+template <typename T0, typename T1, typename T2, typename T3, typename T4,
+          typename T5, typename T6, typename F>
+Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
+  typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
+  Eigen::Dynamic, Eigen::Dynamic>
+mixOde2CptModel_bdf(const F& f,
+                     const int nOde,
+                     const std::vector<T0>& time,
+                     const std::vector<T1>& amt,
+                     const std::vector<T2>& rate,
+                     const std::vector<T3>& ii,
+                     const std::vector<int>& evid,
+                     const std::vector<int>& cmt,
+                     const std::vector<int>& addl,
+                     const std::vector<int>& ss,
+                     const std::vector<std::vector<T4> >& theta,
+                     const std::vector<std::vector<T5> >& biovar,
+                     const std::vector<std::vector<T6> >& tlag,
+                     std::ostream* msgs = 0,
+                     double rel_tol = 1e-6,
+                     double abs_tol = 1e-6,
+                     long int max_num_steps = 1e6) {  // NOLINT(runtime/int)
+  auto x = pmx_solve_twocpt_bdf(f, nOde,
+                                 time, amt, rate, ii, evid, cmt, addl, ss,
+                                 theta, biovar, tlag,
+                                 msgs, rel_tol, abs_tol, max_num_steps);
+  return x.transpose();
+}
+
+  template <typename T0, typename T1, typename T2, typename T3,
+            typename T_par, typename T_biovar, typename T_tlag,
+            typename F,
+            typename
+            std::enable_if_t<
+              !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
+  auto
+  mixOde2CptModel_bdf(const F& f,
+                        const int nOde,
+                        const std::vector<T0>& time,
+                        const std::vector<T1>& amt,
+                        const std::vector<T2>& rate,
+                        const std::vector<T3>& ii,
+                        const std::vector<int>& evid,
+                        const std::vector<int>& cmt,
+                        const std::vector<int>& addl,
+                        const std::vector<int>& ss,
+                        const std::vector<T_par>& pMatrix,
+                        const std::vector<T_biovar>& biovar,
+                        const std::vector<T_tlag>& tlag,
+                        std::ostream* msgs = 0,
+                        double rel_tol = 1e-6,
+                        double abs_tol = 1e-6,
+                        long int max_num_steps = 1e6) {
+    auto x = pmx_solve_twocpt_bdf(f, nOde,
+                                   time, amt, rate, ii, evid, cmt, addl, ss,
+                                   pMatrix, biovar, tlag,
+                                   msgs, rel_tol, abs_tol, max_num_steps);
+    return x.transpose();
+  }
+
 }
 #endif
