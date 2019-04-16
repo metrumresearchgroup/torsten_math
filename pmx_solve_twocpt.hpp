@@ -11,6 +11,7 @@
 #include <stan/math/torsten/PKModel/Pred/PredSS_twoCpt.hpp>
 #include <stan/math/torsten/pmx_twocpt_model.hpp>
 #include <stan/math/torsten/pmx_population_check.hpp>
+#include <stan/math/torsten/return_type.hpp>
 #include <string>
 #include <vector>
 
@@ -45,9 +46,8 @@ namespace torsten {
  */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6>
-Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
-  typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
-  Eigen::Dynamic, Eigen::Dynamic>
+Eigen::Matrix<typename torsten::return_t<T0, T1, T2, T3, T4, T5, T6>::type,
+              Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_twocpt(const std::vector<T0>& time,
               const std::vector<T1>& amt,
               const std::vector<T2>& rate,
@@ -168,8 +168,7 @@ pmx_solve_twocpt(const std::vector<T0>& time,
   // old version
   template <typename T0, typename T1, typename T2, typename T3, typename T4,
             typename T5, typename T6>
-  Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
-                                                           typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
+  Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3, T4, T5, T6>::type,
                  Eigen::Dynamic, Eigen::Dynamic>
   PKModelTwoCpt(const std::vector<T0>& time,
                 const std::vector<T1>& amt,

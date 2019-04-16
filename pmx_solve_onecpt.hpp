@@ -45,9 +45,8 @@ namespace torsten {
  */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6>
-Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
-  typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
-  Eigen::Dynamic, Eigen::Dynamic>
+Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3, T4, T5, T6>::type,
+               Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_onecpt(const std::vector<T0>& time,
               const std::vector<T1>& amt,
               const std::vector<T2>& rate,
@@ -158,8 +157,7 @@ pmx_solve_onecpt(const std::vector<T0>& time,
   // old version
   template <typename T0, typename T1, typename T2, typename T3, typename T4,
             typename T5, typename T6>
-  Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
-                                                           typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
+  Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3, T4, T5, T6>::type,
                  Eigen::Dynamic, Eigen::Dynamic>
   PKModelOneCpt(const std::vector<T0>& time,
                 const std::vector<T1>& amt,

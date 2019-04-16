@@ -65,9 +65,8 @@ namespace torsten {
  */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
-Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
-  typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
-  Eigen::Dynamic, Eigen::Dynamic>
+Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3, T4, T5, T6>::type,
+               Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_twocpt_rk45(const F& f,
                      const int nOde,
                      const std::vector<T0>& time,
@@ -173,9 +172,8 @@ pmx_solve_twocpt_rk45(const F& f,
   // old version
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
-Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
-  typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
-  Eigen::Dynamic, Eigen::Dynamic>
+Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3, T4, T5, T6>::type,
+               Eigen::Dynamic, Eigen::Dynamic>
 mixOde2CptModel_rk45(const F& f,
                      const int nOde,
                      const std::vector<T0>& time,

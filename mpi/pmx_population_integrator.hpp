@@ -6,6 +6,10 @@
 #include <stan/math/torsten/dsolve/pmx_cvodes_integrator.hpp>
 #include <stan/math/torsten/mpi/session.hpp>
 #include <stan/math/torsten/mpi/my_worker.hpp>
+#include <stan/math/torsten/return_type.hpp>
+#include <stan/math/torsten/is_var.hpp>
+#include <algorithm>
+#include <vector>
 
 namespace torsten {
   namespace mpi {
@@ -38,14 +42,15 @@ namespace torsten {
        * MPI solution when the parameters contain @c var
        */ 
       template <typename Tt, typename T_initial, typename T_param,
-                typename std::enable_if_t<stan::is_var<typename stan::return_type<Tt, T_initial, T_param>::type>::value >* = nullptr> // NOLINT
+                typename std::enable_if_t<torsten::is_var<Tt, T_initial, T_param>::value >* = nullptr> // NOLINT
       inline
-      std::vector<Eigen::Matrix<typename stan::return_type<Tt, T_initial, T_param>::type, // NOLINT
-                                Eigen::Dynamic, Eigen::Dynamic> >
+      Eigen::Matrix<typename torsten::return_t<Tt, T_initial, T_param>::type, // NOLINT
+                    Eigen::Dynamic, Eigen::Dynamic>
       operator()(const F& f,
                  const std::vector<std::vector<T_initial> >& y0,
                  double t0,
-                 const std::vector<std::vector<Tt> >& ts,
+                 const std::vector<int>& len,
+                 const std::vector<Tt>& ts,
                  const std::vector<std::vector<T_param> >& theta,
                  const std::vector<std::vector<double> >& x_r,
                  const std::vector<std::vector<int> >& x_i,
@@ -68,10 +73,11 @@ namespace torsten {
         int rank = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM].rank;
         int size = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM].size;
 
-        using scalar_type = typename stan::return_type<Tt, T_initial, T_param>::type;
+        using scalar_type = typename torsten::return_t<Tt, T_initial, T_param>::type;
 
         vector<MatrixXd> res_d(np);
-        vector<Matrix<scalar_type, Dynamic, Dynamic> > res(np);
+        Matrix<scalar_type, -1, -1> res(n, ts.size());
+        res.setZero();
         vector<scalar_type> vars;
         std::vector<double> g;
         int ns, nsol, nsys, nt;
@@ -85,10 +91,13 @@ namespace torsten {
         // need to make sure to finish.
         int n_req = np;
 
+        typename std::vector<Tt>::const_iterator iter = ts.begin();
         for (int i = 0; i < np; ++i) {
+          std::vector<Tt> ts_i(iter, iter + len[i]);
+          iter += len[i];
           int my_worker_id = torsten::mpi::my_worker(i, np, size);
           try {
-            Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
+            Ode ode{serv, f, t0, ts_i, y0[i], theta[i], x_r[i], x_i[i], msgs};
             vars = ode.vars();
             ns   = ode.ns();
             nsys = ode.n_sys();
@@ -115,26 +124,31 @@ namespace torsten {
           }
 
           MPI_Ibcast(res_d[i].data(), res_d[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
-          res[i].resize(n, nt);
         }
 
+        int begin_id = 0;
+        iter = ts.begin();
         for (int i = 0; i < n_req; ++i) {
+          std::vector<Tt> ts_i(iter, iter + len[i]);
+          iter += len[i];
           MPI_Wait(&req[i], MPI_STATUS_IGNORE);
           if(is_invalid) continue;
           if (std::isnan(res_d[i](0))) {
             is_invalid = true;
             rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
           } else {
-            Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
+            Ode ode{serv, f, t0, ts_i, y0[i], theta[i], x_r[i], x_i[i], msgs};
             g.resize(ode.ns());
             vars = ode.vars();
             for (int j = 0 ; j < nt; ++j) {
               for (int k = 0; k < n; ++k) {
                 for (int l = 0 ; l < ns; ++l) g[l] = res_d[i](k * nsol + l + 1, j);
-                res[i](k, j) = precomputed_gradients(res_d[i](k * nsol, j), vars, g);
+                Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i])(k, j) = precomputed_gradients(res_d[i](k * nsol, j), vars, g);
+                // res[i](k, j) = precomputed_gradients(res_d[i](k * nsol, j), vars, g);
               }
             }
           }
+          begin_id += len[i] * n;
         }
         
         if(is_invalid) {
@@ -147,19 +161,23 @@ namespace torsten {
       /*
        * For data-only MPI solution, we simply pass the
        * results over.
+       * @param len num of time steps for each subject.
+       * @param ts time steps for the entire group.
        */
-      inline
-      std::vector<Eigen::MatrixXd>
-      operator()(const F& f,
-                 const std::vector<std::vector<double> >& y0,
-                 double t0,
-                 const std::vector<std::vector<double> >& ts,
-                 const std::vector<std::vector<double> >& theta,
-                 const std::vector<std::vector<double> >& x_r,
-                 const std::vector<std::vector<int> >& x_i,
-                 std::ostream* msgs) {
+      inline Eigen::MatrixXd operator()(const F& f,
+                                        const std::vector<std::vector<double> >& y0,    // NOLINT
+                                        double t0,
+                                        const std::vector<int>& len,
+                                        const std::vector<double>& ts,
+                                        const std::vector<std::vector<double> >& theta, // NOLINT
+                                        const std::vector<std::vector<double> >& x_r,   // NOLINT
+                                        const std::vector<std::vector<int> >& x_i,      // NOLINT
+                                        std::ostream* msgs) {
         using stan::math::var;
         using std::vector;
+        using Eigen::Matrix;
+        using Eigen::MatrixXd;
+        using Eigen::Dynamic;
         using torsten::dsolve::PMXCvodesFwdSystem;
         using torsten::dsolve::PMXCvodesIntegrator;
         using torsten::PMXCvodesSensMethod;
@@ -174,30 +192,31 @@ namespace torsten {
         int rank = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_DATA].rank;
         int size = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_DATA].size;
 
-        vector<Eigen::MatrixXd> res(np);
-        int nsys, nt;
+        Eigen::MatrixXd res = Eigen::MatrixXd::Zero(n, ts.size());
         std::vector<MPI_Request> req(np);
+        std::vector<int> begin_ids(np);
 
         bool is_invalid = false;
         int n_req = np;
         std::ostringstream rank_fail_msg;
 
+        std::vector<double>::const_iterator iter = ts.begin();
+        int begin_id = 0;
         for (int i = 0; i < np; ++i) {
+          std::vector<double> ts_i(iter, iter + len[i]);
+          iter += len[i];
+          int size_id = len[i] * n;
           int my_worker_id = torsten::mpi::my_worker(i, np, size);
           try {
-            Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
-            nsys = ode.n_sys();
-            nt   = ode.ts().size();
-            res[i].resize(nsys, nt);
-            res[i].setConstant(0.0);
+            Ode ode{serv, f, t0, ts_i, y0[i], theta[i], x_r[i], x_i[i], msgs};
 
             // success in creating ODE, solve it
             if(rank == my_worker_id) {
               try {
-                res[i] = solver.integrate<Ode, false>(ode);
+                MatrixXd::Map(&res(begin_id), n, len[i]) = solver.integrate<Ode, false>(ode);
               } catch (const std::exception& e) {
                 is_invalid = true;
-                res[i].setConstant(invalid_res_d);
+                MatrixXd::Map(&res(begin_id), n, len[i]).setConstant(invalid_res_d);
                 rank_fail_msg << "Rank " << rank << " failed to solve ODEs for id " << i << ": " << e.what();
               }
             }
@@ -208,7 +227,9 @@ namespace torsten {
             break;
           }
 
-          MPI_Ibcast(res[i].data(), res[i].size(), MPI_DOUBLE, my_worker_id, comm, &req[i]);
+          MPI_Ibcast(&res(begin_id), size_id, MPI_DOUBLE, my_worker_id, comm, &req[i]);
+          begin_ids[i] = begin_id;
+          begin_id += size_id;
         }
 
         int finished = 0;
@@ -218,7 +239,7 @@ namespace torsten {
           finished++;
           if(is_invalid) continue;
           int i = index;
-          if (std::isnan(res[i](0))) {
+          if (std::isnan(res(begin_ids[i]))) {
             is_invalid = true;
             rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
           }
@@ -232,12 +253,13 @@ namespace torsten {
       }
 #else
       template <typename Tt, typename T_initial, typename T_param>
-      inline std::vector<Eigen::Matrix<typename stan::return_type<Tt, T_initial, T_param>::type, // NOLINT
-                                       Eigen::Dynamic, Eigen::Dynamic> >
+      inline Eigen::Matrix<typename torsten::return_t<Tt, T_initial, T_param>::type, // NOLINT
+                           Eigen::Dynamic, Eigen::Dynamic>
       operator()(const F& f,
                  const std::vector<std::vector<T_initial> >& y0,
                  double t0,
-                 const std::vector<std::vector<Tt> >& ts,
+                 const std::vector<int>& len,
+                 const std::vector<Tt>& ts,
                  const std::vector<std::vector<T_param> >& theta,
                  const std::vector<std::vector<double> >& x_r,
                  const std::vector<std::vector<int> >& x_i,
@@ -262,17 +284,19 @@ namespace torsten {
 
         static torsten::dsolve::PMXCvodesService<typename Ode::Ode> serv(n, m);
 
-        using scalar_type = typename stan::return_type<Tt, T_initial, T_param>::type;
-        vector<Matrix<scalar_type, Dynamic, Dynamic> > res(np);
+        using scalar_type = typename torsten::return_t<Tt, T_initial, T_param>::type;
+        Matrix<scalar_type, Dynamic, Dynamic> res(n, ts.size());
 
         vector<vector<scalar_type> > res_i;
+        typename std::vector<Tt>::const_iterator iter = ts.begin();
+        int begin_id = 0;
         for (int i = 0; i < np; ++i) {
-          Ode ode{serv, f, t0, ts[i], y0[i], theta[i], x_r[i], x_i[i], msgs};
-          res_i = solver.integrate(ode);
-          res[i].resize(res_i[0].size(), res_i.size());
-          for (size_t j = 0; j < res_i.size(); ++j) {
-            res[i].col(j) = stan::math::to_vector(res_i[j]);
-          }
+          std::vector<Tt> ts_i(iter, iter + len[i]);
+          iter += len[i];
+          Ode ode{serv, f, t0, ts_i, y0[i], theta[i], x_r[i], x_i[i], msgs};
+          Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i])
+            = stan::math::to_matrix(solver.integrate(ode)).transpose();
+          begin_id += n * len[i];
         }
 
         return res;

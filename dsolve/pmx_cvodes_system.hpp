@@ -120,15 +120,12 @@ namespace torsten {
         if (mem_ == NULL)
           throw std::runtime_error("CVodeCreate failed to allocate memory");
 
-        auto t0_data = stan::math::value_of(t0);
-        auto ts_data = stan::math::value_of(ts);
-        
         static const char* caller = "PMXCvodesSystem";
-        stan::math::check_finite(caller, "initial time", t0_data);
-        stan::math::check_finite(caller, "times", ts_data);
-        stan::math::check_ordered(caller, "times", ts_data);
-        stan::math::check_nonzero_size(caller, "times", ts_data);
-        stan::math::check_less(caller, "initial time", t0_data, ts_data.front());
+        stan::math::check_finite(caller, "initial time", t0);
+        stan::math::check_finite(caller, "times", ts);
+        stan::math::check_ordered(caller, "times", ts);
+        stan::math::check_nonzero_size(caller, "times", ts);
+        stan::math::check_less(caller, "initial time", t0, ts.front());
         stan::math::check_finite(caller, "initial state", y0);
         stan::math::check_finite(caller, "parameter vector", theta);
         stan::math::check_finite(caller, "continuous data", x_r);
