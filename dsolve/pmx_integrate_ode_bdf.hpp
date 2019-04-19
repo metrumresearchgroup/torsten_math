@@ -7,7 +7,6 @@
 #include <vector>
 
 namespace torsten {
-namespace dsolve {
 
   /*
    * solve an ODE given its RHS with CVODES' BDF solver.
@@ -44,10 +43,7 @@ namespace dsolve {
                          double rtol = 1e-10,
                          double atol = 1e-10,
                          long int max_num_step = 1e8) {
-    using torsten::dsolve::PMXCvodesFwdSystem;
-    using torsten::dsolve::PMXCvodesIntegrator;
-    using torsten::PMXCvodesSensMethod;
-    using Ode = PMXCvodesFwdSystem<F, Tt, T_initial, T_param, CV_BDF, AD>;
+    using Ode = dsolve::PMXCvodesFwdSystem<F, Tt, T_initial, T_param, CV_BDF, AD>;
     const int m = theta.size();
     const int n = y0.size();
 
@@ -67,12 +63,11 @@ namespace dsolve {
     if (atol <= 0) stan::math::invalid_argument(caller, "absolute_tolerance,", atol, "", ", must be greater than 0"); // NOLINT
     if (max_num_step <= 0) stan::math::invalid_argument(caller, "max_num_step,", max_num_step, "", ", must be greater than 0"); // NOLINT
 
-    PMXCvodesService<typename Ode::Ode> serv(n, m);
+    dsolve::PMXCvodesService<typename Ode::Ode> serv(n, m);
 
     Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
-    PMXCvodesIntegrator solver(rtol, atol, max_num_step);
+    dsolve::PMXCvodesIntegrator solver(rtol, atol, max_num_step);
     return solver.integrate(ode);
-}
 }
 }
 #endif

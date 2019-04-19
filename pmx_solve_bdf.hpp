@@ -138,27 +138,24 @@ pmx_solve_bdf(const F& f,
   template <typename T0, typename T1, typename T2, typename T3,
             typename T_par, typename T_biovar, typename T_tlag,
             typename F,
-            typename
-            std::enable_if_t<
-              !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
-  auto
-  pmx_solve_bdf(const F& f,
-                const int nCmt,
-                const std::vector<T0>& time,
-                const std::vector<T1>& amt,
-                const std::vector<T2>& rate,
-                const std::vector<T3>& ii,
-                const std::vector<int>& evid,
-                const std::vector<int>& cmt,
-                const std::vector<int>& addl,
-                const std::vector<int>& ss,
-                const std::vector<T_par>& pMatrix,
-                const std::vector<T_biovar>& biovar,
-                const std::vector<T_tlag>& tlag,
-                std::ostream* msgs = 0,
-                double rel_tol = 1e-6,
-                double abs_tol = 1e-6,
-                long int max_num_steps = 1e6) {
+            typename std::enable_if_t<!(torsten::is_std_vector<T_par, T_biovar, T_tlag>::value)>* = nullptr> //NOLINT
+  auto pmx_solve_bdf(const F& f,
+                     const int nCmt,
+                     const std::vector<T0>& time,
+                     const std::vector<T1>& amt,
+                     const std::vector<T2>& rate,
+                     const std::vector<T3>& ii,
+                     const std::vector<int>& evid,
+                     const std::vector<int>& cmt,
+                     const std::vector<int>& addl,
+                     const std::vector<int>& ss,
+                     const std::vector<T_par>& pMatrix,
+                     const std::vector<T_biovar>& biovar,
+                     const std::vector<T_tlag>& tlag,
+                     std::ostream* msgs = 0,
+                     double rel_tol = 1e-6,
+                     double abs_tol = 1e-6,
+                     long int max_num_steps = 1e6) {
     auto param_ = torsten::to_nested_vector(pMatrix);
     auto biovar_ = torsten::to_nested_vector(biovar);
     auto tlag_ = torsten::to_nested_vector(tlag);

@@ -4,8 +4,6 @@
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_adams.hpp>
 
 namespace torsten {
-namespace dsolve {
-
   /**
    * Solve population ODE model by delegating the population
    * ODE integration task to multiple processors through
@@ -52,7 +50,7 @@ namespace dsolve {
     stan::math::check_consistent_sizes(caller, "y0", y0, "x_r",    x_r);
     stan::math::check_consistent_sizes(caller, "y0", y0, "x_i",    x_i);
 
-    PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
+    dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
     torsten::mpi::PMXPopulationIntegrator<F, CV_ADAMS> solver(integrator);
 
     return solver(f, y0, t0, len, ts, theta, x_r, x_i, msgs);
@@ -106,12 +104,11 @@ namespace dsolve {
     stan::math::check_consistent_sizes(caller, "y0", y0, "x_r",    x_r);
     stan::math::check_consistent_sizes(caller, "y0", y0, "x_i",    x_i);
 
-    PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
+    dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
     torsten::mpi::PMXPopulationIntegrator<F, CV_ADAMS> solver(integrator);
 
     return solver(f, y0, t0, len, ts, group_theta, theta, x_r, x_i, msgs);
   }
 
-}
 }
 #endif

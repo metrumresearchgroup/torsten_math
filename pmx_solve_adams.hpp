@@ -138,13 +138,9 @@ pmx_solve_adams(const F& f,
  * pMatrix/bioavailability/tlag
  */
 template <typename T0, typename T1, typename T2, typename T3,
-          typename T_par, typename T_biovar, typename T_tlag,
-          typename F,
-          typename
-          std::enable_if_t<
-            !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
-auto
-pmx_solve_adams(const F& f,
+          typename T_par, typename T_biovar, typename T_tlag, typename F,
+          typename std::enable_if_t<!(torsten::is_std_vector<T_par, T_biovar, T_tlag>::value)>* = nullptr> //NOLINT
+auto pmx_solve_adams(const F& f,
                      const int nCmt,
                      const std::vector<T0>& time,
                      const std::vector<T1>& amt,
@@ -216,23 +212,23 @@ template <typename T0, typename T1, typename T2, typename T3, typename T4,
 Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
               Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_group_adams(const F& f,
-                           const int nCmt,
-                           const std::vector<int>& len,
-                           const std::vector<T0>& time,
-                           const std::vector<T1>& amt,
-                           const std::vector<T2>& rate,
-                           const std::vector<T3>& ii,
-                           const std::vector<int>& evid,
-                           const std::vector<int>& cmt,
-                           const std::vector<int>& addl,
-                           const std::vector<int>& ss,
-                           const std::vector<std::vector<T4> >& pMatrix,
-                           const std::vector<std::vector<T5> >& biovar,
-                           const std::vector<std::vector<T6> >& tlag,
-                           std::ostream* msgs = 0,
-                           double rel_tol = 1e-10,
-                           double abs_tol = 1e-10,
-                           long int max_num_steps = 1e8) {
+                      const int nCmt,
+                      const std::vector<int>& len,
+                      const std::vector<T0>& time,
+                      const std::vector<T1>& amt,
+                      const std::vector<T2>& rate,
+                      const std::vector<T3>& ii,
+                      const std::vector<int>& evid,
+                      const std::vector<int>& cmt,
+                      const std::vector<int>& addl,
+                      const std::vector<int>& ss,
+                      const std::vector<std::vector<T4> >& pMatrix,
+                      const std::vector<std::vector<T5> >& biovar,
+                      const std::vector<std::vector<T6> >& tlag,
+                      std::ostream* msgs = 0,
+                      double rel_tol = 1e-10,
+                      double abs_tol = 1e-10,
+                      long int max_num_steps = 1e8) {
   static const char* caller("pmx_solve_group_adams");
   torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
                                 pMatrix, biovar, tlag, caller);

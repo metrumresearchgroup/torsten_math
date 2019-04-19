@@ -443,7 +443,6 @@ namespace torsten{
         }
       }
 
-        
       MPI_Barrier(comm);
 
       if(is_invalid) {
