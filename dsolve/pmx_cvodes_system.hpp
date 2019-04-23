@@ -30,8 +30,7 @@ namespace torsten {
      * @tparam Ty0 scalar type of initial unknown values
      * @tparam Tpar scalar type of parameters
      */
-    template <typename F, typename Tts,
-              typename Ty0, typename Tpar, int Lmm>
+    template <typename F, typename Tts, typename Ty0, typename Tpar, int Lmm>
     class PMXCvodesSystem {
     public:
       using Ode = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
@@ -54,8 +53,6 @@ namespace torsten {
       std::vector<double>& y_vec_;
       std::vector<double>& fval_;
       void* mem_;
-      SUNMatrix& A_;
-      SUNLinearSolver& LS_;
       std::ostream* msgs_;
 
     public:
@@ -109,8 +106,6 @@ namespace torsten {
           y_vec_(serv_.y),
           fval_(serv_.fval),
           mem_(serv_.mem),
-          A_(serv_.A),
-          LS_(serv.LS),
           msgs_(msgs) {
         using stan::math::system_error;
 
@@ -143,7 +138,7 @@ namespace torsten {
 
         // initial condition
         for (size_t i = 0; i < N_; ++i) {
-          NV_Ith_S(nv_y_, i) = stan::math::value_of(y0_[i]);
+          NV_Ith_S(nv_y_, i) = y0_dbl_[i];
         }
       }
 
@@ -155,38 +150,12 @@ namespace torsten {
       }
 
       /**
-       * intialize solution to ensure right size for a matrix
-       * output. Since @c Eigen::Matrix is column-major we
-       * designate each col for one time step.
-       *
-       * @param sol solution to be outputed
-       */
-      void initialize_solution(Eigen::MatrixXd& sol) {
-        sol = Eigen::MatrixXd::Zero(n_sys(), ts_.size());
-      }
-
-      /**
-       * intialize solution to ensure right size for
-       * a vector of vectors output, with each vector for
-       * each time step.
-       *
-       * @param sol solution to be outputed
-       */
-      void initialize_solution(std::vector<std::vector<scalar_type> >& sol) {
-        sol.resize(ts_.size());
-        for (auto&& v : sol) {
-          v.resize(N_);
-          std::fill(v.begin(), v.end(), 0.0);
-        }
-      }
-
-      /**
        * Return the size of the solution correspdoning each y[i],
        * namely 1 + number of sensitivities.
        *
        * @return each solution size.
        */
-      int n_sol() {
+      int n_sol() const {
         int nt = stan::is_var<Tts>::value ? ts_.size() : 0;
         return 1 + ns_ + nt;
       }
@@ -248,24 +217,14 @@ namespace torsten {
         try {
           stan::math::start_nested();
 
-          std::vector<stan::math::var> yv_work(n), fyv_work(n);
+          std::vector<var> yv_work(NV_DATA_S(y), NV_DATA_S(y) + n);
+          std::vector<var> fyv_work(f_(t, yv_work, theta_dbl_, x_r_, x_i_, msgs_));
 
-          for (int i = 0; i < n; ++i) {
-            yv_work[i] = NV_Ith_S(y, i);
-            yv_work[i].vi_ -> set_zero_adjoint();
-          }
-
-          fyv_work = f_(t, yv_work, theta_dbl_, x_r_, x_i_, msgs_);
-
-          std::vector<double> g;
           for (int i = 0; i < n; ++i) {
             stan::math::set_zero_all_adjoints_nested();
-            fyv_work[i].grad(yv_work, g);
-            std::for_each(yv_work.begin(), yv_work.end(),
-                          [](var& v) { v.vi_ -> set_zero_adjoint(); });
-
+            fyv_work[i].grad();
             for (int j = 0; j < n; ++j) {
-              SM_ELEMENT_D(J, i, j) = g[j];
+              SM_ELEMENT_D(J, i, j) = yv_work[j].adj();
             }
           }
         } catch (const std::exception& e) {
@@ -321,7 +280,7 @@ namespace torsten {
       /**
        * return number of unknown variables
        */
-      const size_t n() { return N_; }
+      const size_t n() const { return N_; }
 
       /**
        * return number of sensitivity parameters
@@ -331,7 +290,7 @@ namespace torsten {
       /**
        * return size of ODE system for primary and sensitivity unknowns
        */
-      const size_t n_sys() { return N_ * n_sol(); }
+      const size_t n_sys() const { return N_ * n_sol(); }
 
       /**
        * return theta size

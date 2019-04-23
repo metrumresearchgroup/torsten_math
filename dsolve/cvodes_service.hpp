@@ -51,6 +51,8 @@ namespace torsten {
         y(n),
         fval(n),
         mem(CVodeCreate(Ode::lmm_type, CV_NEWTON)),
+        A(SUNDenseMatrix(n, n)),
+        LS(SUNDenseLinearSolver(nv_y, A)),
         yy_cplx(n),
         theta_cplx(m),
         fval_cplx(n)
@@ -67,11 +69,9 @@ namespace torsten {
         }
 
         /*
-         * initialize cvodes system and allocate linear solver mem
+         * initialize cvodes system and attach linear solver
          */ 
         CHECK_SUNDIALS_CALL(CVodeInit(mem, cvodes_rhs<Ode>(), t0, nv_y));
-        A = SUNDenseMatrix(n, n);
-        LS = SUNDenseLinearSolver(nv_y, A);
         CHECK_SUNDIALS_CALL(CVDlsSetLinearSolver(mem, LS, A));
       }
 
