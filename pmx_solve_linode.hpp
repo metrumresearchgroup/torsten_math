@@ -75,7 +75,7 @@ pmx_solve_linode(const std::vector<T0>& time,
 
   std::vector<T4> parameters_dummy(0);
   std::vector<std::vector<T4> > pMatrix_dummy(1, parameters_dummy);
-  torsten::pmetricsCheck(time, amt, rate, ii, evid, cmt, addl, ss,
+  torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
                 pMatrix_dummy, biovar, tlag, function);
 
 #ifdef OLD_TORSTEN

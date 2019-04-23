@@ -92,7 +92,7 @@ pmx_solve_twocpt_rk45(const F& f,
 
   // check arguments
   static const char* function("pmx_solve_twocpt_rk45");
-  torsten::pmetricsCheck(time, amt, rate, ii, evid, cmt, addl, ss,
+  torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
                 theta, biovar, tlag, function);
 
   // Construct dummy array of matrix for last argument of pred

@@ -3,6 +3,7 @@
 
 #include <stan/math/torsten/dsolve/pmx_cvodes_integrator.hpp>
 #include <stan/math/torsten/mpi.hpp>
+#include <stan/math/torsten/dsolve/ode_check.hpp>
 #include <ostream>
 #include <vector>
 
@@ -42,6 +43,9 @@ namespace torsten {
                          double rtol = 1e-10,
                          double atol = 1e-10,
                          long int max_num_step = 1e8) {
+    static const char* caller = "pmx_integrate_ode_adams";
+    dsolve::ode_check(y0, t0, ts, theta, x_r, x_i, caller);
+
     using Ode = dsolve::PMXCvodesFwdSystem<F, Tt, T_initial, T_param, CV_ADAMS, AD>;
     const int n = y0.size();
     const int m = theta.size();

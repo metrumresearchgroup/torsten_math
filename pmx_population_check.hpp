@@ -103,7 +103,7 @@ void pmx_population_check(const std::vector<int>& len,
 
   // total size should be match
   size_t s = 0;
-  for (auto& i : len) s += i;
+  for (auto const & i : len) s += i;
   check_greater_or_equal(function, "time size", time.size(), s);  
 
   if (pMatrix.size() > len.size()) {
@@ -111,7 +111,7 @@ void pmx_population_check(const std::vector<int>& len,
   } else {
     check_consistent_sizes(function, "parameters", pMatrix, "len", len);
   }
-  for (auto&& p : pMatrix) {
+  for (auto const & p : pMatrix) {
     check_finite(function, "parameters", p);
     check_not_nan(function, "parameters", p);
   }
@@ -121,7 +121,7 @@ void pmx_population_check(const std::vector<int>& len,
   } else {
     check_consistent_sizes(function, "bioavailability", biovar, "len", len);
   }
-  for (auto&& p : biovar) {
+  for (auto const & p : biovar) {
     check_nonnegative(function, "bioavailability", p);
     check_finite(function, "bioavailability", p);
     check_not_nan(function, "bioavailability", p);
@@ -132,7 +132,7 @@ void pmx_population_check(const std::vector<int>& len,
   } else {
     check_consistent_sizes(function, "lag time", tlag, "len", len);
   }
-  for (auto&& p : tlag) {
+  for (auto const & p : tlag) {
     check_nonnegative(function, "lag time", p);
     check_finite(function, "lag time", p);
     check_not_nan(function, "lag time", p);

@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_GROUP_ADAMS_HPP
 
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_adams.hpp>
+#include <stan/math/torsten/dsolve/ode_check.hpp>
 
 namespace torsten {
   /**
@@ -45,10 +46,7 @@ namespace torsten {
                                 double atol = 1e-10,
                                 long int max_num_step = 1e6) {  // NOLINT(runtime/int)
     static const char* caller("pmx_integrate_ode_adams");
-    stan::math::check_consistent_sizes(caller, "y0", y0, "length", len);
-    stan::math::check_consistent_sizes(caller, "y0", y0, "theta",  theta);
-    stan::math::check_consistent_sizes(caller, "y0", y0, "x_r",    x_r);
-    stan::math::check_consistent_sizes(caller, "y0", y0, "x_i",    x_i);
+    dsolve::ode_group_check(y0, t0, len, ts, theta, x_r, x_i, caller);
 
     dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
     torsten::mpi::PMXPopulationIntegrator<F, CV_ADAMS> solver(integrator);
@@ -99,10 +97,7 @@ namespace torsten {
                                 double atol = 1e-10,
                                 long int max_num_step = 1e6) {  // NOLINT(runtime/int)
     static const char* caller("pmx_integrate_ode_adams");
-    stan::math::check_consistent_sizes(caller, "y0", y0, "length", len);
-    stan::math::check_consistent_sizes(caller, "y0", y0, "theta",  theta);
-    stan::math::check_consistent_sizes(caller, "y0", y0, "x_r",    x_r);
-    stan::math::check_consistent_sizes(caller, "y0", y0, "x_i",    x_i);
+    dsolve::ode_group_check(y0, t0, len, ts, theta, x_r, x_i, caller);
 
     dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
     torsten::mpi::PMXPopulationIntegrator<F, CV_ADAMS> solver(integrator);

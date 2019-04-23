@@ -88,7 +88,7 @@ pmx_solve_bdf(const F& f,
   using refactor::PKRec;
 
   static const char* function("pmx_solve_bdf");
-  torsten::pmetricsCheck(time, amt, rate, ii, evid, cmt, addl, ss,
+  torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
                 pMatrix, biovar, tlag, function);
 
   // Construct dummy matrix for last argument of pred

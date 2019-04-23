@@ -54,18 +54,18 @@ namespace torsten {
  */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
   typename T5, typename T6>
-void pmetricsCheck(const std::vector<T0>& time,
-                   const std::vector<T1>& amt,
-                   const std::vector<T2>& rate,
-                   const std::vector<T3>& ii,
-                   const std::vector<int>& evid,
-                   const std::vector<int>& cmt,
-                   const std::vector<int>& addl,
-                   const std::vector<int>& ss,
-                   const std::vector<std::vector<T4> >& pMatrix,
-                   const std::vector<std::vector<T5> >& biovar,
-                   const std::vector<std::vector<T6> >& tlag,
-                   const char* function) {
+void pmx_check(const std::vector<T0>& time,
+               const std::vector<T1>& amt,
+               const std::vector<T2>& rate,
+               const std::vector<T3>& ii,
+               const std::vector<int>& evid,
+               const std::vector<int>& cmt,
+               const std::vector<int>& addl,
+               const std::vector<int>& ss,
+               const std::vector<std::vector<T4> >& pMatrix,
+               const std::vector<std::vector<T5> >& biovar,
+               const std::vector<std::vector<T6> >& tlag,
+               const char* function) {
   using std::vector;
   using std::string;
   using Eigen::Dynamic;

@@ -70,7 +70,7 @@ pmx_solve_onecpt(const std::vector<T0>& time,
 
   // Check arguments -- FIX ME: handle the new parameter arguments
   static const char* function("pmx_solve_onecpt");
-  torsten::pmetricsCheck(time, amt, rate, ii, evid, cmt, addl, ss,
+  torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
                 pMatrix, biovar, tlag, function);
   for (size_t i = 0; i < pMatrix.size(); i++) {
     check_positive_finite(function, "PK parameter CL", pMatrix[i][0]);

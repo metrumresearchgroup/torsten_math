@@ -89,7 +89,7 @@ pmx_solve_adams(const F& f,
 
   // check arguments
   static const char* function("pmx_solve_adams");
-  torsten::pmetricsCheck(time, amt, rate, ii, evid, cmt, addl, ss,
+  torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
                 pMatrix, biovar, tlag, function);
 
   // Construct dummy matrix for last argument of pred

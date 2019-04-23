@@ -71,7 +71,7 @@ pmx_solve_twocpt(const std::vector<T0>& time,
   static const char* function("pmx_solve_twocpt");
 
   // Check arguments
-  torsten::pmetricsCheck(time, amt, rate, ii, evid, cmt, addl, ss,
+  torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
                 pMatrix, biovar, tlag, function);
   for (size_t i = 0; i < pMatrix.size(); i++) {
     check_positive_finite(function, "PK parameter CL", pMatrix[i][0]);
