@@ -65,14 +65,7 @@ namespace torsten {
                     init_dt, boost::ref(ode),
                     boost::numeric::odeint::max_step_checker(max_num_step));
 
-    // remove the first state corresponding to the initial value
-    // y_coupled.erase(y_coupled.begin());
-
-    // the coupled system also encapsulates the decoupling operation
-    return ode.decouple_states(ode.y_res_);
-
-    // dsolve::PMXCvodesIntegrator solver(rtol, atol, max_num_step);
-    // return solver.integrate(ode);
+    return ode.y_result;
 }
 }
 #endif

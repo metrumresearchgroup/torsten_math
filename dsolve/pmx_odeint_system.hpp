@@ -15,8 +15,10 @@
 namespace torsten {
 namespace dsolve {
 
-  template <typename F, typename T_init, typename T_par>
+  template <typename F, typename T_init, typename T_par,
+            bool GenVar = true>
   struct PMXOdeintSystem {
+    using scalar_t = typename torsten::return_t<T_init, T_par>::type;
     static constexpr bool is_y0_var  = stan::is_var<T_init>::value;
     static constexpr bool is_par_var = stan::is_var<T_par>::value;
 
@@ -30,7 +32,8 @@ namespace dsolve {
     const size_t N_;
     const size_t M_;
     const size_t size_;
-    std::vector<std::vector<double> > y_res_;
+    std::vector<std::vector<scalar_t> > y_result;
+    Eigen::MatrixXd ymat_result;
     std::ostream* msgs_;
     std::vector<double> y0_fwd_system;
   private:
@@ -55,7 +58,9 @@ namespace dsolve {
         N_(y0.size()),
         M_(theta.size()),      
         size_(N_ + N_ * ((is_y0_var ? N_ : 0) + (is_par_var ? M_ : 0))),
-        y_res_(ts_.size(), std::vector<double>(size_, 0.0)),
+        y_result(GenVar ? std::vector<std::vector<scalar_t>>(ts.size(), std::vector<scalar_t>(N_, 0.0))
+                 : std::vector<std::vector<scalar_t>>()),
+        ymat_result(GenVar ? Eigen::MatrixXd(0, 0) : Eigen::MatrixXd::Zero(size_, ts_.size())),
         msgs_(msgs),
         y0_fwd_system(size_, 0.0),
         step_counter_(0)
@@ -73,7 +78,7 @@ namespace dsolve {
 
     void operator()(const std::vector<double>& y, std::vector<double>& dy_dt,
                     double t) const {
-      eval_fwd_sens_rhs(y, dy_dt, t, y0_, theta_);
+      rhs_impl(y, dy_dt, t, y0_, theta_);
       stan::math::check_size_match("PMXOdeintSystem", "y", y.size(), "dy_dt", dy_dt.size());
     }
 
@@ -83,127 +88,82 @@ namespace dsolve {
      */
     void operator()(const std::vector<double>& curr_result, double t) {
       if(t > t0_) {
-        y_res_[step_counter_] = curr_result;
+        if (GenVar) {
+          observer_impl(y_result[step_counter_], curr_result, y0_, theta_);
+        } else {
+          ymat_result.col(step_counter_) = Eigen::VectorXd::Map(curr_result.data(), size_);
+        }
         step_counter_++;
       }
     }
 
-    void eval_fwd_sens_rhs(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
-                           const std::vector<double>& y0,
-                           const std::vector<double>& theta) const;
-
-    void eval_fwd_sens_rhs(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
-                           const std::vector<double>& y0,
-                           const std::vector<stan::math::var>& theta) const;
-
-    void eval_fwd_sens_rhs(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
-                           const std::vector<stan::math::var>& y0,
-                           const std::vector<double>& theta) const;
-
-    void eval_fwd_sens_rhs(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
-                           const std::vector<stan::math::var>& y0,
-                           const std::vector<stan::math::var>& theta) const;
-
-    std::vector<std::vector<typename torsten::return_t<T_init, T_par>::type >>
-    decouple_states(const std::vector<std::vector<double>>& y) const
-    {
-      return decouple_states_impl(y, y0_, theta_);
+    void observer_impl(std::vector<double>& y_res,
+                       const std::vector<double>& y,
+                       const std::vector<double>& y0,
+                       const std::vector<double>& theta) const {
+      std::copy(y.begin(), y.end(), y_res.begin());
     }
 
-    std::vector<std::vector<typename torsten::return_t<T_init, T_par>::type >>
-    decouple_states_impl(const std::vector<std::vector<double>>& y,
-                         const std::vector<double>& y0,
-                         const std::vector<double>& theta) const
-    {
-      return y;
-    }
-
-    std::vector<std::vector<typename torsten::return_t<T_init, T_par>::type >>
-    decouple_states_impl(const std::vector<std::vector<double>>& y,
-                         const std::vector<double>& y0,
-                         const std::vector<stan::math::var>& theta) const
-    {
-      std::vector<stan::math::var> temp_vars(N_);
-      std::vector<double> temp_gradients(M_);
-      std::vector<std::vector<stan::math::var> > y_return(y.size());
-
-      for (size_t i = 0; i < y.size(); i++) {
-        // iterate over number of equations
-        for (size_t j = 0; j < N_; j++) {
-          // iterate over parameters for each equation
-          for (size_t k = 0; k < M_; k++)
-            temp_gradients[k] = y[i][N_ + N_ * k + j];
-
-          temp_vars[j] = precomputed_gradients(y[i][j], theta_, temp_gradients);
-        }
-        y_return[i] = temp_vars;
+    void observer_impl(std::vector<stan::math::var>& y_res,
+                       const std::vector<double>& y,
+                       const std::vector<double>& y0,
+                       const std::vector<stan::math::var>& theta) const {
+      std::vector<double> g(M_);
+      for (size_t j = 0; j < N_; j++) {
+        for (size_t k = 0; k < M_; k++) g[k] = y[N_ + N_ * k + j];
+        y_res[j] = precomputed_gradients(y[j], theta_, g);
       }
-      return y_return;      
     }
 
-    std::vector<std::vector<typename torsten::return_t<T_init, T_par>::type >>
-    decouple_states_impl(const std::vector<std::vector<double>>& y,
-                         const std::vector<stan::math::var>& y0,
-                         const std::vector<double>& theta) const
-    {
-      using std::vector;
-
-      vector<stan::math::var> temp_vars(N_);
-      vector<double> temp_gradients(N_);
-      vector<vector<stan::math::var> > y_return(y.size());
-
-      for (size_t i = 0; i < y.size(); i++) {
-        // iterate over number of equations
-        for (size_t j = 0; j < N_; j++) {
-          // iterate over parameters for each equation
-          for (size_t k = 0; k < N_; k++)
-            temp_gradients[k] = y[i][N_ + N_ * k + j];
-
-          temp_vars[j] = precomputed_gradients(y[i][j], y0_, temp_gradients);
-        }
-        y_return[i] = temp_vars;
+    void observer_impl(std::vector<stan::math::var>& y_res,
+                       const std::vector<double>& y,
+                       const std::vector<stan::math::var>& y0,
+                       const std::vector<double>& theta) const {
+      std::vector<double> g(N_);
+      for (size_t j = 0; j < N_; j++) {
+        for (size_t k = 0; k < N_; k++) g[k] = y[N_ + N_ * k + j];
+        y_res[j] = precomputed_gradients(y[j], y0_, g);
       }
-      return y_return;
     }
 
-    std::vector<std::vector<typename torsten::return_t<T_init, T_par>::type >>
-    decouple_states_impl(const std::vector<std::vector<double>>& y,
-                         const std::vector<stan::math::var>& y0,
-                         const std::vector<stan::math::var>& theta) const
-    {
-      using std::vector;
-
-      vector<stan::math::var> vars = y0_;
+    void observer_impl(std::vector<stan::math::var>& y_res,
+                       const std::vector<double>& y,
+                       const std::vector<stan::math::var>& y0,
+                       const std::vector<stan::math::var>& theta) const {
+      std::vector<stan::math::var> vars = y0_;
       vars.insert(vars.end(), theta_.begin(), theta_.end());
 
-      vector<stan::math::var> temp_vars(N_);
-      vector<double> temp_gradients(N_ + M_);
-      vector<vector<stan::math::var> > y_return(y.size());
-
-      for (size_t i = 0; i < y.size(); i++) {
-        // iterate over number of equations
-        for (size_t j = 0; j < N_; j++) {
-          // iterate over parameters for each equation
-          for (size_t k = 0; k < N_ + M_; k++)
-            temp_gradients[k] = y[i][N_ + N_ * k + j];
-
-          temp_vars[j] = precomputed_gradients(y[i][j], vars, temp_gradients);
-        }
-        y_return[i] = temp_vars;
+      std::vector<double> g(N_ + M_);
+      for (size_t j = 0; j < N_; j++) {
+        for (size_t k = 0; k < N_ + M_; k++) g[k] = y[N_ + N_ * k + j];
+        y_res[j] = precomputed_gradients(y[j], vars, g);
       }
-
-      return y_return;
     }
 
+    void rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+                  const std::vector<double>& y0,
+                  const std::vector<double>& theta) const;
+
+    void rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+                  const std::vector<double>& y0,
+                  const std::vector<stan::math::var>& theta) const;
+
+    void rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+                  const std::vector<stan::math::var>& y0,
+                  const std::vector<double>& theta) const;
+
+    void rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+                  const std::vector<stan::math::var>& y0,
+                  const std::vector<stan::math::var>& theta) const;
   };
 
   /*
    * Data-only version
    */
-  template<typename F, typename T_init, typename T_par>
-  void PMXOdeintSystem<F, T_init, T_par>::eval_fwd_sens_rhs(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
-                                                            const std::vector<double>& y0,
-                                                            const std::vector<double>& theta) const
+  template<typename F, typename T_init, typename T_par, bool GenVar>
+  void PMXOdeintSystem<F, T_init, T_par, GenVar>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+                                                   const std::vector<double>& y0,
+                                                   const std::vector<double>& theta) const
   {
     dy_dt = f_(t, y, theta_, x_r_, x_i_, msgs_);
   }
@@ -211,30 +171,21 @@ namespace dsolve {
   /*
    * data @c y0, parameter @c theta
    */
-  template<typename F, typename T_init, typename T_par>
-  void PMXOdeintSystem<F, T_init, T_par>::eval_fwd_sens_rhs(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
-                                                            const std::vector<double>& y0,
-                                                            const std::vector<stan::math::var>& theta) const
+  template<typename F, typename T_init, typename T_par, bool GenVar>
+  void PMXOdeintSystem<F, T_init, T_par, GenVar>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+                                                   const std::vector<double>& y0,
+                                                   const std::vector<stan::math::var>& theta) const
   {
     using std::vector;
     using stan::math::var;
 
-    vector<double> grad(N_ + M_);
-
     try {
       stan::math::start_nested();
 
-      vector<stan::math::var> z_vars;
-      z_vars.reserve(N_ + M_);
-
       vector<stan::math::var> y_vars(y.begin(), y.begin() + N_);
-      z_vars.insert(z_vars.end(), y_vars.begin(), y_vars.end());
-
-      // vector<stan::math::var> theta_vars(theta_dbl_.begin(), theta_dbl_.end());
       vector<stan::math::var> theta_vars(M_);
       std::transform(theta.begin(), theta.end(), theta_vars.begin(),
                      [](const T_par& v) {return v.val();});
-      z_vars.insert(z_vars.end(), theta_vars.begin(), theta_vars.end());
 
       vector<stan::math::var> dy_dt_vars = f_(t, y_vars, theta_vars, x_r_, x_i_, msgs_);
 
@@ -243,15 +194,15 @@ namespace dsolve {
       for (size_t i = 0; i < N_; i++) {
         dy_dt[i] = dy_dt_vars[i].val();
         stan::math::set_zero_all_adjoints_nested();
-        dy_dt_vars[i].grad(z_vars, grad);
+        dy_dt_vars[i].grad();
 
         for (size_t j = 0; j < M_; j++) {
           // orders derivatives by equation (i.e. if there are 2 eqns
           // (y1, y2) and 2 parameters (a, b), dy_dt will be ordered as:
           // dy1_dt, dy2_dt, dy1_da, dy2_da, dy1_db, dy2_db
-          double temp_deriv = grad[N_ + j];
+          double temp_deriv = theta_vars[j].adj();
           for (size_t k = 0; k < N_; k++)
-            temp_deriv += y[N_ + N_ * j + k] * grad[k];
+            temp_deriv += y[N_ + N_ * j + k] * y_vars[k].adj();
 
           dy_dt[N_ + i + j * N_] = temp_deriv;
         }
@@ -266,14 +217,12 @@ namespace dsolve {
   /*
    * parameter @c y0, data @c theta
    */
-  template<typename F, typename T_init, typename T_par>
-  void PMXOdeintSystem<F, T_init, T_par>::eval_fwd_sens_rhs(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+  template<typename F, typename T_init, typename T_par, bool GenVar>
+  void PMXOdeintSystem<F, T_init, T_par, GenVar>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
                                                             const std::vector<stan::math::var>& y0,
                                                             const std::vector<double>& theta) const
   {
     using std::vector;
-
-    std::vector<double> grad(N_);
 
     try {
       stan::math::start_nested();
@@ -286,7 +235,7 @@ namespace dsolve {
       for (size_t i = 0; i < N_; i++) {
         dy_dt[i] = dy_dt_vars[i].val();
         stan::math::set_zero_all_adjoints_nested();
-        dy_dt_vars[i].grad(y_vars, grad);
+        dy_dt_vars[i].grad();
 
         for (size_t j = 0; j < N_; j++) {
           // orders derivatives by equation (i.e. if there are 2 eqns
@@ -294,7 +243,7 @@ namespace dsolve {
           // dy1_dt, dy2_dt, dy1_da, dy2_da, dy1_db, dy2_db
           double temp_deriv = 0;
           for (size_t k = 0; k < N_; k++)
-            temp_deriv += y[N_ + N_ * j + k] * grad[k];
+            temp_deriv += y[N_ + N_ * j + k] * y_vars[k].adj();
 
           dy_dt[N_ + i + j * N_] = temp_deriv;
         }
@@ -309,29 +258,20 @@ namespace dsolve {
   /*
    * all parameter
    */
-  template<typename F, typename T_init, typename T_par>
-  void PMXOdeintSystem<F, T_init, T_par>::eval_fwd_sens_rhs(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+  template<typename F, typename T_init, typename T_par, bool GenVar>
+  void PMXOdeintSystem<F, T_init, T_par, GenVar>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
                                                             const std::vector<stan::math::var>& y0,
                                                             const std::vector<stan::math::var>& theta) const
   {
     using std::vector;
 
-    std::vector<double> grad(N_ + M_);
-
     try {
       stan::math::start_nested();
 
-      vector<stan::math::var> z_vars;
-      z_vars.reserve(N_ + M_);
-
       vector<stan::math::var> y_vars(y.begin(), y.begin() + N_);
-      z_vars.insert(z_vars.end(), y_vars.begin(), y_vars.end());
-
-      // vector<stan::math::var> theta_vars(theta_dbl_.begin(), theta_dbl_.end());
       vector<stan::math::var> theta_vars(M_);
       std::transform(theta.begin(), theta.end(), theta_vars.begin(),
                      [](const T_par& v) {return v.val();});
-      z_vars.insert(z_vars.end(), theta_vars.begin(), theta_vars.end());
 
       vector<stan::math::var> dy_dt_vars = f_(t, y_vars, theta_vars, x_r_, x_i_, msgs_);
 
@@ -340,15 +280,15 @@ namespace dsolve {
       for (size_t i = 0; i < N_; i++) {
         dy_dt[i] = dy_dt_vars[i].val();
         stan::math::set_zero_all_adjoints_nested();
-        dy_dt_vars[i].grad(z_vars, grad);
+        dy_dt_vars[i].grad();
 
         for (size_t j = 0; j < N_ + M_; j++) {
           // orders derivatives by equation (i.e. if there are 2 eqns
           // (y1, y2) and 2 parameters (a, b), dy_dt will be ordered as:
           // dy1_dt, dy2_dt, dy1_da, dy2_da, dy1_db, dy2_db
-          double temp_deriv = j < N_ ? 0 : grad[j];
+          double temp_deriv = j < N_ ? 0 : theta_vars[j - N_].adj();
           for (size_t k = 0; k < N_; k++)
-            temp_deriv += y[N_ + N_ * j + k] * grad[k];
+            temp_deriv += y[N_ + N_ * j + k] * y_vars[k].adj();
 
           dy_dt[N_ + i + j * N_] = temp_deriv;
         }
