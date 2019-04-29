@@ -8,7 +8,6 @@
 #include <vector>
 
 namespace torsten {
-namespace dsolve {
   /*
    * solve an ODE given its RHS with Boost Odeint's Rk45 solver.
    *
@@ -59,11 +58,9 @@ namespace dsolve {
     ts_vec[0] = t0;
     std::copy(ts.begin(), ts.end(), ts_vec.begin() + 1);
 
-    std::vector<double> initial_coupled_state = ode.initial_state();
-
     const double init_dt = 0.1;
     integrate_times(make_dense_output(atol, rtol, solver_t()),
-                    boost::ref(ode), initial_coupled_state,
+                    boost::ref(ode), ode.y0_fwd_system,
                     ts_vec.begin(), ts_vec.end(),
                     init_dt, boost::ref(ode),
                     boost::numeric::odeint::max_step_checker(max_num_step));
@@ -76,7 +73,6 @@ namespace dsolve {
 
     // dsolve::PMXCvodesIntegrator solver(rtol, atol, max_num_step);
     // return solver.integrate(ode);
-}
 }
 }
 #endif
