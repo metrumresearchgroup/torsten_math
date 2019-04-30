@@ -500,7 +500,7 @@ namespace torsten {
         using Eigen::Matrix;
         using Eigen::MatrixXd;
         using Eigen::Dynamic;
-        using Ode = ode_t<F, Tt, T_initial, T_param, ode_pars_t>;
+        using Ode = ode_t<F, Tt, T_initial, T_param, ode_pars_t...>;
         const int m = theta[0].size() + group_theta.size();
         const int n = y0[0].size();
         const int np = theta.size(); // population size

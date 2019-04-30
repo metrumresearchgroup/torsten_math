@@ -30,9 +30,7 @@ namespace torsten {
    * @return a vector of vectors for results in each time step.
    */
   template <typename F, typename Tt, typename T_initial, typename T_param>
-  std::vector<std::vector<typename stan::return_type<Tt,
-                                                     T_initial,
-                                                     T_param>::type> >
+  inline std::vector<std::vector<typename stan::return_type<Tt, T_initial, T_param>::type> >
   pmx_integrate_ode_rk45(const F& f,
                          const std::vector<T_initial>& y0,
                          double t0,

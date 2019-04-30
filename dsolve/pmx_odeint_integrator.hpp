@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_ODEINT_INTEGRATOR_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_ODEINT_INTEGRATOR_HPP
 
+#include <stan/math/torsten/gradient_solution.hpp>
 #include <stan/math/torsten/dsolve/pmx_odeint_system.hpp>
 #include <type_traits>
 
@@ -19,8 +20,8 @@ namespace dsolve {
     template<typename Ode, bool GenVar>
     struct SolObserver {
       const Ode& ode_;
-      const int n;
-      const int m;
+      const size_t n;
+      const size_t m;
       std::vector<std::vector<typename Ode::scalar_t>> y;
       int step_counter_;
 
@@ -30,54 +31,41 @@ namespace dsolve {
         step_counter_(0)
       {}
 
-      void operator()(const std::vector<double>& curr_result, double t) {
+      inline void operator()(const std::vector<double>& curr_result, double t) {
         if(t > ode_.t0_) {
           observer_impl(y[step_counter_], curr_result, ode_.y0_, ode_.theta_);
           step_counter_++;
         }
       }
 
-      void observer_impl(std::vector<double>& y_res,
+      inline void observer_impl(std::vector<double>& y_res,
                          const std::vector<double>& y,
                          const std::vector<double>& y0,
                          const std::vector<double>& theta) const {
         std::copy(y.begin(), y.end(), y_res.begin());
       }
 
-      void observer_impl(std::vector<stan::math::var>& y_res,
+      inline void observer_impl(std::vector<stan::math::var>& y_res,
                          const std::vector<double>& y,
                          const std::vector<double>& y0,
                          const std::vector<stan::math::var>& theta) const {
-        std::vector<double> g(m);
-        for (size_t j = 0; j < n; j++) {
-          for (size_t k = 0; k < m; k++) g[k] = y[n + n * k + j];
-          y_res[j] = precomputed_gradients(y[j], theta, g);
-        }
+        y_res = GradientSolution::to_var(y, theta);
       }
 
-      void observer_impl(std::vector<stan::math::var>& y_res,
+      inline void observer_impl(std::vector<stan::math::var>& y_res,
                          const std::vector<double>& y,
                          const std::vector<stan::math::var>& y0,
                          const std::vector<double>& theta) const {
-        std::vector<double> g(n);
-        for (size_t j = 0; j < n; j++) {
-          for (size_t k = 0; k < n; k++) g[k] = y[n + n * k + j];
-          y_res[j] = precomputed_gradients(y[j], y0, g);
-        }
+        y_res = GradientSolution::to_var(y, y0);
       }
 
-      void observer_impl(std::vector<stan::math::var>& y_res,
+      inline void observer_impl(std::vector<stan::math::var>& y_res,
                          const std::vector<double>& y,
                          const std::vector<stan::math::var>& y0,
                          const std::vector<stan::math::var>& theta) const {
         std::vector<stan::math::var> vars = y0;
         vars.insert(vars.end(), theta.begin(), theta.end());
-
-        std::vector<double> g(n + m);
-        for (size_t j = 0; j < n; j++) {
-          for (size_t k = 0; k < n + m; k++) g[k] = y[n + n * k + j];
-          y_res[j] = precomputed_gradients(y[j], vars, g);
-        }
+        y_res = GradientSolution::to_var(y, vars);
       }
     };
 
@@ -93,7 +81,7 @@ namespace dsolve {
         step_counter_(0)
       {}
 
-      void operator()(const std::vector<double>& curr_result, double t) {
+      inline void operator()(const std::vector<double>& curr_result, double t) {
         if(t > ode_.t0_) {
           y.col(step_counter_) = Eigen::VectorXd::Map(curr_result.data(), ode_.size_);
           step_counter_++;
@@ -143,7 +131,6 @@ namespace dsolve {
                       boost::numeric::odeint::max_step_checker(max_num_steps_));
       return observer.y;
     }
-
   };
 
 }

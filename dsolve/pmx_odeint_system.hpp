@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_PMX_ODEINT_SYSTEM_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_PMX_ODEINT_SYSTEM_HPP
 
+#include <stan/math/torsten/gradient_solution.hpp>
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
 #include <stan/math/torsten/dsolve/ode_forms.hpp>
 #include <stan/math/torsten/return_type.hpp>
@@ -33,6 +34,7 @@ namespace dsolve {
     const std::vector<int>& x_i_;
     const size_t N_;
     const size_t M_;
+    const size_t ns;
     const size_t size_;
     std::ostream* msgs_;
     std::vector<double>& y0_fwd_system;
@@ -59,6 +61,7 @@ namespace dsolve {
         x_i_(x_i),
         N_(y0.size()),
         M_(theta.size()),      
+        ns(serv.ns),
         size_(serv.size),
         msgs_(msgs),
         y0_fwd_system(serv.y),
@@ -132,22 +135,7 @@ namespace dsolve {
 
       stan::math::check_size_match("PMXOdeintSystem", "dz_dt", dy_dt_vars.size(), "states", N_);
 
-      for (size_t i = 0; i < N_; i++) {
-        dy_dt[i] = dy_dt_vars[i].val();
-        stan::math::set_zero_all_adjoints_nested();
-        dy_dt_vars[i].grad();
-
-        for (size_t j = 0; j < M_; j++) {
-          // orders derivatives by equation (i.e. if there are 2 eqns
-          // (y1, y2) and 2 parameters (a, b), dy_dt will be ordered as:
-          // dy1_dt, dy2_dt, dy1_da, dy2_da, dy1_db, dy2_db
-          double temp_deriv = theta_vars[j].adj();
-          for (size_t k = 0; k < N_; k++)
-            temp_deriv += y[N_ + N_ * j + k] * y_vars[k].adj();
-
-          dy_dt[N_ + i + j * N_] = temp_deriv;
-        }
-      }
+      GradientSolution::fill_fwd_sens_ode_rhs<T_init, T_par>(dy_dt, y, dy_dt_vars, y_vars, theta_vars);
     } catch (const std::exception& e) {
       stan::math::recover_memory_nested();
       throw;
@@ -173,22 +161,7 @@ namespace dsolve {
 
       stan::math::check_size_match("PMXOdeintSystem", "dz_dt", dy_dt_vars.size(), "states", N_);
 
-      for (size_t i = 0; i < N_; i++) {
-        dy_dt[i] = dy_dt_vars[i].val();
-        stan::math::set_zero_all_adjoints_nested();
-        dy_dt_vars[i].grad();
-
-        for (size_t j = 0; j < N_; j++) {
-          // orders derivatives by equation (i.e. if there are 2 eqns
-          // (y1, y2) and 2 parameters (a, b), dy_dt will be ordered as:
-          // dy1_dt, dy2_dt, dy1_da, dy2_da, dy1_db, dy2_db
-          double temp_deriv = 0;
-          for (size_t k = 0; k < N_; k++)
-            temp_deriv += y[N_ + N_ * j + k] * y_vars[k].adj();
-
-          dy_dt[N_ + i + j * N_] = temp_deriv;
-        }
-      }
+      GradientSolution::fill_fwd_sens_ode_rhs<T_init, T_par>(dy_dt, y, dy_dt_vars, y_vars, theta);
     } catch (const std::exception& e) {
       stan::math::recover_memory_nested();
       throw;
@@ -218,22 +191,7 @@ namespace dsolve {
 
       stan::math::check_size_match("PMXOdeintSystem", "dz_dt", dy_dt_vars.size(), "states", N_);
 
-      for (size_t i = 0; i < N_; i++) {
-        dy_dt[i] = dy_dt_vars[i].val();
-        stan::math::set_zero_all_adjoints_nested();
-        dy_dt_vars[i].grad();
-
-        for (size_t j = 0; j < N_ + M_; j++) {
-          // orders derivatives by equation (i.e. if there are 2 eqns
-          // (y1, y2) and 2 parameters (a, b), dy_dt will be ordered as:
-          // dy1_dt, dy2_dt, dy1_da, dy2_da, dy1_db, dy2_db
-          double temp_deriv = j < N_ ? 0 : theta_vars[j - N_].adj();
-          for (size_t k = 0; k < N_; k++)
-            temp_deriv += y[N_ + N_ * j + k] * y_vars[k].adj();
-
-          dy_dt[N_ + i + j * N_] = temp_deriv;
-        }
-      }
+      GradientSolution::fill_fwd_sens_ode_rhs<T_init, T_par>(dy_dt, y, dy_dt_vars, y_vars, theta_vars);
     } catch (const std::exception& e) {
       stan::math::recover_memory_nested();
       throw;
