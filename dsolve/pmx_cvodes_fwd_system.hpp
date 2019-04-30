@@ -61,7 +61,7 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE
        * @param[in] msgs stream to which messages are printed
        */
-      PMXCvodesFwdSystem(PMXCvodesService<Ode>& serv,
+      PMXCvodesFwdSystem(PMXOdeService<Ode>& serv,
                            const F& f,
                            double t0,
                            const std::vector<Tts>& ts,
@@ -71,15 +71,15 @@ namespace torsten {
                            const std::vector<int>& x_i,
                            std::ostream* msgs) :
         Ode(serv, f, t0, ts, y0, theta, x_r, x_i, msgs),
-        nv_ys_(Ode::serv_.nv_ys),
-        yy_cplx_(Ode::serv_.yy_cplx),
-        theta_cplx_(Ode::serv_.theta_cplx),
-        fval_cplx_(Ode::serv_.fval_cplx)
+        nv_ys_(serv.nv_ys),
+        yy_cplx_(serv.yy_cplx),
+        theta_cplx_(serv.theta_cplx),
+        fval_cplx_(serv.fval_cplx)
       {}
 
       /**
        * Dummy destructor. Deallocation of CVODES memory is done
-       * in @c PMXCvodesService.
+       * in @c PMXOdeService.
        */
       ~PMXCvodesFwdSystem() {
       }
@@ -98,7 +98,7 @@ namespace torsten {
 
       /**
        * Calculate sensitivity rhs using CVODES vectors. The
-       * internal workspace is allocated by @c PMXCvodesService.
+       * internal workspace is allocated by @c PMXOdeService.
        * We use CSDA to compute senstivity, so we need to
        * generate complex version of parameters.
        */
@@ -162,7 +162,7 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE
        * @param[in] msgs stream to which messages are printed
        */
-      PMXCvodesFwdSystem(PMXCvodesService<Ode>& serv,
+      PMXCvodesFwdSystem(PMXOdeService<Ode>& serv,
                            const F& f,
                            double t0,
                            const std::vector<Tts>& ts,
@@ -172,12 +172,12 @@ namespace torsten {
                            const std::vector<int>& x_i,
                            std::ostream* msgs) :
         Ode(serv, f, t0, ts, y0, theta, x_r, x_i, msgs),
-        nv_ys_(Ode::serv_.nv_ys)
+        nv_ys_(serv.nv_ys)
       {}
 
       /**
        * Dummy destructor. Deallocation of CVODES memory is done
-       * in @c PMXCvodesService.
+       * in @c PMXOdeService.
        */
       ~PMXCvodesFwdSystem() {
       }
@@ -196,7 +196,7 @@ namespace torsten {
 
       /**
        * Calculate sensitivity rhs using CVODES vectors. The
-       * internal workspace is allocated by @c PMXCvodesService.
+       * internal workspace is allocated by @c PMXOdeService.
        */
       void eval_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
                          N_Vector* ys, N_Vector* ysdot,

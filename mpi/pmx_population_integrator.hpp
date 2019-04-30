@@ -79,7 +79,7 @@ namespace torsten {
         const int n = y0[0].size();
         const int np = theta.size(); // population size
 
-        torsten::dsolve::PMXCvodesService<typename Ode::Ode> serv(n, m);
+        torsten::dsolve::PMXOdeService<typename Ode::Ode> serv(n, m);
     
         MPI_Comm comm = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM].comm;
         int rank = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM].rank;
@@ -209,7 +209,7 @@ namespace torsten {
         const int n = y0[0].size();
         const int np = len.size(); // population size
 
-        torsten::dsolve::PMXCvodesService<typename Ode::Ode> serv(n, m);
+        torsten::dsolve::PMXOdeService<typename Ode::Ode> serv(n, m);
     
         MPI_Comm comm = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM].comm;
         int rank = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM].rank;
@@ -336,7 +336,7 @@ namespace torsten {
         const int n = y0[0].size();
         const int np = theta.size(); // population size
 
-        torsten::dsolve::PMXCvodesService<typename Ode::Ode> serv(n, m);
+        torsten::dsolve::PMXOdeService<typename Ode::Ode> serv(n, m);
     
         MPI_Comm comm = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_DATA].comm;
         int rank = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_DATA].rank;
@@ -472,7 +472,7 @@ namespace torsten {
           has_warning = true;
         }
 
-        static torsten::dsolve::PMXCvodesService<typename Ode::Ode> serv(n, m);
+        static torsten::dsolve::PMXOdeService<typename Ode::Ode> serv(n, m);
 
         using scalar_type = typename torsten::return_t<Tt, T_initial, T_param>::type;
         Matrix<scalar_type, Dynamic, Dynamic> res(n, ts.size());
@@ -527,7 +527,7 @@ namespace torsten {
           has_warning = true;
         }
 
-        static torsten::dsolve::PMXCvodesService<typename Ode::Ode> serv(n, m);
+        static torsten::dsolve::PMXOdeService<typename Ode::Ode> serv(n, m);
 
         using scalar_type = typename torsten::return_t<Tt, T_initial, T_param>::type;
         Matrix<scalar_type, Dynamic, Dynamic> res(n, ts.size());

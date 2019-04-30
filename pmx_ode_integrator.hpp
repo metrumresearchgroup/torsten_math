@@ -248,7 +248,7 @@ namespace torsten {
       const int m = theta.size();
       const int n = y0.size();
 
-      dsolve::PMXCvodesService<typename Ode::Ode> serv(n, m);
+      dsolve::PMXOdeService<typename Ode::Ode> serv(n, m);
 
       Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
 
@@ -311,7 +311,7 @@ namespace torsten {
       const int m = theta.size();
       const int n = y0.size();
 
-      dsolve::PMXCvodesService<typename Ode::Ode> serv(n, m);
+      dsolve::PMXOdeService<typename Ode::Ode> serv(n, m);
 
       Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
 

@@ -13,14 +13,19 @@
 namespace torsten {
   namespace dsolve {
 
+    enum PMXOdeForm { Odeint, Cvodes };
+
     /* For each type of Ode(with different rhs functor F and
      * senstivity parameters), we allocate mem and workspace for
      * cvodes. This service manages the
      * allocation/deallocation, so ODE systems only request
      * service by injection.
      */
+    template <typename Ode, enum PMXOdeForm = Cvodes>
+    struct PMXOdeService;
+
     template <typename Ode>
-    struct PMXCvodesService {
+    struct PMXOdeService<Ode, Cvodes> {
       const size_t N;
       const size_t M;
       const size_t ns;
@@ -42,7 +47,7 @@ namespace torsten {
        * @param[in] m length of parameter theta
        * @param[in] f ODE RHS function
        */
-      PMXCvodesService(int n, int m) :
+      PMXOdeService(int n, int m) :
         N(n),
         M(m),
         ns((Ode::is_var_y0 ? n : 0) + (Ode::is_var_par ? m : 0)),
@@ -75,13 +80,35 @@ namespace torsten {
         CHECK_SUNDIALS_CALL(CVDlsSetLinearSolver(mem, LS, A));
       }
 
-      ~PMXCvodesService() {
+      ~PMXOdeService() {
         SUNLinSolFree(LS);
         SUNMatDestroy(A);
         CVodeFree(&mem);
         N_VDestroyVectorArray(nv_ys, ns);
         N_VDestroy(nv_y);
       }
+    };
+
+    template <typename Ode>
+    struct PMXOdeService<Ode, Odeint> {
+      const size_t N;
+      const size_t M;
+      const size_t ns;
+      const size_t size;
+      std::vector<double> y;
+
+      /**
+       * Construct Boost Odeint workspace
+       */
+      PMXOdeService(int n, int m) :
+        N(n),
+        M(m),
+        ns((Ode::is_var_y0 ? n : 0) + (Ode::is_var_par ? m : 0)),
+        size(n + n * ns),
+        y(size, 0.0)
+      {}
+
+      ~PMXOdeService() {}
     };
 
   }

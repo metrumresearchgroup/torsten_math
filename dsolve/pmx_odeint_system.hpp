@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_PMX_ODEINT_SYSTEM_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_PMX_ODEINT_SYSTEM_HPP
 
+#include <stan/math/torsten/dsolve/cvodes_service.hpp>
 #include <stan/math/torsten/return_type.hpp>
 #include <stan/math/prim/arr/meta/get.hpp>
 #include <stan/math/prim/arr/meta/length.hpp>
@@ -15,12 +16,12 @@
 namespace torsten {
 namespace dsolve {
 
-  template <typename F, typename T_init, typename T_par,
-            bool GenVar = true>
+  template <typename F, typename T_init, typename T_par>
   struct PMXOdeintSystem {
+    using Ode = PMXOdeintSystem<F, T_init, T_par>;
     using scalar_t = typename torsten::return_t<T_init, T_par>::type;
-    static constexpr bool is_y0_var  = stan::is_var<T_init>::value;
-    static constexpr bool is_par_var = stan::is_var<T_par>::value;
+    static constexpr bool is_var_y0  = stan::is_var<T_init>::value;
+    static constexpr bool is_var_par = stan::is_var<T_par>::value;
 
     const F& f_;
     const double t0_;
@@ -32,15 +33,14 @@ namespace dsolve {
     const size_t N_;
     const size_t M_;
     const size_t size_;
-    std::vector<std::vector<scalar_t> > y_result;
-    Eigen::MatrixXd ymat_result;
     std::ostream* msgs_;
-    std::vector<double> y0_fwd_system;
+    std::vector<double>& y0_fwd_system;
   private:
     int step_counter_;  
 
   public:
-    PMXOdeintSystem(const F& f,
+    PMXOdeintSystem(dsolve::PMXOdeService<Ode, dsolve::Odeint>& serv,
+                    const F& f,
                     double t0,
                     const std::vector<double>& ts,
                     const std::vector<T_init>& y0,
@@ -57,16 +57,13 @@ namespace dsolve {
         x_i_(x_i),
         N_(y0.size()),
         M_(theta.size()),      
-        size_(N_ + N_ * ((is_y0_var ? N_ : 0) + (is_par_var ? M_ : 0))),
-        y_result(GenVar ? std::vector<std::vector<scalar_t>>(ts.size(), std::vector<scalar_t>(N_, 0.0))
-                 : std::vector<std::vector<scalar_t>>()),
-        ymat_result(GenVar ? Eigen::MatrixXd(0, 0) : Eigen::MatrixXd::Zero(size_, ts_.size())),
+        size_(serv.size),
         msgs_(msgs),
-        y0_fwd_system(size_, 0.0),
+        y0_fwd_system(serv.y),
         step_counter_(0)
     {
       // initial state
-      if (is_y0_var)  {
+      if (is_var_y0)  {
       std::transform(y0.begin(), y0.end(), y0_fwd_system.begin(),
                      [](const T_init& v){ return stan::math::value_of(v); });        
       for (size_t i = 0; i < N_; i++) y0_fwd_system[N_ + i * N_ + i] = 1.0;
@@ -80,64 +77,6 @@ namespace dsolve {
                     double t) const {
       rhs_impl(y, dy_dt, t, y0_, theta_);
       stan::math::check_size_match("PMXOdeintSystem", "y", y.size(), "dy_dt", dy_dt.size());
-    }
-
-    /*
-     * For getting results as an @c Odeint @c observer. We
-     * don't need to saves results at @c t0.
-     */
-    void operator()(const std::vector<double>& curr_result, double t) {
-      if(t > t0_) {
-        if (GenVar) {
-          observer_impl(y_result[step_counter_], curr_result, y0_, theta_);
-        } else {
-          ymat_result.col(step_counter_) = Eigen::VectorXd::Map(curr_result.data(), size_);
-        }
-        step_counter_++;
-      }
-    }
-
-    void observer_impl(std::vector<double>& y_res,
-                       const std::vector<double>& y,
-                       const std::vector<double>& y0,
-                       const std::vector<double>& theta) const {
-      std::copy(y.begin(), y.end(), y_res.begin());
-    }
-
-    void observer_impl(std::vector<stan::math::var>& y_res,
-                       const std::vector<double>& y,
-                       const std::vector<double>& y0,
-                       const std::vector<stan::math::var>& theta) const {
-      std::vector<double> g(M_);
-      for (size_t j = 0; j < N_; j++) {
-        for (size_t k = 0; k < M_; k++) g[k] = y[N_ + N_ * k + j];
-        y_res[j] = precomputed_gradients(y[j], theta_, g);
-      }
-    }
-
-    void observer_impl(std::vector<stan::math::var>& y_res,
-                       const std::vector<double>& y,
-                       const std::vector<stan::math::var>& y0,
-                       const std::vector<double>& theta) const {
-      std::vector<double> g(N_);
-      for (size_t j = 0; j < N_; j++) {
-        for (size_t k = 0; k < N_; k++) g[k] = y[N_ + N_ * k + j];
-        y_res[j] = precomputed_gradients(y[j], y0_, g);
-      }
-    }
-
-    void observer_impl(std::vector<stan::math::var>& y_res,
-                       const std::vector<double>& y,
-                       const std::vector<stan::math::var>& y0,
-                       const std::vector<stan::math::var>& theta) const {
-      std::vector<stan::math::var> vars = y0_;
-      vars.insert(vars.end(), theta_.begin(), theta_.end());
-
-      std::vector<double> g(N_ + M_);
-      for (size_t j = 0; j < N_; j++) {
-        for (size_t k = 0; k < N_ + M_; k++) g[k] = y[N_ + N_ * k + j];
-        y_res[j] = precomputed_gradients(y[j], vars, g);
-      }
     }
 
     void rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
@@ -160,8 +99,8 @@ namespace dsolve {
   /*
    * Data-only version
    */
-  template<typename F, typename T_init, typename T_par, bool GenVar>
-  void PMXOdeintSystem<F, T_init, T_par, GenVar>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+  template<typename F, typename T_init, typename T_par>
+  void PMXOdeintSystem<F, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
                                                    const std::vector<double>& y0,
                                                    const std::vector<double>& theta) const
   {
@@ -171,8 +110,8 @@ namespace dsolve {
   /*
    * data @c y0, parameter @c theta
    */
-  template<typename F, typename T_init, typename T_par, bool GenVar>
-  void PMXOdeintSystem<F, T_init, T_par, GenVar>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+  template<typename F, typename T_init, typename T_par>
+  void PMXOdeintSystem<F, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
                                                    const std::vector<double>& y0,
                                                    const std::vector<stan::math::var>& theta) const
   {
@@ -217,8 +156,8 @@ namespace dsolve {
   /*
    * parameter @c y0, data @c theta
    */
-  template<typename F, typename T_init, typename T_par, bool GenVar>
-  void PMXOdeintSystem<F, T_init, T_par, GenVar>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+  template<typename F, typename T_init, typename T_par>
+  void PMXOdeintSystem<F, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
                                                             const std::vector<stan::math::var>& y0,
                                                             const std::vector<double>& theta) const
   {
@@ -258,8 +197,8 @@ namespace dsolve {
   /*
    * all parameter
    */
-  template<typename F, typename T_init, typename T_par, bool GenVar>
-  void PMXOdeintSystem<F, T_init, T_par, GenVar>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+  template<typename F, typename T_init, typename T_par>
+  void PMXOdeintSystem<F, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
                                                             const std::vector<stan::math::var>& y0,
                                                             const std::vector<stan::math::var>& theta) const
   {

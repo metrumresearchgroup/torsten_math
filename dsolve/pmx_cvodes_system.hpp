@@ -36,7 +36,6 @@ namespace torsten {
       using Ode = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
 
     protected:
-      PMXCvodesService<Ode>& serv_;
       const F& f_;
       const double t0_;
       const std::vector<Tts>& ts_;
@@ -80,7 +79,7 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE.
        * @param[in] msgs stream to which messages are printed.
        */
-      PMXCvodesSystem(PMXCvodesService<Ode>& serv,
+      PMXCvodesSystem(PMXOdeService<Ode>& serv,
                        const F& f,
                        double t0,
                        const std::vector<Tts>& ts,
@@ -89,8 +88,7 @@ namespace torsten {
                        const std::vector<double>& x_r,
                        const std::vector<int>& x_i,
                        std::ostream* msgs)
-        : serv_(serv),
-          f_(f),
+        : f_(f),
           t0_(t0),
           ts_(ts),
           y0_(y0),
@@ -102,10 +100,10 @@ namespace torsten {
           N_(y0.size()),
           M_(theta.size()),
           ns_((is_var_y0 ? N_ : 0) + (is_var_par ? M_ : 0)),
-          nv_y_(serv_.nv_y),
-          y_vec_(serv_.y),
-          fval_(serv_.fval),
-          mem_(serv_.mem),
+          nv_y_(serv.nv_y),
+          y_vec_(serv.y),
+          fval_(serv.fval),
+          mem_(serv.mem),
           msgs_(msgs) {
         using stan::math::system_error;
 
@@ -117,13 +115,13 @@ namespace torsten {
 
         static const char* caller = "PMXCvodesSystem";
         int err = 1;
-        if (N_ != serv_.N)
+        if (N_ != serv.N)
           system_error(caller, "N_", err, "inconsistent allocated memory");
         if (N_ != size_t(N_VGetLength_Serial(nv_y_)))
           system_error(caller, "nv_y", err, "inconsistent allocated memory");
-        if (M_ != serv_.M)
+        if (M_ != serv.M)
           system_error(caller, "M_", err, "inconsistent allocated memory");
-        if (ns_ != serv_.ns)
+        if (ns_ != serv.ns)
           system_error(caller, "ns_", err, "inconsistent allocated memory");
 
         // initial condition
@@ -134,7 +132,7 @@ namespace torsten {
 
       /**
        * destructor is empty as all CVODES resources are
-       * handled by @c PMXCvodesService
+       * handled by @c PMXOdeService
        */
       ~PMXCvodesSystem() {
       }
