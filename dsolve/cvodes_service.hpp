@@ -4,6 +4,7 @@
 #include <stan/math/rev/scal/meta/is_var.hpp>
 #include <stan/math/torsten/dsolve/sundials_check.hpp>
 #include <stan/math/torsten/dsolve/cvodes_rhs.hpp>
+#include <stan/math/torsten/dsolve/ode_forms.hpp>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
 #include <ostream>
@@ -13,15 +14,13 @@
 namespace torsten {
   namespace dsolve {
 
-    enum PMXOdeForm { Odeint, Cvodes };
-
     /* For each type of Ode(with different rhs functor F and
      * senstivity parameters), we allocate mem and workspace for
      * cvodes. This service manages the
      * allocation/deallocation, so ODE systems only request
      * service by injection.
      */
-    template <typename Ode, enum PMXOdeForm = Cvodes>
+    template <typename Ode, enum PMXOdeForms = OdeForm<Ode>::value>
     struct PMXOdeService;
 
     template <typename Ode>

@@ -49,7 +49,8 @@ namespace torsten {
     dsolve::ode_group_check(y0, t0, len, ts, theta, x_r, x_i, caller);
 
     dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
-    torsten::mpi::PMXPopulationIntegrator<F, CV_BDF> solver(integrator);
+    torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXCvodesIntegrator,
+                                          dsolve::PMXCvodesFwdSystem_bdf_ad> solver(integrator);
 
     return solver(f, y0, t0, len, ts, theta, x_r, x_i, msgs);
   }
@@ -100,7 +101,8 @@ namespace torsten {
     dsolve::ode_group_check(y0, t0, len, ts, theta, x_r, x_i, caller);
 
     dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
-    torsten::mpi::PMXPopulationIntegrator<F, CV_BDF> solver(integrator);
+    torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXCvodesIntegrator,
+                                          dsolve::PMXCvodesFwdSystem_bdf_ad> solver(integrator);
 
     return solver(f, y0, t0, len, ts, group_theta, theta, x_r, x_i, msgs);
   }

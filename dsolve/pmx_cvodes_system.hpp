@@ -79,7 +79,8 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE.
        * @param[in] msgs stream to which messages are printed.
        */
-      PMXCvodesSystem(PMXOdeService<Ode>& serv,
+      template<typename ode_t>
+      PMXCvodesSystem(PMXOdeService<ode_t>& serv,
                        const F& f,
                        double t0,
                        const std::vector<Tts>& ts,

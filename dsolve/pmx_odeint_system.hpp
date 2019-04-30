@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_DSOLVE_PMX_ODEINT_SYSTEM_HPP
 
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
+#include <stan/math/torsten/dsolve/ode_forms.hpp>
 #include <stan/math/torsten/return_type.hpp>
 #include <stan/math/prim/arr/meta/get.hpp>
 #include <stan/math/prim/arr/meta/length.hpp>
@@ -16,9 +17,9 @@
 namespace torsten {
 namespace dsolve {
 
-  template <typename F, typename T_init, typename T_par>
+  template <typename F, typename Tt, typename T_init, typename T_par>
   struct PMXOdeintSystem {
-    using Ode = PMXOdeintSystem<F, T_init, T_par>;
+    using Ode = PMXOdeintSystem<F, Tt, T_init, T_par>;
     using scalar_t = typename torsten::return_t<T_init, T_par>::type;
     static constexpr bool is_var_y0  = stan::is_var<T_init>::value;
     static constexpr bool is_var_par = stan::is_var<T_par>::value;
@@ -39,7 +40,8 @@ namespace dsolve {
     int step_counter_;  
 
   public:
-    PMXOdeintSystem(dsolve::PMXOdeService<Ode, dsolve::Odeint>& serv,
+    template<typename ode_t>
+    PMXOdeintSystem(dsolve::PMXOdeService<ode_t>& serv,
                     const F& f,
                     double t0,
                     const std::vector<double>& ts,
@@ -99,8 +101,8 @@ namespace dsolve {
   /*
    * Data-only version
    */
-  template<typename F, typename T_init, typename T_par>
-  void PMXOdeintSystem<F, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+  template<typename F, typename Tt, typename T_init, typename T_par>
+  void PMXOdeintSystem<F, Tt, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
                                                    const std::vector<double>& y0,
                                                    const std::vector<double>& theta) const
   {
@@ -110,8 +112,8 @@ namespace dsolve {
   /*
    * data @c y0, parameter @c theta
    */
-  template<typename F, typename T_init, typename T_par>
-  void PMXOdeintSystem<F, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+  template<typename F, typename Tt, typename T_init, typename T_par>
+  void PMXOdeintSystem<F, Tt, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
                                                    const std::vector<double>& y0,
                                                    const std::vector<stan::math::var>& theta) const
   {
@@ -156,8 +158,8 @@ namespace dsolve {
   /*
    * parameter @c y0, data @c theta
    */
-  template<typename F, typename T_init, typename T_par>
-  void PMXOdeintSystem<F, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+  template<typename F, typename Tt, typename T_init, typename T_par>
+  void PMXOdeintSystem<F, Tt, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
                                                             const std::vector<stan::math::var>& y0,
                                                             const std::vector<double>& theta) const
   {
@@ -197,8 +199,8 @@ namespace dsolve {
   /*
    * all parameter
    */
-  template<typename F, typename T_init, typename T_par>
-  void PMXOdeintSystem<F, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
+  template<typename F, typename Tt, typename T_init, typename T_par>
+  void PMXOdeintSystem<F, Tt, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
                                                             const std::vector<stan::math::var>& y0,
                                                             const std::vector<stan::math::var>& theta) const
   {

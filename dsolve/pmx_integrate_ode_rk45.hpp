@@ -47,7 +47,7 @@ namespace torsten {
     static const char* caller = "pmx_integrate_ode_rk45";
     dsolve::ode_check(y0, t0, ts, theta, x_r, x_i, caller);
 
-    using Ode = dsolve::PMXOdeintSystem<F, T_initial, T_param>;
+    using Ode = dsolve::PMXOdeintSystem<F, Tt, T_initial, T_param>;
     const int m = theta.size();
     const int n = y0.size();
 

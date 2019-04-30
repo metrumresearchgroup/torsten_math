@@ -61,15 +61,16 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE
        * @param[in] msgs stream to which messages are printed
        */
-      PMXCvodesFwdSystem(PMXOdeService<Ode>& serv,
-                           const F& f,
-                           double t0,
-                           const std::vector<Tts>& ts,
-                           const std::vector<Ty0>& y0,
-                           const std::vector<Tpar>& theta,
-                           const std::vector<double>& x_r,
-                           const std::vector<int>& x_i,
-                           std::ostream* msgs) :
+      template<typename ode_t>
+      PMXCvodesFwdSystem(PMXOdeService<ode_t>& serv,
+                         const F& f,
+                         double t0,
+                         const std::vector<Tts>& ts,
+                         const std::vector<Ty0>& y0,
+                         const std::vector<Tpar>& theta,
+                         const std::vector<double>& x_r,
+                         const std::vector<int>& x_i,
+                         std::ostream* msgs) :
         Ode(serv, f, t0, ts, y0, theta, x_r, x_i, msgs),
         nv_ys_(serv.nv_ys),
         yy_cplx_(serv.yy_cplx),
@@ -162,7 +163,8 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE
        * @param[in] msgs stream to which messages are printed
        */
-      PMXCvodesFwdSystem(PMXOdeService<Ode>& serv,
+      template<typename ode_t>
+      PMXCvodesFwdSystem(PMXOdeService<ode_t>& serv,
                            const F& f,
                            double t0,
                            const std::vector<Tts>& ts,
@@ -252,6 +254,12 @@ namespace torsten {
         stan::math::recover_memory_nested();
       }
     };
+
+    template <typename F, typename Tts, typename Ty0, typename Tpar>
+    using PMXCvodesFwdSystem_adams_ad = PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, CV_ADAMS, AD>;
+
+    template <typename F, typename Tts, typename Ty0, typename Tpar>
+    using PMXCvodesFwdSystem_bdf_ad = PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, CV_BDF, AD>;
   }  // namespace dsolve
 }  // namespace torsten
 

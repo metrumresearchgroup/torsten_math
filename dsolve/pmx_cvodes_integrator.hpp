@@ -8,7 +8,6 @@
 namespace torsten {
 namespace dsolve {
 
-
 /**
  * CVODES ODE integrator.
  */
