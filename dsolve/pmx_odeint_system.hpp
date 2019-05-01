@@ -111,13 +111,13 @@ namespace dsolve {
         stan::math::check_size_match("PMXOdeintSystem", "dz_dt", fyv.size(), "states", N_);
 
         std::fill(dy_dt.begin(), dy_dt.end(), 0.0);
-        for (int i = 0; i < N_; ++i) {
+        for (size_t i = 0; i < N_; ++i) {
           dy_dt[i] = fyv[i].val();
           stan::math::set_zero_all_adjoints_nested();
           fyv[i].grad();
 
           // df/dy*s_i term, for i = 1...ns
-          for (int j = 0; j < ns; ++j) {
+          for (size_t j = 0; j < ns; ++j) {
             double g = 0;
             for (size_t k = 0; k < N_; k++) g += y[N_ + N_ * j + k] * yv[k].adj();
             dy_dt[N_ + N_ * j + i] = g;
@@ -125,7 +125,7 @@ namespace dsolve {
 
           // df/dp_i term, for i = n...n+m-1
           if (is_var_par) {
-            for (int j = 0; j < M_; ++j) {
+            for (size_t j = 0; j < M_; ++j) {
               dy_dt[N_ + N_ * (ns - M_ + j) + i] += theta_v[j].adj();
             }
           }

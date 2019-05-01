@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_GROUP_BDF_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_GROUP_BDF_HPP
 
+#include <stan/math/torsten/mpi/pmx_population_integrator.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_bdf.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 

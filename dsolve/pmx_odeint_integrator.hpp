@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_DSOLVE_ODEINT_INTEGRATOR_HPP
 
 #include <stan/math/torsten/dsolve/pmx_odeint_system.hpp>
+#include <stan/math/torsten/mpi/precomputed_gradients.hpp>
 #include <type_traits>
 
 namespace torsten {
@@ -38,19 +39,6 @@ namespace dsolve {
       }
 
     private:
-
-      inline std::vector<stan::math::var>
-      to_var(const std::vector<double>& sol, const std::vector<stan::math::var>& theta) const {
-        const size_t n = sol.size()/(1 + theta.size());
-        std::vector<stan::math::var> y_res(n);
-        std::vector<double> g(theta.size());
-        for (size_t j = 0; j < n; j++) {
-          for (size_t k = 0; k < theta.size(); k++) g[k] = sol[n + n * k + j];
-          y_res[j] = precomputed_gradients(sol[j], theta, g);
-        }
-        return y_res;
-      }
-
       inline void observer_impl(std::vector<double>& y_res,
                          const std::vector<double>& y,
                          const std::vector<double>& y0,
@@ -62,14 +50,14 @@ namespace dsolve {
                          const std::vector<double>& y,
                          const std::vector<double>& y0,
                          const std::vector<stan::math::var>& theta) const {
-        y_res = to_var(y, theta);
+        y_res = torsten::precomputed_gradients(y, theta);
       }
 
       inline void observer_impl(std::vector<stan::math::var>& y_res,
                          const std::vector<double>& y,
                          const std::vector<stan::math::var>& y0,
                          const std::vector<double>& theta) const {
-        y_res = to_var(y, y0);
+        y_res = torsten::precomputed_gradients(y, y0);
       }
 
       inline void observer_impl(std::vector<stan::math::var>& y_res,
@@ -78,7 +66,7 @@ namespace dsolve {
                          const std::vector<stan::math::var>& theta) const {
         std::vector<stan::math::var> vars = y0;
         vars.insert(vars.end(), theta.begin(), theta.end());
-        y_res = to_var(y, vars);
+        y_res = torsten::precomputed_gradients(y, vars);
       }
     };
 

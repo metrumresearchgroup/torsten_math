@@ -2,8 +2,7 @@
 #define STAN_MATH_TORSTEN_DSOLVE_PMX_POPULATION_INTEGRATOR_HPP
 
 #include <stan/math/prim/mat/fun/to_matrix.hpp>
-#include <stan/math/torsten/dsolve/pmx_cvodes_fwd_system.hpp>
-#include <stan/math/torsten/dsolve/pmx_cvodes_integrator.hpp>
+#include <stan/math/torsten/mpi/precomputed_gradients.hpp>
 #include <stan/math/torsten/mpi/session.hpp>
 #include <stan/math/torsten/mpi/my_worker.hpp>
 #include <stan/math/torsten/return_type.hpp>
@@ -141,17 +140,8 @@ namespace torsten {
             rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
           } else {
             Ode ode{serv, f, t0, ts_i, y0[i], theta[i], x_r[i], x_i[i], msgs};
-            int nsol = ode.n_sol();
-            int ns = ode.ns();
-            g.resize(ns);
-            int nt = ode.ts().size();
             vars = ode.vars();
-            for (int j = 0 ; j < nt; ++j) {
-              for (int k = 0; k < n; ++k) {
-                for (int l = 0 ; l < ns; ++l) g[l] = res_d[i](k * nsol + l + 1, j);
-                Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i])(k, j) = precomputed_gradients(res_d[i](k * nsol, j), vars, g);
-              }
-            }
+            Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i]) = torsten::precomputed_gradients(res_d[i], vars);
           }
           begin_id += len[i] * n;
         }
@@ -273,17 +263,8 @@ namespace torsten {
           } else {
             std::copy(theta[i].begin(), theta[i].end(), theta_i.begin() + group_theta.size());
             Ode ode{serv, f, t0, ts_i, y0[i], theta_i, x_r[i], x_i[i], msgs};
-            int nsol = ode.n_sol();
-            int ns = ode.ns();
-            g.resize(ns);
-            int nt = ode.ts().size();
             vars = ode.vars();
-            for (int j = 0 ; j < nt; ++j) {
-              for (int k = 0; k < n; ++k) {
-                for (int l = 0 ; l < ns; ++l) g[l] = res_d[i](k * nsol + l + 1, j);
-                Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i])(k, j) = precomputed_gradients(res_d[i](k * nsol, j), vars, g);                  
-              }
-            }
+            Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i]) = torsten::precomputed_gradients(res_d[i], vars);
           }
           begin_id += len[i] * n;
         }
