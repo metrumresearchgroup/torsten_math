@@ -1,7 +1,6 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_PMX_ODEINT_SYSTEM_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_PMX_ODEINT_SYSTEM_HPP
 
-#include <stan/math/torsten/gradient_solution.hpp>
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
 #include <stan/math/torsten/dsolve/ode_forms.hpp>
 #include <stan/math/torsten/return_type.hpp>
@@ -30,6 +29,7 @@ namespace dsolve {
     const std::vector<double>& ts_;
     const std::vector<T_init>& y0_;
     const std::vector<T_par>& theta_;
+    const std::vector<double> theta_dbl_;
     const std::vector<double>& x_r_;
     const std::vector<int>& x_i_;
     const size_t N_;
@@ -57,6 +57,7 @@ namespace dsolve {
         ts_(ts),
         y0_(y0),
         theta_(theta),
+        theta_dbl_(stan::math::value_of(theta)),
         x_r_(x_r),
         x_i_(x_i),
         N_(y0.size()),
@@ -80,124 +81,62 @@ namespace dsolve {
 
     void operator()(const std::vector<double>& y, std::vector<double>& dy_dt,
                     double t) const {
-      rhs_impl(y, dy_dt, t, y0_, theta_);
+      rhs_impl(y, dy_dt, t);
       stan::math::check_size_match("PMXOdeintSystem", "y", y.size(), "dy_dt", dy_dt.size());
     }
 
-    void rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
-                  const std::vector<double>& y0,
-                  const std::vector<double>& theta) const;
+    void rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t) const
+    {
+      using std::vector;
+      using stan::math::var;
 
-    void rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
-                  const std::vector<double>& y0,
-                  const std::vector<stan::math::var>& theta) const;
+      if (!(is_var_y0 || is_var_par)) {
+        dy_dt = f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
+        return;
+      }
 
-    void rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
-                  const std::vector<stan::math::var>& y0,
-                  const std::vector<double>& theta) const;
+      try {
+        stan::math::start_nested();
 
-    void rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
-                  const std::vector<stan::math::var>& y0,
-                  const std::vector<stan::math::var>& theta) const;
+        vector<var> yv(y.begin(), y.begin() + N_);
+
+        vector<var> theta_v;
+        if (is_var_par) {
+          theta_v.insert(theta_v.end(), theta_dbl_.begin(), theta_dbl_.end());
+        }
+        vector<var> fyv(is_var_par ?
+                        f_(t, yv, theta_v, x_r_, x_i_, msgs_) :
+                        f_(t, yv, theta_, x_r_, x_i_, msgs_));
+
+        stan::math::check_size_match("PMXOdeintSystem", "dz_dt", fyv.size(), "states", N_);
+
+        std::fill(dy_dt.begin(), dy_dt.end(), 0.0);
+        for (int i = 0; i < N_; ++i) {
+          dy_dt[i] = fyv[i].val();
+          stan::math::set_zero_all_adjoints_nested();
+          fyv[i].grad();
+
+          // df/dy*s_i term, for i = 1...ns
+          for (int j = 0; j < ns; ++j) {
+            double g = 0;
+            for (size_t k = 0; k < N_; k++) g += y[N_ + N_ * j + k] * yv[k].adj();
+            dy_dt[N_ + N_ * j + i] = g;
+          }
+
+          // df/dp_i term, for i = n...n+m-1
+          if (is_var_par) {
+            for (int j = 0; j < M_; ++j) {
+              dy_dt[N_ + N_ * (ns - M_ + j) + i] += theta_v[j].adj();
+            }
+          }
+        }
+      } catch (const std::exception& e) {
+        stan::math::recover_memory_nested();
+        throw;
+      }
+      stan::math::recover_memory_nested();
+    }
   };
-
-  /*
-   * Data-only version
-   */
-  template<typename F, typename Tt, typename T_init, typename T_par>
-  void PMXOdeintSystem<F, Tt, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
-                                                   const std::vector<double>& y0,
-                                                   const std::vector<double>& theta) const
-  {
-    dy_dt = f_(t, y, theta_, x_r_, x_i_, msgs_);
-  }
-
-  /*
-   * data @c y0, parameter @c theta
-   */
-  template<typename F, typename Tt, typename T_init, typename T_par>
-  void PMXOdeintSystem<F, Tt, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
-                                                   const std::vector<double>& y0,
-                                                   const std::vector<stan::math::var>& theta) const
-  {
-    using std::vector;
-    using stan::math::var;
-
-    try {
-      stan::math::start_nested();
-
-      vector<stan::math::var> y_vars(y.begin(), y.begin() + N_);
-      vector<stan::math::var> theta_vars(M_);
-      std::transform(theta.begin(), theta.end(), theta_vars.begin(),
-                     [](const T_par& v) {return v.val();});
-
-      vector<stan::math::var> dy_dt_vars = f_(t, y_vars, theta_vars, x_r_, x_i_, msgs_);
-
-      stan::math::check_size_match("PMXOdeintSystem", "dz_dt", dy_dt_vars.size(), "states", N_);
-
-      GradientSolution::fill_fwd_sens_ode_rhs<T_init, T_par>(dy_dt, y, dy_dt_vars, y_vars, theta_vars);
-    } catch (const std::exception& e) {
-      stan::math::recover_memory_nested();
-      throw;
-    }
-    stan::math::recover_memory_nested();
-  }
-
-  /*
-   * parameter @c y0, data @c theta
-   */
-  template<typename F, typename Tt, typename T_init, typename T_par>
-  void PMXOdeintSystem<F, Tt, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
-                                                            const std::vector<stan::math::var>& y0,
-                                                            const std::vector<double>& theta) const
-  {
-    using std::vector;
-
-    try {
-      stan::math::start_nested();
-
-      vector<stan::math::var> y_vars(y.begin(), y.begin() + N_);
-      vector<stan::math::var> dy_dt_vars = f_(t, y_vars, theta, x_r_, x_i_, msgs_);
-
-      stan::math::check_size_match("PMXOdeintSystem", "dz_dt", dy_dt_vars.size(), "states", N_);
-
-      GradientSolution::fill_fwd_sens_ode_rhs<T_init, T_par>(dy_dt, y, dy_dt_vars, y_vars, theta);
-    } catch (const std::exception& e) {
-      stan::math::recover_memory_nested();
-      throw;
-    }
-    stan::math::recover_memory_nested();
-  }
-
-  /*
-   * all parameter
-   */
-  template<typename F, typename Tt, typename T_init, typename T_par>
-  void PMXOdeintSystem<F, Tt, T_init, T_par>::rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t,
-                                                            const std::vector<stan::math::var>& y0,
-                                                            const std::vector<stan::math::var>& theta) const
-  {
-    using std::vector;
-
-    try {
-      stan::math::start_nested();
-
-      vector<stan::math::var> y_vars(y.begin(), y.begin() + N_);
-      vector<stan::math::var> theta_vars(M_);
-      std::transform(theta.begin(), theta.end(), theta_vars.begin(),
-                     [](const T_par& v) {return v.val();});
-
-      vector<stan::math::var> dy_dt_vars = f_(t, y_vars, theta_vars, x_r_, x_i_, msgs_);
-
-      stan::math::check_size_match("PMXOdeintSystem", "dz_dt", dy_dt_vars.size(), "states", N_);
-
-      GradientSolution::fill_fwd_sens_ode_rhs<T_init, T_par>(dy_dt, y, dy_dt_vars, y_vars, theta_vars);
-    } catch (const std::exception& e) {
-      stan::math::recover_memory_nested();
-      throw;
-    }
-    stan::math::recover_memory_nested();    
-  }
 
 }  // namespace dsolve
 }  // namespace torsten
