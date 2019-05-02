@@ -3,6 +3,7 @@
 
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
 #include <stan/math/torsten/dsolve/ode_forms.hpp>
+#include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/return_type.hpp>
 #include <stan/math/prim/arr/meta/get.hpp>
 #include <stan/math/prim/arr/meta/length.hpp>
@@ -69,6 +70,7 @@ namespace dsolve {
         step_counter_(0)
     {
       // initial state
+      std::fill(y0_fwd_system.begin(), y0_fwd_system.end(), 0.0);
       if (is_var_y0)  {
       std::transform(y0.begin(), y0.end(), y0_fwd_system.begin(),
                      [](const T_init& v){ return stan::math::value_of(v); });        
@@ -77,6 +79,14 @@ namespace dsolve {
       std::transform(y0.begin(), y0.end(), y0_fwd_system.begin(),
                      [](const T_init& v){ return stan::math::value_of(v); });
       }
+    }
+
+    inline int n_sys() { return size_; }
+
+    const std::vector<Tt> & ts() const { return ts_; }
+
+    std::vector<stan::math::var> vars() const {
+      return torsten::dsolve::pk_vars(y0_, theta_, ts_);
     }
 
     void operator()(const std::vector<double>& y, std::vector<double>& dy_dt,

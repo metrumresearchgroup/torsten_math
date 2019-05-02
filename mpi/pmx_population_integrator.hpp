@@ -70,11 +70,11 @@ namespace torsten {
         using Eigen::Matrix;
         using Eigen::MatrixXd;
         using Eigen::Dynamic;
-        using Ode = ode_t<F, Tt, T_initial, T_param, ode_pars_t...>;
         const int m = theta[0].size();
         const int n = y0[0].size();
         const int np = theta.size(); // population size
 
+        using Ode = ode_t<F, Tt, T_initial, T_param, ode_pars_t...>;
         torsten::dsolve::PMXOdeService<Ode> serv(n, m);
     
         MPI_Comm comm = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM].comm;
@@ -437,7 +437,7 @@ namespace torsten {
 
         static bool has_warning = false;
         if (!has_warning) {
-          std::cout << "Torsten Population ODE solver " << "running sequentially" << "\n";
+          std::cout << "Warning: Torsten group ODE integrator " << "running sequentially" << "\n";
           has_warning = true;
         }
 
@@ -446,7 +446,6 @@ namespace torsten {
         using scalar_type = typename torsten::return_t<Tt, T_initial, T_param>::type;
         Matrix<scalar_type, Dynamic, Dynamic> res(n, ts.size());
 
-        vector<vector<scalar_type> > res_i;
         typename std::vector<Tt>::const_iterator iter = ts.begin();
         int begin_id = 0;
         for (int i = 0; i < np; ++i) {
@@ -457,6 +456,8 @@ namespace torsten {
             = stan::math::to_matrix(solver.template integrate(ode)).transpose();
           begin_id += n * len[i];
         }
+
+        assert(begin_id == res.size());
 
         return res;
       }

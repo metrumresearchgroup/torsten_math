@@ -28,6 +28,7 @@ namespace torsten {
       const size_t N;
       const size_t M;
       const size_t ns;
+      const size_t size;
       N_Vector nv_y;
       N_Vector* nv_ys;
       std::vector<double> y;
@@ -50,6 +51,7 @@ namespace torsten {
         N(n),
         M(m),
         ns((Ode::is_var_y0 ? n : 0) + (Ode::is_var_par ? m : 0)),
+        size(N + N * ns),
         nv_y(N_VNew_Serial(n)),
         nv_ys(nullptr),
         y(n),

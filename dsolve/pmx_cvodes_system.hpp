@@ -48,6 +48,7 @@ namespace torsten {
       const size_t N_;
       const size_t M_;
       const size_t ns_;  // nb. of sensi params
+      const size_t size_;  // nb. of sensi params
       N_Vector& nv_y_;
       std::vector<double>& y_vec_;
       std::vector<double>& fval_;
@@ -101,6 +102,7 @@ namespace torsten {
           N_(y0.size()),
           M_(theta.size()),
           ns_((is_var_y0 ? N_ : 0) + (is_var_par ? M_ : 0)),
+          size_(serv.size),
           nv_y_(serv.nv_y),
           y_vec_(serv.y),
           fval_(serv.fval),
@@ -279,7 +281,7 @@ namespace torsten {
       /**
        * return size of ODE system for primary and sensitivity unknowns
        */
-      const size_t n_sys() const { return N_ * n_sol(); }
+      const size_t n_sys() const { return size_; }
 
       /**
        * return theta size
