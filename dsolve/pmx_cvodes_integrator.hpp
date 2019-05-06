@@ -17,21 +17,21 @@ namespace dsolve {
     const int64_t max_num_steps_;
 
     template<typename Ode, bool GenVar>
-    struct solution_type {
-      using type = std::vector<std::vector<typename Ode::scalar_type>>;
-      static std::vector<std::vector<typename Ode::scalar_type>>
-      initialized_sol(const Ode& ode) {
-        return {ode.ts().size(), std::vector<typename Ode::scalar_type>(ode.n(), 0.0)};
-      }
+    struct SolObserver {
+      std::vector<std::vector<typename Ode::scalar_type>> y;
+
+      SolObserver(const Ode& ode) :
+        y{ode.ts().size(), std::vector<typename Ode::scalar_type>(ode.n(), 0.0)}
+      {}
     };
 
     template<typename Ode>
-    struct solution_type<Ode, false> {
-      using type = Eigen::MatrixXd;
-      static Eigen::MatrixXd
-      initialized_sol(const Ode& ode) {
-        return Eigen::MatrixXd::Zero(ode.n_sys(), ode.ts().size());
-      }
+    struct SolObserver<Ode, false> {
+      Eigen::MatrixXd y;
+
+      SolObserver(const Ode& ode) :
+        y(Eigen::MatrixXd::Zero(ode.fwd_system_size(), ode.ts().size()))
+      {}
     };
 
     // Seqential
@@ -137,7 +137,7 @@ namespace dsolve {
       const size_t n = ode.n();
       const size_t ns= ode.ns();
 
-      typename solution_type<Ode, GenVar>::type res_y(solution_type<Ode, GenVar>::initialized_sol(ode));
+      SolObserver<Ode, GenVar> observer(ode);
 
       // Initial condition is from nv_y, which has changed
       // from previous solution, we need to reset it. Likewise
@@ -173,7 +173,7 @@ namespace dsolve {
         // as the return consists of the CVODES solution
         // instead of the assembled @c var vector in the
         // sequential version.
-        solve(ode, res_y);
+        solve(ode, observer.y);
       } catch (const std::exception& e) {
         CVodeSensFree(mem);
         throw;
@@ -181,7 +181,7 @@ namespace dsolve {
 
       CVodeSensFree(mem);
 
-      return res_y;
+      return observer.y;
     }
   };  // cvodes integrator
 

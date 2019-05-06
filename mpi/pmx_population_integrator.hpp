@@ -86,7 +86,6 @@ namespace torsten {
         vector<MatrixXd> res_d(np);
         Matrix<scalar_type, -1, -1> res(n, ts.size());
         res.setZero();
-        vector<scalar_type> vars;
         std::vector<double> g;
         std::vector<MPI_Request> req(np);
 
@@ -105,7 +104,7 @@ namespace torsten {
           int my_worker_id = torsten::mpi::my_worker(i, np, size);
           try {
             Ode ode{serv, f, t0, ts_i, y0[i], theta[i], x_r[i], x_i[i], msgs};
-            res_d[i].resize(ode.n_sys(), ode.ts().size());
+            res_d[i].resize(ode.fwd_system_size(), ode.ts().size());
             res_d[i].setConstant(0.0);
 
             // success in creating ODE, solve it
@@ -140,8 +139,7 @@ namespace torsten {
             rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
           } else {
             Ode ode{serv, f, t0, ts_i, y0[i], theta[i], x_r[i], x_i[i], msgs};
-            vars = ode.vars();
-            Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i]) = torsten::precomputed_gradients(res_d[i], vars);
+            Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i]) = torsten::precomputed_gradients(res_d[i], ode.vars());
           }
           begin_id += len[i] * n;
         }
@@ -204,7 +202,6 @@ namespace torsten {
         vector<MatrixXd> res_d(np);
         Matrix<scalar_type, -1, -1> res(n, ts.size());
         res.setZero();
-        vector<scalar_type> vars;
         std::vector<double> g;
         std::vector<MPI_Request> req(np);
 
@@ -227,7 +224,7 @@ namespace torsten {
           try {
             std::copy(theta[i].begin(), theta[i].end(), theta_i.begin() + group_theta.size());
             Ode ode{serv, f, t0, ts_i, y0[i], theta_i, x_r[i], x_i[i], msgs};
-            res_d[i].resize(ode.n_sys(), ode.ts().size());
+            res_d[i].resize(ode.fwd_system_size(), ode.ts().size());
             res_d[i].setConstant(0.0);
 
             // success in creating ODE, solve it
@@ -263,8 +260,7 @@ namespace torsten {
           } else {
             std::copy(theta[i].begin(), theta[i].end(), theta_i.begin() + group_theta.size());
             Ode ode{serv, f, t0, ts_i, y0[i], theta_i, x_r[i], x_i[i], msgs};
-            vars = ode.vars();
-            Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i]) = torsten::precomputed_gradients(res_d[i], vars);
+            Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i]) = torsten::precomputed_gradients(res_d[i], ode.vars());
           }
           begin_id += len[i] * n;
         }

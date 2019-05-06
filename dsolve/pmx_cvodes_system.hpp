@@ -14,7 +14,7 @@
 #include <stan/math/prim/mat/fun/typedefs.hpp>
 #include <stan/math/rev/mat/fun/typedefs.hpp>
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
-#include <stan/math/torsten/dsolve/pk_vars.hpp>
+#include <stan/math/torsten/dsolve/pmx_ode_system.hpp>
 
 namespace torsten {
   namespace dsolve {
@@ -31,7 +31,7 @@ namespace torsten {
      * @tparam Tpar scalar type of parameters
      */
     template <typename F, typename Tts, typename Ty0, typename Tpar, int Lmm>
-    class PMXCvodesSystem {
+    class PMXCvodesSystem : public PMXOdeSystem<Tts, Ty0, Tpar> {
     public:
       using Ode = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
 
@@ -247,18 +247,6 @@ namespace torsten {
       inline const std::vector<Tpar>& theta() const { return theta_; }
 
       /**
-       * return a vector of vars for that contains the initial
-       * condition and parameters in case they are vars. The
-       * sensitivity with respect to this vector will be
-       * calculated by CVODES.
-       *
-       * @return vector of vars
-       */
-      std::vector<stan::math::var> vars() const {
-        return torsten::dsolve::pk_vars(y0_, theta_, ts_);
-      }
-
-      /**
        * return current @c y_vec(). We also use it for workspace.
        */
       std::vector<double>& y_vec() { return y_vec_; }
@@ -281,7 +269,7 @@ namespace torsten {
       /**
        * return size of ODE system for primary and sensitivity unknowns
        */
-      const size_t n_sys() const { return size_; }
+      inline const size_t fwd_system_size() const { return size_; }
 
       /**
        * return theta size

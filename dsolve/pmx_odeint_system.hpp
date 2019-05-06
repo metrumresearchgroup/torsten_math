@@ -3,7 +3,7 @@
 
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
 #include <stan/math/torsten/dsolve/ode_forms.hpp>
-#include <stan/math/torsten/dsolve/pk_vars.hpp>
+#include <stan/math/torsten/dsolve/pmx_ode_system.hpp>
 #include <stan/math/torsten/return_type.hpp>
 #include <stan/math/prim/arr/meta/get.hpp>
 #include <stan/math/prim/arr/meta/length.hpp>
@@ -18,8 +18,20 @@
 namespace torsten {
 namespace dsolve {
 
+  /**
+   * Boost Odeint ODE system that contains informtion on residual
+   * equation functor, sensitivity residual equation functor,
+   * as well as initial conditions. This is a base type that
+   * is intended to contain common values used by forward
+   * sensitivity system.
+   *
+   * @tparam F type of functor for ODE residual
+   * @tparam Tt scalar type of time steps
+   * @tparam T_init scalar type of initial unknown values
+   * @tparam T_par scalar type of parameters
+   */
   template <typename F, typename Tt, typename T_init, typename T_par>
-  struct PMXOdeintSystem {
+  struct PMXOdeintSystem : public PMXOdeSystem<Tt, T_init, T_par> {
     using Ode = PMXOdeintSystem<F, Tt, T_init, T_par>;
     using scalar_t = typename torsten::return_t<T_init, T_par>::type;
     static constexpr bool is_var_y0  = stan::is_var<T_init>::value;
@@ -81,13 +93,13 @@ namespace dsolve {
       }
     }
 
-    inline int n_sys() { return size_; }
+    inline const size_t fwd_system_size() const { return size_; }
 
-    const std::vector<Tt> & ts() const { return ts_; }
+    inline const std::vector<Tt> & ts() const { return ts_; }
 
-    std::vector<stan::math::var> vars() const {
-      return torsten::dsolve::pk_vars(y0_, theta_, ts_);
-    }
+    inline const std::vector<T_init>& y0() const { return y0_; }
+
+    inline const std::vector<T_par>& theta() const { return theta_; }
 
     void operator()(const std::vector<double>& y, std::vector<double>& dy_dt,
                     double t) const {
