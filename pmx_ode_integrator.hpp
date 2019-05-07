@@ -127,7 +127,7 @@ namespace torsten {
                  double rtol,
                  double atol,
                  long int max_num_step) {  // NOLINT(runtime/int)                   
-        return torsten::dsolve::pmx_integrate_ode_adams(f, y0, t0, ts, theta,
+        return torsten::pmx_integrate_ode_adams(f, y0, t0, ts, theta,
                                                        x_r, x_i, msgs, rtol,
                                                        atol, max_num_step);
       }
@@ -153,7 +153,7 @@ namespace torsten {
                  double rtol,
                  double atol,
                  long int max_num_step) {  // NOLINT(runtime/int)                   
-        return torsten::dsolve::pmx_integrate_ode_bdf(f, y0, t0, ts, theta,
+        return torsten::pmx_integrate_ode_bdf(f, y0, t0, ts, theta,
                                                      x_r, x_i, msgs, rtol,
                                                      atol, max_num_step);
       }
@@ -248,7 +248,7 @@ namespace torsten {
       const int m = theta.size();
       const int n = y0.size();
 
-      dsolve::PMXCvodesService<typename Ode::Ode> serv(n, m);
+      dsolve::PMXOdeService<typename Ode::Ode> serv(n, m);
 
       Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
 
@@ -311,7 +311,7 @@ namespace torsten {
       const int m = theta.size();
       const int n = y0.size();
 
-      dsolve::PMXCvodesService<typename Ode::Ode> serv(n, m);
+      dsolve::PMXOdeService<typename Ode::Ode> serv(n, m);
 
       Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
 

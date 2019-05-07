@@ -3,19 +3,10 @@
 
 #include <stan/math/torsten/dsolve/pmx_cvodes_fwd_system.hpp>
 #include <stan/math/torsten/dsolve/cvodes_jac.hpp>
+#include <type_traits>
 
 namespace torsten {
 namespace dsolve {
-
-  template<bool GenVar, typename T>
-  struct PMXCvodesIntegratorReturn {
-    using type = std::vector<std::vector<T> >;
-  };
-
-  template<typename T>
-  struct PMXCvodesIntegratorReturn<false, T> {
-    using type = Eigen::MatrixXd;
-  };
 
 /**
  * CVODES ODE integrator.
@@ -25,6 +16,24 @@ namespace dsolve {
     const double atol_;
     const int64_t max_num_steps_;
 
+    template<typename Ode, bool GenVar>
+    struct SolObserver {
+      std::vector<std::vector<typename Ode::scalar_type>> y;
+
+      SolObserver(const Ode& ode) :
+        y{ode.ts().size(), std::vector<typename Ode::scalar_type>(ode.n(), 0.0)}
+      {}
+    };
+
+    template<typename Ode>
+    struct SolObserver<Ode, false> {
+      Eigen::MatrixXd y;
+
+      SolObserver(const Ode& ode) :
+        y(Eigen::MatrixXd::Zero(ode.fwd_system_size(), ode.ts().size()))
+      {}
+    };
+
     // Seqential
     template <typename F, int Lmm, PMXCvodesSensMethod Sm>
     void solve(PMXCvodesFwdSystem<F, double, double, double, Lmm, Sm>& ode,
@@ -32,6 +41,14 @@ namespace dsolve {
 
     template <typename F, int Lmm, PMXCvodesSensMethod Sm>
     void solve(PMXCvodesFwdSystem<F, stan::math::var, double, double, Lmm, Sm>& ode,
+               std::vector<std::vector<stan::math::var> >& res_y);
+
+    template <typename F, typename Ty0, int Lmm, PMXCvodesSensMethod Sm>
+    void solve(PMXCvodesFwdSystem<F, double, Ty0, double, Lmm, Sm>& ode,
+               std::vector<std::vector<stan::math::var> >& res_y);
+
+    template <typename F, typename Tpar, int Lmm, PMXCvodesSensMethod Sm>
+    void solve(PMXCvodesFwdSystem<F, double, double, Tpar, Lmm, Sm>& ode,
                std::vector<std::vector<stan::math::var> >& res_y);
 
     template <typename F, typename Ty0, typename Tpar, int Lmm, PMXCvodesSensMethod Sm>
@@ -120,12 +137,7 @@ namespace dsolve {
       const size_t n = ode.n();
       const size_t ns= ode.ns();
 
-      // the return type for MPI version is based on @c double,
-      // as the return consists of the CVODES solution
-      // instead of the assembled @c var vector in the
-      // sequential version.
-      typename PMXCvodesIntegratorReturn<GenVar, typename Ode::scalar_type>::type res_y;  // NOLINT
-      ode.initialize_solution(res_y);
+      SolObserver<Ode, GenVar> observer(ode);
 
       // Initial condition is from nv_y, which has changed
       // from previous solution, we need to reset it. Likewise
@@ -143,8 +155,10 @@ namespace dsolve {
         CHECK_SUNDIALS_CALL(CVodeSetUserData(mem, ode.to_user_data()));
         CHECK_SUNDIALS_CALL(CVodeSetMaxNumSteps(mem, max_num_steps_));
         CHECK_SUNDIALS_CALL(CVodeSetMaxErrTestFails(mem, 20));
-        CHECK_SUNDIALS_CALL(CVodeSetMaxConvFails(mem, 30));
+        CHECK_SUNDIALS_CALL(CVodeSetMaxConvFails(mem, 20));
+#ifdef TORSTEN_CVS_JAC_AD
         CHECK_SUNDIALS_CALL(CVDlsSetJacFn(mem, cvodes_jac<Ode>()));
+#endif
 
         /** if y0 is parameter, the first n sensitivity vector
          * are regarding y0, thus they form a unit matrix.
@@ -155,7 +169,11 @@ namespace dsolve {
           CHECK_SUNDIALS_CALL(CVodeSensEEtolerances(mem));
         }
 
-        solve(ode, res_y);
+        // the return type for MPI version is based on @c double,
+        // as the return consists of the CVODES solution
+        // instead of the assembled @c var vector in the
+        // sequential version.
+        solve(ode, observer.y);
       } catch (const std::exception& e) {
         CVodeSensFree(mem);
         throw;
@@ -163,7 +181,7 @@ namespace dsolve {
 
       CVodeSensFree(mem);
 
-      return res_y;
+      return observer.y;
     }
   };  // cvodes integrator
 
@@ -203,10 +221,11 @@ namespace dsolve {
     const std::vector<double>& ts = ode.ts();
     auto mem = ode.mem();
     auto y = ode.nv_y();
+    const int n = ode.n();
 
     for (size_t i = 0; i < ts.size(); ++i) {
       CHECK_SUNDIALS_CALL(CVode(mem, ts[i], y, &t1, CV_NORMAL));
-      for (size_t j = 0; j < ode.n(); ++j) res_y(i, j) = NV_Ith_S(y, j);
+      res_y.block(0, i, n, 1) = Eigen::VectorXd::Map(NV_DATA_S(y), n);
     };
   }
 
@@ -243,11 +262,11 @@ namespace dsolve {
     std::vector<double> g(ts.size(), 0.0);
 
     for (size_t i = 0; i < ts.size(); ++i) {
-      double time = value_of(ts[i]);
-      CHECK_SUNDIALS_CALL(CVode(mem, time, y, &t1, CV_NORMAL));
+      CHECK_SUNDIALS_CALL(CVode(mem, ts[i].val(), y, &t1, CV_NORMAL));
+      ode.eval_rhs(t1, y);
       for (size_t j = 0; j < ode.n(); ++j) {
-        ode.eval_rhs(time, y);
         g[i] = ode.fval()[j];
+        // FIXME: use ts[i] instead of ts
         res_y[i][j] = precomputed_gradients(NV_Ith_S(y, j), ts, g);
         g[i] = 0.0;
       }
@@ -269,26 +288,59 @@ namespace dsolve {
    * @param[out] ode ODE system
    * @param[out] res_y ODE solutions, each @c vector
    * corresponds a time step, arranged as:
-   * @c res_y = [y1, dy1/dt, 
-   *             y2, dy2/dt, ...]
+   * @c res_y = [y1, y2, ... dy1/dt1, dy2/dt1...dy1/dtn, dy2/dtn...]
    */
   template <typename F, int Lmm, PMXCvodesSensMethod Sm>
   void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, stan::math::var, double, double, Lmm, Sm>& ode, // NOLINT
                                  Eigen::MatrixXd& res_y) {
-    using stan::math::value_of;
-    using stan::math::var;
     double t1 = ode.t0();
-    const std::vector<var>& ts = ode.ts();
+    const std::vector<stan::math::var>& ts = ode.ts();
     auto mem = ode.mem();
     auto y = ode.nv_y();
+    const int n = ode.n();
 
     for (size_t i = 0; i < ts.size(); ++i) {
-      double time = value_of(ts[i]);
-      CHECK_SUNDIALS_CALL(CVode(mem, time, y, &t1, CV_NORMAL));
-      for (size_t j = 0; j < ode.n(); ++j) {
-        ode.eval_rhs(time, y);
-        res_y(i, (1 + ts.size()) * j) = NV_Ith_S(y, j);
-        res_y(i, (1 + ts.size()) * j + i + 1) = ode.fval()[j];
+      CHECK_SUNDIALS_CALL(CVode(mem, ts[i].val(), y, &t1, CV_NORMAL));
+      res_y.block(0, i, n, 1) = Eigen::VectorXd::Map(NV_DATA_S(y), n);
+
+      ode.eval_rhs(t1, y);
+      res_y.block(n + i * n, i, n, 1) = Eigen::VectorXd::Map(ode.fval().data(), n);
+    }
+  }
+
+  /**
+   * Solve Ode system with forward sensitivty, return a
+   * vector of @c var with precomputed gradient as sensitivity
+   * value, when @c y0 is parameter but @theta & @c ts are not.
+   *
+   * @tparam Ode ODE system type
+   * @param[out] ode ODE system
+   * @param[out] res_y ODE solutions
+   */
+  template <typename F, typename Ty0, int Lmm, PMXCvodesSensMethod Sm>
+  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, double, Ty0, double, Lmm, Sm>& ode, // NOLINT
+                                  std::vector<std::vector<stan::math::var> >& res_y) { // NOLINT
+    using stan::math::precomputed_gradients;
+    double t1 = ode.t0();
+    const std::vector<double>& ts = ode.ts();
+    auto mem = ode.mem();
+    auto y = ode.nv_y();
+    auto ys = ode.nv_ys();
+    const auto n = ode.n();
+    const auto ns = ode.ns();
+
+    std::vector<double> g(n);
+
+    for (size_t i = 0; i < ts.size(); ++i) {
+      CHECK_SUNDIALS_CALL(CVode(mem, ts[i], y, &t1, CV_NORMAL));
+      if (ode.need_fwd_sens) {
+        CHECK_SUNDIALS_CALL(CVodeGetSens(mem, &t1, ys));
+        for (size_t k = 0; k < n; ++k) {
+          for (size_t j = 0; j < ns; ++j) {
+            g[j] = NV_Ith_S(ys[j], k);
+          }
+          res_y[i][k] = precomputed_gradients(NV_Ith_S(y, k), ode.y0(), g);
+        }
       }
     }
   }
@@ -296,7 +348,44 @@ namespace dsolve {
   /**
    * Solve Ode system with forward sensitivty, return a
    * vector of @c var with precomputed gradient as sensitivity
-   * value, when @c y0 and/or @c theta are parameters but @c ts is not.
+   * value, when @c theta is parameter but @c y0 & @c ts are not.
+   *
+   * @tparam Ode ODE system type
+   * @param[out] ode ODE system
+   * @param[out] res_y ODE solutions
+   */
+  template <typename F, typename Tpar, int Lmm, PMXCvodesSensMethod Sm>
+  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, double, double, Tpar, Lmm, Sm>& ode, // NOLINT
+                                  std::vector<std::vector<stan::math::var> >& res_y) { // NOLINT
+    using stan::math::precomputed_gradients;
+    double t1 = ode.t0();
+    const std::vector<double>& ts = ode.ts();
+    auto mem = ode.mem();
+    auto y = ode.nv_y();
+    auto ys = ode.nv_ys();
+    const auto n = ode.n();
+    const auto ns = ode.ns();
+
+    std::vector<double> g(ns);
+
+    for (size_t i = 0; i < ts.size(); ++i) {
+      CHECK_SUNDIALS_CALL(CVode(mem, ts[i], y, &t1, CV_NORMAL));
+      if (ode.need_fwd_sens) {
+        CHECK_SUNDIALS_CALL(CVodeGetSens(mem, &t1, ys));
+        for (size_t k = 0; k < n; ++k) {
+          for (size_t j = 0; j < ns; ++j) {
+            g[j] = NV_Ith_S(ys[j], k);
+          }
+          res_y[i][k] = precomputed_gradients(NV_Ith_S(y, k), ode.theta(), g);
+        }
+      }
+    }
+  }
+
+  /**
+   * Solve Ode system with forward sensitivty, return a
+   * vector of @c var with precomputed gradient as sensitivity
+   * value, when @c y0 and @c theta are parameters but @c ts is not.
    *
    * @tparam Ode ODE system type
    * @param[out] ode ODE system
@@ -344,8 +433,7 @@ namespace dsolve {
    */
   template <typename F, typename Ty0, typename Tpar, int Lmm, PMXCvodesSensMethod Sm> // NOLINT
   void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, double, Ty0, Tpar, Lmm, Sm>& ode, // NOLINT
-                                 Eigen::MatrixXd& res_y) {
-    using stan::math::precomputed_gradients;
+                                  Eigen::MatrixXd& res_y) {
     double t1 = ode.t0();
     const std::vector<double>& ts = ode.ts();
     auto mem = ode.mem();
@@ -353,20 +441,16 @@ namespace dsolve {
     auto ys = ode.nv_ys();
     const auto n = ode.n();
     const auto ns = ode.ns();
-    auto vars = ode.vars();
 
     std::vector<double> g(ns);
 
     for (size_t i = 0; i < ts.size(); ++i) {
       CHECK_SUNDIALS_CALL(CVode(mem, ts[i], y, &t1, CV_NORMAL));
-      if (ode.need_fwd_sens) {
-        CHECK_SUNDIALS_CALL(CVodeGetSens(mem, &t1, ys));
-        for (size_t k = 0; k < n; ++k) {
-          res_y(i, k * ode.n_sol()) = NV_Ith_S(y, k);
-          for (size_t j = 0; j < ns; ++j) {
-            res_y(i, k * ode.n_sol() + j + 1) = NV_Ith_S(ys[j], k);
-          }
-        }
+      res_y.block(0, i, n, 1) = Eigen::VectorXd::Map(NV_DATA_S(y), n);
+
+      CHECK_SUNDIALS_CALL(CVodeGetSens(mem, &t1, ys));
+      for (size_t j = 0; j < ns; ++j) {
+        res_y.block(n + j * n, i, n, 1) = Eigen::VectorXd::Map(NV_DATA_S(ys[j]), n);
       }
     }
   }
@@ -425,35 +509,25 @@ namespace dsolve {
   template <typename F, typename Ty0, typename Tpar, int Lmm, PMXCvodesSensMethod Sm> // NOLINT
   void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, Lmm, Sm>& ode, // NOLINT
                                  Eigen::MatrixXd& res_y) {
-    using stan::math::precomputed_gradients;
-    using stan::math::var;
     double t1 = ode.t0();
-    const std::vector<var>& ts = ode.ts();
+    const std::vector<stan::math::var>& ts = ode.ts();
     auto mem = ode.mem();
     auto y = ode.nv_y();
     auto ys = ode.nv_ys();
     const int n = ode.n();
     const int ns = ode.ns();
-    const int nsol = ode.n_sol();
-    auto vars = ode.vars();
-
-    res_y = Eigen::MatrixXd::Zero(ts.size(), ode.n_sys());
 
     for (size_t i = 0; i < ts.size(); ++i) {
-      double time = value_of(ts[i]);
-      CHECK_SUNDIALS_CALL(CVode(mem, time, y, &t1, CV_NORMAL));
-      if (ode.need_fwd_sens) {
-        CHECK_SUNDIALS_CALL(CVodeGetSens(mem, &t1, ys));
-        ode.eval_rhs(time, y);
-        for (int k = 0; k < n; ++k) {
-          int j0 = k * nsol;
-          res_y(i, j0) = NV_Ith_S(y, k);
-          for (int j = 0; j < ns; ++j) {
-              res_y(i, j0 + j + 1) = NV_Ith_S(ys[j], k);
-          }
-          res_y(i, j0 + ns + 1 + i) = ode.fval()[k];
-        }
+      CHECK_SUNDIALS_CALL(CVode(mem, stan::math::value_of(ts[i]), y, &t1, CV_NORMAL));
+      res_y.block(0, i, n, 1) = Eigen::VectorXd::Map(NV_DATA_S(y), n);
+
+      CHECK_SUNDIALS_CALL(CVodeGetSens(mem, &t1, ys));
+      for (size_t j = 0; j < ns; ++j) {
+        res_y.block(n + j * n, i, n, 1) = Eigen::VectorXd::Map(NV_DATA_S(ys[j]), n);
       }
+
+      ode.eval_rhs(t1, y);
+      res_y.block(n + (i + ns) * n, i, n, 1) = Eigen::VectorXd::Map(ode.fval().data(), n);      
     }
   }
 

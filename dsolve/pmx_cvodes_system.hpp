@@ -14,7 +14,7 @@
 #include <stan/math/prim/mat/fun/typedefs.hpp>
 #include <stan/math/rev/mat/fun/typedefs.hpp>
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
-#include <stan/math/torsten/dsolve/pk_vars.hpp>
+#include <stan/math/torsten/dsolve/pmx_ode_system.hpp>
 
 namespace torsten {
   namespace dsolve {
@@ -30,14 +30,12 @@ namespace torsten {
      * @tparam Ty0 scalar type of initial unknown values
      * @tparam Tpar scalar type of parameters
      */
-    template <typename F, typename Tts,
-              typename Ty0, typename Tpar, int Lmm>
-    class PMXCvodesSystem {
+    template <typename F, typename Tts, typename Ty0, typename Tpar, int Lmm>
+    class PMXCvodesSystem : public PMXOdeSystem<Tts, Ty0, Tpar> {
     public:
       using Ode = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
 
     protected:
-      PMXCvodesService<Ode>& serv_;
       const F& f_;
       const double t0_;
       const std::vector<Tts>& ts_;
@@ -50,12 +48,11 @@ namespace torsten {
       const size_t N_;
       const size_t M_;
       const size_t ns_;  // nb. of sensi params
+      const size_t size_;  // nb. of sensi params
       N_Vector& nv_y_;
       std::vector<double>& y_vec_;
       std::vector<double>& fval_;
       void* mem_;
-      SUNMatrix& A_;
-      SUNLinearSolver& LS_;
       std::ostream* msgs_;
 
     public:
@@ -83,7 +80,8 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE.
        * @param[in] msgs stream to which messages are printed.
        */
-      PMXCvodesSystem(PMXCvodesService<Ode>& serv,
+      template<typename ode_t>
+      PMXCvodesSystem(PMXOdeService<ode_t>& serv,
                        const F& f,
                        double t0,
                        const std::vector<Tts>& ts,
@@ -92,8 +90,7 @@ namespace torsten {
                        const std::vector<double>& x_r,
                        const std::vector<int>& x_i,
                        std::ostream* msgs)
-        : serv_(serv),
-          f_(f),
+        : f_(f),
           t0_(t0),
           ts_(ts),
           y0_(y0),
@@ -105,12 +102,11 @@ namespace torsten {
           N_(y0.size()),
           M_(theta.size()),
           ns_((is_var_y0 ? N_ : 0) + (is_var_par ? M_ : 0)),
-          nv_y_(serv_.nv_y),
-          y_vec_(serv_.y),
-          fval_(serv_.fval),
-          mem_(serv_.mem),
-          A_(serv_.A),
-          LS_(serv.LS),
+          size_(serv.size),
+          nv_y_(serv.nv_y),
+          y_vec_(serv.y),
+          fval_(serv.fval),
+          mem_(serv.mem),
           msgs_(msgs) {
         using stan::math::system_error;
 
@@ -120,59 +116,28 @@ namespace torsten {
         if (mem_ == NULL)
           throw std::runtime_error("CVodeCreate failed to allocate memory");
 
-        auto t0_data = stan::math::value_of(t0);
-        auto ts_data = stan::math::value_of(ts);
-        
         static const char* caller = "PMXCvodesSystem";
-        stan::math::check_finite(caller, "initial time", t0_data);
-        stan::math::check_finite(caller, "times", ts_data);
-        stan::math::check_ordered(caller, "times", ts_data);
-        stan::math::check_nonzero_size(caller, "times", ts_data);
-        stan::math::check_less(caller, "initial time", t0_data, ts_data.front());
-        stan::math::check_finite(caller, "initial state", y0);
-        stan::math::check_finite(caller, "parameter vector", theta);
-        stan::math::check_finite(caller, "continuous data", x_r);
-        stan::math::check_nonzero_size(caller, "initial state", y0);
-
         int err = 1;
-        if (N_ != serv_.N)
+        if (N_ != serv.N)
           system_error(caller, "N_", err, "inconsistent allocated memory");
         if (N_ != size_t(N_VGetLength_Serial(nv_y_)))
           system_error(caller, "nv_y", err, "inconsistent allocated memory");
-        if (M_ != serv_.M)
+        if (M_ != serv.M)
           system_error(caller, "M_", err, "inconsistent allocated memory");
-        if (ns_ != serv_.ns)
+        if (ns_ != serv.ns)
           system_error(caller, "ns_", err, "inconsistent allocated memory");
 
         // initial condition
         for (size_t i = 0; i < N_; ++i) {
-          NV_Ith_S(nv_y_, i) = stan::math::value_of(y0_[i]);
+          NV_Ith_S(nv_y_, i) = y0_dbl_[i];
         }
       }
 
       /**
        * destructor is empty as all CVODES resources are
-       * handled by @c PMXCvodesService
+       * handled by @c PMXOdeService
        */
       ~PMXCvodesSystem() {
-      }
-
-      /**
-       * intialize solution to ensure right size.
-       */
-      void initialize_solution(Eigen::MatrixXd& sol) {
-        sol = Eigen::MatrixXd::Zero(ts_.size(), n_sys());
-      }
-
-      /**
-       * intialize solution to ensure right size.
-       */
-      void initialize_solution(std::vector<std::vector<scalar_type> >& sol) {
-        sol.resize(ts_.size());
-        for (auto&& v : sol) {
-          v.resize(N_);
-          std::fill(v.begin(), v.end(), 0.0);
-        }
       }
 
       /**
@@ -181,7 +146,7 @@ namespace torsten {
        *
        * @return each solution size.
        */
-      int n_sol() {
+      int n_sol() const {
         int nt = stan::is_var<Tts>::value ? ts_.size() : 0;
         return 1 + ns_ + nt;
       }
@@ -243,24 +208,14 @@ namespace torsten {
         try {
           stan::math::start_nested();
 
-          std::vector<stan::math::var> yv_work(n), fyv_work(n);
+          std::vector<var> yv_work(NV_DATA_S(y), NV_DATA_S(y) + n);
+          std::vector<var> fyv_work(f_(t, yv_work, theta_dbl_, x_r_, x_i_, msgs_));
 
-          for (int i = 0; i < n; ++i) {
-            yv_work[i] = NV_Ith_S(y, i);
-            yv_work[i].vi_ -> set_zero_adjoint();
-          }
-
-          fyv_work = f_(t, yv_work, theta_dbl_, x_r_, x_i_, msgs_);
-
-          std::vector<double> g;
           for (int i = 0; i < n; ++i) {
             stan::math::set_zero_all_adjoints_nested();
-            fyv_work[i].grad(yv_work, g);
-            std::for_each(yv_work.begin(), yv_work.end(),
-                          [](var& v) { v.vi_ -> set_zero_adjoint(); });
-
+            fyv_work[i].grad();
             for (int j = 0; j < n; ++j) {
-              SM_ELEMENT_D(J, i, j) = g[j];
+              SM_ELEMENT_D(J, i, j) = yv_work[j].adj();
             }
           }
         } catch (const std::exception& e) {
@@ -292,18 +247,6 @@ namespace torsten {
       inline const std::vector<Tpar>& theta() const { return theta_; }
 
       /**
-       * return a vector of vars for that contains the initial
-       * condition and parameters in case they are vars. The
-       * sensitivity with respect to this vector will be
-       * calculated by CVODES.
-       *
-       * @return vector of vars
-       */
-      std::vector<stan::math::var> vars() const {
-        return torsten::dsolve::pk_vars(y0_, theta_, ts_);
-      }
-
-      /**
        * return current @c y_vec(). We also use it for workspace.
        */
       std::vector<double>& y_vec() { return y_vec_; }
@@ -316,7 +259,7 @@ namespace torsten {
       /**
        * return number of unknown variables
        */
-      const size_t n() { return N_; }
+      const size_t n() const { return N_; }
 
       /**
        * return number of sensitivity parameters
@@ -326,7 +269,7 @@ namespace torsten {
       /**
        * return size of ODE system for primary and sensitivity unknowns
        */
-      const size_t n_sys() { return N_ * n_sol(); }
+      inline const size_t fwd_system_size() const { return size_; }
 
       /**
        * return theta size

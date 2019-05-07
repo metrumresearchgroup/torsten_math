@@ -42,6 +42,7 @@ public:
   const int ncmt;
   std::vector<int> begin_;
   const std::vector<int>& len_;
+  const int total_result_size;
   const std::vector<T0>& time_;
   const std::vector<T1>& amt_;
   const std::vector<T2>& rate_;
@@ -96,6 +97,7 @@ public:
     ncmt(n),
     begin_(len.size()),
     len_(len),
+    total_result_size(std::accumulate(len_.begin(), len_.end(), 0)),
     time_   (time  ),
     amt_    (amt   ),
     rate_   (rate   ),
@@ -153,6 +155,7 @@ public:
     ncmt(n),
     begin_{0},
     len_(len_1_),
+    total_result_size(std::accumulate(len_.begin(), len_.end(), 0)),
     time_   (time   ),
     amt_    (amt    ),
     rate_   (rate   ),
@@ -207,6 +210,7 @@ public:
     ncmt(n),
     begin_(len.size()),
     len_(len),
+    total_result_size(std::accumulate(len_.begin(), len_.end(), 0)),
     time_   (time   ),
     amt_    (amt    ),
     rate_   (rate   ),
@@ -263,6 +267,7 @@ public:
     ncmt(n),
     begin_{0},
     len_(len_1_),
+    total_result_size(std::accumulate(len_.begin(), len_.end(), 0)),
     time_   (time   ),
     amt_    (amt    ),
     rate_   (rate   ),
@@ -356,7 +361,6 @@ public:
   bool has_lag() const {
     return has_lag(0);
   }
-
 };
 
 template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>

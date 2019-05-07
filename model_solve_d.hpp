@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_MODEL_SOLVE_D_HPP
 
 #include <stan/math/torsten/torsten_def.hpp>
+#include <stan/math/torsten/val_and_grad_nested.hpp>
 #include <stan/math/torsten/pmx_ode_integrator.hpp>
 
 namespace torsten {
@@ -82,18 +83,7 @@ namespace torsten {
 
       auto res = pkmodel_new.solve(t1);
       vector<var> var_new(pkmodel_new.vars(t1));
-      vector<double> g;
-      const int nx = res.size();
-      const int ny = var_new.size();      
-      res_d.resize(nx * (ny + 1));
-      for (int i = 0; i < nx; ++i) {
-        stan::math::set_zero_all_adjoints_nested();
-        res_d(i * (ny + 1)) = res[i].val();
-        res[i].grad(var_new, g);
-        for (int j = 0; j < ny; ++j) {
-          res_d(i * (ny + 1) + j + 1) = g[j];
-        }
-      }
+      res_d = val_and_grad_nested(res, var_new);
     } catch (const std::exception& e) {
       stan::math::recover_memory_nested();
       throw;
@@ -152,18 +142,7 @@ namespace torsten {
 
       auto res = pkmodel_new.solve(t1, integrator);
       vector<var> var_new(pkmodel_new.vars(t1));
-      vector<double> g;
-      const int nx = res.size();
-      const int ny = var_new.size();      
-      res_d.resize(nx * (ny + 1));
-      for (int i = 0; i < nx; ++i) {
-        stan::math::set_zero_all_adjoints_nested();
-        res_d(i * (ny + 1)) = res[i].val();
-        res[i].grad(var_new, g);
-        for (int j = 0; j < ny; ++j) {
-          res_d(i * (ny + 1) + j + 1) = g[j];
-        }
-      }
+      res_d = val_and_grad_nested(res, var_new);
     } catch (const std::exception& e) {
       stan::math::recover_memory_nested();
       throw;
@@ -239,18 +218,7 @@ namespace torsten {
       T_ii ii_new = value_of(ii);
       auto res = pkmodel_new.solve(amt_new, r_new, ii_new, cmt);
       vector<var> var_new(pkmodel_new.vars(amt_new, r_new, ii_new));
-      vector<double> g;
-      const int nx = res.size();
-      const int ny = var_new.size();      
-      res_d.resize(nx * (ny + 1));
-      for (int i = 0; i < nx; ++i) {
-        stan::math::set_zero_all_adjoints_nested();
-        res_d(i * (ny + 1)) = res[i].val();
-        res[i].grad(var_new, g);
-        for (int j = 0; j < ny; ++j) {
-          res_d(i * (ny + 1) + j + 1) = g[j];
-        }
-      }
+      res_d = val_and_grad_nested(res, var_new);
     } catch (const std::exception& e) {
       stan::math::recover_memory_nested();
       throw;
@@ -297,18 +265,7 @@ namespace torsten {
         T_ii ii_new = value_of(ii);
         auto res = pkmodel_new.solve(amt_new, r_new, ii_new, cmt, integrator);
         vector<var> var_new(pkmodel_new.vars(amt_new, r_new, ii_new));
-        vector<double> g;
-        const int nx = res.size();
-        const int ny = var_new.size();      
-        res_d.resize(nx * (ny + 1));
-        for (int i = 0; i < nx; ++i) {
-          stan::math::set_zero_all_adjoints_nested();
-          res_d(i * (ny + 1)) = res[i].val();
-          res[i].grad(var_new, g);
-          for (int j = 0; j < ny; ++j) {
-            res_d(i * (ny + 1) + j + 1) = g[j];
-          }
-        }
+        res_d = val_and_grad_nested(res, var_new);
       } catch (const std::exception& e) {
         stan::math::recover_memory_nested();
         throw;

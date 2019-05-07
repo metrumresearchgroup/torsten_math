@@ -264,7 +264,7 @@ class idas_system {
   /**
    * return size of DAE system for primary and sensitivity unknowns
    */
-  const size_t n_sys() { return N_ * (ns_ + 1); }
+  const size_t fwd_system_size() { return N_ * (ns_ + 1); }
 
   /**
    * return theta size

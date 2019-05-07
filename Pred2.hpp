@@ -77,8 +77,10 @@ namespace torsten{
 
       using scalar = typename EM::T_scalar;
 
-      res.resize(EM::solution_size(id, events_rec), EM::nCmt(events_rec));
-      PKRec<scalar> init(EM::nCmt(events_rec));
+      int nCmt = EM::nCmt(events_rec);
+
+      res.resize(nCmt, EM::solution_size(id, events_rec));
+      PKRec<scalar> init(nCmt);
       init.setZero();
 
       try {
@@ -88,7 +90,7 @@ namespace torsten{
         while(ikeep < em.nKeep) {
           stepper(iev, init, em, pred_pars..., model_pars...);
           if(events.keep(iev)) {
-            res.row(ikeep) = init;
+            res.col(ikeep) = init;
             ikeep++;
           }
           iev++;
@@ -98,16 +100,16 @@ namespace torsten{
       }
     }
 
-    /*
-     * For input for a single individual, the call can be simplified.
-     */
-    template<typename T_events_record, typename... Ts>
-    void pred(const T_events_record& events_rec,
-              Eigen::Matrix<typename EventsManager<T_events_record>::T_scalar, -1, -1>& res,
-              const T_pred... pred_pars,
-              const Ts... model_pars) {
-      pred(0, events_rec, res, pred_pars..., model_pars...);
-    }
+    // /*
+    //  * For input for a single individual, the call can be simplified.
+    //  */
+    // template<typename T_events_record, typename... Ts>
+    // void pred(const T_events_record& events_rec,
+    //           Eigen::Matrix<typename EventsManager<T_events_record>::T_scalar, -1, -1>& res,
+    //           const T_pred... pred_pars,
+    //           const Ts... model_pars) {
+    //   pred(0, events_rec, res, pred_pars..., model_pars...);
+    // }
 
     /*
      * Step through a range of events.
@@ -245,9 +247,9 @@ namespace torsten{
     template<typename T_events_record, typename... Ts,
              typename std::enable_if_t<stan::is_var<typename EventsManager<T_events_record>::T_scalar>::value >* = nullptr> //NOLINT
     void pred(const T_events_record& events_rec,
-                     std::vector<Eigen::Matrix<typename EventsManager<T_events_record>::T_scalar, -1, -1> >& res,
-                     const T_pred... pred_pars,
-                     const Ts... model_pars) {
+              Eigen::Matrix<typename EventsManager<T_events_record>::T_scalar, -1, -1>& res,
+              const T_pred... pred_pars,
+              const Ts... model_pars) {
       using Eigen::Matrix;
       using Eigen::MatrixXd;
       using Eigen::VectorXd;
@@ -274,7 +276,7 @@ namespace torsten{
       std::vector<MPI_Request> req(np);
       vector<MatrixXd> res_d(np);
       
-      res.resize(np);
+      res.resize(nCmt, EM::population_solution_size(events_rec));
 
       PKRec<scalar> init(nCmt);
       PKRec<double> pred1;
@@ -284,10 +286,8 @@ namespace torsten{
 
         const int nKeep = EM::solution_size(id, events_rec);
 
-        res[id].resize(nKeep, nCmt);
-
         int nev = EM::num_events(id, events_rec);
-        res_d[id].resize(nev, ES::system_size(id, events_rec));
+        res_d[id].resize(ES::system_size(id, events_rec), nev);
         res_d[id].setConstant(0.0);
 
         int my_worker_id = torsten::mpi::my_worker(id, np, size);
@@ -308,9 +308,9 @@ namespace torsten{
               int ikeep = 0, iev = 0;
               while(ikeep < em.nKeep) {
                 stepper_solve(iev, init, pred1, em, pred_pars..., model_pars...);
-                res_d[id].row(iev).segment(0, pred1.size()) = pred1;
+                res_d[id].col(iev).segment(0, pred1.size()) = pred1;
                 if(events.keep(iev)) {
-                  res[id].row(ikeep) = init;
+                  res.col(EM::begin(id, events_rec) + ikeep) = init;
                   ikeep++;
                 }
                 iev++;
@@ -337,14 +337,14 @@ namespace torsten{
           EM em(id, events_rec);
           auto events = em.events();
           PKRec<scalar> init(nCmt); init.setZero();
-          PKRec<double> pred1 = VectorXd::Zero(res_d[id].cols());
+          PKRec<double> pred1 = VectorXd::Zero(res_d[id].rows());
 
           int ikeep = 0, iev = 0;
           while(ikeep < em.nKeep) {
-            pred1 = res_d[id].row(iev);
+            pred1 = res_d[id].col(iev);
             stepper_sync(iev, init, pred1, em, pred_pars..., model_pars...);
             if(events.keep(iev)) {
-              res[id].row(ikeep) = init;
+              res.col(EM::begin(id, events_rec) + ikeep) = init;
               ikeep++;
             }
             iev++;
@@ -364,8 +364,7 @@ namespace torsten{
      * Data-only MPI solver that takes ragged arrays as input.
      */
     template<typename T_events_record, typename... Ts>
-    void pred(const T_events_record& events_rec,
-                     std::vector<Eigen::Matrix<double, -1, -1> >& res,
+    void pred(const T_events_record& events_rec, Eigen::MatrixXd& res,
                      const T_pred... pred_pars,
                      const Ts... model_pars) {
       using Eigen::Matrix;
@@ -391,17 +390,17 @@ namespace torsten{
 
       std::vector<MPI_Request> req(np);
 
-      res.resize(np);
+      res.resize(nCmt, EM::population_solution_size(events_rec));
 
       PKRec<double> init(nCmt);
       for (int id = 0; id < np; ++id) {
 
         /* For every rank */
 
-        res[id].resize(EM::solution_size(id, events_rec), nCmt);
-        res[id].setConstant(0.0);
-
+        int nKeep = EM::solution_size(id, events_rec);
         int my_worker_id = torsten::mpi::my_worker(id, np, size);
+        int begin_id = EM::begin(id, events_rec) * nCmt;
+        int size_id = nKeep * nCmt;
 
         /* only solver rank */
 
@@ -414,18 +413,19 @@ namespace torsten{
             while(ikeep < em.nKeep) {
               stepper(iev, init, em, pred_pars..., model_pars...);
               if(events.keep(iev)) {
-                res[id].row(ikeep) = init;
+                res.col(EM::begin(id, events_rec) + ikeep) = init;
                 ikeep++;
               }
               iev++;
             }
           } catch (const std::exception& e) {
             is_invalid = true;
-            res[id].setConstant(invalid_res_d);
+            res(begin_id) = invalid_res_d;
             rank_fail_msg << "Rank " << rank << " failed to solve id " << id << ": " << e.what();
           }
         }
-        MPI_Ibcast(res[id].data(), res[id].size(), MPI_DOUBLE, my_worker_id, comm, &req[id]);
+
+        MPI_Ibcast(res.data() + begin_id, size_id, MPI_DOUBLE, my_worker_id, comm, &req[id]);
       }
 
       // make sure every rank throws in case any rank fails
@@ -436,7 +436,8 @@ namespace torsten{
         finished++;
         if(is_invalid) continue;
         int id = index;
-        if (std::isnan(res[id](0))) {
+        int begin_id = EM::begin(id, events_rec) * nCmt;
+        if (std::isnan(res(begin_id))) {
           is_invalid = true;
           rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
         }
@@ -458,15 +459,16 @@ namespace torsten{
      */
     template<typename T_events_record, typename... Ts> //NOLINT
     void pred(const T_events_record& events_rec,
-                     std::vector<Eigen::Matrix<typename EventsManager<T_events_record>::T_scalar, -1, -1> >& res,
+                     Eigen::Matrix<typename EventsManager<T_events_record>::T_scalar, -1, -1>& res,
                      const T_pred... pred_pars,
                      const Ts... model_pars) {
       using ER = T_events_record;
       using EM = EventsManager<ER>;
 
+      const int nCmt = EM::nCmt(events_rec);
       const int np = EM::population_size(events_rec);
       
-      res.resize(np);
+      res.resize(nCmt, EM::population_solution_size(events_rec));
 
       static bool has_warning = false;
       if (!has_warning) {
@@ -475,8 +477,12 @@ namespace torsten{
       }
 
       for (int id = 0; id < np; ++id) {
-        res[id].resize(EM::solution_size(id, events_rec), EM::nCmt(events_rec));
-        pred(id, events_rec, res[id], pred_pars..., model_pars...);
+        const int nKeep = EM::solution_size(id, events_rec);
+        Eigen::Matrix<typename EventsManager<T_events_record>::T_scalar, -1, -1> res_id(nCmt, nKeep);
+        pred(id, events_rec, res_id, pred_pars..., model_pars...);
+        for (int j = 0; j < nKeep; ++j) {
+          res.col(EM::begin(id, events_rec) + j) = res_id.col(j);
+        }
       }
     }
 #endif

@@ -61,25 +61,26 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE
        * @param[in] msgs stream to which messages are printed
        */
-      PMXCvodesFwdSystem(PMXCvodesService<Ode>& serv,
-                           const F& f,
-                           double t0,
-                           const std::vector<Tts>& ts,
-                           const std::vector<Ty0>& y0,
-                           const std::vector<Tpar>& theta,
-                           const std::vector<double>& x_r,
-                           const std::vector<int>& x_i,
-                           std::ostream* msgs) :
+      template<typename ode_t>
+      PMXCvodesFwdSystem(PMXOdeService<ode_t>& serv,
+                         const F& f,
+                         double t0,
+                         const std::vector<Tts>& ts,
+                         const std::vector<Ty0>& y0,
+                         const std::vector<Tpar>& theta,
+                         const std::vector<double>& x_r,
+                         const std::vector<int>& x_i,
+                         std::ostream* msgs) :
         Ode(serv, f, t0, ts, y0, theta, x_r, x_i, msgs),
-        nv_ys_(Ode::serv_.nv_ys),
-        yy_cplx_(Ode::serv_.yy_cplx),
-        theta_cplx_(Ode::serv_.theta_cplx),
-        fval_cplx_(Ode::serv_.fval_cplx)
+        nv_ys_(serv.nv_ys),
+        yy_cplx_(serv.yy_cplx),
+        theta_cplx_(serv.theta_cplx),
+        fval_cplx_(serv.fval_cplx)
       {}
 
       /**
        * Dummy destructor. Deallocation of CVODES memory is done
-       * in @c PMXCvodesService.
+       * in @c PMXOdeService.
        */
       ~PMXCvodesFwdSystem() {
       }
@@ -98,7 +99,7 @@ namespace torsten {
 
       /**
        * Calculate sensitivity rhs using CVODES vectors. The
-       * internal workspace is allocated by @c PMXCvodesService.
+       * internal workspace is allocated by @c PMXOdeService.
        * We use CSDA to compute senstivity, so we need to
        * generate complex version of parameters.
        */
@@ -162,7 +163,8 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE
        * @param[in] msgs stream to which messages are printed
        */
-      PMXCvodesFwdSystem(PMXCvodesService<Ode>& serv,
+      template<typename ode_t>
+      PMXCvodesFwdSystem(PMXOdeService<ode_t>& serv,
                            const F& f,
                            double t0,
                            const std::vector<Tts>& ts,
@@ -172,12 +174,12 @@ namespace torsten {
                            const std::vector<int>& x_i,
                            std::ostream* msgs) :
         Ode(serv, f, t0, ts, y0, theta, x_r, x_i, msgs),
-        nv_ys_(Ode::serv_.nv_ys)
+        nv_ys_(serv.nv_ys)
       {}
 
       /**
        * Dummy destructor. Deallocation of CVODES memory is done
-       * in @c PMXCvodesService.
+       * in @c PMXOdeService.
        */
       ~PMXCvodesFwdSystem() {
       }
@@ -196,19 +198,12 @@ namespace torsten {
 
       /**
        * Calculate sensitivity rhs using CVODES vectors. The
-       * internal workspace is allocated by @c PMXCvodesService.
+       * internal workspace is allocated by @c PMXOdeService.
        */
       void eval_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
                          N_Vector* ys, N_Vector* ysdot,
                          N_Vector temp1, N_Vector temp2) {
-        using Eigen::Matrix;
-        using Eigen::MatrixXd;
-        using Eigen::VectorXd;
-        using Eigen::Dynamic;
-        using stan::math::matrix_v;
-        using stan::math::vector_v;
         using stan::math::var;
-
         using B = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
 
         const int& n = B::N_;
@@ -227,50 +222,28 @@ namespace torsten {
         try {
           stan::math::start_nested();
 
-          std::vector<stan::math::var> pars;
-          std::vector<stan::math::var> yv_work(n), fyv_work(n),
-            theta_work(Ode::theta_dbl_.begin(), Ode::theta_dbl_.end());
+          std::vector<var> yv_work(NV_DATA_S(y), NV_DATA_S(y) + n);
+          std::vector<var> theta_work(Ode::theta_dbl_.begin(), Ode::theta_dbl_.end()); // NOLINT
+          std::vector<var> fyv_work(B::is_var_par ?
+                                    f(t, yv_work, theta_work, x_r, x_i, msgs) :
+                                    f(t, yv_work, theta_dbl, x_r, x_i, msgs));
 
-          for (int i = 0; i < n; ++i) {
-            yv_work[i] = NV_Ith_S(y, i);
-            yv_work[i].vi_ -> set_zero_adjoint();
-          }
-
-          std::for_each(theta_work.begin(), theta_work.end(),
-                        [](var& v) { v.vi_ -> set_zero_adjoint(); });
-
-          if (B::is_var_par) {
-            pars.reserve(n + m);
-            pars.insert(pars.end(), yv_work.begin(), yv_work.end());
-            pars.insert(pars.end(), theta_work.begin(), theta_work.end());
-            fyv_work = f(t, yv_work, theta_work, x_r, x_i, msgs);
-          } else {
-            pars.reserve(n);
-            pars.insert(pars.end(), yv_work.begin(), yv_work.end());
-            fyv_work = f(t, yv_work, theta_dbl, x_r, x_i, msgs);
-          }
-
-          std::vector<double> g;
           for (int j = 0; j < n; ++j) {
             stan::math::set_zero_all_adjoints_nested();
-            fyv_work[j].grad(pars, g);
-            std::for_each(theta_work.begin(), theta_work.end(),
-                          [](var& v) { v.vi_ -> set_zero_adjoint(); });
-            std::for_each(yv_work.begin(), yv_work.end(),
-                        [](var& v) { v.vi_ -> set_zero_adjoint(); });
+            fyv_work[j].grad();
 
             // df/dy*s_i term, for i = 1...ns
             for (int i = 0; i < ns; ++i) {
               auto ysp = N_VGetArrayPointer(ys[i]);
               auto nvp = N_VGetArrayPointer(ysdot[i]);
-              for (int k = 0; k < n; ++k) nvp[j] += g[k] * ysp[k];
+              for (int k = 0; k < n; ++k) nvp[j] += yv_work[k].adj() * ysp[k];
             }
 
             // df/dp_i term, for i = n...n+m-1
             if (B::is_var_par) {
               for (int i = 0; i < m; ++i) {
                 auto nvp = N_VGetArrayPointer(ysdot[ns - m + i]);
-                nvp[j] += g[n + i];
+                nvp[j] += theta_work[i].adj();
               }
             }
           }
@@ -281,6 +254,12 @@ namespace torsten {
         stan::math::recover_memory_nested();
       }
     };
+
+    template <typename F, typename Tts, typename Ty0, typename Tpar>
+    using PMXCvodesFwdSystem_adams_ad = PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, CV_ADAMS, AD>;
+
+    template <typename F, typename Tts, typename Ty0, typename Tpar>
+    using PMXCvodesFwdSystem_bdf_ad = PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, CV_BDF, AD>;
   }  // namespace dsolve
 }  // namespace torsten
 

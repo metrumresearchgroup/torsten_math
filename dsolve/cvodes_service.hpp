@@ -4,6 +4,7 @@
 #include <stan/math/rev/scal/meta/is_var.hpp>
 #include <stan/math/torsten/dsolve/sundials_check.hpp>
 #include <stan/math/torsten/dsolve/cvodes_rhs.hpp>
+#include <stan/math/torsten/dsolve/ode_forms.hpp>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
 #include <ostream>
@@ -19,11 +20,15 @@ namespace torsten {
      * allocation/deallocation, so ODE systems only request
      * service by injection.
      */
+    template <typename Ode, enum PMXOdeForms = OdeForm<Ode>::value>
+    struct PMXOdeService;
+
     template <typename Ode>
-    struct PMXCvodesService {
+    struct PMXOdeService<Ode, Cvodes> {
       const size_t N;
       const size_t M;
       const size_t ns;
+      const size_t size;
       N_Vector nv_y;
       N_Vector* nv_ys;
       std::vector<double> y;
@@ -42,15 +47,18 @@ namespace torsten {
        * @param[in] m length of parameter theta
        * @param[in] f ODE RHS function
        */
-      PMXCvodesService(int n, int m) :
+      PMXOdeService(int n, int m) :
         N(n),
         M(m),
         ns((Ode::is_var_y0 ? n : 0) + (Ode::is_var_par ? m : 0)),
+        size(N + N * ns),
         nv_y(N_VNew_Serial(n)),
         nv_ys(nullptr),
         y(n),
         fval(n),
         mem(CVodeCreate(Ode::lmm_type, CV_NEWTON)),
+        A(SUNDenseMatrix(n, n)),
+        LS(SUNDenseLinearSolver(nv_y, A)),
         yy_cplx(n),
         theta_cplx(m),
         fval_cplx(n)
@@ -67,21 +75,41 @@ namespace torsten {
         }
 
         /*
-         * initialize cvodes system and allocate linear solver mem
+         * initialize cvodes system and attach linear solver
          */ 
         CHECK_SUNDIALS_CALL(CVodeInit(mem, cvodes_rhs<Ode>(), t0, nv_y));
-        A = SUNDenseMatrix(n, n);
-        LS = SUNDenseLinearSolver(nv_y, A);
         CHECK_SUNDIALS_CALL(CVDlsSetLinearSolver(mem, LS, A));
       }
 
-      ~PMXCvodesService() {
+      ~PMXOdeService() {
         SUNLinSolFree(LS);
         SUNMatDestroy(A);
         CVodeFree(&mem);
         N_VDestroyVectorArray(nv_ys, ns);
         N_VDestroy(nv_y);
       }
+    };
+
+    template <typename Ode>
+    struct PMXOdeService<Ode, Odeint> {
+      const size_t N;
+      const size_t M;
+      const size_t ns;
+      const size_t size;
+      std::vector<double> y;
+
+      /**
+       * Construct Boost Odeint workspace
+       */
+      PMXOdeService(int n, int m) :
+        N(n),
+        M(m),
+        ns((Ode::is_var_y0 ? n : 0) + (Ode::is_var_par ? m : 0)),
+        size(n + n * ns),
+        y(size, 0.0)
+      {}
+
+      ~PMXOdeService() {}
     };
 
   }
