@@ -17,8 +17,6 @@
 #include <vector>
 #include <algorithm>
 
-enum IDAS_SENSITIVITY { forward };
-
 namespace torsten {
 namespace dsolve {
 /**

@@ -16,46 +16,6 @@
 #include <ostream>
 #include <vector>
 
-/**
- * copy NV_Vector* array to Eigen::MatrixXd
- *
- * @param[in] nv N_Vector* array.
- * @param[in] nv_size length of nv.
- * @return Eigen::MatrixXd.
- */
-inline Eigen::MatrixXd matrix_d_from_NVarray(const N_Vector* nv,
-                                             const size_t& nv_size) {
-  size_t m = nv_size;
-  size_t n = NV_LENGTH_S(nv[0]);
-  stan::math::matrix_d res(n, m);
-  for (size_t j = 0; j < m; ++j) {
-    auto nvp = N_VGetArrayPointer(nv[j]);
-    for (size_t i = 0; i < n; ++i) {
-      res(i, j) = nvp[i];
-    }
-  }
-  return res;
-}
-
-/**
- * copy Eigen::MatrixXd to NV_Vector* array.
- *
- * @param[in] mat Eigen::MatrixXd to be converted
- * @param[out] nv N_Vector* array
- * @param[in] nv_size length of nv
- */
-inline void matrix_d_to_NVarray(const Eigen::MatrixXd& mat, N_Vector* nv,
-                                const size_t& nv_size) {
-  size_t m = nv_size;
-  size_t n = NV_LENGTH_S(nv[0]);
-  for (size_t j = 0; j < m; ++j) {
-    auto nvp = N_VGetArrayPointer(nv[j]);
-    for (size_t i = 0; i < n; ++i) {
-      nvp[i] = mat(i, j);
-    }
-  }
-}
-
 namespace torsten {
 namespace dsolve {
 
