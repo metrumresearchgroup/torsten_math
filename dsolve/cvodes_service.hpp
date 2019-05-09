@@ -5,6 +5,7 @@
 #include <stan/math/torsten/dsolve/sundials_check.hpp>
 #include <stan/math/torsten/dsolve/cvodes_rhs.hpp>
 #include <stan/math/torsten/dsolve/ode_forms.hpp>
+#include <cvodes/cvodes.h>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
 #include <ostream>
@@ -56,9 +57,9 @@ namespace torsten {
         nv_ys(nullptr),
         y(n),
         fval(n),
-        mem(CVodeCreate(Ode::lmm_type, CV_NEWTON)),
+        mem(CVodeCreate(Ode::lmm_type)),
         A(SUNDenseMatrix(n, n)),
-        LS(SUNDenseLinearSolver(nv_y, A)),
+        LS(SUNLinSol_Dense(nv_y, A)),
         yy_cplx(n),
         theta_cplx(m),
         fval_cplx(n)

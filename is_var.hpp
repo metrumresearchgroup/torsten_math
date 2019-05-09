@@ -12,7 +12,8 @@ namespace torsten {
    */
   template<typename... Ts>
   struct is_var {
-    static constexpr bool value = stan::is_var<typename torsten::return_t<Ts...>::type>::value;
+    enum { value = stan::is_var<typename torsten::return_t<Ts...>::type>::value };
+    // static const bool value = stan::is_var<typename torsten::return_t<Ts...>::type>::value;
   };
 }
 

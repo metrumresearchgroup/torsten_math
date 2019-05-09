@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_IS_STD_VECTOR_HPP
 
 #include <type_traits>
+#include <vector>
 
 namespace torsten {
   template<typename T1, typename... Tn>
