@@ -1,5 +1,5 @@
-#ifndef STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_rk45_HPP
-#define STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_rk45_HPP
+#ifndef STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_RK45_HPP
+#define STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_RK45_HPP
 
 #include <stan/math/torsten/dsolve/pmx_odeint_system.hpp>
 #include <stan/math/torsten/dsolve/pmx_odeint_integrator.hpp>

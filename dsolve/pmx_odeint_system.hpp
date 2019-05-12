@@ -33,13 +33,14 @@ namespace dsolve {
   template <typename F, typename Tt, typename T_init, typename T_par>
   struct PMXOdeintSystem : public PMXOdeSystem<Tt, T_init, T_par> {
     using Ode = PMXOdeintSystem<F, Tt, T_init, T_par>;
-    using scalar_t = typename torsten::return_t<T_init, T_par>::type;
+    using scalar_t = typename torsten::return_t<Tt, T_init, T_par>::type;
+    static constexpr bool is_var_ts  = stan::is_var<Tt>::value;
     static constexpr bool is_var_y0  = stan::is_var<T_init>::value;
     static constexpr bool is_var_par = stan::is_var<T_par>::value;
 
     const F& f_;
     const double t0_;
-    const std::vector<double>& ts_;
+    const std::vector<Tt>& ts_;
     const std::vector<T_init>& y0_;
     const std::vector<T_par>& theta_;
     const std::vector<double> theta_dbl_;
@@ -59,7 +60,7 @@ namespace dsolve {
     PMXOdeintSystem(dsolve::PMXOdeService<ode_t>& serv,
                     const F& f,
                     double t0,
-                    const std::vector<double>& ts,
+                    const std::vector<Tt>& ts,
                     const std::vector<T_init>& y0,
                     const std::vector<T_par>& theta,
                     const std::vector<double>& x_r,

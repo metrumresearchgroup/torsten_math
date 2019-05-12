@@ -33,40 +33,134 @@ namespace dsolve {
 
       inline void operator()(const std::vector<double>& curr_result, double t) {
         if(t > ode_.t0_) {
-          observer_impl(y[step_counter_], curr_result, ode_.y0_, ode_.theta_);
+          observer_impl(y[step_counter_], curr_result, ode_.ts_, ode_.y0_, ode_.theta_, step_counter_);
           step_counter_++;
         }
       }
 
     private:
+      /*
+       * All data, return data
+       */
       inline void observer_impl(std::vector<double>& y_res,
-                         const std::vector<double>& y,
-                         const std::vector<double>& y0,
-                         const std::vector<double>& theta) const {
+                                const std::vector<double>& y,
+                                const std::vector<double>& ts,
+                                const std::vector<double>& y0,
+                                const std::vector<double>& theta,
+                                int i) const {
         std::copy(y.begin(), y.end(), y_res.begin());
       }
 
+      /*
+       * When only @c ts is @c var, we don't solve
+       * sensitivity ODE since the sensitivity is simply the RHS.
+       */
       inline void observer_impl(std::vector<stan::math::var>& y_res,
-                         const std::vector<double>& y,
-                         const std::vector<double>& y0,
-                         const std::vector<stan::math::var>& theta) const {
+                                const std::vector<double>& y,
+                                const std::vector<stan::math::var>& ts,
+                                const std::vector<double>& y0,
+                                const std::vector<double>& theta,
+                                int i) const {
+        int n = y0.size();
+        std::vector<double> g(n * (1 + ts.size()), 0.0);
+        std::copy(y.begin(), y.end(), g.begin());        
+        std::vector<double> dy_dt(n);
+        ode_(y, dy_dt, ts[i].val());
+        std::copy(dy_dt.begin(), dy_dt.end(), g.begin() + n + i * n);
+        y_res = torsten::precomputed_gradients(g, ts);
+      }
+
+      /*
+       * Only @c theta is @c var
+       */
+      inline void observer_impl(std::vector<stan::math::var>& y_res,
+                                const std::vector<double>& y,
+                                const std::vector<double>& ts,
+                                const std::vector<double>& y0,
+                                const std::vector<stan::math::var>& theta,
+                                int i) const {
         y_res = torsten::precomputed_gradients(y, theta);
       }
 
+      /*
+       * @c theta & @c ts are @c var
+       */
       inline void observer_impl(std::vector<stan::math::var>& y_res,
-                         const std::vector<double>& y,
-                         const std::vector<stan::math::var>& y0,
-                         const std::vector<double>& theta) const {
+                                const std::vector<double>& y,
+                                const std::vector<stan::math::var>& ts,
+                                const std::vector<double>& y0,
+                                const std::vector<stan::math::var>& theta,
+                                int i) const {
+        int ns = ode_.ns;
+        int n = y0.size();
+        std::vector<double> g(n * (1 + ns + ts.size()), 0.0);
+        std::copy(y.begin(), y.end(), g.begin());        
+        std::vector<double> dy_dt(n);
+        ode_(y, dy_dt, ts[i].val());
+        std::copy(dy_dt.begin(), dy_dt.end(), g.begin() + n + ns * n + i * n);
+        y_res = torsten::precomputed_gradients(g, ode_.vars());
+      }
+
+      /*
+       * only @c y0 is @c var
+       */
+      inline void observer_impl(std::vector<stan::math::var>& y_res,
+                                const std::vector<double>& y,
+                                const std::vector<double>& ts,
+                                const std::vector<stan::math::var>& y0,
+                                const std::vector<double>& theta,
+                                int i) const {
         y_res = torsten::precomputed_gradients(y, y0);
       }
 
+      /*
+       * @c y0 and @c ts are @c var
+       */
       inline void observer_impl(std::vector<stan::math::var>& y_res,
-                         const std::vector<double>& y,
-                         const std::vector<stan::math::var>& y0,
-                         const std::vector<stan::math::var>& theta) const {
-        std::vector<stan::math::var> vars = y0;
-        vars.insert(vars.end(), theta.begin(), theta.end());
-        y_res = torsten::precomputed_gradients(y, vars);
+                                const std::vector<double>& y,
+                                const std::vector<stan::math::var>& ts,
+                                const std::vector<stan::math::var>& y0,
+                                const std::vector<double>& theta,
+                                int i) const {
+        int ns = ode_.ns;
+        int n = y0.size();
+        std::vector<double> g(n * (1 + ns + ts.size()), 0.0);
+        std::copy(y.begin(), y.end(), g.begin());        
+        std::vector<double> dy_dt(n);
+        ode_(y, dy_dt, ts[i].val());
+        std::copy(dy_dt.begin(), dy_dt.end(), g.begin() + n + ns * n + i * n);
+        y_res = torsten::precomputed_gradients(g, ode_.vars());
+      }
+
+      /*
+       * @c y0 and @c theta are @c var
+       */
+      inline void observer_impl(std::vector<stan::math::var>& y_res,
+                                const std::vector<double>& y,
+                                const std::vector<double>& ts,
+                                const std::vector<stan::math::var>& y0,
+                                const std::vector<stan::math::var>& theta,
+                                int i) const {
+        y_res = torsten::precomputed_gradients(y, ode_.vars());
+      }
+
+      /*
+       * @c y0, @c theta, and @c ts are @c var
+       */
+      inline void observer_impl(std::vector<stan::math::var>& y_res,
+                                const std::vector<double>& y,
+                                const std::vector<stan::math::var>& ts,
+                                const std::vector<stan::math::var>& y0,
+                                const std::vector<stan::math::var>& theta,
+                                int i) const {
+        int ns = ode_.ns;
+        int n = y0.size();
+        std::vector<double> g(n * (1 + ns + ts.size()), 0.0);
+        std::copy(y.begin(), y.end(), g.begin());        
+        std::vector<double> dy_dt(n);
+        ode_(y, dy_dt, ts[i].val());
+        std::copy(dy_dt.begin(), dy_dt.end(), g.begin() + n + ns * n + i * n);
+        y_res = torsten::precomputed_gradients(g, ode_.vars());
       }
     };
 
@@ -78,15 +172,42 @@ namespace dsolve {
 
       SolObserver(const Ode& ode) :
         ode_(ode),
-        y(Eigen::MatrixXd::Zero(ode_.size_, ode_.ts_.size())),
+        y(Eigen::MatrixXd::Zero(ode_.size_ + ode_.N_*(Ode::is_var_ts ? ode_.ts_.size() : 0), ode_.ts_.size())),
         step_counter_(0)
       {}
 
       inline void operator()(const std::vector<double>& curr_result, double t) {
         if(t > ode_.t0_) {
-          y.col(step_counter_) = Eigen::VectorXd::Map(curr_result.data(), ode_.size_);
+          observer_impl(y, curr_result, ode_.ts_, step_counter_);
           step_counter_++;
         }
+      }
+
+    private:
+      /*
+       * @@c ts is data
+       */
+      inline void observer_impl(Eigen::MatrixXd& y_res,
+                                const std::vector<double>& y,
+                                const std::vector<double>& ts,
+                                int i) const {
+        using Eigen::VectorXd;
+        y_res.col(i) = VectorXd::Map(y.data(), ode_.size_);
+      }
+
+      /*
+       * @@c ts is @c var
+       */
+      inline void observer_impl(Eigen::MatrixXd& y_res,
+                                const std::vector<double>& y,
+                                const std::vector<stan::math::var>& ts,
+                                int i) const {
+        using Eigen::VectorXd;
+        for (size_t j = 0; j < ode_.size_; ++j) y_res(j, i) = y[j];
+        int n = ode_.N_;
+        std::vector<double> dy_dt(n);
+        ode_(y, dy_dt, ts[i].val());
+        for (size_t j = 0; j < n; ++j) y_res(ode_.size_ + i * n + j, i) = dy_dt[j];
       }
     };
 
@@ -120,7 +241,9 @@ namespace dsolve {
     auto integrate(Ode& ode) {
       std::vector<double> ts_vec(ode.ts_.size() + 1);
       ts_vec[0] = ode.t0_;
-      std::copy(ode.ts_.begin(), ode.ts_.end(), ts_vec.begin() + 1);
+      for (size_t i = 0; i < ode.ts_.size(); ++i) {
+        ts_vec[i + 1] = stan::math::value_of(ode.ts_[i]);
+      }
 
       SolObserver<Ode, GenVar> observer(ode);
 
