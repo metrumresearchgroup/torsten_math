@@ -3,8 +3,8 @@
 
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
 #include <stan/math/torsten/dsolve/ode_forms.hpp>
-#include <stan/math/torsten/dsolve/pmx_ode_system.hpp>
 #include <stan/math/torsten/return_type.hpp>
+#include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
 #include <stan/math/prim/arr/meta/get.hpp>
 #include <stan/math/prim/arr/meta/length.hpp>
 #include <stan/math/prim/arr/fun/value_of.hpp>
@@ -31,7 +31,7 @@ namespace dsolve {
    * @tparam T_par scalar type of parameters
    */
   template <typename F, typename Tt, typename T_init, typename T_par>
-  struct PMXOdeintSystem : public PMXOdeSystem<Tt, T_init, T_par> {
+  struct PMXOdeintSystem {
     using Ode = PMXOdeintSystem<F, Tt, T_init, T_par>;
     using scalar_t = typename torsten::return_t<Tt, T_init, T_par>::type;
     static constexpr bool is_var_ts  = stan::is_var<Tt>::value;
@@ -101,6 +101,13 @@ namespace dsolve {
     inline const std::vector<T_init>& y0() const { return y0_; }
 
     inline const std::vector<T_par>& theta() const { return theta_; }
+
+    /*
+     * retrieving a vector of vars that will be used as parameters
+     */
+    inline auto vars() const {
+      return pmx_ode_vars(y0_, theta_, ts_);
+    }
 
     void operator()(const std::vector<double>& y, std::vector<double>& dy_dt,
                     double t) const {

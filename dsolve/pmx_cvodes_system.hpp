@@ -14,7 +14,7 @@
 #include <stan/math/prim/mat/fun/typedefs.hpp>
 #include <stan/math/rev/mat/fun/typedefs.hpp>
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
-#include <stan/math/torsten/dsolve/pmx_ode_system.hpp>
+#include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
 
 namespace torsten {
   namespace dsolve {
@@ -31,7 +31,7 @@ namespace torsten {
      * @tparam Tpar scalar type of parameters
      */
     template <typename F, typename Tts, typename Ty0, typename Tpar, int Lmm>
-    class PMXCvodesSystem : public PMXOdeSystem<Tts, Ty0, Tpar> {
+    class PMXCvodesSystem {
     public:
       using Ode = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
 
@@ -245,6 +245,14 @@ namespace torsten {
        * @return reference to parameter
        */
       inline const std::vector<Tpar>& theta() const { return theta_; }
+
+
+      /*
+       * retrieving a vector of vars that will be used as parameters
+       */
+      inline auto vars() const {
+        return pmx_ode_vars(y0_, theta_, ts_);
+      }
 
       /**
        * return current @c y_vec(). We also use it for workspace.
