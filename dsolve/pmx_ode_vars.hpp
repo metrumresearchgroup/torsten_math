@@ -7,21 +7,21 @@ namespace torsten {
   namespace dsolve {
 
     inline const std::vector<stan::math::var>&
-    pmx_ode_vars(const std::vector<stan::math::var>& y0, 
+    pmx_ode_vars(const std::vector<stan::math::var>& y0,
                  const std::vector<double>& theta,
                  const std::vector<double>& ts) {
       return y0;
     }
 
     inline const std::vector<stan::math::var>&
-    pmx_ode_vars(const std::vector<double>& y0, 
+    pmx_ode_vars(const std::vector<double>& y0,
                  const std::vector<stan::math::var>& theta,
                  const std::vector<double>& ts) {
       return theta;
     }
 
     inline const std::vector<stan::math::var>&
-    pmx_ode_vars(const std::vector<double>& y0, 
+    pmx_ode_vars(const std::vector<double>& y0,
                  const std::vector<double>& theta,
                  const std::vector<stan::math::var>& ts) {
       return ts;
