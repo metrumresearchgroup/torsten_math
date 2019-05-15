@@ -13,6 +13,17 @@ namespace torsten {
 
   template<typename T, typename... Ts, typename... Tn>
   struct is_std_vector<std::vector<T, Ts...>, Tn...> : torsten::is_std_vector<Tn...> {};
+
+  template<typename T>
+  struct value_type {
+    using type = T;
+  };
+
+  template<typename T>
+  struct value_type<std::vector<T> > {
+    using type = T;
+  };
+
 }
 
 #endif

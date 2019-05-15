@@ -139,7 +139,12 @@ pmx_solve_bdf(const F& f,
             typename T_par, typename T_biovar, typename T_tlag,
             typename F,
             typename std::enable_if_t<!(torsten::is_std_vector<T_par, T_biovar, T_tlag>::value)>* = nullptr> //NOLINT
-  auto pmx_solve_bdf(const F& f,
+  Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3,
+                                            typename torsten::value_type<T_par>::type,
+                                            typename torsten::value_type<T_biovar>::type,
+                                            typename torsten::value_type<T_tlag>::type>::type,
+                 Eigen::Dynamic, Eigen::Dynamic>
+  pmx_solve_bdf(const F& f,
                      const int nCmt,
                      const std::vector<T0>& time,
                      const std::vector<T1>& amt,
@@ -174,7 +179,11 @@ pmx_solve_bdf(const F& f,
   template <typename T0, typename T1, typename T2, typename T3,
             typename T_par, typename T_biovar, typename T_tlag,
             typename F>
-  auto
+  Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3,
+                                            typename torsten::value_type<T_par>::type,
+                                            typename torsten::value_type<T_biovar>::type,
+                                            typename torsten::value_type<T_tlag>::type>::type,
+                 Eigen::Dynamic, Eigen::Dynamic>
   generalOdeModel_bdf(const F& f,
                       const int nCmt,
                       const std::vector<T0>& time,

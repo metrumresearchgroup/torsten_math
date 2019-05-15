@@ -145,7 +145,11 @@ pmx_solve_twocpt(const std::vector<T0>& time,
                typename
             std::enable_if_t<
               !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
-  auto
+  Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3,
+                                            typename torsten::value_type<T_par>::type,
+                                            typename torsten::value_type<T_biovar>::type,
+                                            typename torsten::value_type<T_tlag>::type>::type,
+                 Eigen::Dynamic, Eigen::Dynamic>
   pmx_solve_twocpt(const std::vector<T0>& time,
                    const std::vector<T1>& amt,
                    const std::vector<T2>& rate,
@@ -191,7 +195,11 @@ pmx_solve_twocpt(const std::vector<T0>& time,
                typename
             std::enable_if_t<
               !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
-  auto
+  Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3,
+                                            typename torsten::value_type<T_par>::type,
+                                            typename torsten::value_type<T_biovar>::type,
+                                            typename torsten::value_type<T_tlag>::type>::type,
+                 Eigen::Dynamic, Eigen::Dynamic>
   PKModelTwoCpt(const std::vector<T0>& time,
                    const std::vector<T1>& amt,
                    const std::vector<T2>& rate,
