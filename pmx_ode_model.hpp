@@ -500,9 +500,11 @@ namespace refactor {
      * Solve the ODE but return the results in data
      * consisting of solution values and gradients.
      */
+    template<PMXOdeIntegratorId It,
+             typename std::enable_if_t<It == torsten::PkBdf || It == torsten::PkAdams || It == torsten::PkRk45>* = nullptr>
     Eigen::VectorXd integrate_d(const std::vector<stan::math::var> &rate,
                                 const T_time& t_next,
-                                const PMXOdeIntegrator<torsten::PkBdf>& integrator) const {
+                                const PMXOdeIntegrator<It>& integrator) const {
       using stan::math::var;
       using stan::math::value_of;
 
@@ -526,9 +528,11 @@ namespace refactor {
      * Solve the ODE but return the results in data
      * consisting of solution values and gradients.
      */
+    template<PMXOdeIntegratorId It,
+             typename std::enable_if_t<It == torsten::PkBdf || It == torsten::PkAdams || It == torsten::PkRk45>* = nullptr>
     Eigen::VectorXd integrate_d(const std::vector<double> &rate,
                                 const T_time& t_next,
-                                const PMXOdeIntegrator<torsten::PkBdf>& integrator) const {
+                                const PMXOdeIntegrator<It>& integrator) const {
       using stan::math::value_of;
 
       Eigen::VectorXd res(n_sys());
@@ -574,7 +578,7 @@ namespace refactor {
      * that can return data directly, so we skip them.
      */
     template<PMXOdeIntegratorId It,
-             typename std::enable_if_t<It != torsten::PkBdf>* = nullptr>
+             typename std::enable_if_t<It == torsten::StanBdf || It == torsten::StanAdams || It == torsten::StanRk45>* = nullptr>
     Eigen::VectorXd solve_d(const T_time& t_next,
                             const PMXOdeIntegrator<It>& integrator) const
     {
@@ -588,8 +592,10 @@ namespace refactor {
      * @c PkBdf can return results in form of data directly,
      * thanks to @c pk_cvodes_integrator implementation.
      */
+    template<PMXOdeIntegratorId It,
+             typename std::enable_if_t<It == torsten::PkBdf || It == torsten::PkAdams || It == torsten::PkRk45>* = nullptr>
     Eigen::VectorXd solve_d(const T_time& t_next,
-                            const PMXOdeIntegrator<torsten::PkBdf>& integrator) const {
+                            const PMXOdeIntegrator<It>& integrator) const {
       static const char* caller = "PMXOdeModel::solve_d";
       stan::math::check_greater(caller, "next time", t_next, t0_);
 

@@ -99,8 +99,6 @@ pmx_solve_rk45(const F& f,
 
   typedef general_functor<F> F0;
 
-  PMXOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-
   const Pred1_general<F0> pred1(F0(f), rel_tol, abs_tol,
                                 max_num_steps, msgs, "rk45");
   const PredSS_general<F0> predss (F0(f), rel_tol, abs_tol,
@@ -120,7 +118,15 @@ pmx_solve_rk45(const F& f,
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(EM::solution_size(events_rec), EM::nCmt(events_rec));
 
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
+
+#ifdef TORSTEN_USE_STAN_ODE
+  PMXOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
   PredWrapper<model_type, PMXOdeIntegrator<StanRk45>&> pr;
+#else
+  PMXOdeIntegrator<PkRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
+  PredWrapper<model_type, PMXOdeIntegrator<PkRk45>&> pr;
+#endif
+
   pr.pred(0, events_rec, pred, integrator, f);
   return pred;
 
