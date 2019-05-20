@@ -24,7 +24,7 @@ namespace torsten {
     using T_par_rate = typename ER::T_par_rate;
     using T_par_ii   = typename ER::T_par_ii;
 
-    EventHistory<T_time, T1, T2, T3> event_his;
+    EventHistory<T0, T1, T2, T3, T4, T5, T6> event_his;
     std::vector<std::vector<T_rate> > rate_v;
     std::vector<T_amt> amt_v;
     std::vector<std::vector<T_par> > par_v;
@@ -118,7 +118,7 @@ namespace torsten {
       }
     }
 
-    const EventHistory<T_time, T1, T2, T3>& events() const {
+    const EventHistory<T0, T1, T2, T3, T4, T5, T6>& events() const {
       return event_his;
     }
 

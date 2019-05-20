@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_PKMODEL_EVENT_HPP
 
 #include <iomanip>
+#include <stan/math/torsten/return_type.hpp>
 #include <stan/math/prim/scal/err/check_greater_or_equal.hpp>
 #include <stan/math/torsten/PKModel/functions.hpp>
 #include <stan/math/torsten/pk_nsys.hpp>
@@ -103,21 +104,66 @@ struct Event{
  * The EventHistory class defines objects that contain a vector of Events,
  * along with a series of functions that operate on them.
  */
-template<typename T_time, typename T_amt, typename T_rate, typename T_ii>
+  template<typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
 struct EventHistory {
-  std::vector<Event<T_time, T_amt, T_rate, T_ii> > Events;
+    using T_scalar = typename torsten::return_t<T0, T1, T2, T3, T4, T5, T6>::type;
+  using T_time = typename torsten::return_t<T0, T1, T6, T2>::type;
+  using T_rate = typename torsten::return_t<T2, T5>::type;
+  using T_amt = typename torsten::return_t<T1, T5>::type;
 
-  EventHistory() : Events() {}
+    const std::vector<T0>& time_;
+    const std::vector<T1>& amt_;
+    const std::vector<T2>& rate_;
+    const std::vector<T3>& ii_;
+    const std::vector<int>& evid_;
+    const std::vector<int>& cmt_;
+    const std::vector<int>& addl_;
+    const std::vector<int>& ss_;
 
-  template<typename T0, typename T1, typename T2, typename T3>
+    // internally generated events
+    std::vector<T_time> gen_time;
+    std::vector<T1> gen_amt;
+    std::vector<T2> gen_rate;
+    std::vector<T3> gen_ii;
+    std::vector<int> gen_evid;
+    std::vector<int> gen_cmt;
+    std::vector<int> gen_addl;
+    std::vector<int> gen_ss;
+
+    using IDVec = std::array<int, 4>;
+    // 0: original(0)/generated(1)
+    // 1: index in original/generated arrays
+    // 2: evid
+    // 3: is new?(0/1)
+    std::vector<IDVec> index;
+
+    inline bool keep(const IDVec& id)  const { return id[0] == 0; }
+    inline bool isnew(const IDVec& id) const { return id[3] == 1; }
+    inline bool keep(int i)  const { return keep(index[i]); }
+    inline bool isnew(int i) const { return isnew(index[i]); }
+    int evid (int i) const { return index[i][2] ; }
+
+
+  // EventHistory() : Events() {}
+
   EventHistory(const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
                const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
                const std::vector<int>& p_evid, const std::vector<int>& p_cmt,
                const std::vector<int>& p_addl, const std::vector<int>& p_ss)
-    : Events(p_evid.size())
+    :
+    time_(p_time),
+    amt_(p_amt),
+    rate_(p_rate),
+    ii_(p_ii),
+    evid_(p_evid),
+    cmt_(p_cmt),
+    addl_(p_addl),
+    ss_(p_ss),
+    index(time_.size(), {0, 0, 0, 0})
   {
-    for (size_t i = 0; i < p_evid.size(); ++i) {
-      Events[i] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i], p_amt[i], p_rate[i], p_ii[i], p_evid[i], p_cmt[i], p_addl[i], p_ss[i], true, false);
+    for (size_t i = 0; i < time_.size(); ++i) {
+      index[i][1] = i;
+      index[i][2] = evid_[i];
     }
   }
 
@@ -128,102 +174,84 @@ struct EventHistory {
    * In this constructor we assume @c p_ii.size() > 1 and
    * @c p_ss.size() > 1.
    */
-  template<typename T0, typename T1, typename T2, typename T3>
   EventHistory(int ibegin, int isize,
                const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
                const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
                const std::vector<int>& p_evid, const std::vector<int>& p_cmt,
                const std::vector<int>& p_addl, const std::vector<int>& p_ss)
-    : Events(isize)
-  {
-    const int iend = ibegin + isize;
-    using stan::math::check_greater_or_equal;
-    static const char* caller = "EventHistory::EventHistory";
-    check_greater_or_equal(caller, "isize", isize , 1);
-    check_greater_or_equal(caller, "time size", p_time.size() , size_t(iend));
-    check_greater_or_equal(caller, "amt size", p_amt.size()   , size_t(iend));
-    check_greater_or_equal(caller, "rate size", p_rate.size() , size_t(iend));
-    check_greater_or_equal(caller, "ii size", p_ii.size()     , size_t(iend));
-    check_greater_or_equal(caller, "evid size", p_evid.size() , size_t(iend));
-    check_greater_or_equal(caller, "cmt size", p_cmt.size()   , size_t(iend));
-    check_greater_or_equal(caller, "addl size", p_addl.size() , size_t(iend));
-    check_greater_or_equal(caller, "ss size", p_ss.size()     , size_t(iend));
-    for (int i = ibegin; i < iend; ++i) {
-      Events[i-ibegin] = Event<T_time, T_amt, T_rate, T_ii>(p_time[i], p_amt[i], p_rate[i], p_ii[i], p_evid[i], p_cmt[i], p_addl[i], p_ss[i], true, false);
+    :
+    time_(p_time),
+    amt_(p_amt),
+    rate_(p_rate),
+    ii_(p_ii),
+    evid_(p_evid),
+    cmt_(p_cmt),
+    addl_(p_addl),
+    ss_(p_ss),
+    index(isize, {0, 0, 0, 0})
+    {
+      const int iend = ibegin + isize;
+      using stan::math::check_greater_or_equal;
+      static const char* caller = "EventHistory::EventHistory";
+      check_greater_or_equal(caller, "isize", isize , 1);
+      check_greater_or_equal(caller, "time size", p_time.size() , size_t(iend));
+      check_greater_or_equal(caller, "amt size", p_amt.size()   , size_t(iend));
+      check_greater_or_equal(caller, "rate size", p_rate.size() , size_t(iend));
+      check_greater_or_equal(caller, "ii size", p_ii.size()     , size_t(iend));
+      check_greater_or_equal(caller, "evid size", p_evid.size() , size_t(iend));
+      check_greater_or_equal(caller, "cmt size", p_cmt.size()   , size_t(iend));
+      check_greater_or_equal(caller, "addl size", p_addl.size() , size_t(iend));
+      check_greater_or_equal(caller, "ss size", p_ss.size()     , size_t(iend));
+      for (size_t i = ibegin; i < iend; ++i) {
+        index[i - ibegin][1] = i;
+        index[i - ibegin][2] = evid_[i];
+      }
     }
-  }
-
-  // /*
-  //  * calculate the size of the ODE system for the event history
-  //  */
-  // int nsys(int ncmt, int nvar, int nvar_ss) {
-  //   using torsten::pk_nsys;
-
-  //   // has transient dosing events?
-  //   bool has_trans_dose = false;
-  //   for (size_t i = 0; i < this -> size(); ++i) {
-  //     if (is_dosing(i) && (!is_ss_dosing(i))) {
-  //       has_trans_dose = true;
-  //       break;
-  //     }
-  //   }
-
-  //   // has SS dosing events?
-  //   bool has_ss_dose = false;
-  //   for (size_t i = 0; i < this -> size(); ++i) {
-  //     if (is_ss_dosing(i)) {
-  //       has_ss_dose = true;
-  //       break;
-  //     }
-  //   }
-
-  //   if (has_trans_dose && (!has_ss_dose)) {
-  //     return pk_nsys(ncmt, nvar);
-  //   } else if((!has_trans_dose) && has_ss_dose) {
-  //     return pk_nsys(ncmt, nvar_ss);
-  //   } else {
-  //     return pk_nsys(ncmt, nvar, nvar_ss);
-  //   }
-  // }
 
   /*
    * Check if the events are in chronological order
    */
   bool Check() {
-    int i = Events.size() - 1;
+    int i = size() - 1;
     bool ordered = true;
 
     while ((i > 0) && (ordered)) {
       // note: evid = 3 and evid = 4 correspond to reset events
-      ordered = (((Events[i].time >= Events[i - 1].time)
-        || (Events[i].evid == 3)) || (Events[i].evid == 4));
+      ordered = (((time(i) >= time(i-1)) || (evid(i) == 3)) || (evid(i) == 4));
       i--;
     }
     return ordered;
   }
 
-  Event<T_time, T_amt, T_rate, T_ii> GetEvent(int i) {
-  Event<T_time, T_amt, T_rate, T_ii>
-    newEvent(Events[i].time, Events[i].amt, Events[i].rate, Events[i].ii,
-      Events[i].evid, Events[i].cmt, Events[i].addl, Events[i].ss,
-      Events[i].keep, Events[i].isnew);
+  Event<T_time, T1, T2, T3> GetEvent(int i) {
+  Event<T_time, T1, T2, T3>
+    newEvent(time(i), amt(i), rate(i), ii(i), evid(i), cmt(i), addl(i), ss(i), keep(i), isnew(i));
     return newEvent;
   }
 
-  void InsertEvent(Event<T_time, T_amt, T_rate, T_ii> p_Event) {
-    Events.push_back(p_Event);
+  void InsertEvent(Event<T_time, T1, T2, T3> p_Event) {
+    index.push_back({1, int(gen_time.size()), p_Event.evid, 1});
+    gen_time.push_back(p_Event.time);
+    gen_amt.push_back(p_Event.amt);
+    gen_rate.push_back(p_Event.rate);
+    gen_ii.push_back(p_Event.ii);
+    gen_evid.push_back(p_Event.evid);
+    gen_cmt.push_back(p_Event.cmt);
+    gen_addl.push_back(p_Event.addl);
+    gen_ss.push_back(p_Event.ss);
+    // Events.push_back(p_Event);
   }
 
-  void RemoveEvent(int i) {
-    assert(i >= 0);
-    Events.erase(Events.begin() + i);
-  }
+  // void RemoveEvent(int i) {
+  //   assert(i >= 0);
+  //   Events.erase(Events.begin() + i);
+  // }
 
-  void CleanEvent() {
-    int nEvent = Events.size();
-    for (int i = 0; i < nEvent; i++)
-      if (Events[i].keep == false) RemoveEvent(i);
-   }
+  // void CleanEvent() {
+  //   int nEvent = Events.size();
+  //   for (int i = 0; i < nEvent; i++)
+  //     if (Events[i].keep == false) RemoveEvent(i);
+  //  }
 
   bool is_reset(int i) const {
     return evid(i) == 3 || evid(i) == 4;
@@ -257,9 +285,9 @@ struct EventHistory {
    * Events is sorted at the end of the procedure.
    */
   void AddlDoseEvents() {
-    for (size_t i = 0; i < Events.size(); i++) {
-      if (is_dosing(i) && ((Events[i].addl > 0) && (Events[i].ii > 0))) {
-        Event<T_time, T_amt, T_rate, T_ii> newEvent = GetEvent(i);
+    for (size_t i = 0; i < size(); i++) {
+      if (is_dosing(i) && ((addl(i) > 0) && (ii(i) > 0))) {
+        Event<T_time, T1, T2, T3> newEvent = GetEvent(i);
         newEvent.addl = 0;
         newEvent.ii = 0;
         newEvent.ss = 0;
@@ -274,27 +302,31 @@ struct EventHistory {
     }
   }
 
-  struct by_time {
-    bool operator()(const Event<T_time, T_amt, T_rate, T_ii> &a,
-      const Event<T_time, T_amt, T_rate, T_ii> &b) {
-        return a.time < b.time;
-    }
-  };
+    // bool by_time(const IDVec &a, const IDVec &b) const {
+    //   using stan::math::value_of;
+    //   double ta = keep(a) ? value_of(time_[a[1]]) : value_of(gen_time[a[1]]);
+    //   double tb = keep(b) ? value_of(time_[b[1]]) : value_of(gen_time[b[1]]);
+    //   return ta < tb;
+    // }
 
-  void Sort() { std::stable_sort(Events.begin(), Events.end(), by_time()); }
+    void Sort() { std::stable_sort(index.begin(), index.end(),
+                                   [this](const IDVec &a, const IDVec &b) {
+                                     using stan::math::value_of;
+                                     double ta = keep(a) ? value_of(time_[a[1]]) : value_of(gen_time[a[1]]);
+                                     double tb = keep(b) ? value_of(time_[b[1]]) : value_of(gen_time[b[1]]);
+                                     return ta < tb;
+                                   });
+    }
 
   // Access functions
-  T_time time (int i) const { return Events[i].time; }
-  T_amt amt   (int i) const { return Events[i].amt; }
-  T_rate rate (int i) const { return Events[i].rate; }
-  T_ii ii     (int i) const { return Events[i].ii; }
-  int evid    (int i) const { return Events[i].evid; }
-  int cmt     (int i) const { return Events[i].cmt; }
-  int addl    (int i) const { return Events[i].addl; }
-  int ss      (int i) const { return Events[i].ss; }
-  bool keep   (int i) const { return Events[i].keep; }
-  bool isnew  (int i) const { return Events[i].isnew; }
-  size_t size()       const { return Events.size(); }
+  T_time time (int i) const { return keep(index[i]) ? time_[index[i][1]] : gen_time[index[i][1]] ; }
+  T1 amt   (int i)    const { return keep(index[i]) ? amt_[index[i][1]] : gen_amt[index[i][1]] ; }
+  T2 rate (int i)     const { return keep(index[i]) ? rate_[index[i][1]] : gen_rate[index[i][1]] ; }
+  T3 ii     (int i)   const { return keep(index[i]) ? ii_[index[i][1]] : gen_ii[index[i][1]] ; }
+  int cmt     (int i) const { return keep(index[i]) ? cmt_[index[i][1]] : gen_cmt[index[i][1]] ; }
+  int addl    (int i) const { return keep(index[i]) ? addl_[index[i][1]] : gen_addl[index[i][1]] ; }
+  int ss      (int i) const { return keep(index[i]) ? ss_[index[i][1]] : gen_ss[index[i][1]] ; }
+  size_t size()       const { return index.size(); }
 
 
   /**
@@ -307,29 +339,29 @@ struct EventHistory {
    * @param[in] nCmt
    * @return - modified events that account for absorption lag times
    */
-  template<typename T_parameters, typename T_biovar, typename T_tlag>
-  void AddLagTimes(const ModelParameterHistory<T_time, T_parameters, T_biovar, T_tlag>& Parameters, int nCmt) {
-    int nEvent = Events.size(), pSize = Parameters.get_size();
+  void AddLagTimes(const ModelParameterHistory<T_time, T4, T5, T6>& Parameters, int nCmt) {
+    int nEvent = size(), pSize = Parameters.get_size();
     assert((pSize = nEvent) || (pSize == 1));
 
-    int iEvent = nEvent - 1, cmt, ipar;
-    Event<T_time, T_amt, T_rate, T_ii> newEvent;
+    int iEvent = nEvent - 1, ipar;
+    Event<T_time, T1, T2, T3> newEvent;
     while (iEvent >= 0) {
-      cmt = Events[iEvent].cmt;
+      // cmt = ;
 
       if (is_dosing(iEvent)) {
         ipar = std::min(iEvent, pSize - 1);  // ipar is the index of the ith
                                              // event or 0, if the parameters
                                              // are constant.
-        if (Parameters.GetValueTlag(ipar, cmt - 1) != 0) {
+        if (Parameters.GetValueTlag(ipar, cmt(iEvent) - 1) != 0) {
           newEvent = GetEvent(iEvent);
-          newEvent.time += Parameters.GetValueTlag(ipar, cmt - 1);
+          newEvent.time += Parameters.GetValueTlag(ipar, cmt(iEvent) - 1);
           newEvent.keep = false;
           newEvent.isnew = true;
           // newEvent.evid = 2  // CHECK
           InsertEvent(newEvent);
 
-          Events[iEvent].evid = 2;  // Check
+          // Events[iEvent].evid = 2;  // Check
+          index[iEvent][2] = 2;
           // The above statement changes events so that CleanEvents does
           // not return an object identical to the original. - CHECK
         }
@@ -355,18 +387,18 @@ struct EventHistory {
       std::setw(w) << "ss" <<
       std::setw(w) << "keep" <<
       std::setw(w) << "isnew" << "\n";
-    for (size_t i = 0; i < ev.Events.size(); ++i) {
+    for (size_t i = 0; i < ev.size(); ++i) {
       os <<
-        std::setw(w)   << ev.Events[i].time << " " <<
-        std::setw(w-1) << ev.Events[i].amt << " " <<
-        std::setw(w-1) << ev.Events[i].rate << " " <<
-        std::setw(w-1) << ev.Events[i].ii << " " <<
-        std::setw(w-1) << ev.Events[i].evid << " " <<
-        std::setw(w-1) << ev.Events[i].cmt << " " <<
-        std::setw(w-1) << ev.Events[i].addl << " " <<
-        std::setw(w-1) << ev.Events[i].ss << " " <<
-        std::setw(w-1) << ev.Events[i].keep << " " <<
-        std::setw(w-1) << ev.Events[i].isnew << "\n";
+        std::setw(w)   << ev.time(i) << " " <<
+        std::setw(w-1) << ev.amt(i) << " " <<
+        std::setw(w-1) << ev.rate(i) << " " <<
+        std::setw(w-1) << ev.ii(i) << " " <<
+        std::setw(w-1) << ev.evid(i) << " " <<
+        std::setw(w-1) << ev.cmt(i) << " " <<
+        std::setw(w-1) << ev.addl(i) << " " <<
+        std::setw(w-1) << ev.ss(i) << " " <<
+        std::setw(w-1) << ev.keep(i) << " " <<
+        std::setw(w-1) << ev.isnew(i) << "\n";
     }
     return os;
   }

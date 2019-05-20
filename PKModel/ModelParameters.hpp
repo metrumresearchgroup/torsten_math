@@ -283,7 +283,7 @@ struct ModelParameterHistory {
    * @return - modified parameters and events.
    */
   template<typename T0, typename T_p1, typename T_p2, typename T_p3>
-  void CompleteParameterHistory(torsten::EventHistory<T0, T_p1, T_p2, T_p3>& events) {
+  void CompleteParameterHistory(torsten::EventHistory<T0, T_p1, T_p2, T_p3, T1, T2, T3>& events) {
     int nEvent = events.size();
     assert(nEvent > 0);
     int len_Parameters = time_.size();  // numbers of events for which parameters are determined
@@ -305,7 +305,7 @@ struct ModelParameterHistory {
       for (int i = 0; i < nEvent; i++) {
         // FIX ME - inefficient data storage
         time_[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(events.time(i)) , std::array<int,3>(std::get<1>(time_[0])));
-        events.Events[i].isnew = false;
+        events.index[i][3] = 0;
       }
     } else {  // parameters are event dependent.
       std::vector<T_time> times(nEvent, 0);
@@ -347,7 +347,7 @@ struct ModelParameterHistory {
           // MPV_[len_Parameters + j] = newParameter;
           newParameter.first = stan::math::value_of(events.time(iEvent));
           time_[len_Parameters + j] = newParameter;
-          events.Events[iEvent].isnew = false;
+          events.index[iEvent][3] = 0;
           if (iEvent < nEvent - 1) iEvent++;
           j++;
         }

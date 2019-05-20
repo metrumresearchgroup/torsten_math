@@ -29,8 +29,8 @@ struct RateHistory {
   /*
    * generate rates using event history
    */
-  template <typename T_amt, typename T_ii>
-  RateHistory(torsten::EventHistory<T_time, T_amt, T_rate, T_ii>& events, int nCmt) {
+  template<typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+  RateHistory(torsten::EventHistory<T0, T1, T2, T3, T4, T5, T6>& events, int nCmt) {
     using std::vector;
 
     if (!events.Check()) events.Sort();
@@ -55,7 +55,7 @@ struct RateHistory {
 
     size_t i = 0, k, l;
     T_time endTime;
-    torsten::Event<T_time, T_amt, T_rate, T_ii> newEvent;
+    torsten::Event<T_time, T1, T2, T3> newEvent;
     while (i < events.size()) {
       if ((events.is_dosing(i)) && (events.rate(i) > 0 && events.amt(i) > 0)) {
           endTime = events.time(i) + events.amt(i)/events.rate(i);

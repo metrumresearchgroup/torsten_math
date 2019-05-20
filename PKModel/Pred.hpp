@@ -99,7 +99,7 @@ Pred(const std::vector<T_time>& time,
   typedef typename promote_args<T_rate, T_biovar>::type T_rate2;
 
   // BOOK-KEEPING: UPDATE DATA SETS
-  EventHistory<T_tau, T_amt, T_rate, T_ii>
+  EventHistory<T_time, T_amt, T_rate, T_ii, T_parameters, T_biovar, T_tlag>
     events(time, amt, rate, ii, evid, cmt, addl, ss);
 
   ModelParameterHistory<T_tau, T_parameters, T_biovar, T_tlag>
