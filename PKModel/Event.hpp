@@ -308,8 +308,7 @@ struct EventHistory {
    * @return - modified events that account for absorption lag times
    */
   template<typename T_parameters, typename T_biovar, typename T_tlag>
-  void AddLagTimes(ModelParameterHistory<T_time, T_parameters, T_biovar,
-                   T_tlag> Parameters, int nCmt) {
+  void AddLagTimes(const ModelParameterHistory<T_time, T_parameters, T_biovar, T_tlag>& Parameters, int nCmt) {
     int nEvent = Events.size(), pSize = Parameters.get_size();
     assert((pSize = nEvent) || (pSize == 1));
 
