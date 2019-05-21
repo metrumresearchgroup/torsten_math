@@ -108,7 +108,7 @@ pmx_solve_bdf(const F& f,
               pMatrix, biovar, tlag, nCmt, dummy_systems,
               pred1, predss);
 #else
-  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
+  using ER = NONMENEventsRecord<T0, T1, T2, T3, std::vector<T4>, T5, T6>;
   using EM = EventsManager<ER>;
   const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
@@ -217,7 +217,7 @@ pmx_solve_bdf(const F& f,
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
-Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
+Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, std::vector<T4>, T5, T6> >::T_scalar, // NOLINT
               Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_group_bdf(const F& f,
                     const int nCmt,
@@ -241,7 +241,7 @@ pmx_solve_group_bdf(const F& f,
   torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
                                 pMatrix, biovar, tlag, caller);
 
-  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
+  using ER = NONMENEventsRecord<T0, T1, T2, T3, std::vector<T4>, T5, T6>;
   using EM = EventsManager<ER>;
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
 

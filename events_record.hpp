@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_NONMEN_EVENTS_RECORD_HPP
 
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
+#include <stan/math/torsten/return_type.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <Eigen/Dense>
 #include <numeric>
@@ -22,19 +23,18 @@ namespace torsten {
    * @tparam T5 type of scalars for the bio-variability parameters.
    * @tparam T6 type of scalars for the model tlag parameters.
    */
-template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+template <typename T0, typename T1, typename T2, typename T3, typename T4_container, typename T5, typename T6>
 struct NONMENEventsRecord {
-  using T_scalar = typename stan::return_type<T0, T1, T2, T3, typename stan::return_type<T4, T5, T6>::type >::type;
-  using T_time = typename stan::return_type<T0, T1, T6, T2>::type;
-  using T_rate = typename stan::return_type<T2, T5>::type;
-  using T_amt = typename stan::return_type<T1, T5>::type;
+  using T4 = typename stan::math::value_type<T4_container>::type;
+  using T_scalar = typename torsten::return_t<T0, T1, T2, T3, T4, T5, T6>::type;
+  using T_time = typename torsten::return_t<T0, T1, T6, T2>::type;
+  using T_rate = typename torsten::return_t<T2, T5>::type;
+  using T_amt = typename torsten::return_t<T1, T5>::type;
   using T_par = T4;
   using T_par_rate = T2;
   using T_par_ii = T3;
 
 private:
-  static const std::vector<Eigen::Matrix<T4, -1, -1>> dummy_param_matrix;
-  static const std::vector<std::vector<T4> > dummy_param_vector;
   const std::vector<int> len_1_;  
 
 public:
@@ -51,8 +51,7 @@ public:
   const std::vector<int>& cmt_;
   const std::vector<int>& addl_;
   const std::vector<int>& ss_;
-  const std::vector<std::vector<T4> >& pMatrix_;
-  const std::vector<Eigen::Matrix<T4, -1, -1>>& systems_;
+  const std::vector<T4_container>& pMatrix_;
   const std::vector<std::vector<T5> >& biovar_;
   const std::vector<std::vector<T6> >& tlag_;
 
@@ -78,7 +77,7 @@ public:
    * @param[in] biovar bioavailability
    * @param[in] tlag lag time
    */
-  template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
+  template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_container_, typename T5_, typename T6_>
   NONMENEventsRecord(int n,
                      const std::vector<int>& len,
                      const std::vector<T0_>& time,
@@ -89,7 +88,7 @@ public:
                      const std::vector<int>& cmt,
                      const std::vector<int>& addl,
                      const std::vector<int>& ss,
-                     const std::vector<Eigen::Matrix<T4_, -1, -1>>& systems,
+                     const std::vector<T4_container_>& pMatrix,
                      const std::vector<std::vector<T5_> >& biovar,
                      const std::vector<std::vector<T6_> >& tlag) :
     len_1_(),
@@ -106,8 +105,7 @@ public:
     cmt_    (cmt    ),
     addl_   (addl   ),
     ss_     (ss     ),
-    pMatrix_(dummy_param_vector),
-    systems_(systems),
+    pMatrix_(pMatrix),
     biovar_ (biovar ),
     tlag_   (tlag   )
   {
@@ -137,7 +135,7 @@ public:
    * @param[in] biovar bioavailability
    * @param[in] tlag lag time
    */
-  template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
+  template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_container_, typename T5_, typename T6_>
   NONMENEventsRecord(int n,
                      const std::vector<T0_>& time,
                      const std::vector<T1_>& amt,
@@ -147,119 +145,7 @@ public:
                      const std::vector<int>& cmt,
                      const std::vector<int>& addl,
                      const std::vector<int>& ss,
-                     const std::vector<Eigen::Matrix<T4_, -1, -1>>& systems,
-                     const std::vector<std::vector<T5_> >& biovar,
-                     const std::vector<std::vector<T6_> >& tlag) :
-    len_1_(1, time.size()),
-    nev(time.size()),
-    ncmt(n),
-    begin_{0},
-    len_(len_1_),
-    total_result_size(std::accumulate(len_.begin(), len_.end(), 0)),
-    time_   (time   ),
-    amt_    (amt    ),
-    rate_   (rate   ),
-    ii_     (ii     ),
-    evid_   (evid   ),
-    cmt_    (cmt    ),
-    addl_   (addl   ),
-    ss_     (ss     ),
-    pMatrix_(dummy_param_vector),
-    systems_(systems),
-    biovar_ (biovar ),
-    tlag_   (tlag   )
-  {}
-
-  /*
-   * Constructor using population data with parameter give as vectors.
-   * @param[in] n number of compartments in model
-   * @param[in] len record length for each individual.
-   * @param[in] time times of events  
-   * @param[in] amt amount at each event
-   * @param[in] rate rate at each event
-   * @param[in] ii inter-dose interval at each event
-   * @param[in] evid event identity: 
-   *                    (0) observation 
-   *                    (1) dosing
-   *                    (2) other 
-   *                    (3) reset 
-   *                    (4) reset AND dosing 
-   * @param[in] cmt compartment number at each event 
-   * @param[in] addl additional dosing at each event 
-   * @param[in] ss steady state approximation at each event (0: no, 1: yes)
-   * @param[in] pMatrix parameters at each event
-   * @param[in] biovar bioavailability
-   * @param[in] tlag lag time
-   */
-  template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
-  NONMENEventsRecord(int n,
-                     const std::vector<int>& len,
-                     const std::vector<T0_>& time,
-                     const std::vector<T1_>& amt,
-                     const std::vector<T2_>& rate,
-                     const std::vector<T3_>& ii,
-                     const std::vector<int>& evid,
-                     const std::vector<int>& cmt,
-                     const std::vector<int>& addl,
-                     const std::vector<int>& ss,
-                     const std::vector<std::vector<T4_> >& pMatrix,
-                     const std::vector<std::vector<T5_> >& biovar,
-                     const std::vector<std::vector<T6_> >& tlag) :
-    len_1_(),
-    nev(time.size()),
-    ncmt(n),
-    begin_(len.size()),
-    len_(len),
-    total_result_size(std::accumulate(len_.begin(), len_.end(), 0)),
-    time_   (time   ),
-    amt_    (amt    ),
-    rate_   (rate   ),
-    ii_     (ii     ),
-    evid_   (evid   ),
-    cmt_    (cmt    ),
-    addl_   (addl   ),
-    ss_     (ss     ),
-    pMatrix_(pMatrix),
-    systems_(dummy_param_matrix),
-    biovar_ (biovar ),
-    tlag_   (tlag   )
-  {
-    begin_[0] = 0;
-    std::partial_sum(len.begin(), len.end() - 1, begin_.begin() + 1);    
-  }
-
-  /*
-   * Constructor using individual data with parameter give as vectors.
-   * @param[in] n number of compartments in model
-   * @param[in] len record length for each individual.
-   * @param[in] time times of events  
-   * @param[in] amt amount at each event
-   * @param[in] rate rate at each event
-   * @param[in] ii inter-dose interval at each event
-   * @param[in] evid event identity: 
-   *                    (0) observation 
-   *                    (1) dosing
-   *                    (2) other 
-   *                    (3) reset 
-   *                    (4) reset AND dosing 
-   * @param[in] cmt compartment number at each event 
-   * @param[in] addl additional dosing at each event 
-   * @param[in] ss steady state approximation at each event (0: no, 1: yes)
-   * @param[in] pMatrix parameters at each event
-   * @param[in] biovar bioavailability
-   * @param[in] tlag lag time
-   */
-  template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
-  NONMENEventsRecord(int n,
-                     const std::vector<T0_>& time,
-                     const std::vector<T1_>& amt,
-                     const std::vector<T2_>& rate,
-                     const std::vector<T3_>& ii,
-                     const std::vector<int>& evid,
-                     const std::vector<int>& cmt,
-                     const std::vector<int>& addl,
-                     const std::vector<int>& ss,
-                     const std::vector<std::vector<T4_> >& pMatrix,
+                     const std::vector<T4_container_>& pMatrix,
                      const std::vector<std::vector<T5_> >& biovar,
                      const std::vector<std::vector<T6_> >& tlag) :
     len_1_(1, time.size()),
@@ -277,7 +163,6 @@ public:
     addl_   (addl   ),
     ss_     (ss     ),
     pMatrix_(pMatrix),
-    systems_(dummy_param_matrix),
     biovar_ (biovar ),
     tlag_   (tlag   )
   {}
@@ -288,11 +173,7 @@ public:
    * either constant or time dependent.
    */
   int begin_param(int id) const {
-    if(pMatrix_.empty()) {
-      return systems_.size() == len_.size() ? id : begin_[id];
-    } else {
-      return pMatrix_.size() == len_.size() ? id : begin_[id];
-    }    
+    return pMatrix_.size() == len_.size() ? id : begin_[id];
   }
 
   /*
@@ -301,11 +182,7 @@ public:
    * either constant or time dependent.
    */
   int len_param(int id) const {
-    if(pMatrix_.empty()) {
-      return systems_.size() == len_.size() ? 1 : len_[id]; 
-    } else {
-      return pMatrix_.size() == len_.size() ? 1 : len_[id]; 
-    }
+    return pMatrix_.size() == len_.size() ? 1 : len_[id]; 
   }
 
   int begin_biovar(int id) const {
@@ -362,14 +239,6 @@ public:
     return has_lag(0);
   }
 };
-
-template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
-const std::vector<Eigen::Matrix<T4, -1, -1>>
-NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>::dummy_param_matrix = {};
-
-template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
-const std::vector<std::vector<T4> >
-NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>::dummy_param_vector = {};
 
 }
 

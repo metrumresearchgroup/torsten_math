@@ -376,7 +376,7 @@ namespace torsten{
       using::stan::math::multiply;
       using refactor::PKRec;
 
-      using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
+      using ER = NONMENEventsRecord<double, double, double, double, std::vector<double>, double, double>;
       using EM = EventsManager<ER>;
 
       const int nCmt = EM::nCmt(events_rec);

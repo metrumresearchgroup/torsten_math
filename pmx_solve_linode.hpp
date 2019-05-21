@@ -83,7 +83,7 @@ pmx_solve_linode(const std::vector<T0>& time,
               pMatrix_dummy, biovar, tlag, nCmt, system,
               Pred1_linOde(), PredSS_linOde());
 #else
-  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
+  using ER = NONMENEventsRecord<T0, T1, T2, T3, Eigen::Matrix<T4,-1,-1>, T5, T6>;
   using EM = EventsManager<ER>;
   const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, system, biovar, tlag);
 

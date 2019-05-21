@@ -13,7 +13,7 @@
 
 namespace torsten {
 
-template<typename T_time, typename T_parameters, typename T_biovar,
+template<typename T_time, typename T_parameters_container, typename T_biovar,
   typename T_tlag> struct ModelParameterHistory;
 
 /**
@@ -339,7 +339,8 @@ struct EventHistory {
    * @param[in] nCmt
    * @return - modified events that account for absorption lag times
    */
-  void AddLagTimes(const ModelParameterHistory<T_time, T4, T5, T6>& Parameters, int nCmt) {
+    template<typename T4_container>  
+  void AddLagTimes(const ModelParameterHistory<T_time, T4_container, T5, T6>& Parameters, int nCmt) {
     int nEvent = size(), pSize = Parameters.get_size();
     assert((pSize = nEvent) || (pSize == 1));
 

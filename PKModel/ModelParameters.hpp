@@ -11,8 +11,6 @@
 
 namespace torsten {
 
-template<typename T_time, typename T_parameters, typename T_biovar, typename T_tlag>
-  struct ModelParameterHistory;
 /**
  * The ModelParameters class defines objects that contain the parameters of
  * a model at a given time.
@@ -28,9 +26,9 @@ struct ModelParameters {
   ModelParameters() {}
 
   ModelParameters(const T_time& time,
+                  const Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic>& K,
                   const std::vector<T_biovar>& biovar,
-                  const std::vector<T_tlag>& tlag,
-                  const Eigen::Matrix<T_parameters, Eigen::Dynamic, Eigen::Dynamic>& K)
+                  const std::vector<T_tlag>& tlag)
     : time_(stan::math::value_of(time)), theta_(K.size()), nrow(K.rows()), ncol(K.cols()), biovar_(biovar), tlag_(tlag)
   {
     Eigen::Matrix<T_parameters, -1, -1>::Map(theta_.data(), nrow, ncol) = K;
@@ -101,32 +99,35 @@ struct ModelParameters {
   }
 };
 
+  template<typename T>
+  struct is_matrix : std::false_type {};
+  
+  template<typename T, int R, int C>
+  struct is_matrix<Eigen::Matrix<T, R, C> > : std::true_type {};
+  
 /**
  * The ModelParameterHistory class defines objects that contain a vector
  * of ModelParameters, along with a series of functions that operate on
  * them.
  */
-template<typename T_time, typename T1, typename T2, typename T3>
+template<typename T_time, typename T4_container, typename T5, typename T6>
 struct ModelParameterHistory {
-  static const std::vector<Eigen::Matrix<T1, -1, -1>> dummy_param_matrix;
-  static const std::vector<std::vector<T1> > dummy_param_vector;
+  using T4 = typename stan::math::value_type<T4_container>::type;
 
-  const bool has_matrix_param;
+  static const bool has_matrix_param;
+
   std::vector<std::pair<double, std::array<int, 3> > > time_;
-  const std::vector<std::vector<T1> >& theta_;
-  const std::vector<Eigen::Matrix<T1, -1, -1> >& K_;
-  const std::vector<std::vector<T2> >& biovar_;
-  const std::vector<std::vector<T3> >& tlag_;
+  const std::vector<T4_container>& theta_;
+  const std::vector<std::vector<T5> >& biovar_;
+  const std::vector<std::vector<T6> >& tlag_;
 
   template<typename T0>
   ModelParameterHistory(const std::vector<T0>& time,
-                        const std::vector<std::vector<T1> >& theta,
-                        const std::vector<std::vector<T2> >& biovar,
-                        const std::vector<std::vector<T3> >& tlag) :
-    has_matrix_param(false),
+                        const std::vector<T4_container>& theta,
+                        const std::vector<std::vector<T5> >& biovar,
+                        const std::vector<std::vector<T6> >& tlag) :
     time_(time.size()),
     theta_(theta),
-    K_(ModelParameterHistory<T_time, T1, T2, T3>::dummy_param_matrix),
     biovar_(biovar),
     tlag_(tlag)
   {
@@ -136,47 +137,6 @@ struct ModelParameterHistory {
       int l = tlag.size()   > 1 ? i : 0;
       time_[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time[i]), {j, k, l} );
     }
-  }
-
-  template<typename T0>
-  ModelParameterHistory(const std::vector<T0>& time,
-                        const std::vector< Eigen::Matrix<T1, Eigen::Dynamic, Eigen::Dynamic> >& K,
-                        const std::vector<std::vector<T2> >& biovar,
-                        const std::vector<std::vector<T3> >& tlag) :
-    has_matrix_param(true),
-    time_(time.size()),
-    theta_(ModelParameterHistory<T_time, T1, T2, T3>::dummy_param_vector),
-    K_(K),
-    biovar_(biovar),
-    tlag_(tlag)
-  {
-    for (int i = 0; i < time_.size(); ++i) {
-      int j = K.size()      > 1 ? i : 0;
-      int k = biovar.size() > 1 ? i : 0;
-      int l = tlag.size()   > 1 ? i : 0;
-      time_[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time[i]), {j, k, l} );
-    }
-  }
-
-  template<typename T0>
-  ModelParameterHistory(const std::vector<T0>& time,
-                        const std::vector<std::vector<T1> >& theta,
-                        const std::vector< Eigen::Matrix<T1, Eigen::Dynamic, Eigen::Dynamic> >& K,
-                        const std::vector<std::vector<T2> >& biovar,
-                        const std::vector<std::vector<T3> >& tlag) :
-    has_matrix_param(theta.empty()),
-    time_(time.size()),
-    theta_(has_matrix_param ? ModelParameterHistory<T_time, T1, T2, T3>::dummy_param_vector : theta),
-    K_(has_matrix_param ? K : ModelParameterHistory<T_time, T1, T2, T3>::dummy_param_matrix),
-    biovar_(biovar),
-    tlag_(tlag)
-  {
-    for (int i = 0; i < time_.size(); ++i) {
-      int j = has_matrix_param ? (K.size() > 1 ? i : 0) : (theta.size() > 1 ? i : 0);
-      int k = biovar.size() > 1 ? i : 0;
-      int l = tlag.size()   > 1 ? i : 0;
-      time_[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time[i]), {j, k, l} );
-    }    
   }
 
   /*
@@ -193,16 +153,13 @@ struct ModelParameterHistory {
   ModelParameterHistory(int ibegin, int isize,
                         const std::vector<T0>& time,
                         int ibegin_theta, int isize_theta,
-                        const std::vector<std::vector<T1> >& theta,
-                        const std::vector< Eigen::Matrix<T1, Eigen::Dynamic, Eigen::Dynamic> >& K,
+                        const std::vector<T4_container>& theta,
                         int ibegin_biovar, int isize_biovar,
-                        const std::vector<std::vector<T2> >& biovar,
+                        const std::vector<std::vector<T5> >& biovar,
                         int ibegin_tlag, int isize_tlag,
-                        const std::vector<std::vector<T3> >& tlag) :
-    has_matrix_param(theta.empty()),
+                        const std::vector<std::vector<T6> >& tlag) :
     time_(isize),
-    theta_(has_matrix_param ? ModelParameterHistory<T_time, T1, T2, T3>::dummy_param_vector : theta),
-    K_(has_matrix_param ? K : ModelParameterHistory<T_time, T1, T2, T3>::dummy_param_matrix),
+    theta_(theta),
     biovar_(biovar),
     tlag_(tlag)
   {
@@ -214,12 +171,8 @@ struct ModelParameterHistory {
     }
   }
 
-  ModelParameters<T_time, T1, T2, T3> GetModelParameters(int i) const {
-    if (has_matrix_param) {
-      return { std::get<0>(time_[i]), biovar_[std::get<1>(time_[i])[1]], tlag_[std::get<1>(time_[i])[2]], K_[std::get<1>(time_[i])[0]] };
-    } else {
-      return { std::get<0>(time_[i]), theta_[std::get<1>(time_[i])[0]], biovar_[std::get<1>(time_[i])[1]], tlag_[std::get<1>(time_[i])[2]] };
-    }
+  ModelParameters<T_time, T4, T5, T6> GetModelParameters(int i) const {
+    return ModelParameters<T_time, T4, T5, T6>(std::get<0>(time_[i]), theta_[std::get<1>(time_[i])[0]], biovar_[std::get<1>(time_[i])[1]], tlag_[std::get<1>(time_[i])[2]]);
   }
 
   /**
@@ -229,15 +182,15 @@ struct ModelParameterHistory {
    * 
    * FIX ME - rename this GetValueTheta
    */
-  const T1& GetValue(int iEvent, int iParameter) const {
+  const T4& GetValue(int iEvent, int iParameter) const {
     return theta_[std::get<1>(time_[iEvent])[0]][iParameter];
   }
 
-  const T2& GetValueBio(int iEvent, int iParameter) const {
+  const T5& GetValueBio(int iEvent, int iParameter) const {
     return biovar_[std::get<1>(time_[iEvent])[1]][iParameter];
   }
 
-  const T3& GetValueTlag(int iEvent, int iParameter) const {
+  const T6& GetValueTlag(int iEvent, int iParameter) const {
     return tlag_[std::get<1>(time_[iEvent])[2]][iParameter];
   }
 
@@ -283,7 +236,7 @@ struct ModelParameterHistory {
    * @return - modified parameters and events.
    */
   template<typename T0, typename T_p1, typename T_p2, typename T_p3>
-  void CompleteParameterHistory(torsten::EventHistory<T0, T_p1, T_p2, T_p3, T1, T2, T3>& events) {
+  void CompleteParameterHistory(torsten::EventHistory<T0, T_p1, T_p2, T_p3, T4, T5, T6>& events) {
     int nEvent = events.size();
     assert(nEvent > 0);
     int len_Parameters = time_.size();  // numbers of events for which parameters are determined
@@ -308,13 +261,13 @@ struct ModelParameterHistory {
         events.index[i][3] = 0;
       }
     } else {  // parameters are event dependent.
-      std::vector<T_time> times(nEvent, 0);
+      std::vector<double> times(nEvent, 0);
       for (int i = 0; i < nEvent; i++) times[i] = time_[i].first;
       iEvent = 0;
 
       int k, j = 0;
       std::pair<double, std::array<int, 3> > newParameter;
-      // ModelParameters<T_time, T1, T2, T3> newParameter;
+      // ModelParameters<T_time, T4, T5, T6> newParameter;
 
       for (int i = 0; i < nEvent; i++) {
         while (events.isnew(iEvent)) {
@@ -360,13 +313,8 @@ struct ModelParameterHistory {
   }
 };
 
-template<typename T_time, typename T1, typename T2, typename T3>
-const std::vector<Eigen::Matrix<T1, -1, -1>>
-ModelParameterHistory<T_time, T1, T2, T3>::dummy_param_matrix = {};
-
-template<typename T_time, typename T1, typename T2, typename T3>
-const std::vector<std::vector<T1> >
-ModelParameterHistory<T_time, T1, T2, T3>::dummy_param_vector = {};
+template<typename T_time, typename T4_container, typename T5, typename T6>
+const bool ModelParameterHistory<T_time, T4_container, T5, T6>::has_matrix_param = is_matrix<T4_container>::value;
 
 } 
 

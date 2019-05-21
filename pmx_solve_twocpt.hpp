@@ -121,7 +121,7 @@ pmx_solve_twocpt(const std::vector<T0>& time,
               nCmt, dummy_systems,
               Pred1_twoCpt(), PredSS_twoCpt());
 #else
-  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
+  using ER = NONMENEventsRecord<T0, T1, T2, T3, std::vector<T4>, T5, T6>;
   using EM = EventsManager<ER>;
   const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
@@ -224,7 +224,7 @@ pmx_solve_twocpt(const std::vector<T0>& time,
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6>
-Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
+Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, std::vector<T4>, T5, T6> >::T_scalar, // NOLINT
               Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_group_twocpt(const std::vector<int>& len,
                        const std::vector<T0>& time,
@@ -238,7 +238,7 @@ pmx_solve_group_twocpt(const std::vector<int>& len,
                        const std::vector<std::vector<T4> >& pMatrix,
                        const std::vector<std::vector<T5> >& biovar,
                        const std::vector<std::vector<T6> >& tlag) {
-  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
+  using ER = NONMENEventsRecord<T0, T1, T2, T3, std::vector<T4>, T5, T6>;
   using EM = EventsManager<ER>;
 
   int nCmt = refactor::PMXTwoCptModel<double, double, double, double>::Ncmt;

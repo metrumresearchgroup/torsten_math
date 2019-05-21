@@ -116,7 +116,7 @@ pmx_solve_onecpt_bdf(const F& f,
 #else
   const int nCmt = nPK + nOde;
 
-  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
+  using ER = NONMENEventsRecord<T0, T1, T2, T3, std::vector<T4>, T5, T6>;
   using EM = EventsManager<ER>;
   const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
 

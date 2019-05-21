@@ -102,7 +102,7 @@ Pred(const std::vector<T_time>& time,
   EventHistory<T_time, T_amt, T_rate, T_ii, T_parameters, T_biovar, T_tlag>
     events(time, amt, rate, ii, evid, cmt, addl, ss);
 
-  ModelParameterHistory<T_tau, T_parameters, T_biovar, T_tlag>
+  ModelParameterHistory<T_tau, std::vector<T_parameters>, T_biovar, T_tlag>
     parameters(time, pMatrix, biovar, tlag, system);
 
   events.Sort();

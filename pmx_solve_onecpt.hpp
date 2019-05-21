@@ -111,7 +111,7 @@ pmx_solve_onecpt(const std::vector<T0>& time,
               nCmt, dummy_systems,
               Pred1_oneCpt(), PredSS_oneCpt());
 #else
-  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
+  using ER = NONMENEventsRecord<T0, T1, T2, T3, std::vector<T4>, T5, T6>;
   using EM = EventsManager<ER>;
   const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 

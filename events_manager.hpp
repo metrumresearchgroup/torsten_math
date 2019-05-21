@@ -13,9 +13,9 @@ namespace torsten {
   template <typename T_event_record>
   struct EventsManager;
 
-  template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
-    struct EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> > {
-    using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
+  template <typename T0, typename T1, typename T2, typename T3, typename T4_container, typename T5, typename T6>
+    struct EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4_container, T5, T6> > {
+    using ER = NONMENEventsRecord<T0, T1, T2, T3, T4_container, T5, T6>;
     using T_scalar = typename ER::T_scalar;
     using T_time   = typename ER::T_time;
     using T_rate   = typename ER::T_rate;
@@ -23,6 +23,7 @@ namespace torsten {
     using T_par    = typename ER::T_par;
     using T_par_rate = typename ER::T_par_rate;
     using T_par_ii   = typename ER::T_par_ii;
+    using T4 = typename stan::math::value_type<T4_container>::type;
 
     EventHistory<T0, T1, T2, T3, T4, T5, T6> event_his;
     std::vector<std::vector<T_rate> > rate_v;
@@ -82,9 +83,9 @@ namespace torsten {
     {
       event_his.Sort();
 
-      ModelParameterHistory<T_time, T4, T5, T6>
+      ModelParameterHistory<T_time, T4_container, T5, T6>
         param_his(rec.begin_[id], rec.len_[id], rec.time_,
-                  ibegin_theta, isize_theta, rec.pMatrix_, rec.systems_,
+                  ibegin_theta, isize_theta, rec.pMatrix_,
                   ibegin_biovar, isize_biovar, rec.biovar_,
                   ibegin_tlag, isize_tlag, rec.tlag_);
       param_his.Sort();
@@ -146,7 +147,7 @@ namespace torsten {
      * be constant across the population.
      */
     static int parameter_size(const ER& rec) {
-      return rec.pMatrix_.empty() ? rec.systems_[0].size() : rec.pMatrix_[0].size();
+      return rec.pMatrix_[0].size();
     }
 
     template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
