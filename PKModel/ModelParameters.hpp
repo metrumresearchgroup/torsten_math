@@ -236,7 +236,7 @@ struct ModelParameterHistory {
    * @return - modified parameters and events.
    */
   template<typename T0, typename T_p1, typename T_p2, typename T_p3>
-  void CompleteParameterHistory(torsten::EventHistory<T0, T_p1, T_p2, T_p3, T4, T5, T6>& events) {
+  void CompleteParameterHistory(torsten::EventHistory<T0, T_p1, T_p2, T_p3, T4_container, T5, T6>& events) {
     int nEvent = events.size();
     assert(nEvent > 0);
     int len_Parameters = time_.size();  // numbers of events for which parameters are determined
@@ -286,15 +286,20 @@ struct ModelParameterHistory {
            */
           // Find the index corresponding to the time of the new event in the
           // times vector.
-          k = SearchReal(times, len_Parameters - 1, events.time(iEvent));
+          // k = SearchReal(times, len_Parameters - 1, events.time(iEvent));
 
-          if ((k == len_Parameters) ||
-              (stan::math::value_of(events.time(iEvent)) == std::get<0>(time_[k - 1])))
-            // newParameter = GetModelParameters(k - 1);
-            newParameter = time_[k-1];
-          else
-            newParameter = time_[k];
-            // newParameter = GetModelParameters(k);
+          // if ((k == len_Parameters) ||
+          //     (stan::math::value_of(events.time(iEvent)) == std::get<0>(time_[k - 1])))
+          //   newParameter = time_[k-1];
+          // else
+          //   newParameter = time_[k];
+          auto lower = lower_bound(time_.begin(), time_.begin() + len_Parameters,
+                                   stan::math::value_of(events.time(iEvent)),
+                                [](const std::pair<double, std::array<int, 3> >& t1, const double& t2)
+                                {
+                                  return t1.first < t2;
+                                });
+          newParameter = lower == (time_.begin() + len_Parameters) ? time_[len_Parameters-1] : *lower;
 
           // newParameter.time_ = stan::math::value_of(events.time(iEvent));
           // MPV_[len_Parameters + j] = newParameter;

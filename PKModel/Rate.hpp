@@ -29,8 +29,8 @@ struct RateHistory {
   /*
    * generate rates using event history
    */
-  template<typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
-  RateHistory(torsten::EventHistory<T0, T1, T2, T3, T4, T5, T6>& events, int nCmt) {
+  template<typename T0, typename T1, typename T2, typename T3, typename T4_container, typename T5, typename T6>
+  RateHistory(torsten::EventHistory<T0, T1, T2, T3, T4_container, T5, T6>& events, int nCmt) {
     using std::vector;
 
     if (!events.Check()) events.Sort();

@@ -9,7 +9,6 @@
 #include <stan/math/prim/arr/functor/coupled_ode_system.hpp>
 #include <stan/math/prim/arr/functor/integrate_ode_rk45.hpp>
 #include <stan/math/rev/mat/functor/integrate_ode_bdf.hpp>
-#include <stan/math/torsten/PKModel/SearchReal.hpp>
 #include <stan/math/torsten/PKModel/functors/functor.hpp>
 #include <vector>
 #include <algorithm>

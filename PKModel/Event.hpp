@@ -104,8 +104,9 @@ struct Event{
  * The EventHistory class defines objects that contain a vector of Events,
  * along with a series of functions that operate on them.
  */
-  template<typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+  template<typename T0, typename T1, typename T2, typename T3, typename T4_container, typename T5, typename T6>
 struct EventHistory {
+    using T4 = typename stan::math::value_type<T4_container>::type;
     using T_scalar = typename torsten::return_t<T0, T1, T2, T3, T4, T5, T6>::type;
   using T_time = typename torsten::return_t<T0, T1, T6, T2>::type;
   using T_rate = typename torsten::return_t<T2, T5>::type;
@@ -119,6 +120,9 @@ struct EventHistory {
     const std::vector<int>& cmt_;
     const std::vector<int>& addl_;
     const std::vector<int>& ss_;
+    const std::vector<T4_container>& theta_;
+    const std::vector<std::vector<T5> >& biovar_;
+    const std::vector<std::vector<T6> >& tlag_;
 
     // internally generated events
     std::vector<T_time> gen_time;
@@ -130,11 +134,14 @@ struct EventHistory {
     std::vector<int> gen_addl;
     std::vector<int> gen_ss;
 
-    using IDVec = std::array<int, 4>;
+    using IDVec = std::array<int, 7>;
     // 0: original(0)/generated(1)
     // 1: index in original/generated arrays
     // 2: evid
     // 3: is new?(0/1)
+    // 4: theta id
+    // 5: biovar id
+    // 6: tlag id
     std::vector<IDVec> index;
 
     inline bool keep(const IDVec& id)  const { return id[0] == 0; }
@@ -149,7 +156,10 @@ struct EventHistory {
   EventHistory(const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
                const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
                const std::vector<int>& p_evid, const std::vector<int>& p_cmt,
-               const std::vector<int>& p_addl, const std::vector<int>& p_ss)
+               const std::vector<int>& p_addl, const std::vector<int>& p_ss,
+               const std::vector<T4_container>& theta,
+               const std::vector<std::vector<T5> >& biovar,
+               const std::vector<std::vector<T6> >& tlag)
     :
     time_(p_time),
     amt_(p_amt),
@@ -159,11 +169,17 @@ struct EventHistory {
     cmt_(p_cmt),
     addl_(p_addl),
     ss_(p_ss),
-    index(time_.size(), {0, 0, 0, 0})
+    theta_(theta),
+    biovar_(biovar),
+    tlag_(tlag),
+    index(time_.size(), {0, 0, 0, 0, 0, 0, 0})
   {
     for (size_t i = 0; i < time_.size(); ++i) {
       index[i][1] = i;
       index[i][2] = evid_[i];
+      if (theta.size() > 1)  index[i][4] = i;
+      if (biovar.size() > 1) index[i][5] = i;
+      if (tlag.size() > 1)   index[i][6] = i;
     }
   }
 
@@ -178,8 +194,13 @@ struct EventHistory {
                const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
                const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
                const std::vector<int>& p_evid, const std::vector<int>& p_cmt,
-               const std::vector<int>& p_addl, const std::vector<int>& p_ss)
-    :
+               const std::vector<int>& p_addl, const std::vector<int>& p_ss,
+               int ibegin_theta, int isize_theta,
+               const std::vector<T4_container>& theta,
+               int ibegin_biovar, int isize_biovar,
+               const std::vector<std::vector<T5> >& biovar,
+               int ibegin_tlag, int isize_tlag,
+               const std::vector<std::vector<T6> >& tlag) :
     time_(p_time),
     amt_(p_amt),
     rate_(p_rate),
@@ -188,7 +209,10 @@ struct EventHistory {
     cmt_(p_cmt),
     addl_(p_addl),
     ss_(p_ss),
-    index(isize, {0, 0, 0, 0})
+    theta_(theta),
+    biovar_(biovar),
+    tlag_(tlag),
+    index(isize, {0, 0, 0, 0, ibegin_theta, ibegin_biovar, ibegin_tlag})
     {
       const int iend = ibegin + isize;
       using stan::math::check_greater_or_equal;
@@ -205,6 +229,9 @@ struct EventHistory {
       for (size_t i = ibegin; i < iend; ++i) {
         index[i - ibegin][1] = i;
         index[i - ibegin][2] = evid_[i];
+        if (isize_theta > 1)  index[i-ibegin][4] = ibegin_theta + i;
+        if (isize_biovar > 1) index[i-ibegin][5] = ibegin_biovar + i;
+        if (isize_tlag > 1)   index[i-ibegin][6] = ibegin_tlag + i;
       }
     }
 
@@ -230,7 +257,7 @@ struct EventHistory {
   }
 
   void InsertEvent(Event<T_time, T1, T2, T3> p_Event) {
-    index.push_back({1, int(gen_time.size()), p_Event.evid, 1});
+    index.push_back({1, int(gen_time.size()), p_Event.evid, 1, 0, 0, 0});
     gen_time.push_back(p_Event.time);
     gen_amt.push_back(p_Event.amt);
     gen_rate.push_back(p_Event.rate);
@@ -339,7 +366,6 @@ struct EventHistory {
    * @param[in] nCmt
    * @return - modified events that account for absorption lag times
    */
-    template<typename T4_container>  
   void AddLagTimes(const ModelParameterHistory<T_time, T4_container, T5, T6>& Parameters, int nCmt) {
     int nEvent = size(), pSize = Parameters.get_size();
     assert((pSize = nEvent) || (pSize == 1));

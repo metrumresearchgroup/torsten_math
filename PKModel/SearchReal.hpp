@@ -25,7 +25,7 @@ int min(int a, int b);  // forward declare
  *
  */
 template<typename T0, typename T1>
-inline int SearchReal(std::vector<T0> v, int numltm, T1 srchNum) {
+inline int SearchReal(const std::vector<T0>& v, int numltm, T1 srchNum) {
   int first = 0, last, mid, real_limit;
 
   assert(numltm >= 0);

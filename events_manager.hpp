@@ -25,7 +25,7 @@ namespace torsten {
     using T_par_ii   = typename ER::T_par_ii;
     using T4 = typename stan::math::value_type<T4_container>::type;
 
-    EventHistory<T0, T1, T2, T3, T4, T5, T6> event_his;
+    EventHistory<T0, T1, T2, T3, T4_container, T5, T6> event_his;
     std::vector<std::vector<T_rate> > rate_v;
     std::vector<T_amt> amt_v;
     std::vector<std::vector<T_par> > par_v;
@@ -77,7 +77,10 @@ namespace torsten {
                   int ibegin_theta, int isize_theta,
                   int ibegin_biovar, int isize_biovar,
                   int ibegin_tlag, int isize_tlag) :
-      event_his(rec.begin_[id], rec.len_[id], rec.time_, rec.amt_, rec.rate_, rec.ii_, rec.evid_, rec.cmt_, rec.addl_, rec.ss_),
+      event_his(rec.begin_[id], rec.len_[id], rec.time_, rec.amt_, rec.rate_, rec.ii_, rec.evid_, rec.cmt_, rec.addl_, rec.ss_,
+                ibegin_theta, isize_theta, rec.pMatrix_,
+                ibegin_biovar, isize_biovar, rec.biovar_,
+                ibegin_tlag, isize_tlag, rec.tlag_),
       nKeep(event_his.size()),
       ncmt(rec.ncmt)
     {
@@ -119,7 +122,7 @@ namespace torsten {
       }
     }
 
-    const EventHistory<T0, T1, T2, T3, T4, T5, T6>& events() const {
+    const EventHistory<T0, T1, T2, T3, T4_container, T5, T6>& events() const {
       return event_his;
     }
 
