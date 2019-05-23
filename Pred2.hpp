@@ -120,7 +120,7 @@ namespace torsten{
       auto events = em.events();
       auto model_rate = em.rates();
       auto model_amt = em.amts();
-      auto model_par = em.pars();
+      // auto model_par = em.pars();
 
       using scalar = typename T_em::T_scalar;
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
@@ -131,7 +131,7 @@ namespace torsten{
         init.setZero();
       } else if (events.is_ss_dosing(i)) {  // steady state event
         typename T_em::T_time model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
-        T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
+        T_model pkmodel {model_time, init, model_rate[i], em.pars(i), model_pars...};
         pred1 = stan::math::multiply(pkmodel.solve(model_amt[i],
                                                    events.rate(i),
                                                    events.ii(i),
@@ -145,7 +145,7 @@ namespace torsten{
           init = pred1;  // steady state with reset (ss = 1)
       } else {           // non-steady dosing event
         typename T_em::T_time model_time = tprev;
-        T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
+        T_model pkmodel {model_time, init, model_rate[i], em.pars(i), model_pars...};
         pred1 = pkmodel.solve(events.time(i), pred_pars...);
         init = pred1;
       }
@@ -166,7 +166,7 @@ namespace torsten{
       auto events = em.events();
       auto model_rate = em.rates();
       auto model_amt = em.amts();
-      auto model_par = em.pars();
+      // auto model_par = em.pars();
 
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
@@ -174,7 +174,7 @@ namespace torsten{
         init.setZero();
       } else if (events.is_ss_dosing(i)) {  // steady state event
         typename T_em::T_time model_time = events.time(i);
-        T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
+        T_model pkmodel {model_time, init, model_rate[i], em.pars(i), model_pars...};
         vector<var> v_i = pkmodel.vars(model_amt[i], events.rate(i), events.ii(i));
         sol_d = pkmodel.solve_d(model_amt[i], events.rate(i), events.ii(i), events.cmt(i), pred_pars...);
         if (events.ss(i) == 2)
@@ -184,7 +184,7 @@ namespace torsten{
       } else {
         if (events.time(i) > tprev) {
           typename T_em::T_time model_time = tprev;
-          T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
+          T_model pkmodel {model_time, init, model_rate[i], em.pars(i), model_pars...};
           vector<var> v_i = pkmodel.vars(events.time(i));
           sol_d = pkmodel.solve_d(events.time(i), pred_pars...);
           init = torsten::mpi::precomputed_gradients(sol_d, v_i);
@@ -207,7 +207,7 @@ namespace torsten{
       auto events = em.events();
       auto model_rate = em.rates();
       auto model_amt = em.amts();
-      auto model_par = em.pars();
+      // auto model_par = em.pars();
 
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
@@ -215,7 +215,7 @@ namespace torsten{
         init.setZero();
       } else if (events.is_ss_dosing(i)) {  // steady state event
         typename T_em::T_time model_time = events.time(i);
-        T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
+        T_model pkmodel {model_time, init, model_rate[i], em.pars(i), model_pars...};
         vector<var> v_i = pkmodel.vars(model_amt[i], events.rate(i), events.ii(i));
         int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
         if (events.ss(i) == 2)
@@ -225,7 +225,7 @@ namespace torsten{
       } else {
         if (events.time(i) > tprev) {
           typename T_em::T_time model_time = tprev;
-          T_model pkmodel {model_time, init, model_rate[i], model_par[i], model_pars...};
+          T_model pkmodel {model_time, init, model_rate[i], em.pars(i), model_pars...};
           vector<var> v_i = pkmodel.vars(events.time(i));
           int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
           init = torsten::mpi::precomputed_gradients(sol_d.segment(0, nsys), v_i);

@@ -26,9 +26,10 @@ namespace torsten {
     using T4 = typename stan::math::value_type<T4_container>::type;
 
     EventHistory<T0, T1, T2, T3, T4_container, T5, T6> event_his;
+    ModelParameterHistory<T_time, T4_container, T5, T6> param_his;
     std::vector<std::vector<T_rate> > rate_v;
     std::vector<T_amt> amt_v;
-    std::vector<std::vector<T_par> > par_v;
+    // std::vector<std::vector<T_par> > par_v;
 
     const int nKeep;
     const int ncmt;
@@ -81,19 +82,13 @@ namespace torsten {
                 ibegin_theta, isize_theta, rec.pMatrix_,
                 ibegin_biovar, isize_biovar, rec.biovar_,
                 ibegin_tlag, isize_tlag, rec.tlag_),
-      nKeep(event_his.size()),
+      param_his(rec.begin_[id], rec.len_[id], rec.time_,
+                ibegin_theta, isize_theta, rec.pMatrix_,
+                ibegin_biovar, isize_biovar, rec.biovar_,
+                ibegin_tlag, isize_tlag, rec.tlag_),
+      nKeep(event_his.events_size),
       ncmt(rec.ncmt)
     {
-      event_his.Sort();
-
-      ModelParameterHistory<T_time, T4_container, T5, T6>
-        param_his(rec.begin_[id], rec.len_[id], rec.time_,
-                  ibegin_theta, isize_theta, rec.pMatrix_,
-                  ibegin_biovar, isize_biovar, rec.biovar_,
-                  ibegin_tlag, isize_tlag, rec.tlag_);
-      param_his.Sort();
-
-      event_his.AddlDoseEvents();
       param_his.CompleteParameterHistory(event_his);
 
       event_his.AddLagTimes(param_his, ncmt);
@@ -114,12 +109,6 @@ namespace torsten {
 
         amt_v.push_back(param_his.GetValueBio(i, event_his.cmt(i) - 1) * event_his.amt(i));
       }
-
-      par_v.resize(event_his.size());
-      for (size_t i = 0; i < event_his.size(); ++i) {
-        auto p = param_his.GetModelParameters(i);
-        par_v[i] = p.get_RealParameters(param_his.has_matrix_param);
-      }
     }
 
     const EventHistory<T0, T1, T2, T3, T4_container, T5, T6>& events() const {
@@ -134,8 +123,8 @@ namespace torsten {
       return amt_v;
     }
 
-    const std::vector<std::vector<T_par> >& pars() const {
-      return par_v;
+    const T4_container& pars(int i) const {
+      return param_his.model_param(i);
     }
 
     /*

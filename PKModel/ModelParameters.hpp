@@ -137,6 +137,7 @@ struct ModelParameterHistory {
       int l = tlag.size()   > 1 ? i : 0;
       time_[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time[i]), {j, k, l} );
     }
+    Sort();
   }
 
   /*
@@ -169,6 +170,11 @@ struct ModelParameterHistory {
       int l = isize_tlag    > 1 ? ibegin_tlag   + i : ibegin_tlag;
       time_[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time[ibegin + i]), {j, k, l });
     }
+    Sort();
+  }
+
+  const T4_container& model_param(int i) const {
+    return theta_[time_[i].second[0]];
   }
 
   ModelParameters<T_time, T4, T5, T6> GetModelParameters(int i) const {

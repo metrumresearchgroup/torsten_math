@@ -67,7 +67,7 @@ namespace refactor {
     const T_time &t0_;
     const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0_;
     const std::vector<T_rate> &rate_;
-    const std::vector<T_par> & par_;
+    const Eigen::Matrix<T_par, -1, -1> & par_;
 
   public:
     static constexpr PMXLinODE f_ = PMXLinODE();
@@ -101,9 +101,9 @@ namespace refactor {
     // {}
 
     PMXLinODEModel(const T_time& t0,
-                  const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0,
-                  const std::vector<T_rate> &rate,
-                  const std::vector<T_par>& par) :
+                   const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0,
+                   const std::vector<T_rate> &rate,
+                   const Eigen::Matrix<T_par, -1, -1>& par) :
       t0_(t0),
       y0_(y0),
       rate_(rate),
@@ -134,14 +134,11 @@ namespace refactor {
     const T_time              & t0()    const { return t0_; }
     const PKRec<T_init>       & y0()    const { return y0_; }
     const std::vector<T_rate> & rate()  const { return rate_; }
-    const std::vector<T_par>  & par ()  const { return par_; }
+    const Eigen::Matrix<T_par,-1,-1>  & par ()  const { return par_; }
     const PMXLinODE            & f()     const { return f_; }
 
     const int ncmt () const {
       return y0_.size();
-    }
-    const PMXLin<T_par> coef () const {
-      return Eigen::Map<const PMXLin<T_par> >(par_.data(), ncmt(), ncmt());
     }
 
     /*
@@ -159,11 +156,9 @@ namespace refactor {
       using stan::math::multiply;
       // using stan::math::scale_matrix_exp_multiply;
 
-      auto system = coef();
-
       T_time dt = t_next - t0_;
 
-      const int nCmt = system.cols();
+      const int nCmt = par_.cols();
       Matrix<scalar_type, Dynamic, 1> y0t(nCmt);
       for (int i = 0; i < nCmt; ++i) y0t(i) = y0_(i);
 
@@ -171,15 +166,15 @@ namespace refactor {
                       [](T_rate r){return r != 0;})) {
         Matrix<scalar_type, Dynamic, 1> rate_vec(rate_.size()), x(nCmt), x2(nCmt);
         for (size_t i = 0; i < rate_.size(); i++) rate_vec(i) = rate_[i];
-        x = mdivide_left(system, rate_vec);
+        x = mdivide_left(par_, rate_vec);
         x2 = x + y0_.transpose();
-        Matrix<scalar_type, Dynamic, Dynamic> dt_system = multiply(dt, system);
+        Matrix<scalar_type, Dynamic, Dynamic> dt_system = multiply(dt, par_);
         Matrix<scalar_type, Dynamic, 1> pred = matrix_exp(dt_system) * x2;
         pred -= x;
         return pred.transpose();
       } else {
         // return scale_matrix_exp_multiply(value_of(dt), system, y0t);
-        Matrix<scalar_type, Dynamic, Dynamic> dt_system = multiply(dt, system);
+        Matrix<scalar_type, Dynamic, Dynamic> dt_system = multiply(dt, par_);
         Matrix<scalar_type, Dynamic, 1> pred = matrix_exp(dt_system) * y0t;
         return pred.transpose();
       }
@@ -210,10 +205,9 @@ namespace refactor {
       typedef typename promote_args<T_ii, T_par>::type T0;
       typedef typename promote_args<T_amt, T_r, T_ii, T_par>::type scalar; //NOLINT
 
-      Matrix<T_par, Dynamic, Dynamic> system = coef();
       int nCmt = ncmt();
       Matrix<T0, Dynamic, Dynamic> workMatrix;
-      Matrix<T0, Dynamic, Dynamic> ii_system = multiply(ii, system);
+      Matrix<T0, Dynamic, Dynamic> ii_system = multiply(ii, par_);
       Matrix<scalar, 1, Dynamic> pred(nCmt);
       pred.setZero();
       Matrix<scalar, Dynamic, 1> amounts(nCmt);
@@ -233,8 +227,8 @@ namespace refactor {
 
         amounts(cmt - 1) = rate;
         scalar t = delta;
-        amounts = mdivide_left(system, amounts);
-        Matrix<scalar, Dynamic, Dynamic> t_system = multiply(delta, system);
+        amounts = mdivide_left(par_, amounts);
+        Matrix<scalar, Dynamic, Dynamic> t_system = multiply(delta, par_);
         pred = matrix_exp(t_system) * amounts;
         pred -= amounts;
 
@@ -244,13 +238,13 @@ namespace refactor {
         Matrix<scalar, Dynamic, 1> pred_t = pred.transpose();
         pred_t = mdivide_left(workMatrix, pred_t);
         t = ii - t;
-        t_system = multiply(t, system);
+        t_system = multiply(t, par_);
         pred_t = matrix_exp(t_system) * pred_t;
         pred = pred_t.transpose();
 
       } else {  // constant infusion
         amounts(cmt - 1) -= rate;
-        pred = mdivide_left(system, amounts);
+        pred = mdivide_left(par_, amounts);
       }
       return pred;
     }

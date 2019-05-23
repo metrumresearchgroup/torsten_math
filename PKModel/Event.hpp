@@ -125,6 +125,7 @@ struct EventHistory {
     const std::vector<std::vector<T6> >& tlag_;
 
     // internally generated events
+    const size_t events_size;
     std::vector<T_time> gen_time;
     std::vector<T1> gen_amt;
     std::vector<T2> gen_rate;
@@ -172,6 +173,7 @@ struct EventHistory {
     theta_(theta),
     biovar_(biovar),
     tlag_(tlag),
+    events_size(time_.size()),
     index(time_.size(), {0, 0, 0, 0, 0, 0, 0})
   {
     for (size_t i = 0; i < time_.size(); ++i) {
@@ -181,6 +183,8 @@ struct EventHistory {
       if (biovar.size() > 1) index[i][5] = i;
       if (tlag.size() > 1)   index[i][6] = i;
     }
+    Sort();
+    AddlDoseEvents();
   }
 
   /*
@@ -212,6 +216,7 @@ struct EventHistory {
     theta_(theta),
     biovar_(biovar),
     tlag_(tlag),
+    events_size(isize),
     index(isize, {0, 0, 0, 0, ibegin_theta, ibegin_biovar, ibegin_tlag})
     {
       const int iend = ibegin + isize;
@@ -229,10 +234,12 @@ struct EventHistory {
       for (size_t i = ibegin; i < iend; ++i) {
         index[i - ibegin][1] = i;
         index[i - ibegin][2] = evid_[i];
-        if (isize_theta > 1)  index[i-ibegin][4] = ibegin_theta + i;
-        if (isize_biovar > 1) index[i-ibegin][5] = ibegin_biovar + i;
-        if (isize_tlag > 1)   index[i-ibegin][6] = ibegin_tlag + i;
+        if (isize_theta > 1)  index[i-ibegin][4] = ibegin_theta + i-ibegin;
+        if (isize_biovar > 1) index[i-ibegin][5] = ibegin_biovar + i-ibegin;
+        if (isize_tlag > 1)   index[i-ibegin][6] = ibegin_tlag + i-ibegin;
       }
+      Sort();
+      AddlDoseEvents();
     }
 
   /*
