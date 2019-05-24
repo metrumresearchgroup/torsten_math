@@ -92,7 +92,7 @@ namespace torsten {
       param_his.CompleteParameterHistory(event_his);
 
       event_his.AddLagTimes(param_his, ncmt);
-      RateHistory<T_time, T2> rate_history(event_his, ncmt);
+      RateHistory<T2> rate_history(event_his, ncmt);
       param_his.CompleteParameterHistory(event_his);
 
       int iRate = 0;

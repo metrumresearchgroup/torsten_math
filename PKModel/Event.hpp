@@ -120,9 +120,10 @@ struct EventHistory {
     const std::vector<int>& cmt_;
     const std::vector<int>& addl_;
     const std::vector<int>& ss_;
-    const std::vector<T4_container>& theta_;
-    const std::vector<std::vector<T5> >& biovar_;
-    const std::vector<std::vector<T6> >& tlag_;
+    ModelParameterHistory<T_time, T4_container, T5, T6> param_his;
+    // const std::vector<T4_container>& theta_;
+    // const std::vector<std::vector<T5> >& biovar_;
+    // const std::vector<std::vector<T6> >& tlag_;
 
     // internally generated events
     const size_t events_size;
@@ -151,49 +152,13 @@ struct EventHistory {
     inline bool isnew(int i) const { return isnew(index[i]); }
     int evid (int i) const { return index[i][2] ; }
 
-
-  // EventHistory() : Events() {}
-
-  EventHistory(const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
-               const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
-               const std::vector<int>& p_evid, const std::vector<int>& p_cmt,
-               const std::vector<int>& p_addl, const std::vector<int>& p_ss,
-               const std::vector<T4_container>& theta,
-               const std::vector<std::vector<T5> >& biovar,
-               const std::vector<std::vector<T6> >& tlag)
-    :
-    time_(p_time),
-    amt_(p_amt),
-    rate_(p_rate),
-    ii_(p_ii),
-    evid_(p_evid),
-    cmt_(p_cmt),
-    addl_(p_addl),
-    ss_(p_ss),
-    theta_(theta),
-    biovar_(biovar),
-    tlag_(tlag),
-    events_size(time_.size()),
-    index(time_.size(), {0, 0, 0, 0, 0, 0, 0})
-  {
-    for (size_t i = 0; i < time_.size(); ++i) {
-      index[i][1] = i;
-      index[i][2] = evid_[i];
-      if (theta.size() > 1)  index[i][4] = i;
-      if (biovar.size() > 1) index[i][5] = i;
-      if (tlag.size() > 1)   index[i][6] = i;
-    }
-    Sort();
-    AddlDoseEvents();
-  }
-
-  /*
-   * for a population with data in ragged array form, we
-   * form the events history using the population data and
-   * the location of the individual in the ragged arrays.
-   * In this constructor we assume @c p_ii.size() > 1 and
-   * @c p_ss.size() > 1.
-   */
+    /*
+     * for a population with data in ragged array form, we
+     * form the events history using the population data and
+     * the location of the individual in the ragged arrays.
+     * In this constructor we assume @c p_ii.size() > 1 and
+     * @c p_ss.size() > 1.
+     */
   EventHistory(int ibegin, int isize,
                const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
                const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
@@ -213,9 +178,10 @@ struct EventHistory {
     cmt_(p_cmt),
     addl_(p_addl),
     ss_(p_ss),
-    theta_(theta),
-    biovar_(biovar),
-    tlag_(tlag),
+    param_his(ibegin, isize, p_time,
+              ibegin_theta, isize_theta, theta,
+              ibegin_biovar, isize_biovar, biovar,
+              ibegin_tlag, isize_tlag, tlag),
     events_size(isize),
     index(isize, {0, 0, 0, 0, ibegin_theta, ibegin_biovar, ibegin_tlag})
     {
@@ -241,6 +207,19 @@ struct EventHistory {
       Sort();
       AddlDoseEvents();
     }
+
+  EventHistory(const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
+               const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
+               const std::vector<int>& p_evid, const std::vector<int>& p_cmt,
+               const std::vector<int>& p_addl, const std::vector<int>& p_ss,
+               const std::vector<T4_container>& theta,
+               const std::vector<std::vector<T5> >& biovar,
+               const std::vector<std::vector<T6> >& tlag)
+    : EventHistory(0, p_time.size(), p_time, p_amt, p_rate, p_ii, p_evid, p_cmt, p_addl, p_ss,
+                   0, theta.size(), theta,
+                   0, biovar.size(), biovar,
+                   0, tlag.size(), tlag)
+    {}
 
   /*
    * Check if the events are in chronological order
@@ -362,6 +341,15 @@ struct EventHistory {
   int ss      (int i) const { return keep(index[i]) ? ss_[index[i][1]] : gen_ss[index[i][1]] ; }
   size_t size()       const { return index.size(); }
 
+
+    std::vector<int> unique_times() {
+      std::vector<int> t(index.size());
+      std::iota(t.begin(), t.end(), 0);
+      auto last = std::unique(t.begin(), t.end(),
+                               [this](const int& i, const int& j) {return time(i) == time(j);});
+      t.erase(last, t.end());
+      return t;
+    }
 
   /**
    * Implement absorption lag times by modifying the times of the dosing events.

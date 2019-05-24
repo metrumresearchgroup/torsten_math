@@ -13,97 +13,75 @@ namespace torsten {
  * The RateHistory class defines objects that contain a vector of rates,
  * along with a series of functions that operate on them.
  */
-template <typename T_time, typename T_rate>
+template <typename T_rate>
 struct RateHistory {
 
-  template<typename T1, typename T2>
+  template<typename T2>
   struct Rate {
-    T1 time;
-    std::vector<T2> rate;
-    Rate() {}
-    Rate(T1 p_time, std::vector<T2>& p_rate) : time(p_time), rate(p_rate) {}
+    double t;
+    std::vector<T2> r;
+
+    Rate(int ncmt) : t(0), r(ncmt, 0.0)
+    {}
   };
 
-  std::vector<Rate<T_time, T_rate> > Rates;
+  std::vector<Rate<T_rate> > Rates;
 
   /*
    * generate rates using event history
    */
   template<typename T0, typename T1, typename T2, typename T3, typename T4_container, typename T5, typename T6>
-  RateHistory(torsten::EventHistory<T0, T1, T2, T3, T4_container, T5, T6>& events, int nCmt) {
+  RateHistory(EventHistory<T0, T1, T2, T3, T4_container, T5, T6>& events, int nCmt) {
+    using T_time = typename EventHistory<T0, T1, T2, T3, T4_container, T5, T6>::T_time;
     using std::vector;
+    using stan::math::value_of;
 
+    const int n = events.size();
+    for (size_t i = 0; i < n; ++i) {
+      if ((events.is_dosing(i)) && (events.rate(i) > 0 && events.amt(i) > 0)) {
+        T_time endTime = events.time(i) + events.amt(i)/events.rate(i);
+        Event<T_time, T1, T2, T3> newEvent(endTime, 0, 0, 0, 2, events.cmt(i), 0, 0, false, true);
+        events.InsertEvent(newEvent);
+      }
+    }
     if (!events.Check()) events.Sort();
 
-    vector<T_rate> rate_init(nCmt, 0);
-    Rate<T_time, T_rate> newRate(0, rate_init);
-    for (size_t j = 0; j < events.size(); j++)
-      if (j == 0 || events.time(j) != events.time(j - 1)) {
-        newRate.time = events.time(j);
-        Rates.push_back(newRate);
-      }
-
+    Rate<T_rate> newRate(nCmt);
+    // unique_times is sorted
+    std::vector<int> unique_times(events.unique_times());
+    for (auto i : unique_times) {
+      newRate.t = value_of(events.time(i));
+      Rates.push_back(newRate);
+    }
     sort();
 
-    // Create time vector for rates
-    vector<T_time> RateTimes(Rates.size(), 0);
-    for (size_t j = 0; j < Rates.size(); j++) RateTimes[j] = Rates[j].time;
-
-    // Create time vector for events
-    vector<T_time> EventTimes(events.size(), 0);
-    for (size_t j = 0; j < events.size(); j++) EventTimes[j] = events.time(j);
-
-    size_t i = 0, k, l;
-    T_time endTime;
-    torsten::Event<T_time, T1, T2, T3> newEvent;
-    while (i < events.size()) {
+    for (size_t i = 0; i < events.size(); ++i) {
       if ((events.is_dosing(i)) && (events.rate(i) > 0 && events.amt(i) > 0)) {
-          endTime = events.time(i) + events.amt(i)/events.rate(i);
-          newEvent = newEvent(endTime, 0, 0, 0, 2, events.cmt(i), 0, 0, false, true);
-          events.InsertEvent(newEvent);
-          if (!events.Check()) events.Sort();
-          EventTimes.push_back(endTime);
-          std::sort(EventTimes.begin(), EventTimes.end());
-
-          // Only create a new Rate if endTime does not correspond to a time
-          // that is already in RateHistory. - CHECK
-          if (!find_time(RateTimes, endTime)) {
-            newRate.time = endTime;
-            Rates.push_back(newRate);
-            // InsertRate(newRate);
-            if (!std::is_sorted(Rates.begin(), Rates.end(), by_time())) sort();
-            RateTimes.push_back(endTime);
-            std::sort(RateTimes.begin(), RateTimes.end());
+        double t0 = value_of(events.time(i));
+        double t1 = t0 + value_of(events.amt(i)/events.rate(i));
+        for (auto&& r : Rates) {
+          if (r.t > t0 && r.t <= t1) {
+            r.r[events.cmt(i) - 1] += events.rate(i);
           }
-
-          // Find indexes at which time of event and endtime occur.
-          l = SearchReal(RateTimes, events.size(), events.time(i));
-          k = SearchReal(RateTimes, events.size(), endTime);
-
-          // Compute Rates for each element between the two times
-          for (size_t iRate = l ; iRate < k; iRate++)
-            Rates[iRate].rate[events.cmt(i) - 1] += events.rate(i);
         }
-        i++;
+      }
     }
-
-    // Sort events and rates
-    if (!std::is_sorted(Rates.begin(), Rates.end(), by_time())) sort();
-    if (!events.Check()) events.Sort();
   }
 
-  T_time time(int i) { return Rates[i].time; }
+  double time(int i) { return Rates[i].t; }
 
-  T_rate rate(int i, int j) { return Rates[i].rate[j]; }
+  const T_rate& rate(int i, int j) { return Rates[i].r[j]; }
 
   struct by_time {
-    bool operator()(Rate<T_time, T_rate> const &a, Rate<T_time, T_rate>
-      const &b) {
-      return a.time < b.time;
+    bool operator()(Rate<T_rate> const &a, Rate<T_rate> const &b) {
+      return a.t < b.t;
     }
   };
 
-  void sort() { std::sort(Rates.begin(), Rates.end(), by_time()); }
+  void sort() {
+    if (!std::is_sorted(Rates.begin(), Rates.end(), by_time()))
+      std::sort(Rates.begin(), Rates.end(), by_time());
+  }
 };
 
 }
