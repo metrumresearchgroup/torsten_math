@@ -113,10 +113,11 @@ struct ModelParameters {
 template<typename T_time, typename T4_container, typename T5, typename T6>
 struct ModelParameterHistory {
   using T4 = typename stan::math::value_type<T4_container>::type;
+  using Param = std::pair<double, std::array<int, 3> >;
 
   static const bool has_matrix_param;
 
-  std::vector<std::pair<double, std::array<int, 3> > > time_;
+  std::vector<Param> index;
   const std::vector<T4_container>& theta_;
   const std::vector<std::vector<T5> >& biovar_;
   const std::vector<std::vector<T6> >& tlag_;
@@ -126,16 +127,16 @@ struct ModelParameterHistory {
                         const std::vector<T4_container>& theta,
                         const std::vector<std::vector<T5> >& biovar,
                         const std::vector<std::vector<T6> >& tlag) :
-    time_(time.size()),
+    index(time.size()),
     theta_(theta),
     biovar_(biovar),
     tlag_(tlag)
   {
-    for (int i = 0; i < time_.size(); ++i) {
+    for (int i = 0; i < index.size(); ++i) {
       int j = theta.size()  > 1 ? i : 0;
       int k = biovar.size() > 1 ? i : 0;
       int l = tlag.size()   > 1 ? i : 0;
-      time_[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time[i]), {j, k, l} );
+      index[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time[i]), {j, k, l} );
     }
     Sort();
   }
@@ -159,7 +160,7 @@ struct ModelParameterHistory {
                         const std::vector<std::vector<T5> >& biovar,
                         int ibegin_tlag, int isize_tlag,
                         const std::vector<std::vector<T6> >& tlag) :
-    time_(isize),
+    index(isize),
     theta_(theta),
     biovar_(biovar),
     tlag_(tlag)
@@ -168,17 +169,17 @@ struct ModelParameterHistory {
       int j = isize_theta   > 1 ? ibegin_theta  + i : ibegin_theta;
       int k = isize_biovar  > 1 ? ibegin_biovar + i : ibegin_biovar;
       int l = isize_tlag    > 1 ? ibegin_tlag   + i : ibegin_tlag;
-      time_[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time[ibegin + i]), {j, k, l });
+      index[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time[ibegin + i]), {j, k, l });
     }
     Sort();
   }
 
   const T4_container& model_param(int i) const {
-    return theta_[time_[i].second[0]];
+    return theta_[index[i].second[0]];
   }
 
   ModelParameters<T_time, T4, T5, T6> GetModelParameters(int i) const {
-    return ModelParameters<T_time, T4, T5, T6>(std::get<0>(time_[i]), theta_[std::get<1>(time_[i])[0]], biovar_[std::get<1>(time_[i])[1]], tlag_[std::get<1>(time_[i])[2]]);
+    return ModelParameters<T_time, T4, T5, T6>(std::get<0>(index[i]), theta_[std::get<1>(index[i])[0]], biovar_[std::get<1>(index[i])[1]], tlag_[std::get<1>(index[i])[2]]);
   }
 
   /**
@@ -188,35 +189,35 @@ struct ModelParameterHistory {
    * 
    * FIX ME - rename this GetValueTheta
    */
-  const T4& GetValue(int iEvent, int iParameter) const {
-    return theta_[std::get<1>(time_[iEvent])[0]][iParameter];
+  inline const T4& GetValue(int iEvent, int iParameter) const {
+    return theta_[std::get<1>(index[iEvent])[0]][iParameter];
   }
 
-  const T5& GetValueBio(int iEvent, int iParameter) const {
-    return biovar_[std::get<1>(time_[iEvent])[1]][iParameter];
+  inline const T5& GetValueBio(int iEvent, int iParameter) const {
+    return biovar_[std::get<1>(index[iEvent])[1]][iParameter];
   }
 
-  const T6& GetValueTlag(int iEvent, int iParameter) const {
-    return tlag_[std::get<1>(time_[iEvent])[2]][iParameter];
+  inline const T6& GetValueTlag(int iEvent, int iParameter) const {
+    return tlag_[std::get<1>(index[iEvent])[2]][iParameter];
   }
 
-  int get_size() const {
-    return time_.size();
+  inline int get_size() const {
+    return index.size();
   }
 
   void Sort() {
-    std::sort(time_.begin(), time_.end(),
-              [](const std::pair<double, std::array<int, 3> >& a, const std::pair<double, std::array<int, 3> >& b)
+    std::sort(index.begin(), index.end(),
+              [](const Param& a, const Param& b)
               { return std::get<0>(a) < std::get<0>(b); });
   }
 
   bool Check() {
   // check that elements are in chronological order.
-    int i = time_.size() - 1;
+    int i = index.size() - 1;
     bool ordered = true;
 
     while (i > 0 && ordered) {
-      ordered = (std::get<0>(time_[i]) >= std::get<0>(time_[i-1]));
+      ordered = (std::get<0>(index[i]) >= std::get<0>(index[i-1]));
       i--;
     }
     return ordered;
@@ -233,7 +234,22 @@ struct ModelParameterHistory {
    * at the subsequent event. If the new event occurs at a time posterior to
    * the time of the last event, than the new vector parameter equals the
    * parameter vector of the last event. This amounts to doing an LOCF
-   * (Last Observation Carried Forward).
+   * (Last Observation Carried Forward):
+   * Three cases:
+   * (a) The time of the new event is higher than the time of the last
+   *     parameter vector in parameters (k = len_parameters).
+   *     Create a parameter vector at the the time of the new event,
+   *     with the parameters of the last parameter vector.
+   *     (Last Observation Carried Forward)
+   * (b) The time of the new event matches the time of a parameter vector
+   *     in parameters. This parameter vector gets replicated.
+   * (c) (a) is not verified and no parameter vector occurs at the time
+   *     of the new event. A new parameter vector is created at the time
+   *     of the new event, and its parameters are equal to the parameters
+   *     of the subsequent parameter vector in parameters.
+   *
+   * Since both @c index and events @c index are sorted
+   * in time, we always move paramtter pointer to events
    *
    * Events and Parameters are sorted at the end of the procedure.
    *
@@ -245,81 +261,49 @@ struct ModelParameterHistory {
   void CompleteParameterHistory(torsten::EventHistory<T0, T_p1, T_p2, T_p3, T4_container, T5, T6>& events) {
     int nEvent = events.size();
     assert(nEvent > 0);
-    int len_Parameters = time_.size();  // numbers of events for which parameters are determined
+    int len_Parameters = index.size();  // numbers of events for which parameters are determined
     assert(len_Parameters > 0);
 
-    // if (!Check()) Sort();
-    Sort();
+    if (!Check()) Sort();
     if (!events.Check()) events.Sort();
-    time_.resize(nEvent);
+    index.resize(nEvent);
 
     int iEvent = 0;
     for (int i = 0; i < len_Parameters - 1; i++) {
       while (events.isnew(iEvent)) iEvent++;  // skip new events
-      assert(std::get<0>(time_[i]) == events.time(iEvent));  // compare time of "old' events to time of parameters.
+      assert(std::get<0>(index[i]) == events.time(iEvent));  // compare time of "old' events to time of parameters.
       iEvent++;
     }
 
     if (len_Parameters == 1)  {
       for (int i = 0; i < nEvent; i++) {
-        // FIX ME - inefficient data storage
-        time_[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(events.time(i)) , std::array<int,3>(std::get<1>(time_[0])));
+        index[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(events.time(i)) , std::array<int,3>(std::get<1>(index[0])));
         events.index[i][3] = 0;
       }
     } else {  // parameters are event dependent.
       std::vector<double> times(nEvent, 0);
-      for (int i = 0; i < nEvent; i++) times[i] = time_[i].first;
+      for (int i = 0; i < nEvent; i++) times[i] = index[i].first;
       iEvent = 0;
 
-      int k, j = 0;
-      std::pair<double, std::array<int, 3> > newParameter;
-      // ModelParameters<T_time, T4, T5, T6> newParameter;
-
-      for (int i = 0; i < nEvent; i++) {
-        while (events.isnew(iEvent)) {
-          /* Three cases:
-           * (a) The time of the new event is higher than the time of the last
-           *     parameter vector in parameters (k = len_parameters).
-           *     Create a parameter vector at the the time of the new event,
-           *     with the parameters of the last parameter vector.
-           *     (Last Observation Carried Forward)
-           * (b) The time of the new event matches the time of a parameter vector
-           *     in parameters. This parameter vector gets replicated.
-           * (c) (a) is not verified and no parameter vector occurs at the time
-           *     of the new event. A new parameter vector is created at the time
-           *     of the new event, and its parameters are equal to the parameters
-           *     of the subsequent parameter vector in parameters.
-           */
+      Param newParameter;
+      int j = 0;
+      std::vector<Param>::const_iterator lower = index.begin();
+      std::vector<Param>::const_iterator it_param_end = index.begin() + len_Parameters;
+      for (int iEvent = 0; iEvent < nEvent; ++iEvent) {
+        if (events.isnew(iEvent)) {
           // Find the index corresponding to the time of the new event in the
           // times vector.
-          // k = SearchReal(times, len_Parameters - 1, events.time(iEvent));
-
-          // if ((k == len_Parameters) ||
-          //     (stan::math::value_of(events.time(iEvent)) == std::get<0>(time_[k - 1])))
-          //   newParameter = time_[k-1];
-          // else
-          //   newParameter = time_[k];
-          auto lower = lower_bound(time_.begin(), time_.begin() + len_Parameters,
-                                   stan::math::value_of(events.time(iEvent)),
-                                [](const std::pair<double, std::array<int, 3> >& t1, const double& t2)
-                                {
-                                  return t1.first < t2;
-                                });
-          newParameter = lower == (time_.begin() + len_Parameters) ? time_[len_Parameters-1] : *lower;
-
-          // newParameter.time_ = stan::math::value_of(events.time(iEvent));
-          // MPV_[len_Parameters + j] = newParameter;
-          newParameter.first = stan::math::value_of(events.time(iEvent));
-          time_[len_Parameters + j] = newParameter;
+          const double t = stan::math::value_of(events.time(iEvent));
+          lower = std::lower_bound(lower, it_param_end, t,
+                                   [](const Param& t1, const double& t2) {return t1.first < t2;});
+          newParameter = lower == (it_param_end) ? index[len_Parameters-1] : *lower;
+          newParameter.first = t;
+          index[len_Parameters + j] = newParameter;
           events.index[iEvent][3] = 0;
-          if (iEvent < nEvent - 1) iEvent++;
           j++;
         }
-
-        if (iEvent < nEvent - 1) iEvent++;
       }
     }
-    // if (!Check()) Sort();
     Sort();
   }
 };
@@ -327,6 +311,6 @@ struct ModelParameterHistory {
 template<typename T_time, typename T4_container, typename T5, typename T6>
 const bool ModelParameterHistory<T_time, T4_container, T5, T6>::has_matrix_param = is_matrix<T4_container>::value;
 
-} 
+}
 
 #endif
