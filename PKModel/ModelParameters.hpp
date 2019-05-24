@@ -123,23 +123,15 @@ struct ModelParameterHistory {
   const std::vector<std::vector<T6> >& tlag_;
 
   template<typename T0>
-  ModelParameterHistory(const std::vector<T0>& time,
+   ModelParameterHistory(const std::vector<T0>& time,
                         const std::vector<T4_container>& theta,
                         const std::vector<std::vector<T5> >& biovar,
                         const std::vector<std::vector<T6> >& tlag) :
-    index(time.size()),
-    theta_(theta),
-    biovar_(biovar),
-    tlag_(tlag)
-  {
-    for (int i = 0; i < index.size(); ++i) {
-      int j = theta.size()  > 1 ? i : 0;
-      int k = biovar.size() > 1 ? i : 0;
-      int l = tlag.size()   > 1 ? i : 0;
-      index[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time[i]), {j, k, l} );
-    }
-    Sort();
-  }
+     ModelParameterHistory(0, time.size(), time,
+                           0, theta.size(), theta,
+                           0, biovar.size(), biovar,
+                           0, tlag.size(), tlag)
+  {}
 
   /*
    * For population data in form of ragged array, we need to

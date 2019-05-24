@@ -13,26 +13,22 @@ namespace torsten {
  * The RateHistory class defines objects that contain a vector of rates,
  * along with a series of functions that operate on them.
  */
-template <typename T_rate>
+template<typename T0, typename T1, typename T2, typename T3, typename T4_container, typename T5, typename T6>
 struct RateHistory {
+    using T_time = typename EventHistory<T0, T1, T2, T3, T4_container, T5, T6>::T_time;
+    using T_rate = T2;
 
-  template<typename T2>
-  struct Rate {
-    double t;
-    std::vector<T2> r;
+  using rate_t = std::pair<double, std::vector<T_rate> >;
 
-    Rate(int ncmt) : t(0), r(ncmt, 0.0)
-    {}
-  };
-
-  std::vector<Rate<T_rate> > Rates;
+  EventHistory<T0, T1, T2, T3, T4_container, T5, T6>& events;
+  std::vector<rate_t> Rates;
 
   /*
    * generate rates using event history
    */
-  template<typename T0, typename T1, typename T2, typename T3, typename T4_container, typename T5, typename T6>
-  RateHistory(EventHistory<T0, T1, T2, T3, T4_container, T5, T6>& events, int nCmt) {
-    using T_time = typename EventHistory<T0, T1, T2, T3, T4_container, T5, T6>::T_time;
+  RateHistory(EventHistory<T0, T1, T2, T3, T4_container, T5, T6>& events_in, int nCmt)
+    : events(events_in)
+  {
     using std::vector;
     using stan::math::value_of;
 
@@ -46,11 +42,11 @@ struct RateHistory {
     }
     if (!events.Check()) events.Sort();
 
-    Rate<T_rate> newRate(nCmt);
+    rate_t newRate = std::pair<double, std::vector<T_rate> >(0.0, std::vector<T_rate>(nCmt, 0.0));
     // unique_times is sorted
     std::vector<int> unique_times(events.unique_times());
     for (auto i : unique_times) {
-      newRate.t = value_of(events.time(i));
+      newRate.first = value_of(events.time(i));
       Rates.push_back(newRate);
     }
     sort();
@@ -60,21 +56,24 @@ struct RateHistory {
         double t0 = value_of(events.time(i));
         double t1 = t0 + value_of(events.amt(i)/events.rate(i));
         for (auto&& r : Rates) {
-          if (r.t > t0 && r.t <= t1) {
-            r.r[events.cmt(i) - 1] += events.rate(i);
+          if (time(r) > t0 && time(r) <= t1) {
+            r.second[events.cmt(i) - 1] += events.rate(i);
           }
         }
       }
     }
   }
 
-  double time(int i) { return Rates[i].t; }
+  double time(int i) { return Rates[i].first; }
 
-  const T_rate& rate(int i, int j) { return Rates[i].r[j]; }
+  double time(const std::pair<double, std::vector<T_rate>>& r) { return r.first; }
+
+  const T_rate& rate(int i, int j) { return Rates[i].second[j]; }
+  const T_rate& rate(const std::pair<double, std::vector<T_rate>>& r, int j) { return r.second[j]; }
 
   struct by_time {
-    bool operator()(Rate<T_rate> const &a, Rate<T_rate> const &b) {
-      return a.t < b.t;
+    bool operator()(rate_t const &a, rate_t const &b) {
+      return a.first < b.first;
     }
   };
 

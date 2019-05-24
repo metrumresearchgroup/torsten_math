@@ -26,10 +26,8 @@ namespace torsten {
     using T4 = typename stan::math::value_type<T4_container>::type;
 
     EventHistory<T0, T1, T2, T3, T4_container, T5, T6> event_his;
-    ModelParameterHistory<T_time, T4_container, T5, T6> param_his;
     std::vector<std::vector<T_rate> > rate_v;
     std::vector<T_amt> amt_v;
-    // std::vector<std::vector<T_par> > par_v;
 
     const int nKeep;
     const int ncmt;
@@ -82,18 +80,14 @@ namespace torsten {
                 ibegin_theta, isize_theta, rec.pMatrix_,
                 ibegin_biovar, isize_biovar, rec.biovar_,
                 ibegin_tlag, isize_tlag, rec.tlag_),
-      param_his(rec.begin_[id], rec.len_[id], rec.time_,
-                ibegin_theta, isize_theta, rec.pMatrix_,
-                ibegin_biovar, isize_biovar, rec.biovar_,
-                ibegin_tlag, isize_tlag, rec.tlag_),
       nKeep(event_his.events_size),
       ncmt(rec.ncmt)
     {
-      param_his.CompleteParameterHistory(event_his);
+      event_his.CompleteParameterHistory();
 
-      event_his.AddLagTimes(param_his, ncmt);
-      RateHistory<T2> rate_history(event_his, ncmt);
-      param_his.CompleteParameterHistory(event_his);
+      event_his.AddLagTimes();
+      RateHistory<T0, T1, T2, T3, T4_container, T5, T6> rate_history(event_his, ncmt);
+      event_his.CompleteParameterHistory();
 
       int iRate = 0;
       for (size_t i = 0; i < event_his.size(); i++) {
@@ -103,11 +97,11 @@ namespace torsten {
         if (rate_history.time(iRate) != event_his.time(i)) iRate++;
         std::vector<T_rate> rate_i(ncmt);
         for (int j = 0; j < ncmt; ++j) {
-          rate_i[j] = rate_history.rate(iRate, j) * param_his.GetValueBio(i, j);
+          rate_i[j] = rate_history.rate(iRate, j) * event_his.GetValueBio(i, j);
         }
         rate_v.push_back(rate_i);
 
-        amt_v.push_back(param_his.GetValueBio(i, event_his.cmt(i) - 1) * event_his.amt(i));
+        amt_v.push_back(event_his.GetValueBio(i, event_his.cmt(i) - 1) * event_his.amt(i));
       }
     }
 
@@ -124,7 +118,7 @@ namespace torsten {
     }
 
     const T4_container& pars(int i) const {
-      return param_his.model_param(i);
+      return event_his.model_param(i);
     }
 
     /*

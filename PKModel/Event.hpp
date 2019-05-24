@@ -16,6 +16,9 @@ namespace torsten {
 template<typename T_time, typename T_parameters_container, typename T_biovar,
   typename T_tlag> struct ModelParameterHistory;
 
+template<typename T_time, typename T_parameters, typename T_biovar, typename T_tlag>
+struct ModelParameters;
+
 /**
  * The Event class defines objects that contain the elements of an event,
  * following NONMEM conventions:
@@ -111,6 +114,7 @@ struct EventHistory {
   using T_time = typename torsten::return_t<T0, T1, T6, T2>::type;
   using T_rate = typename torsten::return_t<T2, T5>::type;
   using T_amt = typename torsten::return_t<T1, T5>::type;
+  using Param = std::pair<double, std::array<int, 3> >;
 
     const std::vector<T0>& time_;
     const std::vector<T1>& amt_;
@@ -120,10 +124,11 @@ struct EventHistory {
     const std::vector<int>& cmt_;
     const std::vector<int>& addl_;
     const std::vector<int>& ss_;
-    ModelParameterHistory<T_time, T4_container, T5, T6> param_his;
-    // const std::vector<T4_container>& theta_;
-    // const std::vector<std::vector<T5> >& biovar_;
-    // const std::vector<std::vector<T6> >& tlag_;
+
+    std::vector<Param> param_index;
+    const std::vector<T4_container>& theta_;
+    const std::vector<std::vector<T5> >& biovar_;
+    const std::vector<std::vector<T6> >& tlag_;
 
     // internally generated events
     const size_t events_size;
@@ -178,10 +183,10 @@ struct EventHistory {
     cmt_(p_cmt),
     addl_(p_addl),
     ss_(p_ss),
-    param_his(ibegin, isize, p_time,
-              ibegin_theta, isize_theta, theta,
-              ibegin_biovar, isize_biovar, biovar,
-              ibegin_tlag, isize_tlag, tlag),
+    param_index(isize),
+    theta_(theta),
+    biovar_(biovar),
+    tlag_(tlag),
     events_size(isize),
     index(isize, {0, 0, 0, 0, ibegin_theta, ibegin_biovar, ibegin_tlag})
     {
@@ -204,8 +209,16 @@ struct EventHistory {
         if (isize_biovar > 1) index[i-ibegin][5] = ibegin_biovar + i-ibegin;
         if (isize_tlag > 1)   index[i-ibegin][6] = ibegin_tlag + i-ibegin;
       }
-      Sort();
       AddlDoseEvents();
+      Sort();
+
+      for (int i = 0; i < isize; ++i) {
+        int j = isize_theta   > 1 ? ibegin_theta  + i : ibegin_theta;
+        int k = isize_biovar  > 1 ? ibegin_biovar + i : ibegin_biovar;
+        int l = isize_tlag    > 1 ? ibegin_tlag   + i : ibegin_tlag;
+        param_index[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time_[ibegin + i]), {j, k, l });
+      }
+      param_sort();
     }
 
   EventHistory(const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
@@ -255,16 +268,54 @@ struct EventHistory {
     // Events.push_back(p_Event);
   }
 
-  // void RemoveEvent(int i) {
-  //   assert(i >= 0);
-  //   Events.erase(Events.begin() + i);
-  // }
+  void CompleteParameterHistory() {
+    int nEvent = size();
+    assert(nEvent > 0);
+    int len_Parameters = param_index.size();  // numbers of events for which parameters are determined
+    assert(len_Parameters > 0);
 
-  // void CleanEvent() {
-  //   int nEvent = Events.size();
-  //   for (int i = 0; i < nEvent; i++)
-  //     if (Events[i].keep == false) RemoveEvent(i);
-  //  }
+    if (!param_check()) param_sort();
+    if (!Check()) Sort();
+    param_index.resize(nEvent);
+
+    int iEvent = 0;
+    for (int i = 0; i < len_Parameters - 1; i++) {
+      while (isnew(iEvent)) iEvent++;  // skip new events
+      assert(std::get<0>(param_index[i]) == time(iEvent));  // compare time of "old' events to time of parameters.
+      iEvent++;
+    }
+
+    if (len_Parameters == 1)  {
+      for (int i = 0; i < nEvent; i++) {
+        param_index[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time(i)) , std::array<int,3>(std::get<1>(param_index[0])));
+        index[i][3] = 0;
+      }
+    } else {  // parameters are event dependent.
+      std::vector<double> times(nEvent, 0);
+      for (int i = 0; i < nEvent; i++) times[i] = param_index[i].first;
+      iEvent = 0;
+
+      Param newParameter;
+      int j = 0;
+      std::vector<Param>::const_iterator lower = param_index.begin();
+      std::vector<Param>::const_iterator it_param_end = param_index.begin() + len_Parameters;
+      for (int iEvent = 0; iEvent < nEvent; ++iEvent) {
+        if (isnew(iEvent)) {
+          // Find the index corresponding to the time of the new event in the
+          // times vector.
+          const double t = stan::math::value_of(time(iEvent));
+          lower = std::lower_bound(lower, it_param_end, t,
+                                   [](const Param& t1, const double& t2) {return t1.first < t2;});
+          newParameter = lower == (it_param_end) ? param_index[len_Parameters-1] : *lower;
+          newParameter.first = t;
+          param_index[len_Parameters + j] = newParameter;
+          index[iEvent][3] = 0;
+          j++;
+        }
+      }
+    }
+    param_sort();
+  }
 
   bool is_reset(int i) const {
     return evid(i) == 3 || evid(i) == 4;
@@ -331,6 +382,25 @@ struct EventHistory {
                                    });
     }
 
+  void param_sort() {
+    std::sort(param_index.begin(), param_index.end(),
+              [](const Param& a, const Param& b)
+              { return a.first < b.first; });
+  }
+
+  bool param_check() {
+  // check that elements are in chronological order.
+    int i = param_index.size() - 1;
+    bool ordered = true;
+
+    while (i > 0 && ordered) {
+      ordered = (param_index[i].first >= param_index[i-1].first);
+      i--;
+    }
+    return ordered;
+  }
+
+
   // Access functions
   T_time time (int i) const { return keep(index[i]) ? time_[index[i][1]] : gen_time[index[i][1]] ; }
   T1 amt   (int i)    const { return keep(index[i]) ? amt_[index[i][1]] : gen_amt[index[i][1]] ; }
@@ -363,23 +433,18 @@ struct EventHistory {
    */
   void AddLagTimes(const ModelParameterHistory<T_time, T4_container, T5, T6>& Parameters, int nCmt) {
     int nEvent = size(), pSize = Parameters.get_size();
-    assert((pSize = nEvent) || (pSize == 1));
+    assert(pSize = nEvent);
 
-    int iEvent = nEvent - 1, ipar;
+    // reverse loop so we don't process same lagged events twice
+    int iEvent = nEvent - 1;
     Event<T_time, T1, T2, T3> newEvent;
     while (iEvent >= 0) {
-      // cmt = ;
-
       if (is_dosing(iEvent)) {
-        ipar = std::min(iEvent, pSize - 1);  // ipar is the index of the ith
-                                             // event or 0, if the parameters
-                                             // are constant.
-        if (Parameters.GetValueTlag(ipar, cmt(iEvent) - 1) != 0) {
+        if (Parameters.GetValueTlag(iEvent, cmt(iEvent) - 1) != 0) {
           newEvent = GetEvent(iEvent);
-          newEvent.time += Parameters.GetValueTlag(ipar, cmt(iEvent) - 1);
+          newEvent.time += Parameters.GetValueTlag(iEvent, cmt(iEvent) - 1);
           newEvent.keep = false;
           newEvent.isnew = true;
-          // newEvent.evid = 2  // CHECK
           InsertEvent(newEvent);
 
           // Events[iEvent].evid = 2;  // Check
@@ -392,6 +457,53 @@ struct EventHistory {
     }
     Sort();
   }
+
+  void AddLagTimes() {
+    // reverse loop so we don't process same lagged events twice
+    int nEvent = size();
+    int iEvent = nEvent - 1;
+    Event<T_time, T1, T2, T3> newEvent;
+    while (iEvent >= 0) {
+      if (is_dosing(iEvent)) {
+        if (GetValueTlag(iEvent, cmt(iEvent) - 1) != 0) {
+          newEvent = GetEvent(iEvent);
+          newEvent.time += GetValueTlag(iEvent, cmt(iEvent) - 1);
+          newEvent.keep = false;
+          newEvent.isnew = true;
+          InsertEvent(newEvent);
+
+          // Events[iEvent].evid = 2;  // Check
+          index[iEvent][2] = 2;
+          // The above statement changes events so that CleanEvents does
+          // not return an object identical to the original. - CHECK
+        }
+      }
+      iEvent--;
+    }
+    Sort();
+  }
+
+  const T4_container& model_param(int i) const {
+    return theta_[param_index[i].second[0]];
+  }
+
+  inline const T4& GetValue(int iEvent, int iParameter) const {
+    return theta_[std::get<1>(param_index[iEvent])[0]][iParameter];
+  }
+
+  inline const T5& GetValueBio(int iEvent, int iParameter) const {
+    return biovar_[std::get<1>(param_index[iEvent])[1]][iParameter];
+  }
+
+  inline const T6& GetValueTlag(int iEvent, int iParameter) const {
+    return tlag_[std::get<1>(param_index[iEvent])[2]][iParameter];
+  }
+
+
+  ModelParameters<T_time, T4, T5, T6> GetModelParameters(int i) const {
+    return ModelParameters<T_time, T4, T5, T6>(std::get<0>(param_index[i]), theta_[std::get<1>(param_index[i])[0]], biovar_[std::get<1>(param_index[i])[1]], tlag_[std::get<1>(param_index[i])[2]]);
+  }
+
 
   /*
    * Overloading the << Operator
