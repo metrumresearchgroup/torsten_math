@@ -115,6 +115,7 @@ struct EventHistory {
   using T_rate = typename torsten::return_t<T2, T5>::type;
   using T_amt = typename torsten::return_t<T1, T5>::type;
   using Param = std::pair<double, std::array<int, 3> >;
+  using rate_t = std::pair<double, std::vector<T2> >;
 
     const std::vector<T0>& time_;
     const std::vector<T1>& amt_;
@@ -151,11 +152,16 @@ struct EventHistory {
     // 6: tlag id
     std::vector<IDVec> index;
 
+    // rate at distinct time
+    std::vector<rate_t> rates;
+
     inline bool keep(const IDVec& id)  const { return id[0] == 0; }
     inline bool isnew(const IDVec& id) const { return id[3] == 1; }
+    inline int evid (const IDVec& id) const { return id[2] ; }
+
     inline bool keep(int i)  const { return keep(index[i]); }
     inline bool isnew(int i) const { return isnew(index[i]); }
-    int evid (int i) const { return index[i][2] ; }
+    inline int evid (int i) const { return evid(index[i]); }
 
     /*
      * for a population with data in ragged array form, we
@@ -202,12 +208,12 @@ struct EventHistory {
       check_greater_or_equal(caller, "cmt size", p_cmt.size()   , size_t(iend));
       check_greater_or_equal(caller, "addl size", p_addl.size() , size_t(iend));
       check_greater_or_equal(caller, "ss size", p_ss.size()     , size_t(iend));
-      for (size_t i = ibegin; i < iend; ++i) {
-        index[i - ibegin][1] = i;
-        index[i - ibegin][2] = evid_[i];
-        if (isize_theta > 1)  index[i-ibegin][4] = ibegin_theta + i-ibegin;
-        if (isize_biovar > 1) index[i-ibegin][5] = ibegin_biovar + i-ibegin;
-        if (isize_tlag > 1)   index[i-ibegin][6] = ibegin_tlag + i-ibegin;
+      for (size_t i = 0; i < isize; ++i) {
+        index[i][1] = ibegin + i;
+        index[i][2] = evid_[ibegin + i];
+        index[i][4] = isize_theta   > 1 ? ibegin_theta  + i : ibegin_theta;
+        index[i][5] = isize_biovar  > 1 ? ibegin_biovar + i : ibegin_biovar;
+        index[i][6] = isize_tlag    > 1 ? ibegin_tlag   + i : ibegin_tlag;
       }
       AddlDoseEvents();
       Sort();
@@ -249,11 +255,15 @@ struct EventHistory {
     return ordered;
   }
 
-  Event<T_time, T1, T2, T3> GetEvent(int i) {
-  Event<T_time, T1, T2, T3>
-    newEvent(time(i), amt(i), rate(i), ii(i), evid(i), cmt(i), addl(i), ss(i), keep(i), isnew(i));
-    return newEvent;
-  }
+    inline Event<T_time, T1, T2, T3> GetEvent(const IDVec& id) {
+      Event<T_time, T1, T2, T3>
+        newEvent(time(id), amt(id), rate(id), ii(id), evid(id), cmt(id), addl(id), ss(id), keep(id), isnew(id));
+      return newEvent;
+    }
+
+    inline Event<T_time, T1, T2, T3> GetEvent(int i) {
+      return GetEvent(index[i]);
+    }
 
   void InsertEvent(Event<T_time, T1, T2, T3> p_Event) {
     index.push_back({1, int(gen_time.size()), p_Event.evid, 1, 0, 0, 0});
@@ -349,7 +359,9 @@ struct EventHistory {
    * Events is sorted at the end of the procedure.
    */
   void AddlDoseEvents() {
-    for (size_t i = 0; i < size(); i++) {
+    // std::vector<IDVec>::const_iterator it;
+    // std::vector<IDVec>::const_iterator end = index.end();    
+    for (int i = 0; i < size(); i++) {
       if (is_dosing(i) && ((addl(i) > 0) && (ii(i) > 0))) {
         Event<T_time, T1, T2, T3> newEvent = GetEvent(i);
         newEvent.addl = 0;
@@ -401,14 +413,64 @@ struct EventHistory {
   }
 
 
+  void generate_rates(int nCmt) {
+    using std::vector;
+    using stan::math::value_of;
+
+    const int n = size();
+    for (size_t i = 0; i < n; ++i) {
+      if ((is_dosing(i)) && (rate(i) > 0 && amt(i) > 0)) {
+        T_time endTime = time(i) + amt(i)/rate(i);
+        Event<T_time, T1, T2, T3> newEvent(endTime, 0, 0, 0, 2, cmt(i), 0, 0, false, true);
+        InsertEvent(newEvent);
+      }
+    }
+    if (!Check()) Sort();
+
+    rate_t newRate{0.0, std::vector<T2>(nCmt, 0.0)};
+    // unique_times is sorted
+    std::vector<int> ut(unique_times());
+    for (auto i : ut) {
+      newRate.first = value_of(time(i));
+      rates.push_back(newRate);
+    }
+    // check sorted?
+    std::sort(rates.begin(), rates.end(), [](rate_t const &a, rate_t const &b) {
+        return a.first < b.first;
+      });
+
+    for (size_t i = 0; i < size(); ++i) {
+      if ((is_dosing(i)) && (rate(i) > 0 && amt(i) > 0)) {
+        double t0 = value_of(time(i));
+        double t1 = t0 + value_of(amt(i)/rate(i));
+        for (auto&& r : rates) {
+          if (r.first > t0 && r.first <= t1) {
+            r.second[cmt(i) - 1] += rate(i);
+          }
+        }
+      }
+    }
+  }
+
   // Access functions
-  T_time time (int i) const { return keep(index[i]) ? time_[index[i][1]] : gen_time[index[i][1]] ; }
-  T1 amt   (int i)    const { return keep(index[i]) ? amt_[index[i][1]] : gen_amt[index[i][1]] ; }
-  T2 rate (int i)     const { return keep(index[i]) ? rate_[index[i][1]] : gen_rate[index[i][1]] ; }
-  T3 ii     (int i)   const { return keep(index[i]) ? ii_[index[i][1]] : gen_ii[index[i][1]] ; }
-  int cmt     (int i) const { return keep(index[i]) ? cmt_[index[i][1]] : gen_cmt[index[i][1]] ; }
-  int addl    (int i) const { return keep(index[i]) ? addl_[index[i][1]] : gen_addl[index[i][1]] ; }
-  int ss      (int i) const { return keep(index[i]) ? ss_[index[i][1]] : gen_ss[index[i][1]] ; }
+  T_time time (const IDVec& id) const { return keep(id) ? time_[id[1]] : gen_time[id[1]] ; }
+  T1 amt      (const IDVec& id) const { return keep(id) ? amt_[id[1]] : gen_amt[id[1]] ; }
+  T2 rate     (const IDVec& id) const { return keep(id) ? rate_[id[1]] : gen_rate[id[1]] ; }
+  T3 ii       (const IDVec& id) const { return keep(id) ? ii_[id[1]] : gen_ii[id[1]] ; }
+  int cmt     (const IDVec& id) const { return keep(id) ? cmt_[id[1]] : gen_cmt[id[1]] ; }
+  int addl    (const IDVec& id) const { return keep(id) ? addl_[id[1]] : gen_addl[id[1]] ; }
+  int ss      (const IDVec& id) const { return keep(id) ? ss_[id[1]] : gen_ss[id[1]] ; }
+
+
+  T_time time (int i) const { return time(index[i]); }
+  T1 amt      (int i) const { return amt (index[i]); }
+  T2 rate     (int i) const { return rate(index[i]); }
+  T3 ii       (int i) const { return ii  (index[i]); }
+  int cmt     (int i) const { return cmt (index[i]); }
+  int addl    (int i) const { return addl(index[i]); }
+  int ss      (int i) const { return ss  (index[i]); }
+
+
   size_t size()       const { return index.size(); }
 
 

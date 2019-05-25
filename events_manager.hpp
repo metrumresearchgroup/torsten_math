@@ -84,9 +84,9 @@ namespace torsten {
       ncmt(rec.ncmt)
     {
       event_his.CompleteParameterHistory();
-
       event_his.AddLagTimes();
-      RateHistory<T0, T1, T2, T3, T4_container, T5, T6> rate_history(event_his, ncmt);
+      // RateHistory<T0, T1, T2, T3, T4_container, T5, T6> rate_history(event_his, ncmt);
+      event_his.generate_rates(ncmt);
       event_his.CompleteParameterHistory();
 
       int iRate = 0;
@@ -94,10 +94,10 @@ namespace torsten {
 
         // Use index iRate instead of i to find rate at matching time, given there
         // is one rate per time, not per event.
-        if (rate_history.time(iRate) != event_his.time(i)) iRate++;
+        if (event_his.rates[iRate].first != event_his.time(i)) iRate++;
         std::vector<T_rate> rate_i(ncmt);
         for (int j = 0; j < ncmt; ++j) {
-          rate_i[j] = rate_history.rate(iRate, j) * event_his.GetValueBio(i, j);
+          rate_i[j] = event_his.rates[iRate].second[j] * event_his.GetValueBio(i, j);
         }
         rate_v.push_back(rate_i);
 
