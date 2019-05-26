@@ -85,7 +85,6 @@ namespace torsten {
     {
       event_his.CompleteParameterHistory();
       event_his.AddLagTimes();
-      // RateHistory<T0, T1, T2, T3, T4_container, T5, T6> rate_history(event_his, ncmt);
       event_his.generate_rates(ncmt);
       event_his.CompleteParameterHistory();
 
@@ -117,7 +116,7 @@ namespace torsten {
       return amt_v;
     }
 
-    const T4_container& pars(int i) const {
+    inline const T4_container& pars(int i) const {
       return event_his.model_param(i);
     }
 

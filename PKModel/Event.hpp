@@ -137,7 +137,6 @@ struct EventHistory {
     std::vector<T1> gen_amt;
     std::vector<T2> gen_rate;
     std::vector<T3> gen_ii;
-    std::vector<int> gen_evid;
     std::vector<int> gen_cmt;
     std::vector<int> gen_addl;
     std::vector<int> gen_ss;
@@ -271,7 +270,6 @@ struct EventHistory {
     gen_amt.push_back(p_Event.amt);
     gen_rate.push_back(p_Event.rate);
     gen_ii.push_back(p_Event.ii);
-    gen_evid.push_back(p_Event.evid);
     gen_cmt.push_back(p_Event.cmt);
     gen_addl.push_back(p_Event.addl);
     gen_ss.push_back(p_Event.ss);
@@ -351,6 +349,21 @@ struct EventHistory {
     return is_dosing(i) && rate(i) < eps;
   }
 
+    /*
+     * use current event #i as template to @c push_back to
+     * another event.
+     */
+    void insert_event(int i) {
+      index.push_back({1, int(gen_time.size()), index[i][2], 1, index[i][4], index[i][5], index[i][6]});
+      gen_time. push_back(time (i));
+      gen_amt.  push_back(amt  (i));
+      gen_rate. push_back(rate (i));
+      gen_ii.   push_back(ii   (i));
+      gen_cmt.  push_back(cmt  (i));
+      gen_addl. push_back(addl (i));
+      gen_ss.   push_back(ss   (i));
+    }
+
   /**
    * Add events to EventHistory object, corresponding to additional dosing,
    * administered at specified inter-dose interval. This information is stored
@@ -359,31 +372,18 @@ struct EventHistory {
    * Events is sorted at the end of the procedure.
    */
   void AddlDoseEvents() {
-    // std::vector<IDVec>::const_iterator it;
-    // std::vector<IDVec>::const_iterator end = index.end();    
     for (int i = 0; i < size(); i++) {
       if (is_dosing(i) && ((addl(i) > 0) && (ii(i) > 0))) {
-        Event<T_time, T1, T2, T3> newEvent = GetEvent(i);
-        newEvent.addl = 0;
-        newEvent.ii = 0;
-        newEvent.ss = 0;
-        newEvent.keep = false;
-        newEvent.isnew = true;
-
         for (int j = 1; j <= addl(i); j++) {
-          newEvent.time = time(i) + j * ii(i);
-          InsertEvent(newEvent);
+          insert_event(i);
+          gen_time.back() += j * ii(i);
+          gen_ii.back() = 0;
+          gen_addl.back() = 0;
+          gen_ss.back() = 0;
         }
       }
     }
   }
-
-    // bool by_time(const IDVec &a, const IDVec &b) const {
-    //   using stan::math::value_of;
-    //   double ta = keep(a) ? value_of(time_[a[1]]) : value_of(gen_time[a[1]]);
-    //   double tb = keep(b) ? value_of(time_[b[1]]) : value_of(gen_time[b[1]]);
-    //   return ta < tb;
-    // }
 
     void Sort() { std::stable_sort(index.begin(), index.end(),
                                    [this](const IDVec &a, const IDVec &b) {
@@ -412,7 +412,6 @@ struct EventHistory {
     return ordered;
   }
 
-
   void generate_rates(int nCmt) {
     using std::vector;
     using stan::math::value_of;
@@ -420,9 +419,14 @@ struct EventHistory {
     const int n = size();
     for (size_t i = 0; i < n; ++i) {
       if ((is_dosing(i)) && (rate(i) > 0 && amt(i) > 0)) {
-        T_time endTime = time(i) + amt(i)/rate(i);
-        Event<T_time, T1, T2, T3> newEvent(endTime, 0, 0, 0, 2, cmt(i), 0, 0, false, true);
-        InsertEvent(newEvent);
+        insert_event(i);
+        index.back()[2] = 2;    // reset evid
+        gen_time. back() += amt(i)/rate(i);
+        gen_amt.  back() = 0;
+        gen_rate. back() = 0;
+        gen_ii.   back() = 0;
+        gen_addl. back() = 0;
+        gen_ss.   back() = 0;
       }
     }
     if (!Check()) Sort();
@@ -454,18 +458,18 @@ struct EventHistory {
 
   // Access functions
   T_time time (const IDVec& id) const { return keep(id) ? time_[id[1]] : gen_time[id[1]] ; }
-  T1 amt      (const IDVec& id) const { return keep(id) ? amt_[id[1]] : gen_amt[id[1]] ; }
-  T2 rate     (const IDVec& id) const { return keep(id) ? rate_[id[1]] : gen_rate[id[1]] ; }
-  T3 ii       (const IDVec& id) const { return keep(id) ? ii_[id[1]] : gen_ii[id[1]] ; }
+  const T1& amt      (const IDVec& id) const { return keep(id) ? amt_[id[1]] : gen_amt[id[1]] ; }
+  const T2& rate     (const IDVec& id) const { return keep(id) ? rate_[id[1]] : gen_rate[id[1]] ; }
+  const T3& ii       (const IDVec& id) const { return keep(id) ? ii_[id[1]] : gen_ii[id[1]] ; }
   int cmt     (const IDVec& id) const { return keep(id) ? cmt_[id[1]] : gen_cmt[id[1]] ; }
   int addl    (const IDVec& id) const { return keep(id) ? addl_[id[1]] : gen_addl[id[1]] ; }
   int ss      (const IDVec& id) const { return keep(id) ? ss_[id[1]] : gen_ss[id[1]] ; }
 
 
   T_time time (int i) const { return time(index[i]); }
-  T1 amt      (int i) const { return amt (index[i]); }
-  T2 rate     (int i) const { return rate(index[i]); }
-  T3 ii       (int i) const { return ii  (index[i]); }
+  const T1& amt      (int i) const { return amt (index[i]); }
+  const T2& rate     (int i) const { return rate(index[i]); }
+  const T3& ii       (int i) const { return ii  (index[i]); }
   int cmt     (int i) const { return cmt (index[i]); }
   int addl    (int i) const { return addl(index[i]); }
   int ss      (int i) const { return ss  (index[i]); }
@@ -528,11 +532,8 @@ struct EventHistory {
     while (iEvent >= 0) {
       if (is_dosing(iEvent)) {
         if (GetValueTlag(iEvent, cmt(iEvent) - 1) != 0) {
-          newEvent = GetEvent(iEvent);
-          newEvent.time += GetValueTlag(iEvent, cmt(iEvent) - 1);
-          newEvent.keep = false;
-          newEvent.isnew = true;
-          InsertEvent(newEvent);
+          insert_event(iEvent);
+          gen_time.back() += GetValueTlag(iEvent, cmt(iEvent) - 1);
 
           // Events[iEvent].evid = 2;  // Check
           index[iEvent][2] = 2;
