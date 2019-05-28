@@ -10,7 +10,7 @@
 #include <stan/math/torsten/PKModel/Pred/Pred1_general.hpp>
 #include <stan/math/torsten/PKModel/Pred/PredSS_general.hpp>
 #include <stan/math/torsten/pmx_ode_model.hpp>
-#include <stan/math/torsten/Pred2.hpp>
+#include <stan/math/torsten/event_solver.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <vector>
 
@@ -119,10 +119,10 @@ pmx_solve_bdf(const F& f,
 
 #ifdef TORSTEN_USE_STAN_ODE
   PMXOdeIntegrator<StanBdf> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PMXOdeIntegrator<StanBdf>&> pr;
+  EventSolver<model_type, PMXOdeIntegrator<StanBdf>&> pr;
 #else
   PMXOdeIntegrator<PkBdf> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PMXOdeIntegrator<PkBdf>&> pr;
+  EventSolver<model_type, PMXOdeIntegrator<PkBdf>&> pr;
 #endif
 
   pr.pred(0, events_rec, pred, integrator, f);
@@ -249,10 +249,10 @@ pmx_solve_group_bdf(const F& f,
 
 #ifdef TORSTEN_USE_STAN_ODE
   PMXOdeIntegrator<StanBdf> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PMXOdeIntegrator<StanBdf>&> pr;
+  EventSolver<model_type, PMXOdeIntegrator<StanBdf>&> pr;
 #else
   PMXOdeIntegrator<PkBdf> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PMXOdeIntegrator<PkBdf>&> pr;
+  EventSolver<model_type, PMXOdeIntegrator<PkBdf>&> pr;
 #endif
 
   Eigen::Matrix<typename EM::T_scalar, -1, -1> pred(nCmt, EM::population_solution_size(events_rec));

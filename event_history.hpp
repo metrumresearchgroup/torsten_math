@@ -63,6 +63,7 @@ namespace torsten {
 
     // rate at distinct time
     std::vector<rate_t> rates;
+    std::vector<int> rate_index;
 
     inline bool keep(const IDVec& id)  const { return id[0] == 0; }
     inline bool isnew(const IDVec& id) const { return id[3] == 1; }
@@ -73,13 +74,53 @@ namespace torsten {
     inline int evid (int i) const { return evid(index[i]); }
 
     /*
+     * Nested structure that will be returned to and
+     * consumed by solvers. The time in this nested
+     * structure may be different from @c T0.
+     */
+  template<typename T>
+  class Event {
+    const T& time_;
+    const T1& amt_;
+    const T2& rate_;
+    const std::vector<T2> & rates_;
+    const T3& ii_;
+    const int evid_;
+    const int cmt_;
+    const int addl_;
+    const int ss_;
+    const T4_container& theta_;
+    const std::vector<T5>& biovar_;
+    const std::vector<T6>& tlag_;
+
+  public:
+    inline const T& time() { return time_; }
+    inline const T1& amt() { return amt_; }
+    inline const T2& rate() { return rate_; }
+    inline const std::vector<T2> & rates() { return rates_; }
+    inline const T3& ii() { return ii_; }
+    inline const int evid() { return evid_; }
+    inline const int cmt() { return cmt_; }
+    inline const int addl() { return addl_; }
+    inline const int ss() { return ss_; }
+    inline const T4_container& theta() { return theta_; }
+    inline const std::vector<T5>& biovar() { return biovar_; }
+    inline const std::vector<T6>& tlag() { return tlag_; }
+
+    inline bool is_dosing() const {return evid_ == 1 || evid_ == 4;}
+    inline bool is_ss_dosing() const {
+      return (is_dosing() && (ss_ == 1 || ss_ == 2)) || ss_ == 3;
+    }
+  };
+
+    /*
      * for a population with data in ragged array form, we
      * form the events history using the population data and
      * the location of the individual in the ragged arrays.
      * In this constructor we assume @c p_ii.size() > 1 and
      * @c p_ss.size() > 1.
      */
-    EventHistory(int ibegin, int isize,
+    EventHistory(int ncmt, int ibegin, int isize,
                  const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
                  const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
                  const std::vector<int>& p_evid, const std::vector<int>& p_cmt,
@@ -134,45 +175,35 @@ namespace torsten {
         param_index[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time_[ibegin + i]), {j, k, l });
       }
       param_sort();
+
+      attach_event_parameters();
+      AddLagTimes();
+      generate_rates(ncmt);
+      attach_event_parameters();
     }
 
-    EventHistory(const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
+    EventHistory(int ncmt,
+                 const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
                  const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
                  const std::vector<int>& p_evid, const std::vector<int>& p_cmt,
                  const std::vector<int>& p_addl, const std::vector<int>& p_ss,
                  const std::vector<T4_container>& theta,
                  const std::vector<std::vector<T5> >& biovar,
                  const std::vector<std::vector<T6> >& tlag)
-      : EventHistory(0, p_time.size(), p_time, p_amt, p_rate, p_ii, p_evid, p_cmt, p_addl, p_ss,
-                     0, theta.size(), theta,
-                     0, biovar.size(), biovar,
-                     0, tlag.size(), tlag)
+    : EventHistory(ncmt,
+                   0, p_time.size(), p_time, p_amt, p_rate, p_ii, p_evid, p_cmt, p_addl, p_ss,
+                   0, theta.size(), theta,
+                   0, biovar.size(), biovar,
+                   0, tlag.size(), tlag)
     {}
 
-    /*
-     * Check if the events are in chronological order
-     */
-    bool Check() {
-      int i = size() - 1;
-      bool ordered = true;
-
-      while ((i > 0) && (ordered)) {
-        // note: evid = 3 and evid = 4 correspond to reset events
-        ordered = (((time(i) >= time(i-1)) || (evid(i) == 3)) || (evid(i) == 4));
-        i--;
-      }
-      return ordered;
-    }
-
-    void CompleteParameterHistory() {
+    void attach_event_parameters() {
       int nEvent = size();
       assert(nEvent > 0);
       int len_Parameters = param_index.size();  // numbers of events for which parameters are determined
       assert(len_Parameters > 0);
 
       if (!param_check()) param_sort();
-      // if (!Check()) Sort();
-      sort_state_time();
       param_index.resize(nEvent);
 
       int iEvent = 0;
@@ -328,7 +359,6 @@ namespace torsten {
           gen_ss.   back() = 0;
         }
       }
-      // if (!Check()) Sort();
       sort_state_time();
 
       rate_t newRate{0.0, std::vector<T2>(nCmt, 0.0)};
@@ -354,6 +384,17 @@ namespace torsten {
           }
         }
       }
+
+      /*
+       * rate index points to the rates for each state time,
+       * since there is one rates vector per time, not per event.
+       */
+      rate_index.resize(index.size());
+      int iRate = 0;
+      for (size_t i = 0; i < index.size(); ++i) {
+        if (rates[iRate].first != time(i)) iRate++;
+        rate_index[i] = iRate;
+      }
     }
 
     // Access functions
@@ -376,7 +417,6 @@ namespace torsten {
 
 
     size_t size()       const { return index.size(); }
-
 
     std::vector<int> unique_times() {
       std::vector<int> t(index.size());

@@ -4,7 +4,7 @@
 #include <Eigen/Dense>
 #include <boost/math/tools/promotion.hpp>
 #include <stan/math/prim/scal/err/check_positive_finite.hpp>
-#include <stan/math/torsten/Pred2.hpp>
+#include <stan/math/torsten/event_solver.hpp>
 #include <stan/math/torsten/events_manager.hpp>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_oneCpt.hpp>
@@ -119,7 +119,7 @@ pmx_solve_onecpt(const std::vector<T0>& time,
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(EM::solution_size(events_rec), EM::nCmt(events_rec));
 
   using model_type = refactor::PMXOneCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
-  PredWrapper<model_type> pr;
+  EventSolver<model_type> pr;
   pr.pred(0, events_rec, pred);
   return pred;
 #endif

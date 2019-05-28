@@ -6,7 +6,7 @@
 #include <stan/math/torsten/events_manager.hpp>
 #include <stan/math/torsten/pmx_population_check.hpp>
 #include <stan/math/torsten/PKModel/functors/general_functor.hpp>
-#include <stan/math/torsten/Pred2.hpp>
+#include <stan/math/torsten/event_solver.hpp>
 #include <stan/math/torsten/pmx_ode_model.hpp>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_general.hpp>
@@ -121,10 +121,10 @@ pmx_solve_rk45(const F& f,
 
 #ifdef TORSTEN_USE_STAN_ODE
   PMXOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PMXOdeIntegrator<StanRk45>&> pr;
+  EventSolver<model_type, PMXOdeIntegrator<StanRk45>&> pr;
 #else
   PMXOdeIntegrator<PkRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PMXOdeIntegrator<PkRk45>&> pr;
+  EventSolver<model_type, PMXOdeIntegrator<PkRk45>&> pr;
 #endif
 
   pr.pred(0, events_rec, pred, integrator, f);
@@ -248,7 +248,7 @@ pmx_solve_group_rk45(const F& f,
 
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
   PMXOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, msgs);
-  PredWrapper<model_type, PMXOdeIntegrator<StanRk45>&> pr;
+  EventSolver<model_type, PMXOdeIntegrator<StanRk45>&> pr;
 
   Eigen::Matrix<typename EM::T_scalar, -1, -1> pred(nCmt, EM::population_solution_size(events_rec));
 

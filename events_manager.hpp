@@ -76,27 +76,27 @@ namespace torsten {
                   int ibegin_theta, int isize_theta,
                   int ibegin_biovar, int isize_biovar,
                   int ibegin_tlag, int isize_tlag) :
-      event_his(rec.begin_[id], rec.len_[id], rec.time_, rec.amt_, rec.rate_, rec.ii_, rec.evid_, rec.cmt_, rec.addl_, rec.ss_,
+      event_his(rec.ncmt, rec.begin_[id], rec.len_[id], rec.time_, rec.amt_, rec.rate_, rec.ii_, rec.evid_, rec.cmt_, rec.addl_, rec.ss_,
                 ibegin_theta, isize_theta, rec.pMatrix_,
                 ibegin_biovar, isize_biovar, rec.biovar_,
                 ibegin_tlag, isize_tlag, rec.tlag_),
       nKeep(event_his.events_size),
       ncmt(rec.ncmt)
     {
-      event_his.CompleteParameterHistory();
-      event_his.AddLagTimes();
-      event_his.generate_rates(ncmt);
-      event_his.CompleteParameterHistory();
+      // event_his.attach_event_parameters();
+      // event_his.AddLagTimes();
+      // event_his.generate_rates(ncmt);
+      // event_his.attach_event_parameters();
 
       int iRate = 0;
       for (size_t i = 0; i < event_his.size(); i++) {
 
         // Use index iRate instead of i to find rate at matching time, given there
         // is one rate per time, not per event.
-        if (event_his.rates[iRate].first != event_his.time(i)) iRate++;
+        // if (event_his.rates[iRate].first != event_his.time(i)) iRate++;
         std::vector<T_rate> rate_i(ncmt);
         for (int j = 0; j < ncmt; ++j) {
-          rate_i[j] = event_his.rates[iRate].second[j] * event_his.GetValueBio(i, j);
+          rate_i[j] = event_his.rates[event_his.rate_index[i]].second[j] * event_his.GetValueBio(i, j);
         }
         rate_v.push_back(rate_i);
 

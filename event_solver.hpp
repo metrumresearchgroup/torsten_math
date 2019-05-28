@@ -1,7 +1,8 @@
 #ifndef STAN_MATH_TORSTEN_PKMODEL_REFACTOR_PRED_HPP
 #define STAN_MATH_TORSTEN_PKMODEL_REFACTOR_PRED_HPP
 
-#include <stan/math/torsten/events_solver.hpp>
+#include <stan/math/torsten/dsolve/pk_vars.hpp>
+#include <stan/math/torsten/events_manager.hpp>
 #include <stan/math/torsten/mpi/session.hpp>
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
 #include <Eigen/Dense>
@@ -9,16 +10,33 @@
 
 namespace torsten{
   /*
-   * the wrapper is aware of @c T_model so it build model
+   * the solver wrapper is aware of @c T_model so it build model
    * accordingly.
    */
   template<typename T_model, typename... T_pred>
-  struct PredWrapper {
+  struct EventSolver {
 
     /*
      * Data used to fill the results when computation throws exception.
      */
     static constexpr double invalid_res_d = std::numeric_limits<double>::quiet_NaN();
+
+    /*
+     * calculate the number of parameters according to the
+     * model type.
+     *
+     * @tparam T_er type of events record
+     * @param id subject id among a population
+     * @param rec events record for the population
+     */
+    template<typename T_er>
+    static int system_size(int id, const T_er& rec) {
+      const int ncmt = rec.ncmt;
+      const int npar = rec.parameter_size();
+      const int nvar = T_model::nvars(ncmt, npar);
+      const int nvar_ss = T_model::template nvars<typename T_er::T_amt, typename T_er::T_par_rate, typename T_er::T_par_ii>(npar); //NOLINT
+      return rec.has_ss_dosing(id) ? pk_nsys(ncmt, nvar, nvar_ss) : pk_nsys(ncmt, nvar);
+    }
 
     /**
      * Every Torsten function calls Pred.
@@ -99,17 +117,6 @@ namespace torsten{
         throw;
       }
     }
-
-    // /*
-    //  * For input for a single individual, the call can be simplified.
-    //  */
-    // template<typename T_events_record, typename... Ts>
-    // void pred(const T_events_record& events_rec,
-    //           Eigen::Matrix<typename EventsManager<T_events_record>::T_scalar, -1, -1>& res,
-    //           const T_pred... pred_pars,
-    //           const Ts... model_pars) {
-    //   pred(0, events_rec, res, pred_pars..., model_pars...);
-    // }
 
     /*
      * Step through a range of events.
@@ -261,7 +268,6 @@ namespace torsten{
 
       using ER = T_events_record;
       using EM = EventsManager<ER>;
-      using ES = EventsSolver<ER, T_model>;
       using scalar = typename EM::T_scalar;
 
       const int nCmt = EM::nCmt(events_rec);
@@ -287,7 +293,7 @@ namespace torsten{
         const int nKeep = EM::solution_size(id, events_rec);
 
         int nev = EM::num_events(id, events_rec);
-        res_d[id].resize(ES::system_size(id, events_rec), nev);
+        res_d[id].resize(system_size(id, events_rec), nev);
         res_d[id].setConstant(0.0);
 
         int my_worker_id = torsten::mpi::my_worker(id, np, size);
@@ -489,7 +495,6 @@ namespace torsten{
   };
 
   template<typename T_model, typename... T_pred>
-  constexpr double PredWrapper<T_model, T_pred...>::invalid_res_d;
-
+  constexpr double EventSolver<T_model, T_pred...>::invalid_res_d;
 }
 #endif

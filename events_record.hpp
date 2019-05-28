@@ -201,14 +201,14 @@ public:
     return tlag_.size()  == len_.size() ? 1 : len_[id];
   }
 
-  static bool has_ss_dosing() {
+  inline bool has_ss_dosing() const {
     return has_ss_dosing(0);
   }
 
   /*
    * check the exisitence of steady state dosing events
    */
-  bool has_ss_dosing(int id) const {
+  inline bool has_ss_dosing(int id) const {
     bool res = false;
     int begin = begin_[id];
     int end = size_t(id + 1) == len_.size() ? time_.size() : begin_[id + 1];
@@ -237,6 +237,10 @@ public:
    */
   bool has_lag() const {
     return has_lag(0);
+  }
+
+  inline int parameter_size() const {
+    return pMatrix_[0].size();
   }
 };
 

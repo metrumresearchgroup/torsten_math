@@ -7,7 +7,7 @@
 #include <stan/math/torsten/PKModel/functors/mix1_functor.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_mix1.hpp>
 #include <stan/math/torsten/PKModel/Pred/PredSS_mix1.hpp>
-#include <stan/math/torsten/Pred2.hpp>
+#include <stan/math/torsten/event_solver.hpp>
 #include <stan/math/torsten/pmx_coupled_model.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <vector>
@@ -124,7 +124,7 @@ pmx_solve_onecpt_bdf(const F& f,
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(EM::solution_size(events_rec), EM::nCmt(events_rec));
 
   using model_type = refactor::PkOneCptOdeModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
-  PredWrapper<model_type, PMXOdeIntegrator<StanBdf>&> pr;
+  EventSolver<model_type, PMXOdeIntegrator<StanBdf>&> pr;
   pr.pred(0, events_rec, pred, integrator, f, nOde);
   return pred;
 
