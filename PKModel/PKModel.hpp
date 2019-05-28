@@ -9,8 +9,7 @@
 #include <stan/math/torsten/PKModel/SearchReal.hpp>
 #include <stan/math/torsten/PKModel/ExtractVector.hpp>
 #include <stan/math/torsten/PKModel/pmxModel.hpp>
-#include <stan/math/torsten/PKModel/Event.hpp>
-#include <stan/math/torsten/PKModel/Rate.hpp>
+#include <stan/math/torsten/event_history.hpp>
 #include <stan/math/torsten/PKModel/ModelParameters.hpp>
 #include <stan/math/torsten/PKModel/integrator.hpp>
 #include <stan/math/torsten/PKModel/Pred/PolyExp.hpp>

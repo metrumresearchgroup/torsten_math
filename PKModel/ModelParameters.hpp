@@ -2,7 +2,7 @@
 #define STAN_MATH_TORSTEN_PKMODEL_MODELPARAMETERS_HPP
 
 #include <stan/math/prim/mat/fun/to_array_1d.hpp>
-#include <stan/math/torsten/PKModel/Event.hpp>
+#include <stan/math/torsten/event_history.hpp>
 #include <stan/math/torsten/PKModel/ExtractVector.hpp>
 #include <stan/math/torsten/PKModel/SearchReal.hpp>
 #include <Eigen/Dense>
