@@ -26,8 +26,6 @@ namespace torsten {
     using T4 = typename stan::math::value_type<T4_container>::type;
 
     EventHistory<T0, T1, T2, T3, T4_container, T5, T6> event_his;
-    std::vector<std::vector<T_rate> > rate_v;
-    std::vector<T_amt> amt_v;
 
     const int nKeep;
     const int ncmt;
@@ -41,22 +39,6 @@ namespace torsten {
      */
     static int begin(int id, const ER& rec) {
       return rec.begin_.at(id);
-    }
-
-    static int population_size(const ER& rec) {
-      return rec.len_.size();
-    }
-
-    static int solution_size(const ER& rec) {
-      return solution_size(0, rec);
-    }
-
-    static int solution_size(int id, const ER& rec) {
-      return rec.len_.at(id);
-    }
-
-    static int population_solution_size(const ER& rec) {
-      return rec.total_result_size;
     }
 
     EventsManager(const ER& rec) : EventsManager(0, rec) {}
@@ -80,132 +62,12 @@ namespace torsten {
                 ibegin_theta, isize_theta, rec.pMatrix_,
                 ibegin_biovar, isize_biovar, rec.biovar_,
                 ibegin_tlag, isize_tlag, rec.tlag_),
-      nKeep(event_his.events_size),
+      nKeep(event_his.num_event_times),
       ncmt(rec.ncmt)
-    {
-      // event_his.attach_event_parameters();
-      // event_his.AddLagTimes();
-      // event_his.generate_rates(ncmt);
-      // event_his.attach_event_parameters();
-
-      int iRate = 0;
-      for (size_t i = 0; i < event_his.size(); i++) {
-
-        // Use index iRate instead of i to find rate at matching time, given there
-        // is one rate per time, not per event.
-        // if (event_his.rates[iRate].first != event_his.time(i)) iRate++;
-        std::vector<T_rate> rate_i(ncmt);
-        for (int j = 0; j < ncmt; ++j) {
-          rate_i[j] = event_his.rates[event_his.rate_index[i]].second[j] * event_his.GetValueBio(i, j);
-        }
-        rate_v.push_back(rate_i);
-
-        amt_v.push_back(event_his.GetValueBio(i, event_his.cmt(i) - 1) * event_his.amt(i));
-      }
-    }
+    {}
 
     const EventHistory<T0, T1, T2, T3, T4_container, T5, T6>& events() const {
       return event_his;
-    }
-
-    const std::vector<std::vector<T_rate> >& rates() const {
-      return rate_v;
-    }
-
-    const std::vector<T_amt>& amts() const {
-      return amt_v;
-    }
-
-    inline const T4_container& pars(int i) const {
-      return event_his.model_param(i);
-    }
-
-    /*
-     * check the exisitence of SS dosing events
-     */
-    static bool has_ss_dosing(int id, const ER& rec) {
-      return rec.has_ss_dosing(id);
-    }
-
-    /*
-     * number of parameter for a given model is supposed to
-     * be constant across the population.
-     */
-    static int parameter_size(const ER& rec) {
-      return rec.pMatrix_[0].size();
-    }
-
-    template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
-    static int num_events(int ibegin, int isize,
-                       const std::vector<T0_>& time,
-                       const std::vector<T1_>& amt,
-                       const std::vector<T2_>& rate,
-                       const std::vector<T3_>& ii,
-                       const std::vector<int>& evid,
-                       const std::vector<int>& cmt,
-                       const std::vector<int>& addl,
-                       const std::vector<int>& ss,
-                       int ibegin_pMatrix, int isize_pMatrix,
-                       const std::vector<std::vector<T4_> >& pMatrix,
-                       int ibegin_biovar, int isize_biovar,
-                       const std::vector<std::vector<T5_> >& biovar,
-                       int ibegin_tlag, int isize_tlag,
-                       const std::vector<std::vector<T6_> >& tlag) {
-      using stan::math::value_of;
-
-      int res;
-      bool has_lag = std::any_of(tlag.begin() + ibegin_tlag, tlag.begin() + ibegin_tlag + isize_tlag,
-                                 [](const std::vector<T6_>& v) {
-                                   return std::any_of(v.begin(), v.end(), [](const T6_& x) { return std::abs(value_of(x)) > 1.E-10; });
-                                 });
-
-      if (!has_lag) {
-        int n = isize;
-        for (int i = ibegin; i < ibegin + isize; ++i) {
-          if (evid[i] == 1 || evid[i] == 4) {      // is dosing event
-            if (addl[i] > 0 && ii[i] > 0) {        // has addl doses
-              if (rate[i] > 0 && amt[i] > 0) {
-                n++;                               // end event for original IV dose
-                n += 2 * addl[i];                  // end event for addl IV dose
-              } else {
-                n += addl[i];
-              }
-            } else if (rate[i] > 0 && amt[i] > 0) {
-              n++;                                 // end event for IV dose
-            }
-          }
-        }
-        res = n;
-      } else if (isize_tlag == 1) {
-        int n = isize;
-        std::vector<std::tuple<double, int>> dose;
-        dose.reserve(isize);
-        for (int i = ibegin; i < ibegin + isize; ++i) {
-          if (evid[i] == 1 || evid[i] == 4) {      // is dosing event
-            if (tlag[ibegin_tlag][cmt[i] - 1] > 0.0) {       // tlag dose
-              n++;
-            }
-            if (addl[i] > 0 && ii[i] > 0) {        // has addl doses
-              if (rate[i] > 0 && amt[i] > 0) {
-                n++;                               // end ev for IV dose
-                n += 2 * addl[i];                  // end ev for addl IV dose
-              } else {
-                n += addl[i];
-              }
-              if (tlag[ibegin_tlag][cmt[i] - 1] > 0.0) {     // tlag dose
-                n += addl[i];
-              }
-            } else if (rate[i] > 0 && amt[i] > 0) {
-              n++;                                 // end event for IV dose
-            }
-          }
-        }
-        res = n;
-      } else {
-        // TODO
-      }
-
-      return res;
     }
 
     /*
@@ -269,7 +131,7 @@ namespace torsten {
         res = n;
       } else {
         // FIXME
-        res = EventsManager(id, rec).events().size();
+        res = EventsManager(id, rec).events().num_state_times();
       }
 
       return res;

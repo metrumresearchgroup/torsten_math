@@ -113,7 +113,7 @@ pmx_solve_bdf(const F& f,
   const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
-    Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(EM::solution_size(events_rec), EM::nCmt(events_rec));
+    Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
   using model_type = refactor::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
 
@@ -255,7 +255,7 @@ pmx_solve_group_bdf(const F& f,
   EventSolver<model_type, PMXOdeIntegrator<PkBdf>&> pr;
 #endif
 
-  Eigen::Matrix<typename EM::T_scalar, -1, -1> pred(nCmt, EM::population_solution_size(events_rec));
+  Eigen::Matrix<typename EM::T_scalar, -1, -1> pred(nCmt, events_rec.total_num_event_times);
 
   pr.pred(events_rec, pred, integrator, f);
 

@@ -97,7 +97,7 @@ namespace torsten{
 
       int nCmt = EM::nCmt(events_rec);
 
-      res.resize(nCmt, EM::solution_size(id, events_rec));
+      res.resize(nCmt, events_rec.num_event_times(id));
       PKRec<scalar> init(nCmt);
       init.setZero();
 
@@ -125,9 +125,6 @@ namespace torsten{
     void stepper(int i, refactor::PKRec<typename T_em::T_scalar>& init,
                         const T_em& em, const T_pred... pred_pars, const Ts... model_pars) {
       auto events = em.events();
-      auto model_rate = em.rates();
-      auto model_amt = em.amts();
-      // auto model_par = em.pars();
 
       using scalar = typename T_em::T_scalar;
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
@@ -138,8 +135,10 @@ namespace torsten{
         init.setZero();
       } else if (events.is_ss_dosing(i)) {  // steady state event
         typename T_em::T_time model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
-        T_model pkmodel {model_time, init, model_rate[i], em.pars(i), model_pars...};
-        pred1 = stan::math::multiply(pkmodel.solve(model_amt[i],
+        std::vector<typename T_em::T_rate> dummy_rate;
+        T_model pkmodel {model_time, init, dummy_rate, events.model_param(i), model_pars...};
+        auto curr_amt = events.fractioned_amt(i);
+        pred1 = stan::math::multiply(pkmodel.solve(curr_amt,
                                                    events.rate(i),
                                                    events.ii(i),
                                                    events.cmt(i),
@@ -150,15 +149,16 @@ namespace torsten{
           init += pred1;  // steady state without reset
         else
           init = pred1;  // steady state with reset (ss = 1)
-      } else {           // non-steady dosing event
+      } else if (events.time(i) > tprev) {           // non-steady dosing event
         typename T_em::T_time model_time = tprev;
-        T_model pkmodel {model_time, init, model_rate[i], em.pars(i), model_pars...};
+        auto curr_rates = events.fractioned_rates(i);
+        T_model pkmodel {model_time, init, curr_rates, events.model_param(i), model_pars...};
         pred1 = pkmodel.solve(events.time(i), pred_pars...);
         init = pred1;
       }
 
       if (events.is_bolus_dosing(i)) {
-        init(0, events.cmt(i) - 1) += model_amt[i];
+        init(0, events.cmt(i) - 1) += events.fractioned_amt(i);
       }
       tprev = events.time(i);
     }
@@ -171,9 +171,6 @@ namespace torsten{
       using stan::math::var;
 
       auto events = em.events();
-      auto model_rate = em.rates();
-      auto model_amt = em.amts();
-      // auto model_par = em.pars();
 
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
@@ -181,25 +178,26 @@ namespace torsten{
         init.setZero();
       } else if (events.is_ss_dosing(i)) {  // steady state event
         typename T_em::T_time model_time = events.time(i);
-        T_model pkmodel {model_time, init, model_rate[i], em.pars(i), model_pars...};
-        vector<var> v_i = pkmodel.vars(model_amt[i], events.rate(i), events.ii(i));
-        sol_d = pkmodel.solve_d(model_amt[i], events.rate(i), events.ii(i), events.cmt(i), pred_pars...);
+        std::vector<typename T_em::T_rate> dummy_rate;
+        T_model pkmodel {model_time, init, dummy_rate, events.model_param(i), model_pars...};
+        auto curr_amt = events.fractioned_amt(i);
+        vector<var> v_i = pkmodel.vars(curr_amt, events.rate(i), events.ii(i));
+        sol_d = pkmodel.solve_d(curr_amt, events.rate(i), events.ii(i), events.cmt(i), pred_pars...);
         if (events.ss(i) == 2)
           init += torsten::mpi::precomputed_gradients(sol_d, v_i);  // steady state without reset
         else
           init = torsten::mpi::precomputed_gradients(sol_d, v_i);  // steady state with reset (ss = 1)
-      } else {
-        if (events.time(i) > tprev) {
+      } else if (events.time(i) > tprev) {
           typename T_em::T_time model_time = tprev;
-          T_model pkmodel {model_time, init, model_rate[i], em.pars(i), model_pars...};
+          auto curr_rates = events.fractioned_rates(i);
+          T_model pkmodel {model_time, init, curr_rates, events.model_param(i), model_pars...};
           vector<var> v_i = pkmodel.vars(events.time(i));
           sol_d = pkmodel.solve_d(events.time(i), pred_pars...);
           init = torsten::mpi::precomputed_gradients(sol_d, v_i);
-        }
       }
 
       if (events.is_bolus_dosing(i)) {
-        init(0, events.cmt(i) - 1) += model_amt[i];
+        init(0, events.cmt(i) - 1) += events.fractioned_amt(i);
       }
       tprev = events.time(i);
     }
@@ -212,9 +210,6 @@ namespace torsten{
       using stan::math::var;
 
       auto events = em.events();
-      auto model_rate = em.rates();
-      auto model_amt = em.amts();
-      // auto model_par = em.pars();
 
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
@@ -222,25 +217,26 @@ namespace torsten{
         init.setZero();
       } else if (events.is_ss_dosing(i)) {  // steady state event
         typename T_em::T_time model_time = events.time(i);
-        T_model pkmodel {model_time, init, model_rate[i], em.pars(i), model_pars...};
-        vector<var> v_i = pkmodel.vars(model_amt[i], events.rate(i), events.ii(i));
+        std::vector<typename T_em::T_rate> dummy_rate;
+        T_model pkmodel {model_time, init, dummy_rate, events.model_param(i), model_pars...};
+        auto curr_amt = events.fractioned_amt(i);
+        vector<var> v_i = pkmodel.vars(curr_amt, events.rate(i), events.ii(i));
         int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
         if (events.ss(i) == 2)
           init += torsten::mpi::precomputed_gradients(sol_d.segment(0, nsys), v_i);  // steady state without reset
         else
           init = torsten::mpi::precomputed_gradients(sol_d.segment(0, nsys), v_i);  // steady state with reset (ss = 1)
-      } else {
-        if (events.time(i) > tprev) {
+      } else if (events.time(i) > tprev) {
           typename T_em::T_time model_time = tprev;
-          T_model pkmodel {model_time, init, model_rate[i], em.pars(i), model_pars...};
+          auto curr_rates = events.fractioned_rates(i);
+          T_model pkmodel {model_time, init, curr_rates, events.model_param(i), model_pars...};
           vector<var> v_i = pkmodel.vars(events.time(i));
           int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
           init = torsten::mpi::precomputed_gradients(sol_d.segment(0, nsys), v_i);
-        }
       }
 
       if (events.is_bolus_dosing(i)) {
-        init(0, events.cmt(i) - 1) += model_amt[i];
+        init(0, events.cmt(i) - 1) += events.fractioned_amt(i);
       }
     }
 
@@ -268,10 +264,10 @@ namespace torsten{
 
       using ER = T_events_record;
       using EM = EventsManager<ER>;
-      using scalar = typename EM::T_scalar;
+      using scalar = typename ER::T_scalar;
 
       const int nCmt = EM::nCmt(events_rec);
-      const int np = EM::population_size(events_rec);
+      const int np = events_rec.num_subjects();
       bool is_invalid = false;
       std::ostringstream rank_fail_msg;
 
@@ -282,7 +278,7 @@ namespace torsten{
       std::vector<MPI_Request> req(np);
       vector<MatrixXd> res_d(np);
       
-      res.resize(nCmt, EM::population_solution_size(events_rec));
+      res.resize(nCmt, events_rec.total_num_event_times);
 
       PKRec<scalar> init(nCmt);
       PKRec<double> pred1;
@@ -290,7 +286,7 @@ namespace torsten{
 
         /* For every rank */
 
-        const int nKeep = EM::solution_size(id, events_rec);
+        const int nKeep = events_rec.num_event_times(id);
 
         int nev = EM::num_events(id, events_rec);
         res_d[id].resize(system_size(id, events_rec), nev);
@@ -307,7 +303,7 @@ namespace torsten{
             try {
               EM em(id, events_rec);
               auto events = em.events();
-              assert(nev == events.size());
+              assert(nev == events.num_state_times());
               assert(nKeep == em.nKeep);
               init.setZero();
 
@@ -386,7 +382,7 @@ namespace torsten{
       using EM = EventsManager<ER>;
 
       const int nCmt = EM::nCmt(events_rec);
-      const int np = EM::population_size(events_rec);
+      const int np = events_rec.num_subjects();
       bool is_invalid = false;
       std::ostringstream rank_fail_msg;
 
@@ -396,14 +392,14 @@ namespace torsten{
 
       std::vector<MPI_Request> req(np);
 
-      res.resize(nCmt, EM::population_solution_size(events_rec));
+      res.resize(nCmt, events_rec.total_num_event_times);
 
       PKRec<double> init(nCmt);
       for (int id = 0; id < np; ++id) {
 
         /* For every rank */
 
-        int nKeep = EM::solution_size(id, events_rec);
+        int nKeep = events_rec.num_event_times(id);
         int my_worker_id = torsten::mpi::my_worker(id, np, size);
         int begin_id = EM::begin(id, events_rec) * nCmt;
         int size_id = nKeep * nCmt;
@@ -472,9 +468,9 @@ namespace torsten{
       using EM = EventsManager<ER>;
 
       const int nCmt = EM::nCmt(events_rec);
-      const int np = EM::population_size(events_rec);
+      const int np = events_rec.num_subjects();
       
-      res.resize(nCmt, EM::population_solution_size(events_rec));
+      res.resize(nCmt, events_rec.total_num_event_times);
 
       static bool has_warning = false;
       if (!has_warning) {
@@ -483,7 +479,7 @@ namespace torsten{
       }
 
       for (int id = 0; id < np; ++id) {
-        const int nKeep = EM::solution_size(id, events_rec);
+        const int nKeep = events_rec.num_event_times(id);
         Eigen::Matrix<typename EventsManager<T_events_record>::T_scalar, -1, -1> res_id(nCmt, nKeep);
         pred(id, events_rec, res_id, pred_pars..., model_pars...);
         for (int j = 0; j < nKeep; ++j) {

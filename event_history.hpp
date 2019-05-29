@@ -42,7 +42,7 @@ namespace torsten {
     const std::vector<std::vector<T6> >& tlag_;
 
     // internally generated events
-    const size_t events_size;
+    const size_t num_event_times;
     std::vector<T_time> gen_time;
     std::vector<T1> gen_amt;
     std::vector<T2> gen_rate;
@@ -74,46 +74,6 @@ namespace torsten {
     inline int evid (int i) const { return evid(index[i]); }
 
     /*
-     * Nested structure that will be returned to and
-     * consumed by solvers. The time in this nested
-     * structure may be different from @c T0.
-     */
-  template<typename T>
-  class Event {
-    const T& time_;
-    const T1& amt_;
-    const T2& rate_;
-    const std::vector<T2> & rates_;
-    const T3& ii_;
-    const int evid_;
-    const int cmt_;
-    const int addl_;
-    const int ss_;
-    const T4_container& theta_;
-    const std::vector<T5>& biovar_;
-    const std::vector<T6>& tlag_;
-
-  public:
-    inline const T& time() { return time_; }
-    inline const T1& amt() { return amt_; }
-    inline const T2& rate() { return rate_; }
-    inline const std::vector<T2> & rates() { return rates_; }
-    inline const T3& ii() { return ii_; }
-    inline const int evid() { return evid_; }
-    inline const int cmt() { return cmt_; }
-    inline const int addl() { return addl_; }
-    inline const int ss() { return ss_; }
-    inline const T4_container& theta() { return theta_; }
-    inline const std::vector<T5>& biovar() { return biovar_; }
-    inline const std::vector<T6>& tlag() { return tlag_; }
-
-    inline bool is_dosing() const {return evid_ == 1 || evid_ == 4;}
-    inline bool is_ss_dosing() const {
-      return (is_dosing() && (ss_ == 1 || ss_ == 2)) || ss_ == 3;
-    }
-  };
-
-    /*
      * for a population with data in ragged array form, we
      * form the events history using the population data and
      * the location of the individual in the ragged arrays.
@@ -143,7 +103,7 @@ namespace torsten {
       theta_(theta),
       biovar_(biovar),
       tlag_(tlag),
-      events_size(isize),
+      num_event_times(isize),
       index(isize, {0, 0, 0, 0, ibegin_theta, ibegin_biovar, ibegin_tlag})
     {
       const int iend = ibegin + isize;
@@ -177,7 +137,7 @@ namespace torsten {
       param_sort();
 
       attach_event_parameters();
-      AddLagTimes();
+      insert_lag_dose();
       generate_rates(ncmt);
       attach_event_parameters();
     }
@@ -198,7 +158,7 @@ namespace torsten {
     {}
 
     void attach_event_parameters() {
-      int nEvent = size();
+      int nEvent = num_state_times();
       assert(nEvent > 0);
       int len_Parameters = param_index.size();  // numbers of events for which parameters are determined
       assert(len_Parameters > 0);
@@ -296,7 +256,7 @@ namespace torsten {
      * Events is sorted at the end of the procedure.
      */
     void insert_addl_dose() {
-      for (int i = 0; i < size(); i++) {
+      for (int i = 0; i < num_state_times(); i++) {
         if (is_dosing(i) && ((addl(i) > 0) && (ii(i) > 0))) {
           for (int j = 1; j <= addl(i); j++) {
             insert_event(i);
@@ -346,7 +306,7 @@ namespace torsten {
       using std::vector;
       using stan::math::value_of;
 
-      const int n = size();
+      const int n = num_state_times();
       for (size_t i = 0; i < n; ++i) {
         if ((is_dosing(i)) && (rate(i) > 0 && amt(i) > 0)) {
           insert_event(i);
@@ -373,7 +333,7 @@ namespace torsten {
           return a.first < b.first;
         });
 
-      for (size_t i = 0; i < size(); ++i) {
+      for (size_t i = 0; i < num_state_times(); ++i) {
         if ((is_dosing(i)) && (rate(i) > 0 && amt(i) > 0)) {
           double t0 = value_of(time(i));
           double t1 = t0 + value_of(amt(i)/rate(i));
@@ -398,25 +358,37 @@ namespace torsten {
     }
 
     // Access functions
-    T_time time (const IDVec& id) const { return keep(id) ? time_[id[1]] : gen_time[id[1]] ; }
-    const T1& amt      (const IDVec& id) const { return keep(id) ? amt_[id[1]] : gen_amt[id[1]] ; }
-    const T2& rate     (const IDVec& id) const { return keep(id) ? rate_[id[1]] : gen_rate[id[1]] ; }
-    const T3& ii       (const IDVec& id) const { return keep(id) ? ii_[id[1]] : gen_ii[id[1]] ; }
-    int cmt     (const IDVec& id) const { return keep(id) ? cmt_[id[1]] : gen_cmt[id[1]] ; }
-    int addl    (const IDVec& id) const { return keep(id) ? addl_[id[1]] : gen_addl[id[1]] ; }
-    int ss      (const IDVec& id) const { return keep(id) ? ss_[id[1]] : gen_ss[id[1]] ; }
+    inline T_time time (const IDVec& id) const { return keep(id) ? time_[id[1]] : gen_time[id[1]] ; }
+    inline const T1& amt      (const IDVec& id) const { return keep(id) ? amt_[id[1]] : gen_amt[id[1]] ; }
+    inline const T2& rate     (const IDVec& id) const { return keep(id) ? rate_[id[1]] : gen_rate[id[1]] ; }
+    inline const T3& ii       (const IDVec& id) const { return keep(id) ? ii_[id[1]] : gen_ii[id[1]] ; }
+    inline int cmt     (const IDVec& id) const { return keep(id) ? cmt_[id[1]] : gen_cmt[id[1]] ; }
+    inline int addl    (const IDVec& id) const { return keep(id) ? addl_[id[1]] : gen_addl[id[1]] ; }
+    inline int ss      (const IDVec& id) const { return keep(id) ? ss_[id[1]] : gen_ss[id[1]] ; }
 
+    inline T_time time (int i) const { return time(index[i]); }
+    inline const T1& amt      (int i) const { return amt (index[i]); }
+    inline const T2& rate     (int i) const { return rate(index[i]); }
+    inline const T3& ii       (int i) const { return ii  (index[i]); }
+    inline int cmt     (int i) const { return cmt (index[i]); }
+    inline int addl    (int i) const { return addl(index[i]); }
+    inline int ss      (int i) const { return ss  (index[i]); }
 
-    T_time time (int i) const { return time(index[i]); }
-    const T1& amt      (int i) const { return amt (index[i]); }
-    const T2& rate     (int i) const { return rate(index[i]); }
-    const T3& ii       (int i) const { return ii  (index[i]); }
-    int cmt     (int i) const { return cmt (index[i]); }
-    int addl    (int i) const { return addl(index[i]); }
-    int ss      (int i) const { return ss  (index[i]); }
+    inline size_t num_state_times() const { return index.size(); }
 
+    inline std::vector<T_rate> fractioned_rates(int i) const {
+      const int n = rates[0].second.size();
+      const std::vector<T2>& r = rates[rate_index[i]].second;
+      std::vector<T_rate> res(r.size());
+      for (size_t j = 0; j < r.size(); ++j) {
+        res[j] = r[j] * bioavailability(i, j);
+      }
+      return res;
+    }
 
-    size_t size()       const { return index.size(); }
+    inline T_amt fractioned_amt(int i) const {
+      return bioavailability(i, cmt(i) - 1) * amt(i);
+    }
 
     std::vector<int> unique_times() {
       std::vector<int> t(index.size());
@@ -435,9 +407,9 @@ namespace torsten {
      * @tparam T_parameters type of scalar model parameters
      * @return - modified events that account for absorption lag times
      */
-    void AddLagTimes() {
+    void insert_lag_dose() {
       // reverse loop so we don't process same lagged events twice
-      int nEvent = size();
+      int nEvent = num_state_times();
       int iEvent = nEvent - 1;
       while (iEvent >= 0) {
         if (is_dosing(iEvent)) {
@@ -456,7 +428,7 @@ namespace torsten {
       sort_state_time();
     }
 
-    const T4_container& model_param(int i) const {
+    inline const T4_container& model_param(int i) const {
       return theta_[param_index[i].second[0]];
     }
 
@@ -464,7 +436,7 @@ namespace torsten {
       return theta_[std::get<1>(param_index[iEvent])[0]][iParameter];
     }
 
-    inline const T5& GetValueBio(int iEvent, int iParameter) const {
+    inline const T5& bioavailability(int iEvent, int iParameter) const {
       return biovar_[std::get<1>(param_index[iEvent])[1]][iParameter];
     }
 

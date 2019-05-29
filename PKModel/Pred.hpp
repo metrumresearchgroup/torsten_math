@@ -195,7 +195,7 @@ Pred(const std::vector<T_time>& time,
   events.insert_addl_dose();
   parameters.CompleteParameterHistory(events);
 
-  events.AddLagTimes();
+  events.insert_lag_dose();
   // RateHistory<T_time, T_amt, T_rate, T_ii, std::vector<T_parameters>, T_biovar, T_tlag> rates(events, nCmt);
   parameters.CompleteParameterHistory(events);
 

@@ -42,7 +42,7 @@ public:
   const int ncmt;
   std::vector<int> begin_;
   const std::vector<int>& len_;
-  const int total_result_size;
+  const int total_num_event_times;
   const std::vector<T0>& time_;
   const std::vector<T1>& amt_;
   const std::vector<T2>& rate_;
@@ -96,7 +96,7 @@ public:
     ncmt(n),
     begin_(len.size()),
     len_(len),
-    total_result_size(std::accumulate(len_.begin(), len_.end(), 0)),
+    total_num_event_times(std::accumulate(len_.begin(), len_.end(), 0)),
     time_   (time  ),
     amt_    (amt   ),
     rate_   (rate   ),
@@ -153,7 +153,7 @@ public:
     ncmt(n),
     begin_{0},
     len_(len_1_),
-    total_result_size(std::accumulate(len_.begin(), len_.end(), 0)),
+    total_num_event_times(std::accumulate(len_.begin(), len_.end(), 0)),
     time_   (time   ),
     amt_    (amt    ),
     rate_   (rate   ),
@@ -242,6 +242,19 @@ public:
   inline int parameter_size() const {
     return pMatrix_[0].size();
   }
+
+  inline int num_event_times(int id) const {
+    return len_.at(id);
+  }
+
+  inline int num_event_times() const {
+    return len_.at(0);
+  }
+
+  inline int num_subjects() const {
+    return len_.size();
+  }
+
 };
 
 }
