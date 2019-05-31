@@ -129,20 +129,28 @@ namespace torsten {
         }
 
         int begin_id = 0;
+        int finished = 0;
+        int index = 0;
+        int flag = 0;
         iter = ts.begin();
-        for (int i = 0; i < n_req; ++i) {
-          std::vector<Tt> ts_i(iter, iter + len[i]);
-          iter += len[i];
-          MPI_Wait(&req[i], MPI_STATUS_IGNORE);
-          if(is_invalid) continue;
-          if (std::isnan(res_d[i](0))) {
-            is_invalid = true;
-            rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
-          } else {
-            Ode ode{serv, f, t0, ts_i, y0[i], theta[i], x_r[i], x_i[i], msgs};
-            Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i]) = torsten::precomputed_gradients(res_d[i], ode.vars());
+        while (finished < n_req) {
+          MPI_Test(&req[index], &flag, MPI_STATUS_IGNORE);
+          if (flag) {
+            int i = index;
+            index++;
+            finished++;
+            std::vector<Tt> ts_i(iter, iter + len[i]);
+            iter += len[i];
+            if(is_invalid) continue;
+            if (std::isnan(res_d[i](0))) {
+              is_invalid = true;
+              rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
+            } else {
+              Ode ode{serv, f, t0, ts_i, y0[i], theta[i], x_r[i], x_i[i], msgs};
+              Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i]) = torsten::precomputed_gradients(res_d[i], ode.vars());
+            }
+            begin_id += len[i] * n;
           }
-          begin_id += len[i] * n;
         }
         
         if(is_invalid) {
@@ -250,21 +258,29 @@ namespace torsten {
         }
 
         int begin_id = 0;
+        int finished = 0;
+        int index = 0;
+        int flag = 0;
         iter = ts.begin();
-        for (int i = 0; i < n_req; ++i) {
-          std::vector<Tt> ts_i(iter, iter + len[i]);
-          iter += len[i];
-          MPI_Wait(&req[i], MPI_STATUS_IGNORE);
-          if(is_invalid) continue;
-          if (std::isnan(res_d[i](0))) {
-            is_invalid = true;
-            rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
-          } else {
-            std::copy(theta[i].begin(), theta[i].end(), theta_i.begin() + group_theta.size());
-            Ode ode{serv, f, t0, ts_i, y0[i], theta_i, x_r[i], x_i[i], msgs};
-            Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i]) = torsten::precomputed_gradients(res_d[i], ode.vars());
+        while (finished < n_req) {
+          MPI_Test(&req[index], &flag, MPI_STATUS_IGNORE);
+          if (flag) {
+            int i = index;
+            index++;
+            finished++;
+            std::vector<Tt> ts_i(iter, iter + len[i]);
+            iter += len[i];
+            if(is_invalid) continue;
+            if (std::isnan(res_d[i](0))) {
+              is_invalid = true;
+              rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
+            } else {
+              std::copy(theta[i].begin(), theta[i].end(), theta_i.begin() + group_theta.size());
+              Ode ode{serv, f, t0, ts_i, y0[i], theta_i, x_r[i], x_i[i], msgs};
+              Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i]) = torsten::precomputed_gradients(res_d[i], ode.vars());
+            }
+            begin_id += len[i] * n;
           }
-          begin_id += len[i] * n;
         }
         
         if(is_invalid) {
@@ -355,14 +371,17 @@ namespace torsten {
 
         int finished = 0;
         int index;
-        while(finished != n_req) {
-          MPI_Waitany(n_req, req.data(), &index, MPI_STATUS_IGNORE);
-          finished++;
-          if(is_invalid) continue;
-          int i = index;
-          if (std::isnan(res(begin_ids[i]))) {
-            is_invalid = true;
-            rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
+        int flag = 0;
+        while(finished < n_req) {
+          MPI_Testany(n_req, req.data(), &index, &flag, MPI_STATUS_IGNORE);
+          if (flag) {
+            finished++;
+            if(is_invalid) continue;
+            int i = index;
+            if (std::isnan(res(begin_ids[i]))) {
+              is_invalid = true;
+              rank_fail_msg << "Rank " << rank << " received invalid data for id " << i;
+            }
           }
         }
 
