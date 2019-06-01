@@ -328,37 +328,73 @@ namespace torsten{
         MPI_Ibcast(res_d[id].data(), res_d[id].size(), MPI_DOUBLE, my_worker_id, comm, &req[id]);
       }
 
-      for(int id = 0; id < np; ++id) {
-        MPI_Wait(&req[id], MPI_STATUS_IGNORE);
+      // int finished = 0;
+      // int index;
+      // int flag = 0;
+      // for(int id = 0; id < np; ++id) {
+      //   MPI_Wait(&req[id], MPI_STATUS_IGNORE);
 
-        if (is_invalid) continue;
-        if (std::isnan(res_d[id](0))) {
-          assert(rank != torsten::mpi::my_worker(id, np, size));
-          is_invalid = true;
-          rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
-        } else {
-          EM em(id, events_rec);
-          auto events = em.events();
-          PKRec<scalar> init(nCmt); init.setZero();
-          PKRec<double> pred1 = VectorXd::Zero(res_d[id].rows());
+      //   if (is_invalid) continue;
+      //   if (std::isnan(res_d[id](0))) {
+      //     assert(rank != torsten::mpi::my_worker(id, np, size));
+      //     is_invalid = true;
+      //     rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
+      //   } else {
+      //     EM em(id, events_rec);
+      //     auto events = em.events();
+      //     PKRec<scalar> init(nCmt); init.setZero();
+      //     PKRec<double> pred1 = VectorXd::Zero(res_d[id].rows());
 
-          int ikeep = 0, iev = 0;
-          while(ikeep < em.nKeep) {
-            pred1 = res_d[id].col(iev);
-            stepper_sync(iev, init, pred1, em, pred_pars..., model_pars...);
-            if(events.keep(iev)) {
-              res.col(EM::begin(id, events_rec) + ikeep) = init;
-              ikeep++;
+      //     int ikeep = 0, iev = 0;
+      //     while(ikeep < em.nKeep) {
+      //       pred1 = res_d[id].col(iev);
+      //       stepper_sync(iev, init, pred1, em, pred_pars..., model_pars...);
+      //       if(events.keep(iev)) {
+      //         res.col(EM::begin(id, events_rec) + ikeep) = init;
+      //         ikeep++;
+      //       }
+      //       iev++;
+      //     }
+      //   }
+      // }
+
+      int finished = 0;
+      int index;
+      int flag = 0;
+      while (finished < np) {
+        MPI_Test(&req[index], &flag, MPI_STATUS_IGNORE);
+        if (flag) {
+          int id = index;
+          index++;
+          finished++;
+          if (is_invalid) continue;
+          if (std::isnan(res_d[id](0))) {
+            assert(rank != torsten::mpi::my_worker(id, np, size));
+            is_invalid = true;
+            rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
+          } else {
+            EM em(id, events_rec);
+            auto events = em.events();
+            PKRec<scalar> init(nCmt); init.setZero();
+            PKRec<double> pred1 = VectorXd::Zero(res_d[id].rows());
+
+            int ikeep = 0, iev = 0;
+            while(ikeep < em.nKeep) {
+              pred1 = res_d[id].col(iev);
+              stepper_sync(iev, init, pred1, em, pred_pars..., model_pars...);
+              if(events.keep(iev)) {
+                res.col(EM::begin(id, events_rec) + ikeep) = init;
+                ikeep++;
+              }
+              iev++;
             }
-            iev++;
           }
-        }
+        } 
       }
 
       MPI_Barrier(comm);
 
       if(is_invalid) {
-        // MPI_Barrier(comm);
         throw std::runtime_error(rank_fail_msg.str());
       }
     }
@@ -435,15 +471,18 @@ namespace torsten{
       // make sure every rank throws in case any rank fails
       int finished = 0;
       int index;
-      while (finished != np && size > 1) {
-        MPI_Waitany(np, req.data(), &index, MPI_STATUS_IGNORE);
-        finished++;
-        if(is_invalid) continue;
-        int id = index;
-        int begin_id = EM::begin(id, events_rec) * nCmt;
-        if (std::isnan(res(begin_id))) {
-          is_invalid = true;
-          rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
+      int flag = 0;
+      while (finished < np && size > 1) {
+        MPI_Testany(np, req.data(), &index, &flag, MPI_STATUS_IGNORE);
+        if (flag) {
+          finished++;
+          if(is_invalid) continue;
+          int id = index;
+          int begin_id = EM::begin(id, events_rec) * nCmt;
+          if (std::isnan(res(begin_id))) {
+            is_invalid = true;
+            rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
+          }
         }
       }
 
