@@ -359,7 +359,7 @@ namespace torsten{
       // }
 
       int finished = 0;
-      int index;
+      int index = 0;
       int flag = 0;
       while (finished < np) {
         MPI_Test(&req[index], &flag, MPI_STATUS_IGNORE);
@@ -470,7 +470,7 @@ namespace torsten{
 
       // make sure every rank throws in case any rank fails
       int finished = 0;
-      int index;
+      int index = 0;
       int flag = 0;
       while (finished < np && size > 1) {
         MPI_Testany(np, req.data(), &index, &flag, MPI_STATUS_IGNORE);
