@@ -2,8 +2,6 @@
 #define STAN_MATH_TORSTEN_ONECPT_MODEL_HPP
 
 #include <stan/math/torsten/PKModel/functors/check_mti.hpp>
-#include <stan/math/torsten/PKModel/Pred/unpromote.hpp>
-#include <stan/math/torsten/PKModel/Pred/PolyExp.hpp>
 #include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/torsten/pmx_ode_integrator.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
@@ -16,7 +14,7 @@ namespace refactor {
   using boost::math::tools::promote_args;
 
   /**
-   * standard one compartment PK ODE functor
+   * standard one compartment with 1st order absorption PK ODE functor
    */
   struct PMXOneCptODE {
   /**
@@ -242,23 +240,29 @@ namespace refactor {
       using Eigen::Dynamic;
 
       T_time dt = t_next - t0_;
+      Matrix<scalar_type, -1, 1> pred = PKRec<scalar_type>::Zero(Ncmt);
 
-      std::vector<scalar_type> a(Ncmt, 0);
-      Matrix<scalar_type, 1, Dynamic> pred = PKRec<scalar_type>::Zero(Ncmt);
+      typename torsten::return_t<T_par, T_time>::type exp1 = exp(-k10_ * dt);
+      typename torsten::return_t<T_par, T_time>::type exp2 = exp(-ka_ * dt);
 
-      if ((y0_[0] != 0) || (rate_[0] != 0)) {
-        pred(0, 0) = y0_[0] * exp(-ka_ * dt) + rate_[0] * (1 - exp(-ka_ * dt)) / ka_;
-        a[0] = ka_ / (ka_ - alpha_[0]);
-        a[1] = -a[0];
-        pred(0, 1) += torsten::PolyExp(dt, y0_[0], 0, 0, 0, false, a, alpha_, 2) +
-          torsten::PolyExp(dt, 0, rate_[0], dt, 0, false, a, alpha_, 2);
+      if (y0_[0] > 0) {
+        pred(0) += y0_[0] * exp2;
+        pred(1) += y0_[0] * ka_ / (ka_ - k10_) * (exp1 - exp2);
       }
 
-      if ((y0_[1] != 0) || (rate_[1] != 0)) {
-        a[0] = 1;
-        pred(0, 1) += torsten::PolyExp(dt, y0_[1], 0, 0, 0, false, a, alpha_, 1) +
-          torsten::PolyExp(dt, 0, rate_[1], dt, 0, false, a, alpha_, 1);
+      if (rate_[0] > 0) {
+        pred(0) += rate_[0] * (1 - exp2) / ka_;
+        pred(1) += rate_[0] * ka_ / (ka_ - k10_) * ((1 - exp1) / k10_ - (1 - exp2) / ka_);
       }
+
+      if (y0_[1] > 0) {
+        pred(1) += y0_[1] * exp1;
+      }
+
+      if (rate_[1] > 0) {
+        pred(1) += rate_[1] * (1 - exp1) / k10_;
+      }
+
       return pred;
     }
 
@@ -279,7 +283,7 @@ namespace refactor {
    */
     template<typename T_amt, typename T_r, typename T_ii>
     Eigen::Matrix<typename stan::return_type<T_par, T_amt, T_r, T_ii>::type, Eigen::Dynamic, 1>
-    solve(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt) const { //NOLINT
+    solve(const T_amt& amt, const T_r& rate, const T_ii& ii, int cmt) const { //NOLINT
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using std::vector;
@@ -292,46 +296,33 @@ namespace refactor {
       stan::math::check_less("steady state one-cpt solver", "cmt", cmt, 3);
 
       std::vector<ss_scalar_type> a(2, 0);
-      Matrix<ss_scalar_type, 1, Dynamic> pred = Matrix<ss_scalar_type, 1, Dynamic>::Zero(2);
-      if (stan::math::value_of(rate) == 0) {  // bolus dose
+      Matrix<ss_scalar_type, -1, 1> pred = Matrix<ss_scalar_type, -1, 1>::Zero(2);
+      if (rate == 0) {  // bolus dose
         if (cmt == 1) {
-          a[0] = 0;
-          a[1] = 1;
-          pred(0) = torsten::PolyExp(ii, amt, 0, 0, ii, true, a, alpha_, 2);
-          a[0] = ka_ / (ka_ - alpha_[0]);
-          a[1] = -a[0];
-          pred(1) = torsten::PolyExp(ii, amt, 0, 0, ii, true, a, alpha_, 2);
-        } else {  // cmt=2
-          a[0] = 1;
-          pred(1) = torsten::PolyExp(ii, amt, 0, 0, ii, true, a, alpha_, 1);
+          pred(0) = amt / (exp(ka_ * ii) - 1.0);
+          pred(1) = amt * ka_ / (ka_ - k10_) * (1.0 / (exp(k10_ * ii)-1.0) - 1.0 / (exp(ka_ * ii)-1.0));
+        } else {
+          pred(1) = amt / (exp(k10_ * ii) - 1.0);
         }
       } else if (ii > 0) {  // multiple truncated infusions
-        double delta = torsten::unpromote(amt / rate);
+        typename torsten::return_t<T_amt, T_r>::type dt_infus = amt/rate;
         static const char* function("Steady State Event");
-        torsten::check_mti(amt, delta, ii, function);
+        torsten::check_mti(amt, stan::math::value_of(dt_infus), ii, function);
 
+        // since we've checked ii > dt_infus
         if (cmt == 1) {
-          a[0] = 0;
-          a[1] = 1;
-          pred(0) = torsten::PolyExp(ii, 0, rate, amt / rate, ii, true, a, alpha_, 2);
-          a[0] = ka_ / (ka_ - alpha_[0]);
-          a[1] = -a[0];
-          pred(1) = torsten::PolyExp(ii, 0, rate, amt / rate, ii, true, a, alpha_, 2);
-        } else {  // cmt = 2
-          a[0] = 1;
-          pred(1) = torsten::PolyExp(ii, 0, rate, amt / rate, ii, true, a, alpha_, 1);
+          pred(0) = rate / ka_ * (1 - exp(-ka_ * dt_infus)) * exp(-ka_ * (ii - dt_infus)) / (1 - exp(-ka_ * ii));
+          pred(1) = rate * ka_ / (k10_ * (ka_ - k10_)) * (1 - exp(-k10_ * dt_infus)) * exp(-k10_ * (ii - dt_infus)) / (1 - exp(-k10_ * ii))
+            - rate / (ka_ - k10_) * (1 - exp(-ka_ * dt_infus)) * exp(-ka_ * (ii - dt_infus)) / (1 - exp(-ka_ * ii));
+        } else {
+          pred(1) = rate / k10_ * (1 - exp(-k10_ * dt_infus)) * exp(-k10_ * (ii - dt_infus)) / (1 - exp(-k10_ * ii));
         }
       } else {  // constant infusion
         if (cmt == 1) {
-          a[0] = 0;
-          a[1] = 1;
-          pred(0) = torsten::PolyExp(0, 0, rate, inf, 0, true, a, alpha_, 2);
-          a[0] = ka_ / (ka_ - alpha_[0]);
-          a[1] = -a[0];
-          pred(1) = torsten::PolyExp(0, 0, rate, inf, 0, true, a, alpha_, 2);
+          pred(0) = rate / ka_;
+          pred(1) = rate * (ka_ / (k10_ * (ka_ - k10_)) - 1.0 / (ka_ - k10_));
         } else {  // cmt = 2
-          a[0] = 1;
-          pred(1) = torsten::PolyExp(0, 0, rate, inf, 0, true, a, alpha_, 1);
+          pred(1) = rate / k10_;
         }
       }
       return pred;
