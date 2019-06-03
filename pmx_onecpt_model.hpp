@@ -245,23 +245,19 @@ namespace refactor {
       typename torsten::return_t<T_par, T_time>::type exp1 = exp(-k10_ * dt);
       typename torsten::return_t<T_par, T_time>::type exp2 = exp(-ka_ * dt);
 
-      if (y0_[0] > 0) {
-        pred(0) += y0_[0] * exp2;
-        pred(1) += y0_[0] * ka_ / (ka_ - k10_) * (exp1 - exp2);
-      }
+      // contribution from cpt 0 bolus dose
+      pred(0) += y0_[0] * exp2;
+      pred(1) += y0_[0] * ka_ / (ka_ - k10_) * (exp1 - exp2);
 
-      if (rate_[0] > 0) {
-        pred(0) += rate_[0] * (1 - exp2) / ka_;
-        pred(1) += rate_[0] * ka_ / (ka_ - k10_) * ((1 - exp1) / k10_ - (1 - exp2) / ka_);
-      }
+      // contribution from cpt 0 infusion dose
+      pred(0) += rate_[0] * (1 - exp2) / ka_;
+      pred(1) += rate_[0] * ka_ / (ka_ - k10_) * ((1 - exp1) / k10_ - (1 - exp2) / ka_);
 
-      if (y0_[1] > 0) {
-        pred(1) += y0_[1] * exp1;
-      }
+      // contribution from cpt 1 bolus dose
+      pred(1) += y0_[1] * exp1;
 
-      if (rate_[1] > 0) {
-        pred(1) += rate_[1] * (1 - exp1) / k10_;
-      }
+      // contribution from cpt 1 infusion dose
+      pred(1) += rate_[1] * (1 - exp1) / k10_;
 
       return pred;
     }
