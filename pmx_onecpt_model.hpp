@@ -294,11 +294,14 @@ namespace refactor {
       std::vector<ss_scalar_type> a(2, 0);
       Matrix<ss_scalar_type, -1, 1> pred = Matrix<ss_scalar_type, -1, 1>::Zero(2);
       if (rate == 0) {  // bolus dose
-        if (cmt == 1) {
+        switch (cmt) {
+        case 1:
           pred(0) = amt / (exp(ka_ * ii) - 1.0);
           pred(1) = amt * ka_ / (ka_ - k10_) * (1.0 / (exp(k10_ * ii)-1.0) - 1.0 / (exp(ka_ * ii)-1.0));
-        } else {
+          break;
+        case 2:
           pred(1) = amt / (exp(k10_ * ii) - 1.0);
+          break;
         }
       } else if (ii > 0) {  // multiple truncated infusions
         typename torsten::return_t<T_amt, T_r>::type dt_infus = amt/rate;
@@ -306,19 +309,26 @@ namespace refactor {
         torsten::check_mti(amt, stan::math::value_of(dt_infus), ii, function);
 
         // since we've checked ii > dt_infus
-        if (cmt == 1) {
+        // TODO: ii < dt_infus
+        switch (cmt) {
+        case 1:
           pred(0) = rate / ka_ * (1 - exp(-ka_ * dt_infus)) * exp(-ka_ * (ii - dt_infus)) / (1 - exp(-ka_ * ii));
           pred(1) = rate * ka_ / (k10_ * (ka_ - k10_)) * (1 - exp(-k10_ * dt_infus)) * exp(-k10_ * (ii - dt_infus)) / (1 - exp(-k10_ * ii))
             - rate / (ka_ - k10_) * (1 - exp(-ka_ * dt_infus)) * exp(-ka_ * (ii - dt_infus)) / (1 - exp(-ka_ * ii));
-        } else {
+          break;
+        case 2:
           pred(1) = rate / k10_ * (1 - exp(-k10_ * dt_infus)) * exp(-k10_ * (ii - dt_infus)) / (1 - exp(-k10_ * ii));
+          break;
         }
       } else {  // constant infusion
-        if (cmt == 1) {
+        switch (cmt) {
+        case 1:
           pred(0) = rate / ka_;
           pred(1) = rate * (ka_ / (k10_ * (ka_ - k10_)) - 1.0 / (ka_ - k10_));
-        } else {  // cmt = 2
+          break;
+        case 2:
           pred(1) = rate / k10_;
+          break;
         }
       }
       return pred;
