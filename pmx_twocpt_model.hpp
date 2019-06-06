@@ -283,12 +283,12 @@ namespace refactor {
 
       // contribution from cpt 0
       {
-        T_par a1 = ka_ * (k21_ - alpha_[0]) / ((ka_ - alpha_[0]) * (alpha_[1] - alpha_[0]));
-        T_par a2 = ka_ * (k21_ - alpha_[1]) / ((ka_ - alpha_[1]) * (alpha_[0] - alpha_[1]));
-        T_par a3 = -(a1 + a2);
-        T_par a4 = ka_ * k12_ / ((ka_ - alpha_[0]) * (alpha_[1] - alpha_[0]));
-        T_par a5 = ka_ * k12_ / ((ka_ - alpha_[1]) * (alpha_[0] - alpha_[1]));
-        T_par a6 = -(a4 + a5);
+        const T_par a1 = ka_ * (k21_ - alpha_[0]) / ((ka_ - alpha_[0]) * (alpha_[1] - alpha_[0]));
+        const T_par a2 = ka_ * (k21_ - alpha_[1]) / ((ka_ - alpha_[1]) * (alpha_[0] - alpha_[1]));
+        const T_par a3 = -(a1 + a2);
+        const T_par a4 = ka_ * k12_ / ((ka_ - alpha_[0]) * (alpha_[1] - alpha_[0]));
+        const T_par a5 = ka_ * k12_ / ((ka_ - alpha_[1]) * (alpha_[0] - alpha_[1]));
+        const T_par a6 = -(a4 + a5);
 
         // bolus
         pred(0) += y0_[0] * exp(-ka_ * dt);
@@ -303,8 +303,8 @@ namespace refactor {
 
       // contribution from cpt 1
       {
-        T_par a1 = (k21_ - alpha_[0]) / (alpha_[1] - alpha_[0]);
-        T_par a2 = (k21_ - alpha_[1]) / (alpha_[0] - alpha_[1]);
+        const T_par a1 = (k21_ - alpha_[0]) / (alpha_[1] - alpha_[0]);
+        const T_par a2 = (k21_ - alpha_[1]) / (alpha_[0] - alpha_[1]);
 
         // bolus
         pred(1) += y0_[1] * (a1 * exp(-alpha_[0] * dt) + a2 * exp(-alpha_[1] * dt));
@@ -317,8 +317,8 @@ namespace refactor {
 
       // contribution from cpt 2
       {
-        T_par a1 = (k10_ + k12_ - alpha_[0]) / (alpha_[1] - alpha_[0]);
-        T_par a2 = (k10_ + k12_ - alpha_[1]) / (alpha_[0] - alpha_[1]);
+        const T_par a1 = (k10_ + k12_ - alpha_[0]) / (alpha_[1] - alpha_[0]);
+        const T_par a2 = (k10_ + k12_ - alpha_[1]) / (alpha_[0] - alpha_[1]);
 
         // bolus
         pred(1) += y0_[2] * k21_ / (alpha_[1] - alpha_[0]) * (exp(-alpha_[0] * dt) - exp(-alpha_[1] * dt));
@@ -369,8 +369,7 @@ namespace refactor {
       if (rate == 0) {  // bolus dose
         switch (cmt) {
         case 1:
-          // pred(0) = torsten::PolyExp(ii, amt, 0, 0, ii, true, a, alpha_, 3); // FIXME:pred(0)==0
-          pred(0) = 0.0;        // FIXME
+          pred(0) = amt / (exp(ka_ * ii) - 1.0);
           a[0] = ka_ * (k21_ - alpha_[0]) / ((ka_ - alpha_[0]) * (alpha_[1] - alpha_[0]));
           a[1] = ka_ * (k21_ - alpha_[1]) / ((ka_ - alpha_[1]) * (alpha_[0] - alpha_[1]));
           a[2] = -(a[0] + a[1]);
