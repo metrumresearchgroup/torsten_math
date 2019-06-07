@@ -383,8 +383,8 @@ namespace refactor {
           a[0] = (k21_ - alpha_[0]) / (alpha_[1] - alpha_[0]);
           a[1] = (k21_ - alpha_[1]) / (alpha_[0] - alpha_[1]);
           pred(1) = amt * (a[0] / (exp(alpha_[0] * ii)-1.0) + a[1] / (exp(alpha_[1] * ii)-1.0));
-          a[0] = ka_ * k12_ / ((ka_ - alpha_[0]) * (alpha_[1] - alpha_[0]));
-          a[1] = ka_ * k12_ / ((ka_ - alpha_[1]) * (alpha_[0] - alpha_[1]));
+          a[0] = k12_ / (alpha_[1] - alpha_[0]);
+          a[1] = -a[0];
           pred(2) = amt * (a[0] / (exp(alpha_[0] * ii)-1.0) + a[1] / (exp(alpha_[1] * ii)-1.0));
           break;
         case 3:
