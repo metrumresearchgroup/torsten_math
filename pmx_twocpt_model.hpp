@@ -440,8 +440,6 @@ namespace refactor {
       } else {  // constant infusion
         switch (cmt) {
         case 1:
-          // a[2] = 1;
-          // pred(0) = torsten::PolyExp(0, 0, rate, inf, 0, true, a, alpha_, 3);
           pred(0) = rate / alpha_[2];
           a[0] = ka_ * (k21_ - alpha_[0]) / ((ka_ - alpha_[0]) * (alpha_[1] - alpha_[0]));
           a[1] = ka_ * (k21_ - alpha_[1]) / ((ka_ - alpha_[1]) * (alpha_[0] - alpha_[1]));
