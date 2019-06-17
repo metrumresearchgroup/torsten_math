@@ -4,7 +4,6 @@
 #include <stan/math/rev/mat/functor/algebra_solver.hpp>
 #include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
-#include <stan/math/torsten/pk_ss_system.hpp>
 #include <stan/math/torsten/PKModel/Pred/unpromote.hpp>
 
 namespace refactor {
@@ -129,6 +128,198 @@ namespace refactor {
   };
 
 
+/**
+ * A structure to store the algebraic system
+ * which gets solved when computing the steady
+ * state solution for ODE models.
+ *
+ * @tparam It integrator type
+ * @tparam T_amt @c amt type
+ * @tparam T_rate @c rate type
+ * @tparam F ODE RHS functor type
+ */
+  template <PMXOdeIntegratorId It, typename T_amt, typename T_rate, typename F>
+  struct SSFunctor;
+
+/* When both @c amt and @c rate are fixed
+ * data, @c x_r consists of {rate, amt} so that the
+ * nonlinear function for root finding looks at passed-in @c x_r for
+ * @c amt and @c rate(vector).
+ */
+  template <PMXOdeIntegratorId It, typename F>
+    struct SSFunctor<It, double, double, F> {
+    PMXOdeFunctorRateAdaptor<F, double> f_;
+    double ii_;
+    int cmt_;
+    const PMXOdeIntegrator<It> integrator_;
+
+    SSFunctor() {}
+
+    SSFunctor(const F& f, double ii, int cmt,
+              const PMXOdeIntegrator<It>& integrator) :
+      f_(f), ii_(ii), cmt_(cmt), integrator_(integrator)
+    {}
+
+  /**
+   *  dd regime.
+   *  dat contains the rates in each compartment followed
+   *  by the adjusted amount (biovar * amt).
+   */
+  template <typename T0, typename T1>
+  inline
+  Eigen::Matrix<typename boost::math::tools::promote_args<T0, T1>::type,
+                Eigen::Dynamic, 1>
+  operator()(const Eigen::Matrix<T0, Eigen::Dynamic, 1>& x,
+             const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+             const std::vector<double>& dat,
+             const std::vector<int>& dat_int,
+             std::ostream* msgs) const {
+    using stan::math::to_array_1d;
+    using stan::math::to_vector;
+    using stan::math::to_vector;
+    using Eigen::Matrix;
+    using Eigen::Dynamic;
+    using std::vector;
+    using torsten::check_mti;
+
+    typedef typename boost::math::tools::promote_args<T0, T1>::type scalar_t;
+
+    double t0 = 0;
+    vector<double> ts(1);
+
+    vector<scalar_t> x0(x.size());
+    for (size_t i = 0; i < x0.size(); i++) x0[i] = x(i);
+    double amt = dat[dat.size() - 1];
+    double rate = dat[cmt_ - 1];
+
+    Eigen::Matrix<scalar_t, Eigen::Dynamic, 1> result(x.size());
+
+    if (rate == 0) {  // bolus dose
+      x0[cmt_ - 1] += amt;
+      ts[0] = ii_;
+
+      vector<scalar_t> pred = integrator_(f_, x0, t0, ts, to_array_1d(y), dat, dat_int)[0];
+
+      for (int i = 0; i < result.size(); i++)
+        result(i) = x(i) - pred[i];
+
+    } else if (ii_ > 0) {  // multiple truncated infusions
+      ts[0] = amt / rate;
+
+      static const char* function("Steady State Event");
+      torsten::check_mti(amt, ts[0], ii_, function);
+
+      std::vector<T1> theta = to_array_1d(y);
+      x0 = integrator_(f_, to_array_1d(x), t0, ts, theta, dat, dat_int)[0];
+
+      ts[0] = ii_ - ts[0];
+      std::vector<double> null_rate(dat.size() - 1, 0.0);
+      vector<scalar_t> pred = integrator_(f_, x0, t0, ts, theta, null_rate, dat_int)[0];
+
+      for (int i = 0; i < result.size(); i++)
+        result(i) = x(i) - pred[i];
+    } else {  // constant infusion
+      vector<scalar_t> derivative = f_(0, to_array_1d(x), to_array_1d(y), dat, dat_int, 0);
+      result = to_vector(derivative);
+    }
+
+    return result;
+  }
+};
+
+/**
+ * A structure to store the algebraic system
+ * which gets solved when computing the steady
+ * state solution.
+ *
+ * In this structure, amt is a random variable
+ * and rate a fixed variable (vd regime).
+ */
+  template <PMXOdeIntegratorId It, typename F>
+  struct SSFunctor<It, stan::math::var, double, F> {
+    PMXOdeFunctorRateAdaptor<F, double> f_;
+    double ii_;
+    int cmt_;
+    const PMXOdeIntegrator<It> integrator_;
+
+    SSFunctor() {}
+
+    SSFunctor(const F& f, double ii, int cmt,
+              const PMXOdeIntegrator<It>& integrator) :
+      f_(f), ii_(ii), cmt_(cmt), integrator_(integrator)
+    {}
+
+    /**
+     *  Case where the modified amt is a random variable. This
+     *  will usually happen because biovar is a parameter, making 
+     *  amt a transformed parameter.
+     *  The last element of y is amt.
+     *  dat stores the rate.
+     */
+    template <typename T0, typename T1>
+    inline
+    Eigen::Matrix<typename boost::math::tools::promote_args<T0, T1>::type,
+                  Eigen::Dynamic, 1>
+    operator()(const Eigen::Matrix<T0, Eigen::Dynamic, 1>& x,
+               const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+               const std::vector<double>& dat,
+               const std::vector<int>& dat_int,
+               std::ostream* msgs) const {
+      using stan::math::to_array_1d;
+      using stan::math::to_vector;
+      using std::vector;
+      using stan::math::invalid_argument;
+      using stan::math::value_of;
+
+      typedef typename boost::math::tools::promote_args<T0, T1>::type scalar_t;
+
+      double t0 = 0;
+      const vector<double> ts{ii_};
+
+      vector<scalar_t> x0(x.size());
+      for (size_t i = 0; i < x0.size(); i++) x0[i] = x(i);
+      const T1& amt = y(y.size() - 1);
+      double rate = dat.at(cmt_ - 1);
+
+      Eigen::Matrix<scalar_t, Eigen::Dynamic, 1> result(x.size());
+      std::vector<T1> theta(y.size() - 1);
+      for (size_t i = 0; i < theta.size(); i++) theta[i] = y(i);
+
+      if (rate == 0) {  // bolus dose
+        x0[cmt_ - 1] += amt;
+        vector<scalar_t> pred = integrator_(f_, x0, t0, ts, theta, dat, dat_int)[0];
+
+        for (int i = 0; i < result.size(); i++) {
+          result(i) = x(i) - pred[i];        
+        }
+      } else if (ii_ > 0) {  // multiple truncated infusions
+        std::vector<T1> ts_v{amt / rate};
+
+        static const char* function("Steady State Event");
+        torsten::check_mti(amt, ts_v[0], ii_, function);
+      
+        x0 = integrator_(f_, to_array_1d(x), t0, ts_v, theta, dat, dat_int)[0];
+
+        ts_v[0] = ii_ - ts_v[0];
+        std::vector<double> null_rate(dat.size(), 0.0);
+        vector<scalar_t> pred = integrator_(f_, x0, t0, ts_v, theta, null_rate, dat_int)[0];
+
+        for (int i = 0; i < result.size(); i++) result(i) = x(i) - pred[i];
+      } else {  // constant infusion
+        if (amt != 0)
+          invalid_argument("Steady State Event",
+                           "amt should be 0 when specifying a constant",
+                           "", " infusion (i.e. rate > 0 and ii = 0).",
+                           "");
+
+        vector<scalar_t> derivative = f_(0, to_array_1d(x), theta, dat, dat_int, 0);
+        result = to_vector(derivative);
+      }
+
+      return result;
+    }
+  };
+
   /**
    * ODE-based PKPD models.
    *
@@ -156,30 +347,6 @@ namespace refactor {
     using par_type    = T_par;
     using rate_type   = T_rate;
     using f_type      = F;
-
-    /**
-     * Constructor
-     * FIXME need to remove parameter as this is for linode only.
-     *
-     * @tparam T_mp parameters class
-     * @tparam Ts parameter types
-     * @param t0 initial time
-     * @param y0 initial condition
-     * @param rate dosing rate
-     * @param par model parameters
-     * @param parameter ModelParameter type
-     * @param f ODE functor
-     * @param ncmt the ODE size.
-     */
-    template<template<typename...> class T_mp, typename... Ts>
-    PKODEModel(const T_time& t0,
-               const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0,
-               const std::vector<T_rate> &rate,
-               const std::vector<T_par> &par,
-               const T_mp<Ts...> &parameter,
-               const F& f) :
-      t0_(t0), y0_(y0), rate_(rate), par_(par), f_(f), f1(f_, par_.size()), ncmt_(y0.size()) // NOLINT
-    {}
 
     /**
      * Constructor
@@ -441,7 +608,8 @@ namespace refactor {
     }
 
     /*
-     * For steady-state. Same as the first version but with given @c init.
+     * For steady-state with data rate. 
+     * Same as the non-steady version but with given @c init.
      */
     template<PMXOdeIntegratorId It>
     Eigen::Matrix<double, Eigen::Dynamic, 1>
@@ -495,6 +663,35 @@ namespace refactor {
       }
       return res;
     }
+
+    // /*
+    //  * For steady-state with parameter rate. 
+    //  * Same as the non-steady version but with given @c init.
+    //  */
+    // template<PMXOdeIntegratorId It>
+    // Eigen::Matrix<double, Eigen::Dynamic, 1>
+    // integrate(const std::vector<double> &rate,
+    //           const Eigen::Matrix<double, 1, Eigen::Dynamic>& y0,
+    //           const double& dt,
+    //           const PMXOdeIntegrator<It>& integrator) const {
+    //   using stan::math::value_of;
+
+    //   const double t0 = value_of(t0_) - dt;
+    //   std::vector<double> ts{value_of(t0_)};
+    //   Eigen::Matrix<double, Eigen::Dynamic, 1> res;
+    //   if (ts[0] == t0) {
+    //     res = y0;
+    //   } else {
+    //     auto y = stan::math::to_array_1d(y0);
+    //     PMXOdeFunctorRateAdaptor<F, double> f(f_);
+    //     std::vector<int> x_i;
+    //     const std::vector<double> pars{value_of(par_)};
+    //     std::vector<std::vector<double> > res_v =
+    //       integrator(f, y, t0, ts, pars, rate, x_i); // NOLINT
+    //     res = stan::math::to_vector(res_v[0]);
+    //   }
+    //   return res;
+    // }
 
     /*
      * Solve the ODE but return the results in data
@@ -639,10 +836,7 @@ namespace refactor {
      */
     template<PMXOdeIntegratorId It, typename T_ii>
     Eigen::Matrix<typename promote_args<T_ii, par_type>::type, Eigen::Dynamic, 1> // NOLINT
-    solve(const double& amt,
-          const double& rate,
-          const T_ii& ii,
-          const int& cmt,
+    solve(const double& amt, const double& rate, const T_ii& ii, const int& cmt,
           const PMXOdeIntegrator<It>& integrator) const {
       using Eigen::Matrix;
       using Eigen::Dynamic;
@@ -660,11 +854,10 @@ namespace refactor {
       Matrix<scalar, Dynamic, 1> pred;
 
       // Arguments for ODE integrator (and initial guess)
-      double ii_dbl = torsten::unpromote(ii);
-      Matrix<double, 1, Dynamic> init_dbl(ncmt);
-      for (int i = 0; i < ncmt; i++) init_dbl(i) = 0;
+      double ii_dbl = stan::math::value_of(ii);
+      Matrix<double, 1, Dynamic> init_dbl = Matrix<double, 1, Dynamic>::Zero(ncmt);
       vector<double> x_r(ncmt, 0);
-      vector<int> x_i(0);
+      vector<int> x_i;
 
       // Arguments for algebraic solver
       Matrix<double, Dynamic, 1> y;
@@ -672,8 +865,7 @@ namespace refactor {
       const double f_tol = 1e-4;  // empirical
       const long int alge_max_steps = 1e3;  // default
 
-      using F_ss = PMXOdeFunctorRateAdaptor<F, double>;
-      torsten::SSFunctor<It, double, double, F_ss, void> system(f1, ii_dbl, cmt, integrator); // NOLINT
+      SSFunctor<It, double, double, F> system(f_, ii_dbl, cmt, integrator); // NOLINT
 
       if (rate == 0) {          // multiple bolus dose: AMT>0, RATE=0, SS=1, and II>0.
         // compute initial guess
@@ -725,32 +917,30 @@ namespace refactor {
      * @param msgs @c ostream output of ODE integrator.
      * @return col vector of the steady state ODE solution
      */
-    template<PMXOdeIntegratorId It, typename T_amt, typename T_ii>
-    Eigen::Matrix<typename promote_args<T_amt, T_ii, T_par>::type, Eigen::Dynamic, 1> // NOLINT
-    solve(const T_amt& amt,
-          const double& rate,
-          const T_ii& ii,
-          const int& cmt,
+    template<PMXOdeIntegratorId It, typename T_amt, typename T_r, typename T_ii>
+    Eigen::Matrix<typename promote_args<T_amt, T_r, T_ii, T_par>::type, Eigen::Dynamic, 1> // NOLINT
+    solve(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
           const PMXOdeIntegrator<It>& integrator) const {
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using Eigen::VectorXd;
       using std::vector;
+      using stan::math::value_of;
       using stan::math::algebra_solver;
       using stan::math::to_vector;
       using stan::math::invalid_argument;
 
       typedef typename promote_args<T_ii, T_amt, T_time, T_par>::type scalar;
+      bool is_var_amt = stan::is_var<T_amt>::value;
+      bool is_var_rate = stan::is_var<T_r>::value;
 
       const int& ncmt = ncmt_;
-      const std::vector<T_par>& pars = par_;
 
       Matrix<scalar, Dynamic, 1> pred;
 
       // Arguments for the ODE integrator
-      double ii_dbl = torsten::unpromote(ii);
-      Matrix<double, 1, Dynamic> init_dbl(ncmt);
-      for (int i = 0; i < ncmt; i++) init_dbl(i) = 0;
+      double ii_dbl = value_of(ii);
+      Matrix<double, 1, Dynamic> init_dbl = Matrix<double, 1, Dynamic>::Zero(ncmt);
       vector<double> x_r(ncmt, 0);
       vector<int> x_i(0);
 
@@ -761,28 +951,43 @@ namespace refactor {
       const long int alge_max_steps = 1e4;  // default  // NOLINT
 
       // construct algebraic function
-      using F_ss = PMXOdeFunctorRateAdaptor<F, double>;
-      torsten::SSFunctor<It, T_amt, double, F_ss, void> system(F_ss(f_), ii_dbl, cmt, integrator); // NOLINT
+      SSFunctor<It, T_amt, double, F> system(f_, ii_dbl, cmt, integrator); // NOLINT
 
-      int npar = pars.size();
-      Matrix<scalar, Dynamic, 1> parms(npar + 1);
-      for (int i = 0; i < npar; i++) parms(i) = pars[i];
-      parms(npar) = amt;
+      int npar = par_.size();
+      // Matrix<scalar, Dynamic, 1> parms(npar + ((is_var_amt && rate == 0) ? 1 : (is_var_rate ? 1 : 0)));
+      Matrix<scalar, Dynamic, 1> parms(npar + ((is_var_amt) ? 1 : 0));
+      for (int i = 0; i < npar; i++) parms(i) = par_[i];
+      if (is_var_amt) {
+        parms(npar) = amt;
+      } else if (is_var_rate) {
+        // parms(npar) = rate;
+      }     
 
       if (rate == 0) {  // bolus dose
-        // compute initial guess
-        init_dbl(cmt - 1) = torsten::unpromote(amt);
+        init_dbl(cmt - 1) = value_of(amt); // bolus as initial condition
         y = integrate(x_r, init_dbl, ii_dbl, integrator); // NOLINT
         pred = algebra_solver(system, y, parms, x_r, x_i, 0, alge_rtol, f_tol, alge_max_steps); // NOLINT
       }  else if (ii > 0) {  // multiple truncated infusions
-        // compute initial guess
-        x_r[cmt - 1] = rate;
-        y = integrate(x_r, init_dbl, ii_dbl, integrator); // NOLINT
-        pred = algebra_solver(system, y, parms, x_r, x_i, 0, alge_rtol, 1e-3, alge_max_steps); // NOLINT
+        if (is_var_rate) {
+          std::vector<stan::math::var> rate_v(ncmt, 0);
+          // rate_v[cmt - 1] = rate;
+          // y = integrate(rate_v, init_dbl, ii_dbl, integrator); // NOLINT
+          // pred = algebra_solver(system, y, parms, x_r, x_i, 0, alge_rtol, 1e-3, alge_max_steps); // NOLINT
+        } else {
+          x_r[cmt - 1] = value_of(rate);
+          y = integrate(x_r, init_dbl, ii_dbl, integrator); // NOLINT
+          pred = algebra_solver(system, y, parms, x_r, x_i, 0, alge_rtol, 1e-3, alge_max_steps); // NOLINT
+        }
       } else {  // constant infusion
-        x_r[cmt - 1] = rate;
-        y = integrate(x_r, init_dbl, 100.0, integrator); // NOLINT
-        pred = algebra_solver(system, y, parms, x_r, x_i, 0, alge_rtol, f_tol, alge_max_steps); // NOLINT
+        if (is_var_rate) {
+          // rate_v[cmt - 1] = rate;
+          // y = integrate(rate_v, init_dbl, 100.0, integrator); // NOLINT
+          // pred = algebra_solver(system, y, parms, x_r, x_i, 0, alge_rtol, f_tol, alge_max_steps); // NOLINT
+        } else {
+          x_r[cmt - 1] = value_of(rate);
+          y = integrate(x_r, init_dbl, 100.0, integrator); // NOLINT
+          pred = algebra_solver(system, y, parms, x_r, x_i, 0, alge_rtol, f_tol, alge_max_steps); // NOLINT
+        }
       }
       return pred;
     }
