@@ -14,30 +14,6 @@ namespace refactor {
   using torsten::PMXOdeIntegrator;
   using torsten::PMXOdeIntegratorId;
 
-  /*
-   * when solving ODE with @c var rate, we append it to
-   * parameter vector. Note that spurious @c var
-   * parameters will be generated if the original parameters
-   * are data.
-   */
-  template<typename T>
-  inline std::vector<stan::math::var> parameters_with_rate(const std::vector<T> &par,
-                                                           const std::vector<stan::math::var> &rate)
-  {
-    std::vector<stan::math::var> theta(par.size() + rate.size());
-    for (size_t i = 0; i < par.size();  ++i) theta[i] = par[i];
-    for (size_t i = 0; i < rate.size(); ++i) theta[i + par.size()] = rate[i];
-    return theta;
-  }
-
-  template<typename T>
-  inline std::vector<stan::math::var> parameters_with_rate(const std::vector<T> &par,
-                                                           const std::vector<double> &rate)
-  {
-    std::vector<stan::math::var> res;
-    return res;
-  }
-
   template<typename F, typename T_rate>
   struct PMXOdeFunctorRateAdaptor;
 
@@ -76,6 +52,16 @@ namespace refactor {
       res = f(t, y, theta, x_r, x_i, msgs);
       for (size_t i = 0; i < y.size(); i++) res.at(i) += x_r.at(i);
       return res;
+    }
+
+    template<typename T>
+    static const std::vector<T>& adapted_param(const std::vector<T> &par,
+                                               const std::vector<double> &rate) {
+      return par;
+    }
+
+    static const std::vector<double>& adapted_x_r(const std::vector<double> &rate) {
+      return rate;
     }
   };
 
@@ -125,8 +111,27 @@ namespace refactor {
 
       return res;
     }
-  };
 
+    /*
+     * when solving ODE with @c var rate, we append it to
+     * parameter vector. Note that spurious @c var
+     * parameters will be generated if the original parameters
+     * are data.
+     */
+    template<typename T>
+    static std::vector<stan::math::var> adapted_param(const std::vector<T> &par,
+                                                      const std::vector<stan::math::var> &rate)
+    {
+      std::vector<stan::math::var> theta(par.size() + rate.size());
+      for (size_t i = 0; i < par.size();  ++i) theta[i] = par[i];
+      for (size_t i = 0; i < rate.size(); ++i) theta[i + par.size()] = rate[i];
+      return theta;
+    }
+
+    static const std::vector<double> adapted_x_r(const std::vector<stan::math::var> &rate) {
+      return {};
+    }
+  };
 
 /**
  * A structure to store the algebraic system
@@ -453,6 +458,7 @@ namespace refactor {
                                              const Eigen::Matrix<T1, 1, Eigen::Dynamic>& y0,
                                              const std::vector<T2> &rate,
                                              const std::vector<T3> &par) {
+      using stan::math::to_var;      
       using stan::is_var;      
       using stan::math::var;
       std::vector<stan::math::var> res(nvars(t1, y0, rate, par));
@@ -464,7 +470,7 @@ namespace refactor {
         }
       }
       if (is_var<T2>::value) {
-        std::vector<stan::math::var> theta(parameters_with_rate(par, rate));
+        std::vector<stan::math::var> theta(to_var(PMXOdeFunctorRateAdaptor<F, T2>::adapted_param(par, rate)));
         for (size_t j = 0; j < theta.size(); ++j) {
           res[i] = theta[j];
           i++;
@@ -565,13 +571,6 @@ namespace refactor {
 
   private:
     /*
-     * When time is data, the time step is trivial
-     */
-    std::vector<double> time_step(const double t_next) const {
-      return {t_next};
-    }
-
-    /*
      * When time is param, the time step needs to
      * incorporate information of initial time.
      */
@@ -580,31 +579,10 @@ namespace refactor {
     }
 
     /*
-     * We overload @c integrate so that we can pass @c rate
-     * with different types, due to limit of c++ of partial
-     * spec of member functions. The first version is for
-     * rate being data.
+     * When time is data, the time step is trivial
      */
-    template<PMXOdeIntegratorId It>
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
-    integrate(const std::vector<double> &rate,
-              const T_time& t_next,
-              const PMXOdeIntegrator<It>& integrator) const {
-      using stan::math::value_of;
-
-      const double t0 = value_of(t0_);
-      std::vector<T_time> ts(time_step(t_next));
-      Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> res;
-      if (ts[0] == t0_) {
-        res = y0_;
-      } else {
-        auto y = stan::math::to_array_1d(y0_);
-        std::vector<int> x_i;
-        std::vector<std::vector<scalar_type> > res_v =
-          integrator(f1, y, t0, ts, par_, rate, x_i); // NOLINT
-        res = stan::math::to_vector(res_v[0]);
-      }
-      return res;
+    std::vector<double> time_step(const double t_next) const {
+      return {t_next};
     }
 
     /*
@@ -636,115 +614,6 @@ namespace refactor {
       return res;
     }
 
-    /*
-     * When @c rate is a parameter, we append it to @c theta.
-     */
-    template<PMXOdeIntegratorId It>
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
-    integrate(const std::vector<stan::math::var> &rate,
-              const T_time& t_next,
-              const PMXOdeIntegrator<It>& integrator) const {
-      using stan::math::var;
-      using stan::math::value_of;
-
-      const double t0 = value_of(t0_);
-      std::vector<T_time> ts(time_step(t_next));
-      Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> res;
-      if (ts[0] == t0_) {
-        res = y0_;
-      } else {
-        auto y = stan::math::to_array_1d(y0_);
-        std::vector<double> x_r;
-        std::vector<int> x_i;
-        std::vector<stan::math::var> theta(parameters_with_rate(par_, rate));
-        std::vector<std::vector<scalar_type> > res_v =
-          integrator(f1, y, t0, ts, theta, x_r, x_i); // NOLINT
-        res = stan::math::to_vector(res_v[0]);
-      }
-      return res;
-    }
-
-    // /*
-    //  * For steady-state with parameter rate. 
-    //  * Same as the non-steady version but with given @c init.
-    //  */
-    // template<PMXOdeIntegratorId It>
-    // Eigen::Matrix<double, Eigen::Dynamic, 1>
-    // integrate(const std::vector<double> &rate,
-    //           const Eigen::Matrix<double, 1, Eigen::Dynamic>& y0,
-    //           const double& dt,
-    //           const PMXOdeIntegrator<It>& integrator) const {
-    //   using stan::math::value_of;
-
-    //   const double t0 = value_of(t0_) - dt;
-    //   std::vector<double> ts{value_of(t0_)};
-    //   Eigen::Matrix<double, Eigen::Dynamic, 1> res;
-    //   if (ts[0] == t0) {
-    //     res = y0;
-    //   } else {
-    //     auto y = stan::math::to_array_1d(y0);
-    //     PMXOdeFunctorRateAdaptor<F, double> f(f_);
-    //     std::vector<int> x_i;
-    //     const std::vector<double> pars{value_of(par_)};
-    //     std::vector<std::vector<double> > res_v =
-    //       integrator(f, y, t0, ts, pars, rate, x_i); // NOLINT
-    //     res = stan::math::to_vector(res_v[0]);
-    //   }
-    //   return res;
-    // }
-
-    /*
-     * Solve the ODE but return the results in data
-     * consisting of solution values and gradients.
-     */
-    template<PMXOdeIntegratorId It,
-             typename std::enable_if_t<It == torsten::PkBdf || It == torsten::PkAdams || It == torsten::PkRk45>* = nullptr>
-    Eigen::VectorXd integrate_d(const std::vector<stan::math::var> &rate,
-                                const T_time& t_next,
-                                const PMXOdeIntegrator<It>& integrator) const {
-      using stan::math::var;
-      using stan::math::value_of;
-
-      const double t0 = value_of(t0_);
-      std::vector<T_time> ts(time_step(t_next));
-      Eigen::VectorXd res(n_sys());
-      if (ts[0] == t0_) {
-        res = stan::math::value_of(y0_);
-        res.resize(n_sys());
-      } else {
-        auto y = stan::math::to_array_1d(y0_);
-        std::vector<double> x_r;
-        std::vector<int> x_i;
-        std::vector<stan::math::var> theta(parameters_with_rate(par_, rate));
-        res = integrator.solve_d(f1, y, t0, ts, theta, x_r, x_i).col(0);
-      }
-      return res;
-    }
-
-    /*
-     * Solve the ODE but return the results in data
-     * consisting of solution values and gradients.
-     */
-    template<PMXOdeIntegratorId It,
-             typename std::enable_if_t<It == torsten::PkBdf || It == torsten::PkAdams || It == torsten::PkRk45>* = nullptr>
-    Eigen::VectorXd integrate_d(const std::vector<double> &rate,
-                                const T_time& t_next,
-                                const PMXOdeIntegrator<It>& integrator) const {
-      using stan::math::value_of;
-
-      Eigen::VectorXd res(n_sys());
-      const double t0 = value_of(t0_);
-      std::vector<T_time> ts(time_step(t_next));
-      if (ts[0] == t0_) {
-
-      } else {
-        auto y = stan::math::to_array_1d(y0_);
-        std::vector<int> x_i;
-        res = integrator.solve_d(f1, y, t0, ts, par_, rate, x_i).col(0);
-      }
-      return res;
-    }
-
   public:
     /*
      * solve ODE system. The different cases when @c rate is
@@ -764,7 +633,22 @@ namespace refactor {
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     solve(const T_time& t_next,
           const PMXOdeIntegrator<It>& integrator) const {
-      return integrate(rate_, t_next, integrator);
+      const double t0 = stan::math::value_of(t0_);
+      std::vector<T_time> ts(time_step(t_next));
+      Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> res;
+      if (ts[0] == t0_) {
+        res = y0_;
+      } else {
+        auto y = stan::math::to_array_1d(y0_);
+        std::vector<int> x_i;
+        std::vector<std::vector<scalar_type> > res_v =
+          integrator(f1, y, t0, ts,
+                     f1.adapted_param(par_, rate_),
+                     f1.adapted_x_r(rate_),
+                     x_i);
+        res = stan::math::to_vector(res_v[0]);
+      }
+      return res;
     }
 
     /*
@@ -796,7 +680,26 @@ namespace refactor {
       static const char* caller = "PMXOdeModel::solve_d";
       stan::math::check_greater(caller, "next time", t_next, t0_);
 
-      return integrate_d(rate_, t_next, integrator);
+      // return integrate_d(rate_, t_next, integrator);
+      using stan::math::var;
+      using stan::math::value_of;
+      using stan::math::to_var;
+
+      const double t0 = value_of(t0_);
+      std::vector<T_time> ts(time_step(t_next));
+      Eigen::VectorXd res(n_sys());
+      if (ts[0] == t0_) {
+        res = stan::math::value_of(y0_);
+        res.resize(n_sys());
+      } else {
+        auto y = stan::math::to_array_1d(y0_);
+        std::vector<int> x_i;
+        res = integrator.solve_d(f1, y, t0, ts,
+                                 f1.adapted_param(par_, rate_),
+                                 f1.adapted_x_r(rate_),
+                                 x_i).col(0);
+      }
+      return res;
     }
 
     /**
