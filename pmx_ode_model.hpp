@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_REFACTOR_ODE_MODEL_HPP
 
 #include <stan/math/rev/mat/functor/algebra_solver.hpp>
+#include <stan/math/prim/scal/err/check_less_or_equal.hpp>
 #include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
 #include <stan/math/torsten/PKModel/Pred/unpromote.hpp>
@@ -139,7 +140,8 @@ namespace refactor {
 /**
  * A structure to store the algebraic system
  * which gets solved when computing the steady
- * state solution for ODE models.
+ * state solution for ODE models. The default case is when
+ * both @c amt & @c rate are params
  *
  * @tparam It integrator type
  * @tparam T_amt @c amt type
@@ -147,7 +149,101 @@ namespace refactor {
  * @tparam F ODE RHS functor type
  */
   template <PMXOdeIntegratorId It, typename T_amt, typename T_rate, typename F>
-  struct PMXOdeFunctorSSAdaptor;
+  struct PMXOdeFunctorSSAdaptor {
+    PMXOdeFunctorRateAdaptor<F, T_rate> f_;
+    double ii_;
+    int cmt_;
+    int ncmt_;
+    int npar_;
+    const PMXOdeIntegrator<It> integrator_;
+
+    PMXOdeFunctorSSAdaptor() {}
+
+    PMXOdeFunctorSSAdaptor(const F& f, int npar, double ii,
+                           int cmt, int ncmt,
+                           const PMXOdeIntegrator<It>& integrator) :
+      f_(f, npar), ii_(ii), cmt_(cmt), ncmt_(ncmt), npar_(npar), integrator_(integrator)
+    {}
+
+    /**
+     *  When rate is RV, it's attached to parameters vector.
+     * IN this case parameter @c y consists of {theta, rate}
+     */
+    template <typename T0, typename T1>
+    inline
+    Eigen::Matrix<typename boost::math::tools::promote_args<T0, T1>::type,
+                  Eigen::Dynamic, 1>
+    operator()(const Eigen::Matrix<T0, Eigen::Dynamic, 1>& x,
+               const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+               const std::vector<double>& dat,
+               const std::vector<int>& dat_int,
+               std::ostream* msgs) const {
+      using stan::math::to_array_1d;
+      using stan::math::to_vector;
+      using std::vector;
+      using stan::math::invalid_argument;
+      using stan::math::value_of;
+
+      typedef typename stan::return_type<T0, T1>::type scalar_t;
+
+      double t0 = 0;
+      const vector<double> ts{ii_};
+
+      vector<scalar_t> x0(x.size());
+      for (size_t i = 0; i < x0.size(); i++) x0[i] = x(i);
+      const T1& amt = y(y.size() - 1);
+      const T1& rate = y(npar_ + cmt_ - 1);
+
+      Eigen::Matrix<scalar_t, Eigen::Dynamic, 1> result(x.size());
+      std::vector<T1> theta(y.size() - 1);
+      for (size_t i = 0; i < theta.size(); i++) theta[i] = y(i);
+
+      static const char* function("Steady State Event");
+
+      if (rate == 0) {  // bolus dose
+        x0[cmt_ - 1] += amt;
+        vector<scalar_t> pred = integrator_(f_, x0, t0, ts, theta, dat, dat_int)[0];
+        for (int i = 0; i < result.size(); i++) {
+          result(i) = x(i) - pred[i];
+        }
+      } else if (ii_ > 0) {  // multiple truncated infusions
+        std::vector<T1> ts_v{amt / rate};
+
+        torsten::check_mti(amt, ts_v[0], ii_, function);
+
+        x0 = integrator_(f_, to_array_1d(x), t0, ts_v, theta, dat, dat_int)[0];
+
+        ts_v[0] = ii_ - ts_v[0];
+        theta[npar_ + cmt_ - 1] = 0.0;
+        vector<scalar_t> pred = integrator_(f_, x0, t0, ts_v, theta, dat, dat_int)[0];
+        for (int i = 0; i < result.size(); i++) result(i) = x(i) - pred[i];
+      } else {  // constant infusion
+        stan::math::check_less_or_equal(function, "AMT", amt, 0);
+
+        vector<scalar_t> derivative = f_(0, to_array_1d(x), theta, dat, dat_int, 0);
+        result = to_vector(derivative);
+      }
+
+      return result;
+    }
+
+    /*
+     * Append @c rate & amt parameter to original parameter vector.
+     */
+    template<typename T>
+    inline Eigen::Matrix<typename stan::return_type<T, T_amt, T_rate>::type, -1, 1>
+    adapted_param(const std::vector<T> &par, const T_amt& amt, const T_rate& rate) {
+      std::vector<typename stan::return_type<T_amt, T_rate>::type> rate_amt_vec(1 + ncmt_, 0.0);
+      rate_amt_vec[cmt_ - 1] = rate;
+      rate_amt_vec.back() = amt;
+      return stan::math::to_vector(f_.adapted_param(par, rate_amt_vec));
+    }
+
+    inline const std::vector<double>
+    adapted_x_r(const T_amt& amt, const T_rate& rate) {
+      return {};
+    }
+  };
 
   /* When both @c amt and @c rate are fixed
    * data, @c x_r consists of {rate, amt} so that the
@@ -206,6 +302,8 @@ namespace refactor {
 
       Eigen::Matrix<scalar_t, Eigen::Dynamic, 1> result(x.size());
 
+      static const char* function("Steady State Event");
+
       if (rate == 0) {  // bolus dose
         x0[cmt_ - 1] += amt;
         ts[0] = ii_;
@@ -218,7 +316,6 @@ namespace refactor {
       } else if (ii_ > 0) {  // multiple truncated infusions
         ts[0] = amt / rate;
 
-        static const char* function("Steady State Event");
         torsten::check_mti(amt, ts[0], ii_, function);
 
         std::vector<T1> theta = to_array_1d(y);
@@ -231,6 +328,7 @@ namespace refactor {
         for (int i = 0; i < result.size(); i++)
           result(i) = x(i) - pred[i];
       } else {  // constant infusion
+        stan::math::check_less_or_equal(function, "AMT", amt, 0);
         vector<scalar_t> derivative = f_(0, to_array_1d(x), to_array_1d(y), dat, dat_int, 0);
         result = to_vector(derivative);
       }
@@ -313,6 +411,8 @@ namespace refactor {
       std::vector<T1> theta(y.size() - 1);
       for (size_t i = 0; i < theta.size(); i++) theta[i] = y(i);
 
+      static const char* function("Steady State Event");
+
       if (rate == 0) {  // bolus dose
         x0[cmt_ - 1] += amt;
         vector<scalar_t> pred = integrator_(f_, x0, t0, ts, theta, dat, dat_int)[0];
@@ -323,7 +423,6 @@ namespace refactor {
       } else if (ii_ > 0) {  // multiple truncated infusions
         std::vector<T1> ts_v{amt / rate};
 
-        static const char* function("Steady State Event");
         torsten::check_mti(amt, ts_v[0], ii_, function);
       
         x0 = integrator_(f_, to_array_1d(x), t0, ts_v, theta, dat, dat_int)[0];
@@ -334,12 +433,7 @@ namespace refactor {
 
         for (int i = 0; i < result.size(); i++) result(i) = x(i) - pred[i];
       } else {  // constant infusion
-        if (amt != 0)
-          invalid_argument("Steady State Event",
-                           "amt should be 0 when specifying a constant",
-                           "", " infusion (i.e. rate > 0 and ii = 0).",
-                           "");
-
+        stan::math::check_less_or_equal(function, "AMT", amt, 0);
         vector<scalar_t> derivative = f_(0, to_array_1d(x), theta, dat, dat_int, 0);
         result = to_vector(derivative);
       }
@@ -420,6 +514,7 @@ namespace refactor {
 
       Eigen::Matrix<scalar_t, Eigen::Dynamic, 1> result(x.size());
       std::vector<T1> theta(to_array_1d(y));
+      static const char* function("Steady State Event");
 
       if (rate == 0) {  // bolus dose
         x0[cmt_ - 1] += amt;
@@ -430,7 +525,6 @@ namespace refactor {
       } else if (ii_ > 0) {  // multiple truncated infusions
         std::vector<T1> ts_v{amt / rate};
 
-        static const char* function("Steady State Event");
         torsten::check_mti(amt, ts_v[0], ii_, function);
       
         x0 = integrator_(f_, to_array_1d(x), t0, ts_v, theta, dat, dat_int)[0];
@@ -440,12 +534,7 @@ namespace refactor {
         vector<scalar_t> pred = integrator_(f_, x0, t0, ts_v, theta, dat, dat_int)[0];
         for (int i = 0; i < result.size(); i++) result(i) = x(i) - pred[i];
       } else {  // constant infusion
-        if (amt != 0)
-          invalid_argument("Steady State Event",
-                           "amt should be 0 when specifying a constant",
-                           "", " infusion (i.e. rate > 0 and ii = 0).",
-                           "");
-
+        stan::math::check_less_or_equal(function, "AMT", amt, 0);
         vector<scalar_t> derivative = f_(0, to_array_1d(x), theta, dat, dat_int, 0);
         result = to_vector(derivative);
       }
@@ -469,6 +558,8 @@ namespace refactor {
       return {amt};
    }
   };
+
+
 
   /**
    * ODE-based PKPD models.
@@ -922,20 +1013,16 @@ namespace refactor {
                               fss.adapted_param(par_, amt, rate),
                               fss.adapted_x_r(amt, rate),
                               x_i, 0, alge_rtol, f_tol, alge_max_steps); // NOLINT
-      } else if (ii > 0) {  // multiple truncated infusions
+      } else {  // infusions (truncated or constant)
         x_r[cmt - 1] = value_of(rate);
-        y = integrate(x_r, init_dbl, ii_dbl, integrator);
+        const double long_dt = 100.0;
+        const double dt = ii > 0 ? ii_dbl : long_dt;
+        const double f_tol_rate = ii > 0 ? 1e-3 : f_tol;
+        y = integrate(x_r, init_dbl, dt, integrator);
         pred = algebra_solver(fss, y,
                               fss.adapted_param(par_, amt, rate),
                               fss.adapted_x_r(amt, rate),
-                              x_i, 0, alge_rtol, 1e-3, alge_max_steps);
-      } else {  // constant infusion
-        x_r[cmt - 1] = value_of(rate);
-        y = integrate(x_r, init_dbl, 100.0, integrator); // NOLINT
-        pred = algebra_solver(fss, y,
-                              fss.adapted_param(par_, amt, rate),
-                              fss.adapted_x_r(amt, rate),
-                              x_i, 0, alge_rtol, f_tol, alge_max_steps); // NOLINT
+                              x_i, 0, alge_rtol, f_tol_rate, alge_max_steps);
       }
       return pred;
     }
