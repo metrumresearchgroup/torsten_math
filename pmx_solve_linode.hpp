@@ -120,8 +120,8 @@ pmx_solve_linode(const std::vector<T0>& time,
                  const std::vector<T_biovar>& biovar,
                  const std::vector<T_tlag>& tlag) {
   std::vector<Eigen::Matrix<T4, -1, -1> > system_{system};
-  auto biovar_ = torsten::to_nested_vector(biovar);
-  auto tlag_ = torsten::to_nested_vector(tlag);
+  auto biovar_ = torsten::to_array_2d(biovar);
+  auto tlag_ = torsten::to_array_2d(tlag);
 
   return pmx_solve_linode(time, amt, rate, ii, evid, cmt, addl, ss,
                           system_, biovar_, tlag_);
@@ -151,8 +151,8 @@ pmx_solve_linode(const std::vector<T0>& time,
                  const std::vector< Eigen::Matrix<T4, -1, -1> >& system,
                  const std::vector<T_biovar>& biovar,
                  const std::vector<T_tlag>& tlag) {
-  auto biovar_ = torsten::to_nested_vector(biovar);
-  auto tlag_ = torsten::to_nested_vector(tlag);
+  auto biovar_ = torsten::to_array_2d(biovar);
+  auto tlag_ = torsten::to_array_2d(tlag);
 
   return pmx_solve_linode(time, amt, rate, ii, evid, cmt, addl, ss,
                           system, biovar_, tlag_);

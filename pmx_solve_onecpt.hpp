@@ -150,9 +150,9 @@ pmx_solve_onecpt(const std::vector<T0>& time,
                    const std::vector<T_par>& pMatrix,
                    const std::vector<T_biovar>& biovar,
                    const std::vector<T_tlag>& tlag) {
-    auto param_ = torsten::to_nested_vector(pMatrix);
-    auto biovar_ = torsten::to_nested_vector(biovar);
-    auto tlag_ = torsten::to_nested_vector(tlag);
+    auto param_ = torsten::to_array_2d(pMatrix);
+    auto biovar_ = torsten::to_array_2d(biovar);
+    auto tlag_ = torsten::to_array_2d(tlag);
 
     return pmx_solve_onecpt(time, amt, rate, ii, evid, cmt, addl, ss,
                             param_, biovar_, tlag_);

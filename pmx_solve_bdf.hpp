@@ -2,7 +2,7 @@
 #define STAN_MATH_TORSTEN_REFACTOR_GENERALODEMODEL_BDF_HPP
 
 #include <Eigen/Dense>
-#include <stan/math/torsten/to_nested_vector.hpp>
+#include <stan/math/torsten/to_array_2d.hpp>
 #include <stan/math/torsten/events_manager.hpp>
 #include <stan/math/torsten/pmx_population_check.hpp>
 #include <stan/math/torsten/PKModel/functors/general_functor.hpp>
@@ -161,9 +161,9 @@ pmx_solve_bdf(const F& f,
                      double rel_tol = 1e-6,
                      double abs_tol = 1e-6,
                      long int max_num_steps = 1e6) {
-    auto param_ = torsten::to_nested_vector(pMatrix);
-    auto biovar_ = torsten::to_nested_vector(biovar);
-    auto tlag_ = torsten::to_nested_vector(tlag);
+    auto param_ = torsten::to_array_2d(pMatrix);
+    auto biovar_ = torsten::to_array_2d(biovar);
+    auto tlag_ = torsten::to_array_2d(tlag);
 
     return pmx_solve_bdf(f, nCmt,
                          time, amt, rate, ii, evid, cmt, addl, ss,
