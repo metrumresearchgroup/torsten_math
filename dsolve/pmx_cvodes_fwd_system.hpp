@@ -228,6 +228,8 @@ namespace torsten {
                                     f(t, yv_work, theta_work, x_r, x_i, msgs) :
                                     f(t, yv_work, theta_dbl, x_r, x_i, msgs));
 
+          stan::math::check_size_match("PMXOdeintSystem", "dz_dt", fyv_work.size(), "states", n);
+
           for (int j = 0; j < n; ++j) {
             stan::math::set_zero_all_adjoints_nested();
             fyv_work[j].grad();

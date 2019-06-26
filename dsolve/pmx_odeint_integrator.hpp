@@ -31,6 +31,10 @@ namespace dsolve {
         step_counter_(0)
       {}
 
+      /*
+       * use observer to convert y value and gradient to var
+       * results, if necessary.
+       */
       inline void operator()(const std::vector<double>& curr_result, double t) {
         if(t > ode_.t0_) {
           observer_impl(y[step_counter_], curr_result, ode_.ts_, ode_.y0_, ode_.theta_, step_counter_);
@@ -65,7 +69,7 @@ namespace dsolve {
         std::vector<double> g(n * (1 + ts.size()), 0.0);
         std::copy(y.begin(), y.end(), g.begin());        
         std::vector<double> dy_dt(n);
-        ode_(y, dy_dt, ts[i].val());
+        ode_.dbl_rhs_impl(y, dy_dt, ts[i].val());
         std::copy(dy_dt.begin(), dy_dt.end(), g.begin() + n + i * n);
         y_res = torsten::precomputed_gradients(g, ts);
       }
@@ -83,25 +87,6 @@ namespace dsolve {
       }
 
       /*
-       * @c theta & @c ts are @c var
-       */
-      inline void observer_impl(std::vector<stan::math::var>& y_res,
-                                const std::vector<double>& y,
-                                const std::vector<stan::math::var>& ts,
-                                const std::vector<double>& y0,
-                                const std::vector<stan::math::var>& theta,
-                                int i) const {
-        int ns = ode_.ns;
-        int n = y0.size();
-        std::vector<double> g(n * (1 + ns + ts.size()), 0.0);
-        std::copy(y.begin(), y.end(), g.begin());        
-        std::vector<double> dy_dt(n);
-        ode_(y, dy_dt, ts[i].val());
-        std::copy(dy_dt.begin(), dy_dt.end(), g.begin() + n + ns * n + i * n);
-        y_res = torsten::precomputed_gradients(g, ode_.vars());
-      }
-
-      /*
        * only @c y0 is @c var
        */
       inline void observer_impl(std::vector<stan::math::var>& y_res,
@@ -111,25 +96,6 @@ namespace dsolve {
                                 const std::vector<double>& theta,
                                 int i) const {
         y_res = torsten::precomputed_gradients(y, y0);
-      }
-
-      /*
-       * @c y0 and @c ts are @c var
-       */
-      inline void observer_impl(std::vector<stan::math::var>& y_res,
-                                const std::vector<double>& y,
-                                const std::vector<stan::math::var>& ts,
-                                const std::vector<stan::math::var>& y0,
-                                const std::vector<double>& theta,
-                                int i) const {
-        int ns = ode_.ns;
-        int n = y0.size();
-        std::vector<double> g(n * (1 + ns + ts.size()), 0.0);
-        std::copy(y.begin(), y.end(), g.begin());        
-        std::vector<double> dy_dt(n);
-        ode_(y, dy_dt, ts[i].val());
-        std::copy(dy_dt.begin(), dy_dt.end(), g.begin() + n + ns * n + i * n);
-        y_res = torsten::precomputed_gradients(g, ode_.vars());
       }
 
       /*
@@ -145,20 +111,21 @@ namespace dsolve {
       }
 
       /*
-       * @c y0, @c theta, and @c ts are @c var
+       * @c theta and/or &c y0 are @c var, together with @c ts.
        */
+      template<typename T1, typename T2>
       inline void observer_impl(std::vector<stan::math::var>& y_res,
                                 const std::vector<double>& y,
                                 const std::vector<stan::math::var>& ts,
-                                const std::vector<stan::math::var>& y0,
-                                const std::vector<stan::math::var>& theta,
+                                const std::vector<T1>& y0,
+                                const std::vector<T2>& theta,
                                 int i) const {
         int ns = ode_.ns;
         int n = y0.size();
         std::vector<double> g(n * (1 + ns + ts.size()), 0.0);
         std::copy(y.begin(), y.end(), g.begin());        
-        std::vector<double> dy_dt(n);
-        ode_(y, dy_dt, ts[i].val());
+        std::vector<double> dy_dt(n), y_dbl(y.begin(), y.begin() + n);
+        ode_.dbl_rhs_impl(y_dbl, dy_dt, ts[i].val());
         std::copy(dy_dt.begin(), dy_dt.end(), g.begin() + n + ns * n + i * n);
         y_res = torsten::precomputed_gradients(g, ode_.vars());
       }

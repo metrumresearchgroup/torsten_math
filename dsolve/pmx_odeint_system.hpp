@@ -109,12 +109,32 @@ namespace dsolve {
       return pmx_ode_vars(y0_, theta_, ts_);
     }
 
+    /*
+     * Evaluate RHS of the ODE
+     * @param y current dependent value, arranged as {y, dy_dp1, dy_dp2...}
+     * @param dy_dt ODE RHS to be filled.
+     * @param t current indepedent value
+     */
     void operator()(const std::vector<double>& y, std::vector<double>& dy_dt,
                     double t) const {
-      rhs_impl(y, dy_dt, t);
       stan::math::check_size_match("PMXOdeintSystem", "y", y.size(), "dy_dt", dy_dt.size());
+      rhs_impl(y, dy_dt, t);
     }
 
+    /*
+     * evaluate RHS with data only inputs.
+     */
+    void dbl_rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t) const
+    {
+      stan::math::check_size_match("PMXOdeintSystem", "y", y.size(), "dy_dt", dy_dt.size());
+      dy_dt = f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
+      return;      
+    }
+
+    /*
+     * evalute RHS of the entire system, possibly including
+     * the forward sensitivity equation components in @c y and @c dy_dt.
+     */
     void rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t) const
     {
       using std::vector;
@@ -125,38 +145,34 @@ namespace dsolve {
         return;
       }
 
+      std::fill(dy_dt.begin(), dy_dt.end(), 0.0);
       try {
         stan::math::start_nested();
 
-        vector<var> yv(y.begin(), y.begin() + N_);
-
-        vector<var> theta_v;
-        if (is_var_par) {
-          theta_v.insert(theta_v.end(), theta_dbl_.begin(), theta_dbl_.end());
-        }
-        vector<var> fyv(is_var_par ?
-                        f_(t, yv, theta_v, x_r_, x_i_, msgs_) :
-                        f_(t, yv, theta_, x_r_, x_i_, msgs_));
+        std::vector<var> yv(y.begin(), y.begin() + N_);
+        std::vector<var> theta_v(theta_dbl_.begin(), theta_dbl_.end());
+        std::vector<var> fyv(is_var_par ?
+                             f_(t, yv, theta_v, x_r_, x_i_, msgs_) :
+                             f_(t, yv, theta_, x_r_, x_i_, msgs_));
 
         stan::math::check_size_match("PMXOdeintSystem", "dz_dt", fyv.size(), "states", N_);
 
-        std::fill(dy_dt.begin(), dy_dt.end(), 0.0);
         for (size_t i = 0; i < N_; ++i) {
-          dy_dt[i] = fyv[i].val();
           stan::math::set_zero_all_adjoints_nested();
+          dy_dt[i] = fyv[i].val();
           fyv[i].grad();
 
           // df/dy*s_i term, for i = 1...ns
           for (size_t j = 0; j < ns; ++j) {
-            double g = 0;
-            for (size_t k = 0; k < N_; k++) g += y[N_ + N_ * j + k] * yv[k].adj();
-            dy_dt[N_ + N_ * j + i] = g;
+            for (size_t k = 0; k < N_; ++k) {
+              dy_dt.at(N_ + N_ * j + i) += y[N_ + N_ * j + k] * yv[k].adj();
+            }
           }
 
           // df/dp_i term, for i = n...n+m-1
           if (is_var_par) {
             for (size_t j = 0; j < M_; ++j) {
-              dy_dt[N_ + N_ * (ns - M_ + j) + i] += theta_v[j].adj();
+              dy_dt.at(N_ + N_ * (ns - M_ + j) + i) += theta_v[j].adj();
             }
           }
         }

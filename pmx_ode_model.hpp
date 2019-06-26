@@ -35,7 +35,7 @@ namespace refactor {
      * calculated by assumption that @c theta is laid out as
      * @c [theta, rate]
      */
-    PMXOdeFunctorRateAdaptor() {}
+    PMXOdeFunctorRateAdaptor() : f() {}
 
     /*
      * Evaluate ODE functor, with @c theta contains original
