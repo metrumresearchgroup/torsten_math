@@ -1031,9 +1031,9 @@ namespace refactor {
      * return steady state solution in form of data, use
      * default behavior, namely take gradients using autodiff.
      */
-    template<PMXOdeIntegratorId It, typename T_amt, typename T_ii>
+    template<PMXOdeIntegratorId It, typename T_amt, typename T_r, typename T_ii>
     Eigen::VectorXd solve_d(const T_amt& amt,
-                            const double& rate,
+                            const T_r& rate,
                             const T_ii& ii,
                             const int& cmt,
                             const PMXOdeIntegrator<It>& integrator) const {
