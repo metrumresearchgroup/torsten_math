@@ -2,7 +2,10 @@
 #define STAN_MATH_TORSTEN_MPI_CVODES_BRAID_HPP
 
 #include <braid.hpp>
-#include <stan/math/torsten/dsolve.hpp>
+#include <stan/math/torsten/dsolve/sundials_check.hpp>
+#include <nvector/nvector_serial.h>
+#include <cvodes/cvodes.h>
+#include <vector>
 
 namespace torsten {
   namespace mpi {

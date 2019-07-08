@@ -1,7 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_CVODES_FWD_SYSTEM_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_CVODES_FWD_SYSTEM_HPP
 
-#include <stan/math/prim/scal/err/check_greater.hpp>
+#include <stan/math/prim/scal/err/check_size_match.hpp>
 #include <stan/math/torsten/dsolve/pmx_cvodes_system.hpp>
 #include <stan/math/torsten/dsolve/cvodes_sens_rhs.hpp>
 #include <stan/math/torsten/pmx_csda.hpp>

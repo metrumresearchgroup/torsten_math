@@ -38,14 +38,14 @@ std::vector<std::vector<Tpar> > pmx_integrate_dae(
     double t0, const std::vector<double>& ts, const std::vector<Tpar>& theta,
     const std::vector<double>& x_r, const std::vector<int>& x_i,
     const double rtol, const double atol,
-    const int64_t max_num_steps = idas_integrator::IDAS_MAX_STEPS,
+    const int64_t max_num_steps = PMXIdasIntegrator::IDAS_MAX_STEPS,
     std::ostream* msgs = nullptr) {
   /* it doesn't matter here what values @c eq_id has, as we
      don't allow yy0 or yp0 to be parameters */
   const std::vector<int> dummy_eq_id(yy0.size(), 0);
 
-  torsten::dsolve::idas_integrator solver(rtol, atol, max_num_steps);
-  torsten::dsolve::pk_idas_fwd_system<F, double, double, Tpar> dae{
+  torsten::dsolve::PMXIdasIntegrator solver(rtol, atol, max_num_steps);
+  torsten::dsolve::PMXIdasFwdSystem<F, double, double, Tpar> dae{
       f, dummy_eq_id, yy0, yp0, theta, x_r, x_i, msgs};
 
   dae.check_ic_consistency(t0, atol);

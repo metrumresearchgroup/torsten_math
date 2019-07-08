@@ -7,8 +7,8 @@
 #include <stan/math/rev/mat/fun/typedefs.hpp>
 #include <stan/math/torsten/dsolve/pmx_idas_system.hpp>
 #include <stan/math/rev/mat/functor/jacobian.hpp>
+#include <stan/math/torsten/to_matrix.hpp>
 #include <idas/idas.h>
-#include <nvector/nvector_serial.h>
 #include <ostream>
 #include <vector>
 
@@ -24,7 +24,7 @@ namespace dsolve {
  * @tparam Tpar type of parameters.
  */
 template <typename F, typename Tyy, typename Typ, typename Tpar>
-class pk_idas_fwd_system : public idas_system<F, Tyy, Typ, Tpar> {
+class PMXIdasFwdSystem : public PMXIdasSystem<F, Tyy, Typ, Tpar> {
   N_Vector* nv_yys_;
   N_Vector* nv_yps_;
 
@@ -43,12 +43,12 @@ class pk_idas_fwd_system : public idas_system<F, Tyy, Typ, Tpar> {
    * @param[in] x_i integer data vector for the DAE
    * @param[in] msgs stream to which messages are printed
    */
-  pk_idas_fwd_system(const F& f, const std::vector<int>& eq_id,
+  PMXIdasFwdSystem(const F& f, const std::vector<int>& eq_id,
                       const std::vector<Tyy>& yy0, const std::vector<Typ>& yp0,
                       const std::vector<Tpar>& theta,
                       const std::vector<double>& x_r,
                       const std::vector<int>& x_i, std::ostream* msgs)
-      : idas_system<F, Tyy, Typ, Tpar>(f, eq_id, yy0, yp0, theta, x_r, x_i,
+    : PMXIdasSystem<F, Tyy, Typ, Tpar>(f, eq_id, yy0, yp0, theta, x_r, x_i,
                                        msgs) {
     if (this->need_sens) {
       nv_yys_ = N_VCloneVectorArray(this->ns_, this->nv_yy_);
@@ -63,7 +63,7 @@ class pk_idas_fwd_system : public idas_system<F, Tyy, Typ, Tpar> {
   /**
    * destructor to deallocate IDAS solution memory and workspace.
    */
-  ~pk_idas_fwd_system() {
+  ~PMXIdasFwdSystem() {
     if (this->need_sens) {
       N_VDestroyVectorArray_Serial(nv_yys_, this->ns_);
       N_VDestroyVectorArray_Serial(nv_yps_, this->ns_);
@@ -102,7 +102,7 @@ class pk_idas_fwd_system : public idas_system<F, Tyy, Typ, Tpar> {
       using stan::math::vector_v;
       using stan::math::var;
 
-      using DAE = pk_idas_fwd_system<F, Tyy, Typ, Tpar>;
+      using DAE = PMXIdasFwdSystem<F, Tyy, Typ, Tpar>;
       DAE* dae = static_cast<DAE*>(user_data);
 
       static const char* caller = "sensitivity_residual";
@@ -119,8 +119,8 @@ class pk_idas_fwd_system : public idas_system<F, Tyy, Typ, Tpar> {
 
       Eigen::Map<VectorXd> vec_theta(vtheta.data(), vtheta.size());
 
-      auto yys_mat = matrix_d_from_NVarray(yys, ns);
-      auto yps_mat = matrix_d_from_NVarray(yps, ns);
+      auto yys_mat = torsten::to_matrix(yys, ns);
+      auto yps_mat = torsten::to_matrix(yps, ns);
 
       try {
         stan::math::start_nested();
@@ -165,7 +165,7 @@ class pk_idas_fwd_system : public idas_system<F, Tyy, Typ, Tpar> {
               += J;  // only for theta
         }
 
-        matrix_d_to_NVarray(r, ress, ns);
+        to_NVarray(r, ns, ress);
       } catch (const std::exception& e) {
         stan::math::recover_memory_nested();
         throw;
@@ -176,6 +176,26 @@ class pk_idas_fwd_system : public idas_system<F, Tyy, Typ, Tpar> {
       return 0;
     };
   }
+
+  /**
+   * copy Eigen::MatrixXd to NV_Vector* array.
+   *
+   * @param[in] mat Eigen::MatrixXd to be converted
+   * @param[in] nv_size length of nv
+   * @param[out] nv N_Vector* array
+   */
+  static void to_NVarray(const Eigen::MatrixXd& mat, const size_t& nv_size,
+                         N_Vector* nv) {
+    size_t m = nv_size;
+    size_t n = NV_LENGTH_S(nv[0]);
+    for (size_t j = 0; j < m; ++j) {
+      auto nvp = N_VGetArrayPointer(nv[j]);
+      for (size_t i = 0; i < n; ++i) {
+        nvp[i] = mat(i, j);
+      }
+    }
+  }
+
 };
 
 }  // namespace dsolve

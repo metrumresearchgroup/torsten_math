@@ -22,7 +22,7 @@ namespace dsolve {
 /**
  * IDAS DAE integrator.
  */
-class idas_integrator {
+class PMXIdasIntegrator {
   const double rtol_;
   const double atol_;
   const int64_t max_num_steps_;
@@ -39,7 +39,7 @@ class idas_integrator {
    * @param[in] dae DAE system
    */
   template <typename F>
-  void init_sensitivity(pk_idas_fwd_system<F, double, double, double>& dae) {}
+  void init_sensitivity(PMXIdasFwdSystem<F, double, double, double>& dae) {}
 
   // /**
   //  *  idas adjoint sens calculation requires different initialization
@@ -59,7 +59,7 @@ class idas_integrator {
   // }
 
   template <typename F>
-  void solve(pk_idas_fwd_system<F, double, double, double>& dae,
+  void solve(PMXIdasFwdSystem<F, double, double, double>& dae,
              const double& t0, const std::vector<double>& ts,
              std::vector<std::vector<double> >& res_yy);
 
@@ -77,21 +77,21 @@ class idas_integrator {
    * @param[in] atol absolute tolerance
    * @param[in] max_num_steps max nb. of times steps
    */
-  idas_integrator(const double rtol, const double atol,
+  PMXIdasIntegrator(const double rtol, const double atol,
                   const int64_t max_num_steps = IDAS_MAX_STEPS)
       : rtol_(rtol), atol_(atol), max_num_steps_(max_num_steps) {
     using stan::math::invalid_argument;
     if (rtol_ <= 0)
-      invalid_argument("idas_integrator", "relative tolerance,", rtol_, "",
+      invalid_argument("PMXIdasIntegrator", "relative tolerance,", rtol_, "",
                        ", must be greater than 0");
     if (rtol_ > 1.0E-3)
-      invalid_argument("idas_integrator", "relative tolerance,", rtol_, "",
+      invalid_argument("PMXIdasIntegrator", "relative tolerance,", rtol_, "",
                        ", must be less than 1.0E-3");
     if (atol_ <= 0)
-      invalid_argument("idas_integrator", "absolute tolerance,", atol_, "",
+      invalid_argument("PMXIdasIntegrator", "absolute tolerance,", atol_, "",
                        ", must be greater than 0");
     if (max_num_steps_ <= 0)
-      invalid_argument("idas_integrator", "max_num_steps,", max_num_steps_, "",
+      invalid_argument("PMXIdasIntegrator", "max_num_steps,", max_num_steps_, "",
                        ", must be greater than 0");
   }
 
@@ -122,7 +122,7 @@ class idas_integrator {
     using stan::math::check_nonzero_size;
     using stan::math::check_less;
 
-    static const char* caller = "idas_integrator";
+    static const char* caller = "PMXIdasIntegrator";
     check_finite(caller, "initial time", t0);
     check_finite(caller, "times", ts);
     check_ordered(caller, "times", ts);
@@ -173,7 +173,7 @@ class idas_integrator {
  * @param[in/out] dae DAE system
  */
 template <typename Dae>
-void idas_integrator::init_sensitivity(Dae& dae) {
+void PMXIdasIntegrator::init_sensitivity(Dae& dae) {
   if (Dae::need_sens) {
     auto mem = dae.mem();
     auto yys = dae.nv_yys();
@@ -206,7 +206,7 @@ void idas_integrator::init_sensitivity(Dae& dae) {
  * @param[out] res_yy DAE solutions
  */
 template <typename F>
-void idas_integrator::solve(pk_idas_fwd_system<F, double, double, double>& dae,
+void PMXIdasIntegrator::solve(PMXIdasFwdSystem<F, double, double, double>& dae,
                             const double& t0, const std::vector<double>& ts,
                             std::vector<std::vector<double> >& res_yy) {
   double t1 = t0;
@@ -231,7 +231,7 @@ void idas_integrator::solve(pk_idas_fwd_system<F, double, double, double>& dae,
  * @param[out] res_yy DAE solutions
  */
 template <typename Dae>
-void idas_integrator::solve(Dae& dae, const double& t0,
+void PMXIdasIntegrator::solve(Dae& dae, const double& t0,
                             const std::vector<double>& ts,
                             typename Dae::return_type& res_yy) {
   double t1 = t0;

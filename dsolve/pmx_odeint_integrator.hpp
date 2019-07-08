@@ -3,6 +3,7 @@
 
 #include <stan/math/torsten/dsolve/pmx_odeint_system.hpp>
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
+#include <boost/numeric/odeint.hpp>
 #include <type_traits>
 
 namespace torsten {

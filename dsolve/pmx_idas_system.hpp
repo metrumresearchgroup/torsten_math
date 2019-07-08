@@ -32,7 +32,7 @@ namespace dsolve {
  * @tparam Tpar scalar type of parameters
  */
 template <typename F, typename Tyy, typename Typ, typename Tpar>
-class idas_system {
+class PMXIdasSystem {
  protected:
   const F& f_;
   const std::vector<Tyy>& yy_;
@@ -73,10 +73,10 @@ class idas_system {
    * @param[in] x_i integer data vector for the DAE.
    * @param[in] msgs stream to which messages are printed.
    */
-  idas_system(const F& f, const std::vector<int>& eq_id,
-              const std::vector<Tyy>& yy0, const std::vector<Typ>& yp0,
-              const std::vector<Tpar>& theta, const std::vector<double>& x_r,
-              const std::vector<int>& x_i, std::ostream* msgs)
+  PMXIdasSystem(const F& f, const std::vector<int>& eq_id,
+                const std::vector<Tyy>& yy0, const std::vector<Typ>& yp0,
+                const std::vector<Tpar>& theta, const std::vector<double>& x_r,
+                const std::vector<int>& x_i, std::ostream* msgs)
       : f_(f),
         yy_(yy0),
         yp_(yp0),
@@ -132,7 +132,7 @@ class idas_system {
   /**
    * destructor to deallocate IDAS solution memory and workspace.
    */
-  ~idas_system() {
+  ~PMXIdasSystem() {
     N_VDestroy_Serial(nv_yy_);
     N_VDestroy_Serial(nv_yp_);
     N_VDestroy_Serial(id_);
@@ -247,7 +247,7 @@ class idas_system {
   IDAResFn residual() {  // a non-capture lambda
     return [](double t, N_Vector yy, N_Vector yp, N_Vector rr,
               void* user_data) -> int {
-      using DAE = idas_system<F, Tyy, Typ, Tpar>;
+      using DAE = PMXIdasSystem<F, Tyy, Typ, Tpar>;
       DAE* dae = static_cast<DAE*>(user_data);
 
       size_t N = NV_LENGTH_S(yy);
