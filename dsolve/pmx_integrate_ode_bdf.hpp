@@ -3,7 +3,6 @@
 
 #include <stan/math/torsten/dsolve/pmx_cvodes_integrator.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
-#include <stan/math/torsten/mpi.hpp>
 #include <ostream>
 #include <vector>
 

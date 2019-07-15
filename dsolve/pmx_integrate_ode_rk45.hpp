@@ -3,7 +3,6 @@
 
 #include <stan/math/torsten/dsolve/pmx_odeint_system.hpp>
 #include <stan/math/torsten/dsolve/pmx_odeint_integrator.hpp>
-#include <stan/math/torsten/mpi.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 #include <ostream>
 #include <vector>

@@ -2,7 +2,6 @@
 #define STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_ADAMS_HPP
 
 #include <stan/math/torsten/dsolve/pmx_cvodes_integrator.hpp>
-#include <stan/math/torsten/mpi.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 #include <ostream>
 #include <vector>
