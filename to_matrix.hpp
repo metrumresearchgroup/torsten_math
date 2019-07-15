@@ -16,7 +16,9 @@ namespace torsten {
   to_matrix(const std::vector<std::vector<T> >& vv) {
     Eigen::Matrix<T, -1, -1> res(vv[0].size(), vv.size());
     for (size_t i = 0; i < vv.size(); ++i) {
-      res.col(i) = Eigen::Map<Eigen::Matrix<T, -1, 1>>(vv[i].data(), vv[i].size());
+      for (size_t j = 0; j < vv[i].size(); ++j) {
+        res(j, i) = vv[i][j];
+      }
     }
     return res;
   }

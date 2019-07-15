@@ -2,13 +2,15 @@
 #define STAN_MATH_TORSTEN_MPI_DYNAMIC_LOAD_HPP
 
 #include <stan/math/torsten/dsolve/group_functor.hpp>
+#include <stan/math/prim/scal/err/check_greater.hpp>
+#include <stan/math/prim/scal/err/check_less.hpp>
 #include <vector>
 
 namespace torsten {
   namespace mpi {
     
   // lock slaves in waiting-loop 
-  template<typename T>
+  template<typename... Args>
   struct PMXDynamicLoad;
 
   template<>
@@ -40,6 +42,9 @@ namespace torsten {
       pmx_comm(comm_in), comm(pmx_comm.comm), init_buf(init_buf_size, 0)
     {
       init_buf[0] = -1;
+
+      static const char* caller = "PMXDynamicLoad::constructor";
+      stan::math::check_greater(caller, "MPI comm size", pmx_comm.size, 1);
     }
 
     /*
@@ -133,6 +138,18 @@ namespace torsten {
     }
 
     /*
+     * master node (rank = 0) prompts slaves to break the
+     * waiting-working cycle by sending a kill tag.
+     */
+    inline void kill_slaves() {
+      if (pmx_comm.rank == 0) {
+        for (int i = 1; i < pmx_comm.size; ++i) {
+          MPI_Send(work_r.data(), 0, MPI_DOUBLE, i, kill_tag, comm);
+        }
+      }
+    }
+
+    /*
      * master node (rank = 0) recv results and send
      * available tasks to vacant slaves.
      */
@@ -147,6 +164,9 @@ namespace torsten {
                                   const std::vector<std::vector<int> >& x_i,
                                   double rtol, double atol, int max_num_step) {
       using Eigen::MatrixXd;
+
+      static const char* caller = "PMXDynamicLoad::master";
+      stan::math::check_less(caller, "MPI comm rank", pmx_comm.rank, 1);
 
       init_buf[0]           = f.id;
       init_buf[1]           = integ_id;
@@ -166,17 +186,12 @@ namespace torsten {
       const int n = y0[0].size();
       const int np = theta.size(); // population size
 
-
-      int work_r_count0 = 1 + init_buf[i_y] + init_buf[i_theta] + init_buf[i_x_r] + 2;
-
-      std::vector<double>::const_iterator iter = ts.begin();
       int begin_id = 0;
-
-      std::vector<int> task_map(pmx_comm.size);
+      std::vector<int> task_map(pmx_comm.size, -1);
 
       // initial task distribution
-      int ip = 0;
-      for (int i = 0; i < pmx_comm.size && ip < np; ++i, ++ip) {
+      int ip = 0, n_recv = 0;
+      for (int i = 1; i < pmx_comm.size && ip < np; ++i, ++ip) {
         set_work(ip, y0, t0, len, ts, theta, x_r, x_i, rtol, atol, max_num_step);
         MPI_Send(work_r.data(), work_r.size(), MPI_DOUBLE, i, work_tag, comm);
         MPI_Send(work_i.data(), work_i.size(), MPI_INT, i, work_tag, comm);
@@ -185,42 +200,63 @@ namespace torsten {
 
       // recv & dispatch new task
       MPI_Status stat;
-      bool is_invalid;
-      while ((ip < np - 1) && (!is_invalid)) {
+      bool is_invalid = false;
+      MatrixXd res = Eigen::MatrixXd::Zero(n, ts.size());
+      for (;;) {
+        int source;
         MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, comm, &stat);
         if (stat.MPI_TAG == err_tag) {
           is_invalid = true;
+          n_recv = np;
         } else {
-          int source = stat.MPI_SOURCE;
-          auto ts_range_iter = ts_range(task_map[source], len, ts);
+          source = stat.MPI_SOURCE;
+          auto ts_range_iter = ts_range(task_map.at(source), len, ts);
           std::vector<double> ts_i(ts_range_iter[0], ts_range_iter[1]);
-          MatrixXd res(n, ts_i.size());
-          MPI_Recv(res.data(), res.size(), MPI_DOUBLE, source, MPI_ANY_TAG, comm, &stat);
-          set_work(++ip, y0, t0, len, ts, theta, x_r, x_i, rtol, atol, max_num_step);          
+          // std::cout << "taki test master recv: " << task_map.at(source) << "\n";
+          // std::cout << "taki test master recv: " << n * std::distance(ts.begin(), ts_range_iter[0]) << "\n";
+          // std::cout << "taki test master recv: " << n * std::distance(ts_range_iter[0], ts_range_iter[1]) << "\n";
+          MPI_Recv(&res(n * std::distance(ts.begin(), ts_range_iter[0])),
+                   n * std::distance(ts_range_iter[0], ts_range_iter[1]),
+                   MPI_DOUBLE, source, MPI_ANY_TAG, comm, &stat);
+          n_recv++;
+        }
+
+        // more work to do?
+        if (ip < np && (!is_invalid)) {
+          set_work(ip, y0, t0, len, ts, theta, x_r, x_i, rtol, atol, max_num_step);          
           MPI_Send(work_r.data(), work_r.size(), MPI_DOUBLE, source, work_tag, comm);
           MPI_Send(work_i.data(), work_i.size(), MPI_INT, source, work_tag, comm);
-          task_map[source] = ip;
+          task_map.at(source) = ip++;
+        }
+
+        // all results recved?
+        if (n_recv == np) {
+          for (int i = 1; i < pmx_comm.size; ++i) {
+            MPI_Send(work_r.data(), 0, MPI_DOUBLE, i, down_tag, comm);
+          }
+          break;
         }
       }
 
-      for (int i = 0; i < pmx_comm.size; ++i) {
-        MPI_Send(work_r.data(), 0, MPI_DOUBLE, i, down_tag, comm);
-      }
-
-      // FIME
-      MatrixXd res;
       return res;
     }
 
     /*
-     * Slave nodes recv work and send back results
+     * Slave nodes recv work and send back results.
+     * Depends on the tag recved, the slaves do
+     * - initialize model data
+     * - recv, do, and send back work
+     * - go back to waiting
+     * - kill(break wait loop)
      */
     inline void slave() {
       using Eigen::MatrixXd;
 
+      static const char* caller = "PMXDynamicLoad::slave";
+      stan::math::check_greater(caller, "MPI comm rank", pmx_comm.rank, 0);
+
       MPI_Status stat;
 
-      // recv activation data
       double t0;
       std::vector<double> y0;
       std::vector<double> ts;
@@ -238,7 +274,7 @@ namespace torsten {
 
         if (stat.MPI_TAG == up_tag) {
           MPI_Recv(init_buf.data(), init_buf_size, MPI_INT, 0, up_tag, comm, &stat);          
-        } else if(stat.MPI_TAG == work_tag) {
+        } else if (stat.MPI_TAG == work_tag) {
           int work_r_count;
           MPI_Get_count(&stat, MPI_DOUBLE, &work_r_count);
 
@@ -288,9 +324,13 @@ namespace torsten {
             tag_ = err_tag;
           }
 
-          // send data
           int send_size = tag_ == err_tag ? 0 : res.size();
           MPI_Send(res.data(), send_size, MPI_DOUBLE, 0, tag_, comm);
+        } else if (stat.MPI_TAG == kill_tag) {
+          MPI_Recv(work_r.data(), 0, MPI_DOUBLE, 0, kill_tag, comm, &stat);
+          break;
+        } else if (stat.MPI_TAG == down_tag) {
+          MPI_Recv(work_r.data(), 0, MPI_DOUBLE, 0, down_tag, comm, &stat);
         }
       }
     }
