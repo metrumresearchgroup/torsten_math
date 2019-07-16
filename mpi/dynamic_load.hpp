@@ -211,6 +211,8 @@ namespace torsten {
                 const std::vector<Tt>& ts,
                 const std::vector<std::vector<Tp> >& theta,
                 MPI_Status& stat) {
+      using torsten::dsolve::pmx_ode_vars;
+
       int source = stat.MPI_SOURCE;
       int ires = task_map.at(source);
       auto its = ts_range(ires, len, ts);
@@ -223,7 +225,7 @@ namespace torsten {
       Eigen::Matrix<typename torsten::return_t<Tt, Ty, Tp>::type, -1, -1>::
         Map(&res(n * std::distance(ts.begin(), its[0])), n, len[ires]) =
         torsten::precomputed_gradients(res_d,
-                                       torsten::dsolve::pmx_ode_vars(y0[ires], theta[ires], its[0], its[1]));
+                                       pmx_ode_vars<Tt, Ty, Tp>(y0[ires], theta[ires], its[0], its[1]));
     }
     
     /*
@@ -411,27 +413,40 @@ namespace torsten {
           functor_id = init_buf[0];
           integrator_id = init_buf[1];
 
+#define MPI_DYN_LOAD_SLAVE_SOLVE(TY, TT, TP)                                                                         \
+          {                                                                                                      \
+            std::vector<TY> y0;                                                                                  \
+            std::vector<TT> ts;                                                                                  \
+            std::vector<TP> theta;                                                                               \
+            use_work(y0, t0, ts, theta, x_r, x_i, rtol, atol, max_num_step);                                     \
+            res = slave_solve(functor_id, integrator_id, y0, t0, ts, theta, x_r, x_i, rtol, atol, max_num_step); \
+          }
+          
           int tag_ = work_tag;
           MatrixXd res;
           try {
-            if (!is_var_ts() && !is_var_y0() && !is_var_theta()) {
-              std::vector<double> y0;
-              std::vector<double> ts;
-              std::vector<double> theta;
-              use_work(y0, t0, ts, theta, x_r, x_i, rtol, atol, max_num_step);
-              res = slave_solve(functor_id, integrator_id,
-                                y0, t0, ts, theta, x_r, x_i, rtol, atol, max_num_step);
-            } else if (is_var_ts() && !is_var_y0() && !is_var_theta()) {
-              std::vector<double> y0;
-              std::vector<var> ts;
-              std::vector<double> theta;
-              use_work(y0, t0, ts, theta, x_r, x_i, rtol, atol, max_num_step);
-              res = slave_solve(functor_id, integrator_id,
-                                y0, t0, ts, theta, x_r, x_i, rtol, atol, max_num_step);
+            if (!is_var_y0() && !is_var_ts() && !is_var_theta()) {
+              MPI_DYN_LOAD_SLAVE_SOLVE(double, double, double);
+            } else if (!is_var_y0() && !is_var_ts() && is_var_theta()) {
+              MPI_DYN_LOAD_SLAVE_SOLVE(double, double, var);
+            } else if (!is_var_y0() && is_var_ts() && !is_var_theta()) {
+              MPI_DYN_LOAD_SLAVE_SOLVE(double, var, double);
+            } else if (!is_var_y0() && is_var_ts() && is_var_theta()) {
+              MPI_DYN_LOAD_SLAVE_SOLVE(double, var, var);
+            } else if (is_var_y0() && !is_var_ts() && !is_var_theta()) {
+              MPI_DYN_LOAD_SLAVE_SOLVE(var, double, double);
+            } else if (is_var_y0() && !is_var_ts() && is_var_theta()) {
+              MPI_DYN_LOAD_SLAVE_SOLVE(var, double, var);
+            } else if (is_var_y0() && is_var_ts() && !is_var_theta()) {
+              MPI_DYN_LOAD_SLAVE_SOLVE(var, var, double);
+            } else if (is_var_y0() && is_var_ts() && is_var_theta()) {
+              MPI_DYN_LOAD_SLAVE_SOLVE(var, var, var);
             }
           } catch (const std::exception& e) {
             tag_ = err_tag;
           }
+
+#undef MPI_DYN_LOAD_SLAVE_SOLVE
 
           MPI_Send(res.data(), tag_ == err_tag ? 0 : res.size(), MPI_DOUBLE, 0, tag_, comm);
         } else if (stat.MPI_TAG == kill_tag) {
