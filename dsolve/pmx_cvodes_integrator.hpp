@@ -16,6 +16,10 @@ namespace dsolve {
     const double atol_;
     const int64_t max_num_steps_;
 
+    /*
+     * Observer stores return data that is updated as requested.
+     * Usually the returned is of @c array_2d @c var type.
+     */
     template<typename Ode, bool GenVar>
     struct SolObserver {
       std::vector<std::vector<typename Ode::scalar_type>> y;
@@ -25,12 +29,21 @@ namespace dsolve {
       {}
     };
 
+    /*
+     * Observer stores return data that is updated as requested.
+     * For MPI results we need return data type so it can be
+     * sent over to other nodes before reassembled into @c var
+     * type. In this case, the returned matrix contain value
+     * and sensitivity.
+     */
     template<typename Ode>
     struct SolObserver<Ode, false> {
       Eigen::MatrixXd y;
 
       SolObserver(const Ode& ode) :
-        y(Eigen::MatrixXd::Zero(ode.fwd_system_size(), ode.ts().size()))
+        y(Eigen::MatrixXd::Zero(ode.fwd_system_size() +
+                                ode.n() * (Ode::is_var_ts ? ode.ts().size() : 0),
+                                ode.ts().size()))
       {}
     };
 
