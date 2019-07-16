@@ -174,7 +174,8 @@ namespace dsolve {
         for (size_t j = 0; j < ode_.size_; ++j) y_res(j, i) = y[j];
         int n = ode_.N_;
         std::vector<double> dy_dt(n);
-        ode_(y, dy_dt, ts[i].val());
+        std::vector<double> y_tmp(y.begin(), y.begin() + n);
+        ode_.dbl_rhs_impl(y_tmp, dy_dt, ts[i].val());
         for (size_t j = 0; j < n; ++j) y_res(ode_.size_ + i * n + j, i) = dy_dt[j];
       }
     };
