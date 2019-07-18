@@ -88,7 +88,9 @@ namespace torsten {
        * @c work_i layout: x_i, max_num_step
        */
       template<typename Ti, typename Tt, typename Ty, typename Tp>
-      inline void set_work(int ip,
+      inline void set_work(std::vector<double>& work_r_tmp,
+                           std::vector<int>& work_i_tmp,
+                           int ip,
                            const std::vector<std::vector<Ty> >& y0,
                            double t0,
                            const std::vector<Ti>& len,
@@ -99,9 +101,9 @@ namespace torsten {
                            double rtol, double atol, int max_num_step) {
         int work_r_count0 = 1 + init_buf[i_y] + init_buf[i_p] + init_buf[i_x_r] + 2;
         auto ts_iters = ts_range(ip, len, ts);
-        work_r.resize(work_r_count0 + std::distance(ts_iters[0], ts_iters[1]));
-        work_r[0] = t0;
-        std::vector<double>::iterator ptr = work_r.begin() + 1;
+        work_r_tmp.resize(work_r_count0 + std::distance(ts_iters[0], ts_iters[1]));
+        work_r_tmp[0] = t0;
+        std::vector<double>::iterator ptr = work_r_tmp.begin() + 1;
         auto to_val = [](const auto& x) { return stan::math::value_of(x); };
         ptr = std::transform(y0[ip].begin(), y0[ip].end(), ptr, to_val);
         ptr = std::transform(theta[ip].begin(), theta[ip].end(), ptr, to_val);
@@ -112,10 +114,29 @@ namespace torsten {
         ptr++;
         ptr = std::transform(ts_iters[0], ts_iters[1], ptr, to_val);
 
-        work_i.resize(x_i[0].size() + 1);
-        std::copy(x_i[ip].begin(), x_i[ip].end(), work_i.begin());
-        work_i.back() = max_num_step;
+        work_i_tmp.resize(x_i[0].size() + 1);
+        std::copy(x_i[ip].begin(), x_i[ip].end(), work_i_tmp.begin());
+        work_i_tmp.back() = max_num_step;
       }
+
+      /*
+       * assemble work space data to be sent to slaves
+       * @c work_r layout: t0, y0, theta, x_r, rtol, atol, ts
+       * @c work_i layout: x_i, max_num_step
+       */
+      template<typename Ti, typename Tt, typename Ty, typename Tp>
+      inline void set_work(int ip,
+                           const std::vector<std::vector<Ty> >& y0,
+                           double t0,
+                           const std::vector<Ti>& len,
+                           const std::vector<Tt>& ts,
+                           const std::vector<std::vector<Tp> >& theta,
+                           const std::vector<std::vector<double> >& x_r,
+                           const std::vector<std::vector<int> >& x_i,
+                           double rtol, double atol, int max_num_step) {
+        set_work(work_r, work_i, ip, y0, t0, len, ts, theta,
+                 x_r, x_i, rtol, atol, max_num_step);
+      }        
 
       /*
        * disassemble work space data into ODE solver inputs
@@ -194,22 +215,29 @@ namespace torsten {
        * helper function to master node (rank = 0) to recv
        * results.
        */
-      inline void
+      inline std::array<int, 2>
       master_recv(Eigen::MatrixXd& res,
-                  Eigen::MatrixXd& res_d,
-                  const std::vector<int>& task_map,
-                  const std::vector<std::vector<double>>& y0,
+                  std::vector<Eigen::MatrixXd>& res_d,
+                  int n,
+                  const std::vector<int>& inv_task_map,
                   const std::vector<int>& len,
                   const std::vector<double>& ts,
-                  const std::vector<std::vector<double>>& theta,
-                  MPI_Status& stat) {
+                  std::vector<MPI_Request>& req) {
+        static double dummy;
+
+        MPI_Status stat;
+        MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, comm, &stat);
         int source = stat.MPI_SOURCE;
-        int ires = task_map.at(source);
-        auto its = ts_range(ires, len, ts);
-        int n = y0[0].size();
-        MPI_Recv(&res(n * std::distance(ts.begin(), its[0])),
-                 n * std::distance(its[0], its[1]),
-                 MPI_DOUBLE, source, MPI_ANY_TAG, comm, &stat);
+        int ires = inv_task_map.at(source);
+        if (stat.MPI_TAG == err_tag) {
+          MPI_Irecv(&dummy, 0, MPI_DOUBLE, source, err_tag, comm, &req[ires]);
+        } else {
+          auto its = ts_range(ires, len, ts);
+          MPI_Irecv(&res(n * std::distance(ts.begin(), its[0])),
+                    n * std::distance(its[0], its[1]),
+                    MPI_DOUBLE, source, work_tag, comm, &req[ires]);
+        }
+        return {stat.MPI_TAG == err_tag, source};
       }
     
       /*
@@ -217,34 +245,84 @@ namespace torsten {
        * results and generated @c var results if parameters
        * are present.
        */
-      template<typename Tt, typename Ty, typename Tp,
-               typename std::enable_if_t<torsten::is_var<Tt, Ty, Tp>::value >* = nullptr> //NOLINT
-      inline void
-      master_recv(Eigen::Matrix<typename torsten::return_t<Tt, Ty, Tp>::type, -1, -1>& res,
-                  Eigen::MatrixXd& res_d,
-                  const std::vector<int>& task_map,
-                  const std::vector<std::vector<Ty> >& y0,
+      template<typename Tt, typename T,
+               typename std::enable_if_t<torsten::is_var<T>::value >* = nullptr> //NOLINT
+      inline std::array<int, 2>
+      master_recv(Eigen::Matrix<T, -1, -1>& res,
+                  std::vector<Eigen::MatrixXd>& res_d,
+                  int n,
+                  const std::vector<int>& inv_task_map,
                   const std::vector<int>& len,
                   const std::vector<Tt>& ts,
-                  const std::vector<std::vector<Tp> >& theta,
-                  MPI_Status& stat) {
+                  std::vector<MPI_Request>& req) {
         using torsten::dsolve::pmx_ode_vars;
+        static double dummy;
 
+        MPI_Status stat;
+        MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, comm, &stat);
         int source = stat.MPI_SOURCE;
-        int ires = task_map.at(source);
-        auto its = ts_range(ires, len, ts);
+        int ires = inv_task_map.at(source);
+        if (stat.MPI_TAG == err_tag) {
+          MPI_Irecv(&dummy, 0, MPI_DOUBLE, source, err_tag, comm, &req[ires]);
+        } else {
+          auto its = ts_range(ires, len, ts);
 
-        int res_count;
-        int n = y0[0].size();
-        MPI_Get_count(&stat, MPI_DOUBLE, &res_count);
-        res_d.resize(res_count/len[ires], len[ires]);
-        MPI_Recv(res_d.data(), res_count, MPI_DOUBLE, source, MPI_ANY_TAG, comm, &stat);
-        Eigen::Matrix<typename torsten::return_t<Tt, Ty, Tp>::type, -1, -1>::
-          Map(&res(n * std::distance(ts.begin(), its[0])), n, len[ires]) =
-          torsten::precomputed_gradients(res_d,
-                                         pmx_ode_vars<Tt, Ty, Tp>(y0[ires], theta[ires], its[0], its[1]));
+          int res_count;
+          MPI_Get_count(&stat, MPI_DOUBLE, &res_count);
+          res_d[ires].resize(res_count/len[ires], len[ires]);
+          MPI_Irecv(res_d[ires].data(), res_count, MPI_DOUBLE, source, work_tag, comm, &req[ires]);
+        }
+        return {stat.MPI_TAG == err_tag, source};
       }
     
+      /*
+       * Ensure requests for recv have been completed
+       */
+      inline void complete_recv(Eigen::MatrixXd& res,
+                                std::vector<Eigen::MatrixXd>& res_d,
+                                const std::vector<std::vector<double> >& y0,
+                                const std::vector<int>& len,
+                                const std::vector<double>& ts,
+                                const std::vector<std::vector<double> >& theta,
+                                std::vector<MPI_Request>& req,
+                                int n_recv, bool is_invalid) {
+        MPI_Waitall(n_recv, req.data(), MPI_STATUSES_IGNORE);
+      }
+
+      /*
+       * Ensure requests for recv have been completed and
+       * convert recved data to var results.
+       */
+      template<typename Tt, typename Ty, typename Tp>
+      inline void complete_recv(Eigen::Matrix<typename torsten::return_t<Tt, Ty, Tp>::type, -1, -1>& res,
+                                std::vector<Eigen::MatrixXd>& res_d,
+                                const std::vector<std::vector<Ty> >& y0,
+                                const std::vector<int>& len,
+                                const std::vector<Tt>& ts,
+                                const std::vector<std::vector<Tp> >& theta,
+                                std::vector<MPI_Request>& req,
+                                int n_recv, bool is_invalid) {
+        if (is_invalid) {
+          MPI_Waitall(n_recv, req.data(), MPI_STATUSES_IGNORE);
+        } else {
+          int finished = 0;
+          int index = 0;
+          int flag = 0;
+          const int n = y0[0].size();
+          while (finished < n_recv) {
+            MPI_Testany(n_recv, req.data(), &index, &flag, MPI_STATUS_IGNORE);
+            if (flag) {
+              finished++;
+              auto its = ts_range(index, len, ts);
+              Eigen::Matrix<typename torsten::return_t<Tt, Ty, Tp>::type, -1, -1>::
+                Map(&res(n * std::distance(ts.begin(), its[0])), n, len[index]) =
+                torsten::precomputed_gradients(res_d[index],
+                                               dsolve::pmx_ode_vars<Tt, Ty, Tp>(y0[index], theta[index], its[0], its[1]));
+            }
+          }
+        }
+      }
+
       /*
        * master node (rank = 0) recv results and send
        * available tasks to vacant slaves.
@@ -263,7 +341,6 @@ namespace torsten {
              double rtol, double atol, int max_num_step) {
         using Eigen::MatrixXd;
         using Eigen::Matrix;
-
 
         using scalar_t = typename torsten::return_t<Tt, Ty, Tp>::type;
 
@@ -289,50 +366,73 @@ namespace torsten {
         const int np = theta.size(); // population size
 
         int begin_id = 0;
-        std::vector<int> task_map(pmx_comm.size, -1);
+        std::vector<int> inv_task_map(pmx_comm.size, -1);
+        std::vector<int> task_map(np, -1);
+        std::vector<std::vector<double> > work_r_tmp(np);
+        std::vector<std::vector<int> > work_i_tmp(np);
+        std::vector<MPI_Request> work_r_req(np);
+        std::vector<MPI_Request> work_i_req(np);
 
         // initial task distribution
-        int ip = 0, n_recv = 0;
+        int ip = 0;
         for (int i = 1; i < pmx_comm.size && ip < np; ++i, ++ip) {
-          set_work(ip, y0, t0, len, ts, theta, x_r, x_i, rtol, atol, max_num_step);
-          MPI_Send(work_r.data(), work_r.size(), MPI_DOUBLE, i, work_tag, comm);
-          MPI_Send(work_i.data(), work_i.size(), MPI_INT, i, work_tag, comm);
-          task_map[i] = ip;
+          set_work(work_r_tmp[ip], work_i_tmp[ip], ip, y0, t0, len, ts, theta, x_r, x_i, rtol, atol, max_num_step);
+          MPI_Isend(work_r_tmp[ip].data(), work_r_tmp[ip].size(), MPI_DOUBLE, i, work_tag, comm,&work_r_req[ip]);
+          MPI_Isend(work_i_tmp[ip].data(), work_i_tmp[ip].size(), MPI_INT, i, work_tag, comm,&work_i_req[ip]);
+          inv_task_map[i] = ip;
+          task_map[ip] = i;
         }
 
-        // recv & dispatch new task
-        MPI_Status stat;
-        bool is_invalid = false;
-        int npar0 = 1 + stan::is_var<Ty>::value ? n : 0 + stan::is_var<Tp>::value ? m : 0;
         Eigen::Matrix<scalar_t, -1, -1> res = Eigen::Matrix<scalar_t, -1, -1>::Zero(n, ts.size());
-        MatrixXd res_d;
+        std::vector<MatrixXd> res_d(np);
+        std::vector<MPI_Request> req(np);
+        int n_recv = 0, source;
+        bool is_invalid = false;
+        std::array<int, 2> recv_out;
       
         for (;;) {
-          MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, comm, &stat);
-          int source = stat.MPI_SOURCE;
-          if (stat.MPI_TAG == err_tag) {
-            is_invalid = true;
-            n_recv = np;
-          } else {
-            master_recv(res, res_d, task_map, y0, len, ts, theta, stat);
-            n_recv++;
-          }
+          // recv some results
+          recv_out = master_recv(res, res_d, n, inv_task_map, len, ts, req);
+          is_invalid = recv_out[0];
+          source = recv_out[1];
+          n_recv++;
 
           // more work to do?
           if (ip < np && (!is_invalid)) {
-            set_work(ip, y0, t0, len, ts, theta, x_r, x_i, rtol, atol, max_num_step);          
-            MPI_Send(work_r.data(), work_r.size(), MPI_DOUBLE, source, work_tag, comm);
-            MPI_Send(work_i.data(), work_i.size(), MPI_INT, source, work_tag, comm);
-            task_map.at(source) = ip++;
+            set_work(work_r_tmp[ip], work_i_tmp[ip], ip, y0, t0, len, ts, theta, x_r, x_i, rtol, atol, max_num_step);
+            MPI_Isend(work_r_tmp[ip].data(), work_r_tmp[ip].size(), MPI_DOUBLE, source, work_tag, comm,&work_r_req[ip]);
+            MPI_Isend(work_i_tmp[ip].data(), work_i_tmp[ip].size(), MPI_INT, source, work_tag, comm,&work_i_req[ip]);
+            task_map.at(ip) = source;
+            inv_task_map.at(source) = ip;
+            ip++;
           }
 
           // all results recved?
-          if (n_recv == np) {
+          if (n_recv == np || is_invalid) {
             for (int i = 1; i < pmx_comm.size; ++i) {
               MPI_Send(work_r.data(), 0, MPI_DOUBLE, i, down_tag, comm);
             }
             break;
           }
+        }
+
+        // make sure whatever sent are recved. 
+        if (is_invalid) {
+          while (n_recv != ip) {
+            master_recv(res, res_d, n, inv_task_map, len, ts, req);
+            n_recv++;
+          }
+        }
+
+        complete_recv(res, res_d, y0, len, ts, theta, req, n_recv, is_invalid);
+
+        MPI_Waitall(ip, work_r_req.data(), MPI_STATUSES_IGNORE);
+        MPI_Waitall(ip, work_i_req.data(), MPI_STATUSES_IGNORE);
+
+        if(is_invalid) {
+          std::ostringstream rank_fail_msg;
+          rank_fail_msg << "Rank " << source << " failed to solve ODEs for id " << inv_task_map.at(source);
+          throw std::runtime_error(rank_fail_msg.str());
         }
 
         return res;
