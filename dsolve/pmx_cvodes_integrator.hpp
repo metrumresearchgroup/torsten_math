@@ -11,7 +11,7 @@ namespace dsolve {
 /**
  * CVODES ODE integrator.
  */
-  class PMXCvodesIntegrator {
+  struct PMXCvodesIntegrator {
     const double rtol_;
     const double atol_;
     const int64_t max_num_steps_;

@@ -5,6 +5,7 @@
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
 #include <stan/math/torsten/mpi/session.hpp>
 #include <stan/math/torsten/mpi/my_worker.hpp>
+#include <stan/math/torsten/mpi/dynamic_load.hpp>
 #include <stan/math/torsten/return_type.hpp>
 #include <stan/math/torsten/is_var.hpp>
 #include <algorithm>
@@ -37,9 +38,52 @@ namespace torsten {
       PMXPopulationIntegrator(solver_t& solver0) : solver(solver0) {}
 
 #ifdef TORSTEN_MPI
+#ifdef TORSTEN_MPI_DYN
+      /*
+       * MPI solution with per-subject parameters, using
+       * #dynamic load balance
+       *
+       * @tparam Tt time type
+       * @tparam T_initial @c y0 type
+       * @tparam T_param @c theta type
+       * @param f functor for the RHS of ODE
+       * @param y0 init condition
+       * @param t0 starting time
+       * @param len length of data for each subject in @c ts
+       * @param ts time step for the entire group, concatenated.
+       * @param theta parameter for each ODE among the group
+       * @param x_r real data for each ODE among the group
+       * @param x_i int data for each ODE among the group
+       */ 
+      template <typename Tt, typename T_initial, typename T_param>
+      inline
+      Eigen::Matrix<typename torsten::return_t<Tt, T_initial, T_param>::type, // NOLINT
+                    Eigen::Dynamic, Eigen::Dynamic>
+      operator()(const F& f,
+                 const std::vector<std::vector<T_initial> >& y0,
+                 double t0,
+                 const std::vector<int>& len,
+                 const std::vector<Tt>& ts,
+                 const std::vector<std::vector<T_param> >& theta,
+                 const std::vector<std::vector<double> >& x_r,
+                 const std::vector<std::vector<int> >& x_i,
+                 std::ostream* msgs) {
+        using torsten::dsolve::pmx_ode_group_mpi_functor;
+        using torsten::dsolve::pmx_ode_group_mpi_functor_id;
+
+        torsten::mpi::Communicator& pmx_comm = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM];
+        int integ_id = torsten::dsolve::integrator_id<ode_t<F, Tt, T_initial, T_param, ode_pars_t...>>::value;
+        int functor_id = pmx_ode_group_mpi_functor_id<F>::value;
+
+        torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_MASTER> load(pmx_comm);
+        return load.master(f, integ_id, y0, t0, len, ts, theta, x_r, x_i,
+                           solver.rtol_, solver.atol_, solver.max_num_steps_);
+      }
+
+#else  // static load balance
       /*
        * MPI solution when the parameters contain @c var,
-       * assuming per-subject parameters.
+       * assuming per-subject parameters, using static load balance
        *
        * @tparam Tt time type
        * @tparam T_initial @c y0 type
@@ -427,8 +471,8 @@ namespace torsten {
                        });
         return (*this)(f, y0, t0, len, ts, theta_, x_r, x_i, msgs);
       }
-
-#else
+#endif  // end of TORSTEN_MPI_DYN
+#else   // sequential
       /*
        * In sequential run we simply solve the ODEs one-by-one.
        */
@@ -534,7 +578,7 @@ namespace torsten {
 
         return res;
       }
-#endif
+#endif  // end of TORSTEN_MPI
     };
 
     template <typename F, typename solver_t, template<typename...> class ode_t, typename... ode_pars_t>

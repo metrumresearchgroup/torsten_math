@@ -13,7 +13,7 @@ namespace dsolve {
  * @c boost::odeint ODE integrator.
  */
   template<typename scheme_t>
-  class PMXOdeintIntegrator {
+  struct PMXOdeintIntegrator {
     const double rtol_;
     const double atol_;
     const int64_t max_num_steps_;
