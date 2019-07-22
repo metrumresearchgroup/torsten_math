@@ -52,8 +52,19 @@ namespace torsten {
 
     pmx_ode_group_mpi_functor(int i) : id(i) {}
 
-    // template<typename F>
-    // pmx_ode_group_mpi_functor(int i) : id(i) {}
+    struct dummy_functor {
+      template <typename T0, typename T1, typename T2>
+      inline std::vector<typename torsten::return_t<T0, T1, T2>::type>
+      operator()(const T0& t_in, const std::vector<T1>& y_in,
+                 const std::vector<T2>& theta, const std::vector<double>& x_r,
+                 const std::vector<int>& x_i,
+                 std::ostream* msgs = nullptr,
+                 double rtol = 1e-6,
+                 double atol = 1e-6,
+                 long int max_num_step = 1e6) {
+        return {};
+      }
+    };
 
     /*
      * Dispatch according to value of @c id, forward the args
