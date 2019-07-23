@@ -183,7 +183,7 @@ namespace torsten {
        * master node (rank = 0) prompts slaves to break the
        * waiting-working cycle by sending a kill tag.
        */
-      inline void kill_slaves() {
+      inline void kill_slaves() const {
         if (pmx_comm.rank == 0) {
           for (int i = 1; i < pmx_comm.size; ++i) {
             MPI_Send(work_r.data(), 0, MPI_DOUBLE, i, kill_tag, comm);
@@ -195,8 +195,9 @@ namespace torsten {
     template<int Impi>
     struct PMXDynamicLoad;
 
-#define TORSTEN_MPI_DYN_MASTER 0
-#define TORSTEN_MPI_DYN_SLAVE  1
+#define TORSTEN_MPI_DYN_MASTER  0
+#define TORSTEN_MPI_DYN_SLAVE   1
+#define TORSTEN_MPI_DYN_CLEANER 2
 
     /*
      * Specialization for master node: the maste send data
@@ -590,6 +591,23 @@ namespace torsten {
       }
     };
     
+    /*
+     * A special type that kills slaves when
+     * destroyed, used in @c session for global master-slave control.
+     */
+    template<>
+    struct PMXDynamicLoad<TORSTEN_MPI_DYN_CLEANER> : PMXOdeMPILoad {
+      bool slave_alive;
+
+      PMXDynamicLoad(const torsten::mpi::Communicator& comm_in) :
+        PMXOdeMPILoad(comm_in), slave_alive(true)
+      {}
+
+      ~PMXDynamicLoad() {
+        if(slave_alive) kill_slaves();
+      }
+    };
+
   } 
 }
 
