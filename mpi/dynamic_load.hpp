@@ -43,9 +43,6 @@ namespace torsten {
         pmx_comm(comm_in), comm(pmx_comm.comm), init_buf(init_buf_size, 0)
       {
         init_buf[0] = -1;
-
-        static const char* caller = "PMXDynamicLoad::constructor";
-        stan::math::check_greater(caller, "MPI comm size", pmx_comm.size, 1);
       }
 
       /*
@@ -206,11 +203,17 @@ namespace torsten {
     template<>
     struct PMXDynamicLoad<TORSTEN_MPI_DYN_MASTER> : PMXOdeMPILoad {
       /*
-       * constructor only allocates @c init_buf
+       * constructor only allocates @c init_buf. We check
+       * comm size because master object is used in
+       * population/group solvers and we need make sure
+       * there are at least one workers.
        */
       PMXDynamicLoad(const torsten::mpi::Communicator& comm_in) :
         PMXOdeMPILoad(comm_in)
-      {}
+      {
+        static const char* caller = "PMXDynamicLoad(master)";
+        stan::math::check_greater(caller, "MPI comm size", pmx_comm.size, 1);
+      }
 
       /*
        * helper function to master node (rank = 0) to recv
