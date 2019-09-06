@@ -22,6 +22,54 @@ namespace torsten {
   template<PMXOdeIntegratorId It>
   struct PMXOdeIntegrator;
 
+  using stan::math::integrate_ode_adams;
+  using stan::math::integrate_ode_bdf;
+  using stan::math::integrate_ode_rk45;
+  using torsten::pmx_integrate_ode_adams;
+  using torsten::pmx_integrate_ode_bdf;
+  using torsten::pmx_integrate_ode_rk45;
+
+#define DEF_TORSTEN_INTEGRATOR(INT_NAME)                                              \
+  template <typename F, typename Tt, typename T_initial, typename T_param>            \
+  std::vector<std::vector<typename torsten::return_t<Tt, T_initial, T_param>::type> > \
+  operator()(const F& f,                                                              \
+             const std::vector<T_initial>& y0,                                        \
+             double t0,                                                               \
+             const std::vector<Tt>& ts,                                               \
+             const std::vector<T_param>& theta,                                       \
+             const std::vector<double>& x_r,                                          \
+             const std::vector<int>& x_i) const {                                     \
+    return INT_NAME(f, y0, t0, ts, theta, x_r, x_i, msgs, rtol, atol, max_num_step);  \
+  }
+
+#define DEF_TORSTEN_SINGLE_STEP_INTEGRATOR                                            \
+  template <typename F, typename Tt, typename T_initial, typename T_param>            \
+  std::vector<std::vector<typename torsten::return_t<Tt, T_initial, T_param>::type> > \
+  operator()(const F& f,                                                              \
+             const std::vector<T_initial>& y0,                                        \
+             double t0,                                                               \
+             const Tt& t1,                                                            \
+             const std::vector<T_param>& theta,                                       \
+             const std::vector<double>& x_r,                                          \
+             const std::vector<int>& x_i) const {                                     \
+    std::vector<Tt> ts{t1};                                                           \
+    return (*this)(f, y0, t0, ts, theta, x_r, x_i);                                   \
+  }
+
+#define DEF_TORSTEN_SINGLE_STEP_SOLVE_D                                      \
+    template <typename F, typename Tt, typename T_initial, typename T_param> \
+    Eigen::MatrixXd                                                          \
+    solve_d(const F& f,                                                      \
+            const std::vector<T_initial>& y0,                                \
+            double t0,                                                       \
+            const Tt& t1,                                                    \
+            const std::vector<T_param>& theta,                               \
+            const std::vector<double>& x_r,                                  \
+            const std::vector<int>& x_i) const {                             \
+      std::vector<Tt> ts{t1};                                                \
+      return this -> solve_d(f, y0, t0, ts, theta, x_r, x_i);                \
+    }
+
   template<>
   struct PMXOdeIntegrator<StanAdams> {
     const double rtol;
@@ -36,21 +84,8 @@ namespace torsten {
       rtol(rtol0), atol(atol0), max_num_step(max_num_step0), msgs(msgs0)
     {}
     
-    /*
-     * Stan's ODE solver function doesn't support @c T_t to
-     * be @c var
-     */
-    template <typename F, typename Tt, typename T_initial, typename T_param>
-    std::vector<std::vector<typename stan::return_type<T_initial, T_param>::type> > // NOLINT
-    operator()(const F& f,
-               const std::vector<T_initial>& y0,
-               double t0,
-               const std::vector<Tt>& ts,
-               const std::vector<T_param>& theta,
-               const std::vector<double>& x_r,
-               const std::vector<int>& x_i) const {
-      return stan::math::integrate_ode_adams(f, y0, t0, ts, theta, x_r, x_i, msgs, rtol, atol, max_num_step);
-    }
+    DEF_TORSTEN_INTEGRATOR(integrate_ode_adams)
+    DEF_TORSTEN_SINGLE_STEP_INTEGRATOR
   };
 
   template<>
@@ -67,21 +102,8 @@ namespace torsten {
       rtol(rtol0), atol(atol0), max_num_step(max_num_step0), msgs(msgs0)
     {}
     
-    /*
-     * Stan's ODE solver function doesn't support @c T_t to
-     * be @c var
-     */
-    template <typename F, typename Tt, typename T_initial, typename T_param>
-    std::vector<std::vector<typename stan::return_type<T_initial, T_param>::type> > // NOLINT
-    operator()(const F& f,
-               const std::vector<T_initial>& y0,
-               double t0,
-               const std::vector<Tt>& ts,
-               const std::vector<T_param>& theta,
-               const std::vector<double>& x_r,
-               const std::vector<int>& x_i) const {
-      return stan::math::integrate_ode_bdf(f, y0, t0, ts, theta, x_r, x_i, msgs, rtol, atol, max_num_step);
-    }
+    DEF_TORSTEN_INTEGRATOR(integrate_ode_bdf)
+    DEF_TORSTEN_SINGLE_STEP_INTEGRATOR
   };
 
   template<>
@@ -98,21 +120,8 @@ namespace torsten {
       rtol(rtol0), atol(atol0), max_num_step(max_num_step0), msgs(msgs0)
     {}
     
-    /*
-     * Stan's ODE solver function doesn't support @c T_t to
-     * be @c var
-     */
-    template <typename F, typename Tt, typename T_initial, typename T_param>
-    std::vector<std::vector<typename stan::return_type<T_initial, T_param>::type> > // NOLINT
-    operator()(const F& f,
-               const std::vector<T_initial>& y0,
-               double t0,
-               const std::vector<Tt>& ts,
-               const std::vector<T_param>& theta,
-               const std::vector<double>& x_r,
-               const std::vector<int>& x_i) const {
-      return stan::math::integrate_ode_rk45(f, y0, t0, ts, theta, x_r, x_i, msgs, rtol, atol, max_num_step);
-    }
+    DEF_TORSTEN_INTEGRATOR(integrate_ode_rk45)
+    DEF_TORSTEN_SINGLE_STEP_INTEGRATOR
   };
 
   /*
@@ -132,20 +141,8 @@ namespace torsten {
       rtol(rtol0), atol(atol0), max_num_step(max_num_step0), msgs(msgs0)
     {}
 
-    /*
-     * Torsten's ODE solvers support @c T_t to be @c var
-     */
-    template <typename F, typename Tt, typename T_initial, typename T_param>
-    std::vector<std::vector<typename stan::return_type<Tt, T_initial, T_param>::type> > // NOLINT
-    operator()(const F& f,
-               const std::vector<T_initial>& y0,
-               double t0,
-               const std::vector<Tt>& ts,
-               const std::vector<T_param>& theta,
-               const std::vector<double>& x_r,
-               const std::vector<int>& x_i) const {
-      return torsten::pmx_integrate_ode_bdf(f, y0, t0, ts, theta, x_r, x_i, msgs, rtol, atol, max_num_step);
-    }
+    DEF_TORSTEN_INTEGRATOR(pmx_integrate_ode_bdf)
+    DEF_TORSTEN_SINGLE_STEP_INTEGRATOR
 
     /*
      * For MPI solution we need to return data that consists
@@ -173,6 +170,8 @@ namespace torsten {
 
       return res;
     }
+
+    DEF_TORSTEN_SINGLE_STEP_SOLVE_D
   };
 
   /*
@@ -192,20 +191,8 @@ namespace torsten {
       rtol(rtol0), atol(atol0), max_num_step(max_num_step0), msgs(msgs0)
     {}
 
-    /*
-     * Torsten's ODE solvers support @c T_t to be @c var
-     */
-    template <typename F, typename Tt, typename T_initial, typename T_param>
-    std::vector<std::vector<typename stan::return_type<Tt, T_initial, T_param>::type> > // NOLINT
-    operator()(const F& f,
-               const std::vector<T_initial>& y0,
-               double t0,
-               const std::vector<Tt>& ts,
-               const std::vector<T_param>& theta,
-               const std::vector<double>& x_r,
-               const std::vector<int>& x_i) const {
-      return torsten::pmx_integrate_ode_adams(f, y0, t0, ts, theta, x_r, x_i, msgs, rtol, atol, max_num_step);
-    }
+    DEF_TORSTEN_INTEGRATOR(pmx_integrate_ode_adams)
+    DEF_TORSTEN_SINGLE_STEP_INTEGRATOR
 
     /*
      * For MPI solution we need to return data that consists
@@ -233,6 +220,8 @@ namespace torsten {
 
       return res;
     }
+
+    DEF_TORSTEN_SINGLE_STEP_SOLVE_D
   };
 
   /*
@@ -252,20 +241,8 @@ namespace torsten {
       rtol(rtol0), atol(atol0), max_num_step(max_num_step0), msgs(msgs0)
     {}
 
-    /*
-     * Torsten's ODE solvers support @c T_t to be @c var
-     */
-    template <typename F, typename Tt, typename T_initial, typename T_param>
-    std::vector<std::vector<typename stan::return_type<Tt, T_initial, T_param>::type> > // NOLINT
-    operator()(const F& f,
-               const std::vector<T_initial>& y0,
-               double t0,
-               const std::vector<Tt>& ts,
-               const std::vector<T_param>& theta,
-               const std::vector<double>& x_r,
-               const std::vector<int>& x_i) const {
-      return torsten::pmx_integrate_ode_rk45(f, y0, t0, ts, theta, x_r, x_i, msgs, rtol, atol, max_num_step);
-    }
+    DEF_TORSTEN_INTEGRATOR(pmx_integrate_ode_rk45)
+    DEF_TORSTEN_SINGLE_STEP_INTEGRATOR
 
     /*
      * For MPI solution we need to return data that consists
@@ -293,7 +270,13 @@ namespace torsten {
 
       return res;
     }
+
+    DEF_TORSTEN_SINGLE_STEP_SOLVE_D
   };
 }
+
+#undef DEF_TORSTEN_SINGLE_STEP_SOLVE_D
+#undef DEF_TORSTEN_SINGLE_STEP_INTEGRATOR
+#undef DEF_TORSTEN_INTEGRATOR
 
 #endif

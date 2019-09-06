@@ -192,7 +192,6 @@ namespace refactor {
 
       double t0 = 0;
       double ii_ = x_r[0];
-      const vector<double> ts{ii_};
 
       vector<scalar_t> x0(x.size());
       for (size_t i = 0; i < x0.size(); i++) x0[i] = x(i);
@@ -207,20 +206,20 @@ namespace refactor {
 
       if (rate == 0) {  // bolus dose
         x0[cmt_ - 1] += amt;
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ts, theta, x_r, x_i)[0];
+        vector<scalar_t> pred = integrator_(f_, x0, t0, ii_, theta, x_r, x_i)[0];
         for (int i = 0; i < result.size(); i++) {
           result(i) = x(i) - pred[i];
         }
       } else if (ii_ > 0) {  // multiple truncated infusions
-        std::vector<T1> ts_v{amt / rate};
+        T1 dt = amt / rate;
 
-        torsten::check_mti(amt, ts_v[0], ii_, function);
+        torsten::check_mti(amt, dt, ii_, function);
 
-        x0 = integrator_(f_, to_array_1d(x), t0, ts_v, theta, x_r, x_i)[0];
+        x0 = integrator_(f_, to_array_1d(x), t0, dt, theta, x_r, x_i)[0];
 
-        ts_v[0] = ii_ - ts_v[0];
+        dt = ii_ - dt;
         theta[npar_ + cmt_ - 1] = 0.0;
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ts_v, theta, x_r, x_i)[0];
+        vector<scalar_t> pred = integrator_(f_, x0, t0, dt, theta, x_r, x_i)[0];
         for (int i = 0; i < result.size(); i++) result(i) = x(i) - pred[i];
       } else {  // constant infusion
         stan::math::check_less_or_equal(function, "AMT", amt, 0);
@@ -296,7 +295,6 @@ namespace refactor {
       double ii_ = x_r.back();
       double amt = x_r.rbegin()[1];
       double rate = x_r[cmt_ - 1];
-      vector<double> ts(1);
 
       vector<scalar_t> x0(x.size());
       for (size_t i = 0; i < x0.size(); i++) x0[i] = x(i);
@@ -307,24 +305,23 @@ namespace refactor {
 
       if (rate == 0) {  // bolus dose
         x0[cmt_ - 1] += amt;
-        ts[0] = ii_;
 
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ts, to_array_1d(y), x_r, x_i)[0];
+        vector<scalar_t> pred = integrator_(f_, x0, t0, ii_, to_array_1d(y), x_r, x_i)[0];
 
         for (int i = 0; i < result.size(); i++)
           result(i) = x(i) - pred[i];
 
       } else if (ii_ > 0) {  // multiple truncated infusions
-        ts[0] = amt / rate;
+        double dt = amt / rate;
 
-        torsten::check_mti(amt, ts[0], ii_, function);
+        torsten::check_mti(amt, dt, ii_, function);
 
         std::vector<T1> theta = to_array_1d(y);
-        x0 = integrator_(f_, to_array_1d(x), t0, ts, theta, x_r, x_i)[0];
+        x0 = integrator_(f_, to_array_1d(x), t0, dt, theta, x_r, x_i)[0];
 
-        ts[0] = ii_ - ts[0];
+        dt = ii_ - dt;
         std::vector<double> null_rate(x_r.size() - 1, 0.0);
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ts, theta, null_rate, x_i)[0];
+        vector<scalar_t> pred = integrator_(f_, x0, t0, dt, theta, null_rate, x_i)[0];
 
         for (int i = 0; i < result.size(); i++)
           result(i) = x(i) - pred[i];
@@ -416,20 +413,18 @@ namespace refactor {
 
       if (rate == 0) {  // bolus dose
         x0[cmt_ - 1] += amt;
-        vector<T1> ts{ii_};
-
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ts, ode_parameters, x_r, x_i)[0];
+        vector<scalar_t> pred = integrator_(f_, x0, t0, ii_, ode_parameters, x_r, x_i)[0];
 
         for (int i = 0; i < result.size(); i++)
           result(i) = x(i) - pred[i];
 
       } else if (ii_ > 0) {  // multiple truncated infusions
-        vector<T1> ts{amt / rate};
-        torsten::check_mti(amt, ts[0], ii_, function);
-        x0 = integrator_(f_, to_array_1d(x), t0, ts, ode_parameters, x_r, x_i)[0];
-        ts[0] = ii_ - ts[0];
+        T1 dt = amt / rate;
+        torsten::check_mti(amt, dt, ii_, function);
+        x0 = integrator_(f_, to_array_1d(x), t0, dt, ode_parameters, x_r, x_i)[0];
+        dt = ii_ - dt;
         std::vector<double> null_rate(ncmt_, 0.0);
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ts, ode_parameters, null_rate, x_i)[0];
+        vector<scalar_t> pred = integrator_(f_, x0, t0, dt, ode_parameters, null_rate, x_i)[0];
         for (int i = 0; i < result.size(); i++) {
           result(i) = x(i) - pred[i];          
         }
@@ -510,7 +505,6 @@ namespace refactor {
       double ii_ = x_r.back();
       const T1& amt = y(y.size() - 1);
       double rate = x_r.at(cmt_ - 1);
-      const vector<double> ts{ii_};
 
       vector<scalar_t> x0(x.size());
       for (size_t i = 0; i < x0.size(); i++) x0[i] = x(i);
@@ -523,21 +517,21 @@ namespace refactor {
 
       if (rate == 0) {  // bolus dose
         x0[cmt_ - 1] += amt;
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ts, theta, x_r, x_i)[0];
+        vector<scalar_t> pred = integrator_(f_, x0, t0, ii_, theta, x_r, x_i)[0];
 
         for (int i = 0; i < result.size(); i++) {
           result(i) = x(i) - pred[i];        
         }
       } else if (ii_ > 0) {  // multiple truncated infusions
-        std::vector<T1> ts_v{amt / rate};
+        T1 dt = amt / rate;
 
-        torsten::check_mti(amt, ts_v[0], ii_, function);
+        torsten::check_mti(amt, dt, ii_, function);
       
-        x0 = integrator_(f_, to_array_1d(x), t0, ts_v, theta, x_r, x_i)[0];
+        x0 = integrator_(f_, to_array_1d(x), t0, dt, theta, x_r, x_i)[0];
 
-        ts_v[0] = ii_ - ts_v[0];
+        dt = ii_ - dt;
         std::vector<double> null_rate(x_r.size(), 0.0);
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ts_v, theta, null_rate, x_i)[0];
+        vector<scalar_t> pred = integrator_(f_, x0, t0, dt, theta, null_rate, x_i)[0];
 
         for (int i = 0; i < result.size(); i++) result(i) = x(i) - pred[i];
       } else {  // constant infusion
@@ -613,7 +607,6 @@ namespace refactor {
       double ii_ = x_r.back();
       const double amt = x_r.front();
       const T1& rate = y(npar_ + cmt_ - 1);
-      const vector<double> ts{ii_};
 
       vector<scalar_t> x0(x.size());
       for (size_t i = 0; i < x0.size(); i++) x0[i] = x(i);
@@ -624,20 +617,20 @@ namespace refactor {
 
       if (rate == 0) {  // bolus dose
         x0[cmt_ - 1] += amt;
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ts, theta, x_r, x_i)[0];
+        vector<scalar_t> pred = integrator_(f_, x0, t0, ii_, theta, x_r, x_i)[0];
         for (int i = 0; i < result.size(); i++) {
           result(i) = x(i) - pred[i];        
         }
       } else if (ii_ > 0) {  // multiple truncated infusions
-        std::vector<T1> ts_v{amt / rate};
+        T1 dt = amt / rate;
 
-        torsten::check_mti(amt, ts_v[0], ii_, function);
+        torsten::check_mti(amt, dt, ii_, function);
       
-        x0 = integrator_(f_, to_array_1d(x), t0, ts_v, theta, x_r, x_i)[0];
+        x0 = integrator_(f_, to_array_1d(x), t0, dt, theta, x_r, x_i)[0];
 
-        ts_v[0] = ii_ - ts_v[0];
+        dt = ii_ - dt;
         theta[npar_ + cmt_ - 1] = 0.0;
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ts_v, theta, x_r, x_i)[0];
+        vector<scalar_t> pred = integrator_(f_, x0, t0, dt, theta, x_r, x_i)[0];
         for (int i = 0; i < result.size(); i++) result(i) = x(i) - pred[i];
       } else {  // constant infusion
         stan::math::check_less_or_equal(function, "AMT", amt, 0);
