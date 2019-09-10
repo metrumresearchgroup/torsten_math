@@ -1318,9 +1318,6 @@ namespace refactor {
       vector<int> x_i{cmt, ncmt_, int(par_.size())};
 
       Matrix<double, Dynamic, 1> y(ncmt_);
-      const double alge_rtol = 1e-10;
-      const double f_tol = is_var_amt ? 5e-4 : 1e-4;  // empirical (note: differs from other function)
-      const long int alge_max_steps = is_var_amt ? 1e4 : 1e3;  // default  // NOLINT
 
       // construct algebraic function
       PMXOdeFunctorSSAdaptorPacker<F, T_amt, T_r, T_ii> packer;
@@ -1332,17 +1329,17 @@ namespace refactor {
         pred = algebra_solver(fss, y,
                               packer.adapted_param(par_, amt, rate, ii, x_i),
                               packer.adapted_x_r(amt, rate, ii, x_i),
-                              x_i, 0, alge_rtol, f_tol, alge_max_steps); // NOLINT
+                              x_i, 0,
+                              integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step);
       } else {  // infusions (truncated or constant)
         x_r[cmt - 1] = value_of(rate);
-        const double long_dt = 100.0;
-        const double dt = ii > 0 ? ii_dbl : long_dt;
-        const double f_tol_rate = ii > 0 ? 1e-3 : f_tol;
+        const double dt = ii > 0 ? ii_dbl : 24.0;
         y = integrate(x_r, init_dbl, dt, integrator);
         pred = algebra_solver(fss, y,
                               packer.adapted_param(par_, amt, rate, ii, x_i),
                               packer.adapted_x_r(amt, rate, ii, x_i),
-                              x_i, 0, alge_rtol, f_tol_rate, alge_max_steps);
+                              x_i, 0,
+                              integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step);
       }
       return pred;
     }
