@@ -138,6 +138,425 @@ namespace refactor {
   };
 
   /**
+   * A structure to pack & unpack the algebraic system
+   * which gets solved when computing the steady
+   * state solution for ODE models. Note that Stan algebra
+   * solver demands default constructor for passed-in system
+   * functor, so we need to put all relevant info into 
+   * @c theta, @c x_r, and @c x_i.
+   *
+   * @tparam F ODE RHS functor type
+   * @tparam T_amt @c amt type
+   * @tparam T_rate @c rate type
+   * @tparam T_ii @c dosing interval type
+   */
+  template <typename F, typename T_amt, typename T_rate, typename T_ii>
+  struct PMXOdeFunctorSSAdaptorPacker;
+
+  /**
+   * Partial specialization of @c PMXOdeFunctorSSAdaptorPacker:
+   * @c ii is data.
+   */
+  template <typename F,typename T_amt, typename T_rate>
+  struct PMXOdeFunctorSSAdaptorPacker<F, T_amt, T_rate, double> {
+
+    PMXOdeFunctorSSAdaptorPacker() {}
+
+    template<typename T>
+    inline Eigen::Matrix<typename stan::return_type<T, T_amt, T_rate>::type, -1, 1>
+    adapted_param(const std::vector<T> &par, const T_amt& amt, const T_rate& rate, double ii,
+                  const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      int ncmt_ = x_i[1];
+      PMXOdeFunctorRateAdaptor<F, T_rate> f_;
+      std::vector<typename stan::return_type<T_amt, T_rate>::type> rate_amt_vec(1 + ncmt_, 0.0);
+      rate_amt_vec[cmt_ - 1] = rate;
+      rate_amt_vec.back() = amt;
+      return stan::math::to_vector(f_.adapted_param(par, rate_amt_vec));
+    }
+
+    inline const std::vector<double>
+    adapted_x_r(const T_amt& amt, const T_rate& rate, double ii,
+                  const std::vector<int>& x_i) const {
+      return {ii};
+    }
+
+    
+    template<typename T1>
+    const T1& unpack_rate(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                          const std::vector<double>& x_r,
+                          const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      int npar_ = x_i[2];
+      return y(npar_ + cmt_ - 1);
+    }
+
+    template<typename T1>
+    const T1& unpack_amt(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                         const std::vector<double>& x_r,
+                         const std::vector<int>& x_i) const {
+      int ncmt_ = x_i[1];
+      int npar_ = x_i[2];
+      return y(npar_ + ncmt_);
+    }
+
+    template<typename T1>
+    const double& unpack_ii(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                            const std::vector<double>& x_r,
+                            const std::vector<int>& x_i) const {
+      return x_r[0];
+    }
+
+    template<typename T1>
+    std::vector<T1> unpack_ode_theta(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                                     const std::vector<int>& x_i) const {
+      int ncmt_ = x_i[1];
+      int npar_ = x_i[2];
+      std::vector<T1> theta(npar_ + ncmt_);
+      for (size_t i = 0; i < theta.size(); i++) theta[i] = y(i);
+      return theta;
+    }
+
+    std::vector<double> unpack_ode_x_r(const std::vector<double>& x_r,
+                                       const std::vector<int>& x_i) const {
+      return {};
+    }
+
+    template<typename T1>
+    inline void nullify_truncated_rate(std::vector<T1>& ode_theta, std::vector<double>& ode_x_r,
+                                       const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      int npar_ = x_i[2];
+      ode_theta[npar_ + cmt_ - 1] = 0.0;
+    }    
+  };
+
+  /**
+   * Partial specialization of @c PMXOdeFunctorSSAdaptorPacker:
+   * @c amt, @c rate, and @c ii are data.
+   */
+  template <typename F>
+  struct PMXOdeFunctorSSAdaptorPacker<F, double, double, double> {
+
+    PMXOdeFunctorSSAdaptorPacker() {}
+
+    template<typename T>
+    inline Eigen::Matrix<T, -1, 1>
+    adapted_param(const std::vector<T> &par, double amt, double rate, double ii,
+                  const std::vector<int>& x_i) const {
+      return stan::math::to_vector(par);
+    }
+
+    /*
+     * When @c rate is @c var, the @c x_r is empty
+     */
+    inline const std::vector<double>
+    adapted_x_r(double amt, double rate, double ii,
+                const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      int ncmt_ = x_i[1];
+      std::vector<double> res(ncmt_ + 1 + 1, 0.0);
+      res[cmt_ - 1] = rate;
+      res.rbegin()[1] = amt;
+      res.back() = ii;
+      return res;
+    }
+
+    template<typename T1>
+    const double& unpack_rate(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                              const std::vector<double>& x_r,
+                              const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      return x_r[cmt_ - 1];
+    }
+
+    template<typename T1>
+    const double& unpack_amt(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                             const std::vector<double>& x_r,
+                             const std::vector<int>& x_i) const {
+      return x_r.rbegin()[1];
+    }
+
+    template<typename T1>
+    const double& unpack_ii(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                            const std::vector<double>& x_r,
+                            const std::vector<int>& x_i) const {
+      return x_r.back();
+    }
+    
+    template<typename T1>
+    std::vector<T1> unpack_ode_theta(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                                     const std::vector<int>& x_i) const {
+      int npar_ = x_i[2];
+      std::vector<T1> theta(npar_);
+      for (size_t i = 0; i < theta.size(); i++) theta[i] = y(i);
+      return theta;
+    }
+
+    std::vector<double> unpack_ode_x_r(const std::vector<double>& x_r,
+                                       const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      int ncmt_ = x_i[1];
+      std::vector<double> rate(ncmt_, 0.0);
+      rate[cmt_ - 1] = x_r[cmt_ - 1];
+      return rate;
+    }
+
+    template<typename T1>
+    inline void nullify_truncated_rate(std::vector<T1>& ode_theta, std::vector<double>& ode_x_r,
+                                       const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      ode_x_r[cmt_ - 1] = 0.0;
+    }
+  };
+
+  /**
+   * Partial specialization of @c PMXOdeFunctorSSAdaptorPacker:
+   * @c amt and @c rate are data.
+   */
+  template <typename F,typename T_ii>
+  struct PMXOdeFunctorSSAdaptorPacker<F, double, double, T_ii> {
+
+    PMXOdeFunctorSSAdaptorPacker() {}
+
+    template<typename T>
+    inline Eigen::Matrix<typename torsten::return_t<T, T_ii>::type, -1, 1>
+    adapted_param(const std::vector<T> &par, double amt, double rate, const T_ii& ii,
+                  const std::vector<int>& x_i) const {
+      int npar_ = x_i[2];
+      Eigen::Matrix<typename torsten::return_t<T, T_ii>::type, -1, 1> res(npar_ + 1);
+      for (int i = 0; i < npar_; i++) res(i) = par[i];
+      res(npar_) = ii;
+      return res;
+    }
+
+    /*
+     * When @c rate is @c var, the @c x_r is empty
+     */
+    inline const std::vector<double>
+    adapted_x_r(double amt, double rate, const T_ii& ii,
+                const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      int ncmt_ = x_i[1];
+      std::vector<double> res(ncmt_ + 1, 0.0);
+      res[cmt_ - 1] = rate;
+      res.back() = amt;
+      return res;
+    }
+
+    template<typename T1>
+    const double& unpack_rate(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                              const std::vector<double>& x_r,
+                              const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      return x_r[cmt_ - 1];
+    }
+
+    template<typename T1>
+    const double& unpack_amt(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                             const std::vector<double>& x_r,
+                             const std::vector<int>& x_i) const {
+      return x_r.back();
+    }
+
+    template<typename T1>
+    const T1& unpack_ii(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                        const std::vector<double>& x_r,
+                        const std::vector<int>& x_i) const {
+      int npar_ = x_i[2];
+      return y(npar_);
+    }
+    
+    template<typename T1>
+    std::vector<T1> unpack_ode_theta(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                                     const std::vector<int>& x_i) const {
+      int npar_ = x_i[2];
+      std::vector<T1> theta(npar_);
+      for (size_t i = 0; i < theta.size(); i++) theta[i] = y(i);
+      return theta;
+    }
+
+    std::vector<double> unpack_ode_x_r(const std::vector<double>& x_r,
+                                       const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      int ncmt_ = x_i[1];
+      std::vector<double> rate(ncmt_, 0.0);
+      rate[cmt_ - 1] = x_r[cmt_ - 1];
+      return rate;
+    }
+
+    template<typename T1>
+    inline void nullify_truncated_rate(std::vector<T1>& ode_theta,
+                                       std::vector<double>& ode_x_r,
+                                       const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      ode_x_r[cmt_ - 1] = 0.0;
+    }
+  };
+
+  /**
+   * Partial specialization of @c PMXOdeFunctorSSAdaptorPacker:
+   * @c rate and @c ii are data.
+   */
+  template <typename F,typename T_amt>
+  struct PMXOdeFunctorSSAdaptorPacker<F, T_amt, double, double> {
+
+    PMXOdeFunctorSSAdaptorPacker() {}
+
+    /*
+     * Append @c amt parameter to original parameter vector
+     */
+    template<typename T>
+    inline Eigen::Matrix<typename stan::return_type<T, T_amt>::type, -1, 1>
+    adapted_param(const std::vector<T> &par, const T_amt& amt, double rate, double ii,
+                  const std::vector<int>& x_i) const {
+      int npar_ = x_i[2];
+      Eigen::Matrix<typename stan::return_type<T, T_amt>::type, -1, 1> res(npar_ + 1);
+      for (int i = 0; i < npar_; i++) res(i) = par[i];
+      res(npar_) = amt;
+      return res;
+    }
+
+    inline const std::vector<double>
+    adapted_x_r(const T_amt& amt, double rate, double ii,
+                const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      int ncmt_ = x_i[1];
+      std::vector<double> res(ncmt_ + 1, 0.0);
+      res[cmt_ - 1] = rate;
+      res.back() = ii;
+      return res;
+   }
+
+    template<typename T1>
+    const double& unpack_rate(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                              const std::vector<double>& x_r,
+                                       const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      return x_r[cmt_ - 1];
+    }
+
+    template<typename T1>
+    const T1& unpack_amt(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                         const std::vector<double>& x_r,
+                                       const std::vector<int>& x_i) const {
+      int npar_ = x_i[2];
+      return y(npar_);
+    }
+
+    template<typename T1>
+    const double& unpack_ii(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                            const std::vector<double>& x_r,
+                                       const std::vector<int>& x_i) const {
+      return x_r.back();
+    }
+    
+    template<typename T1>
+    std::vector<T1> unpack_ode_theta(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                                       const std::vector<int>& x_i) const {
+      int npar_ = x_i[2];
+      std::vector<T1> theta(npar_);
+      for (size_t i = 0; i < theta.size(); i++) theta[i] = y(i);
+      return theta;
+    }
+
+    std::vector<double> unpack_ode_x_r(const std::vector<double>& x_r,
+                                       const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      int ncmt_ = x_i[1];
+      std::vector<double> rate(ncmt_, 0.0);
+      rate[cmt_ - 1] = x_r[cmt_ - 1];
+      return rate;
+    }
+
+    template<typename T1>
+    inline void nullify_truncated_rate(std::vector<T1>& ode_theta,
+                                       std::vector<double>& ode_x_r,
+                                       const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      ode_x_r[cmt_ - 1] = 0.0;
+    }
+  };
+
+  /**
+   * Partial specialization of @c PMXOdeFunctorSSAdaptorPacker:
+   * @c amt and @c ii are data.
+   */
+  template <typename F,typename T_rate>
+  struct PMXOdeFunctorSSAdaptorPacker<F, double, T_rate, double> {
+
+    PMXOdeFunctorSSAdaptorPacker() {}
+
+    /*
+     * Append @c rate parameter to original parameter vector
+     */
+    template<typename T>
+    inline Eigen::Matrix<typename stan::return_type<T, T_rate>::type, -1, 1>
+    adapted_param(const std::vector<T> &par, double amt, const T_rate& rate, double ii,
+                  const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      int ncmt_ = x_i[1];
+      PMXOdeFunctorRateAdaptor<F, T_rate> f_;
+      std::vector<T_rate> rate_vec(ncmt_, 0.0);
+      rate_vec[cmt_ - 1] = rate;
+      return stan::math::to_vector(f_.adapted_param(par, rate_vec));
+    }
+
+    inline const std::vector<double>
+    adapted_x_r(double amt, const T_rate& rate, double ii,
+                const std::vector<int>& x_i) const {
+      return {amt, ii};
+    }
+
+    template<typename T1>
+    const T1& unpack_rate(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                          const std::vector<double>& x_r,
+                          const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      int npar_ = x_i[2];
+      return y(npar_ + cmt_ - 1);
+    }
+
+    template<typename T1>
+    const double& unpack_amt(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                             const std::vector<double>& x_r,
+                             const std::vector<int>& x_i) const {
+      return x_r[0];
+    }
+
+    template<typename T1>
+    const double& unpack_ii(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                            const std::vector<double>& x_r,
+                            const std::vector<int>& x_i) const {
+      return x_r.back();
+    }
+
+    template<typename T1>
+    std::vector<T1> unpack_ode_theta(const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
+                                     const std::vector<int>& x_i) const {
+      int ncmt_ = x_i[1];
+      int npar_ = x_i[2];
+      std::vector<T1> theta(npar_ + ncmt_);
+      for (size_t i = 0; i < theta.size(); i++) theta[i] = y(i);
+      return theta;
+    }
+
+    std::vector<double> unpack_ode_x_r(const std::vector<double>& x_r,
+                                       const std::vector<int>& x_i) const {
+      return {};
+    }
+
+    template<typename T1>
+    inline void nullify_truncated_rate(std::vector<T1>& ode_theta,
+                                       std::vector<double>& ode_x_r,
+                                       const std::vector<int>& x_i) const {
+      int cmt_ = x_i[0];
+      int npar_ = x_i[2];
+      ode_theta[npar_ + cmt_ - 1] = 0.0;
+    }
+  };
+
+  /**
    * A structure to store the algebraic system
    * which gets solved when computing the steady
    * state solution for ODE models.
@@ -149,28 +568,12 @@ namespace refactor {
    * @tparam F ODE RHS functor type
    */
   template <PMXOdeIntegratorId It, typename T_amt, typename T_rate, typename T_ii, typename F>
-  struct PMXOdeFunctorSSAdaptor;
-
-  /**
-   * Partial specialization: @c ii is data.
-   */
-  template <PMXOdeIntegratorId It, typename T_amt, typename T_rate, typename F>
-  struct PMXOdeFunctorSSAdaptor<It, T_amt, T_rate, double, F> {
-    PMXOdeFunctorRateAdaptor<F, T_rate> f_;
-    int cmt_;
-    int ncmt_;
-    int npar_;
-    const PMXOdeIntegrator<It> integrator_;
+  struct PMXOdeFunctorSSAdaptor {
 
     PMXOdeFunctorSSAdaptor() {}
 
-    PMXOdeFunctorSSAdaptor(const F& f, int npar, int cmt, int ncmt,
-                           const PMXOdeIntegrator<It>& integrator) :
-      f_(f, npar), cmt_(cmt), ncmt_(ncmt), npar_(npar), integrator_(integrator)
-    {}
-
     /**
-     *  When rate is RV, it's attached to parameters vector.
+     * When rate is RV, it's attached to parameters vector.
      * IN this case parameter @c y consists of {theta, rate}
      */
     template <typename T0, typename T1>
@@ -189,472 +592,52 @@ namespace refactor {
       using stan::math::value_of;
 
       typedef typename stan::return_type<T0, T1>::type scalar_t;
+      const PMXOdeFunctorSSAdaptorPacker<F, T_amt, T_rate, T_ii> packer_;
+      const PMXOdeIntegrator<It> integrator_;
+      const PMXOdeFunctorRateAdaptor<F, T_rate> f_;
+      int cmt_ = x_i[0];
+      int ncmt_ = x_i[1];
+      int npar_ = x_i[2];
+
+      const auto& ii_ = packer_.unpack_ii(y, x_r, x_i);
+      const auto& rate = packer_.unpack_rate(y, x_r, x_i);
+      const auto& amt = packer_.unpack_amt(y, x_r, x_i);
 
       double t0 = 0;
-      double ii_ = x_r[0];
 
       vector<scalar_t> x0(x.size());
       for (size_t i = 0; i < x0.size(); i++) x0[i] = x(i);
-      const T1& amt = y(y.size() - 1);
-      const T1& rate = y(npar_ + cmt_ - 1);
+
+      std::vector<T1> ode_theta(packer_.unpack_ode_theta(y, x_i));
+      std::vector<double> ode_x_r(packer_.unpack_ode_x_r(x_r, x_i));
 
       Eigen::Matrix<scalar_t, Eigen::Dynamic, 1> result(x.size());
-      std::vector<T1> theta(y.size() - 1);
-      for (size_t i = 0; i < theta.size(); i++) theta[i] = y(i);
 
       static const char* function("Steady State Event");
 
       if (rate == 0) {  // bolus dose
         x0[cmt_ - 1] += amt;
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ii_, theta, x_r, x_i)[0];
+        vector<scalar_t> pred = integrator_(f_, x0, t0, ii_, ode_theta, ode_x_r, x_i)[0];
         for (int i = 0; i < result.size(); i++) {
           result(i) = x(i) - pred[i];
         }
       } else if (ii_ > 0) {  // multiple truncated infusions
         T1 dt = amt / rate;
-
         torsten::check_mti(amt, dt, ii_, function);
 
-        x0 = integrator_(f_, to_array_1d(x), t0, dt, theta, x_r, x_i)[0];
+        x0 = integrator_(f_, to_array_1d(x), t0, dt, ode_theta, ode_x_r, x_i)[0];
 
         dt = ii_ - dt;
-        theta[npar_ + cmt_ - 1] = 0.0;
-        vector<scalar_t> pred = integrator_(f_, x0, t0, dt, theta, x_r, x_i)[0];
+        packer_.nullify_truncated_rate(ode_theta, ode_x_r, x_i);
+        vector<scalar_t> pred = integrator_(f_, x0, t0, dt, ode_theta, ode_x_r, x_i)[0];
         for (int i = 0; i < result.size(); i++) result(i) = x(i) - pred[i];
       } else {  // constant infusion
         stan::math::check_less_or_equal(function, "AMT", amt, 0);
-
-        vector<scalar_t> derivative = f_(0, to_array_1d(x), theta, x_r, x_i, 0);
+        vector<scalar_t> derivative = f_(0, to_array_1d(x), ode_theta, ode_x_r, x_i, 0);
         result = to_vector(derivative);
       }
 
       return result;
-    }
-
-    /*
-     * Append @c rate & amt parameter to original parameter vector.
-     */
-    template<typename T>
-    inline Eigen::Matrix<typename stan::return_type<T, T_amt, T_rate>::type, -1, 1>
-    adapted_param(const std::vector<T> &par, const T_amt& amt, const T_rate& rate, double ii) {
-      std::vector<typename stan::return_type<T_amt, T_rate>::type> rate_amt_vec(1 + ncmt_, 0.0);
-      rate_amt_vec[cmt_ - 1] = rate;
-      rate_amt_vec.back() = amt;
-      return stan::math::to_vector(f_.adapted_param(par, rate_amt_vec));
-    }
-
-    inline const std::vector<double>
-    adapted_x_r(const T_amt& amt, const T_rate& rate, double ii) {
-      return {ii};
-    }
-  };
-
-  /**
-   * Partial specialization: @c rate, @c amt, and @c ii are data.
-   */
-  template <PMXOdeIntegratorId It, typename F>
-  struct PMXOdeFunctorSSAdaptor<It, double, double, double, F> {
-    PMXOdeFunctorRateAdaptor<F, double> f_;
-    int cmt_;
-    int ncmt_;
-    int npar_;
-    const PMXOdeIntegrator<It> integrator_;
-
-    PMXOdeFunctorSSAdaptor() {}
-
-    PMXOdeFunctorSSAdaptor(const F& f, int npar, int cmt, int ncmt,
-                           const PMXOdeIntegrator<It>& integrator) :
-      f_(f), cmt_(cmt), ncmt_(ncmt), npar_(npar), integrator_(integrator)
-    {}
-
-    /**
-     *  dd regime.
-     *  x_r contains the rates in each compartment followed
-     *  by the adjusted amount (biovar * amt).
-     */
-    template <typename T0, typename T1>
-    inline
-    Eigen::Matrix<typename boost::math::tools::promote_args<T0, T1>::type,
-                  Eigen::Dynamic, 1>
-    operator()(const Eigen::Matrix<T0, Eigen::Dynamic, 1>& x,
-               const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
-               const std::vector<double>& x_r,
-               const std::vector<int>& x_i,
-               std::ostream* msgs) const {
-      using stan::math::to_array_1d;
-      using stan::math::to_vector;
-      using stan::math::to_vector;
-      using Eigen::Matrix;
-      using Eigen::Dynamic;
-      using std::vector;
-      using torsten::check_mti;
-
-      typedef typename boost::math::tools::promote_args<T0, T1>::type scalar_t;
-
-      double t0 = 0;
-      double ii_ = x_r.back();
-      double amt = x_r.rbegin()[1];
-      double rate = x_r[cmt_ - 1];
-
-      vector<scalar_t> x0(x.size());
-      for (size_t i = 0; i < x0.size(); i++) x0[i] = x(i);
-
-      Eigen::Matrix<scalar_t, Eigen::Dynamic, 1> result(x.size());
-
-      static const char* function("Steady State Event");
-
-      if (rate == 0) {  // bolus dose
-        x0[cmt_ - 1] += amt;
-
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ii_, to_array_1d(y), x_r, x_i)[0];
-
-        for (int i = 0; i < result.size(); i++)
-          result(i) = x(i) - pred[i];
-
-      } else if (ii_ > 0) {  // multiple truncated infusions
-        double dt = amt / rate;
-
-        torsten::check_mti(amt, dt, ii_, function);
-
-        std::vector<T1> theta = to_array_1d(y);
-        x0 = integrator_(f_, to_array_1d(x), t0, dt, theta, x_r, x_i)[0];
-
-        dt = ii_ - dt;
-        std::vector<double> null_rate(x_r.size() - 1, 0.0);
-        vector<scalar_t> pred = integrator_(f_, x0, t0, dt, theta, null_rate, x_i)[0];
-
-        for (int i = 0; i < result.size(); i++)
-          result(i) = x(i) - pred[i];
-      } else {  // constant infusion
-        stan::math::check_less_or_equal(function, "AMT", amt, 0);
-        vector<scalar_t> derivative = f_(0, to_array_1d(x), to_array_1d(y), x_r, x_i, 0);
-        result = to_vector(derivative);
-      }
-
-      return result;
-    }
-
-    template<typename T>
-    inline Eigen::Matrix<T, -1, 1>
-    adapted_param(const std::vector<T> &par, double amt, double rate, double ii) {
-      return stan::math::to_vector(par);
-    }
-
-    /*
-     * When @c rate is @c var, the @c x_r is empty
-     */
-    inline const std::vector<double>
-    adapted_x_r(double amt, double rate, double ii) {
-      std::vector<double> res(ncmt_ + 1 + 1, 0.0);
-      res[cmt_ - 1] = rate;
-      res.rbegin()[1] = amt;
-      res.back() = ii;
-      return res;
-    }
-  };
-
-  /**
-   * Partial specialization: @c rate and @c amt are data.
-   */
-  template <PMXOdeIntegratorId It, typename T_ii, typename F>
-  struct PMXOdeFunctorSSAdaptor<It, double, double, T_ii, F> {
-    PMXOdeFunctorRateAdaptor<F, double> f_;
-    int cmt_;
-    int ncmt_;
-    int npar_;
-    const PMXOdeIntegrator<It> integrator_;
-
-    PMXOdeFunctorSSAdaptor() {}
-
-    PMXOdeFunctorSSAdaptor(const F& f, int npar, int cmt, int ncmt,
-                           const PMXOdeIntegrator<It>& integrator) :
-      f_(f), cmt_(cmt), ncmt_(ncmt), npar_(npar), integrator_(integrator)
-    {}
-
-    /**
-     *  dd regime.
-     *  x_r contains the rates in each compartment followed
-     *  by the adjusted amount (biovar * amt).
-     */
-    template <typename T0, typename T1>
-    inline
-    Eigen::Matrix<typename torsten::return_t<T0, T1>::type,
-                  Eigen::Dynamic, 1>
-    operator()(const Eigen::Matrix<T0, Eigen::Dynamic, 1>& x,
-               const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
-               const std::vector<double>& x_r,
-               const std::vector<int>& x_i,
-               std::ostream* msgs) const {
-      using stan::math::to_array_1d;
-      using stan::math::to_vector;
-      using stan::math::to_vector;
-      using Eigen::Matrix;
-      using Eigen::Dynamic;
-      using std::vector;
-      using torsten::check_mti;
-
-      using scalar_t = typename torsten::return_t<T0, T1>::type;
-
-      double t0 = 0;
-      const T1& ii_ = y(y.size() - 1);
-      std::vector<T1> ode_parameters(npar_);
-      for (int i = 0; i < npar_; ++i) {
-        ode_parameters[i] = y(i);
-      }
-      double amt = x_r.back();
-      double rate = x_r[cmt_ - 1];
-
-      vector<scalar_t> x0(x.size());
-      for (size_t i = 0; i < x0.size(); i++) x0[i] = x(i);
-
-      Eigen::Matrix<scalar_t, Eigen::Dynamic, 1> result(x.size());
-
-      static const char* function("Steady State Event");
-
-      if (rate == 0) {  // bolus dose
-        x0[cmt_ - 1] += amt;
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ii_, ode_parameters, x_r, x_i)[0];
-
-        for (int i = 0; i < result.size(); i++)
-          result(i) = x(i) - pred[i];
-
-      } else if (ii_ > 0) {  // multiple truncated infusions
-        T1 dt = amt / rate;
-        torsten::check_mti(amt, dt, ii_, function);
-        x0 = integrator_(f_, to_array_1d(x), t0, dt, ode_parameters, x_r, x_i)[0];
-        dt = ii_ - dt;
-        std::vector<double> null_rate(ncmt_, 0.0);
-        vector<scalar_t> pred = integrator_(f_, x0, t0, dt, ode_parameters, null_rate, x_i)[0];
-        for (int i = 0; i < result.size(); i++) {
-          result(i) = x(i) - pred[i];          
-        }
-      } else {  // constant infusion
-        stan::math::check_less_or_equal(function, "AMT", amt, 0);
-
-        // FIXME: we are forcing return to be @c var type
-        result = to_vector(f_(0, to_array_1d(x), ode_parameters, x_r, x_i, 0));
-      }
-
-      return result;
-    }
-
-    template<typename T>
-    inline Eigen::Matrix<typename torsten::return_t<T, T_ii>::type, -1, 1>
-    adapted_param(const std::vector<T> &par, double amt, double rate, const T_ii& ii) {
-      Eigen::Matrix<typename torsten::return_t<T, T_ii>::type, -1, 1> res(npar_ + 1);
-      for (int i = 0; i < npar_; i++) res(i) = par[i];
-      res(npar_) = ii;
-      return res;
-    }
-
-    /*
-     * When @c rate is @c var, the @c x_r is empty
-     */
-    inline const std::vector<double>
-    adapted_x_r(double amt, double rate, const T_ii& ii) {
-      std::vector<double> res(ncmt_ + 1, 0.0);
-      res[cmt_ - 1] = rate;
-      res.back() = amt;
-      return res;
-    }
-  };
-
-  /**
-   * Partial specialization: @c rate and @c ii are data.
-   */
-  template <PMXOdeIntegratorId It, typename T_amt, typename F>
-  struct PMXOdeFunctorSSAdaptor<It, T_amt, double, double, F> {
-    PMXOdeFunctorRateAdaptor<F, double> f_;
-    int cmt_;
-    int ncmt_;
-    int npar_;
-    const PMXOdeIntegrator<It> integrator_;
-
-    PMXOdeFunctorSSAdaptor() {}
-
-    PMXOdeFunctorSSAdaptor(const F& f, int npar, int cmt, int ncmt,
-                           const PMXOdeIntegrator<It>& integrator) :
-      f_(f), cmt_(cmt), ncmt_(ncmt), npar_(npar), integrator_(integrator)
-    {}
-
-    /**
-     *  Case where the modified amt is a random variable. This
-     *  will usually happen because biovar is a parameter, making 
-     *  amt a transformed parameter.
-     *  The last element of y is amt.
-     *  x_r stores the rate.
-     */
-    template <typename T0, typename T1>
-    inline
-    Eigen::Matrix<typename boost::math::tools::promote_args<T0, T1>::type,
-                  Eigen::Dynamic, 1>
-    operator()(const Eigen::Matrix<T0, Eigen::Dynamic, 1>& x,
-               const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
-               const std::vector<double>& x_r,
-               const std::vector<int>& x_i,
-               std::ostream* msgs) const {
-      using stan::math::to_array_1d;
-      using stan::math::to_vector;
-      using std::vector;
-      using stan::math::invalid_argument;
-      using stan::math::value_of;
-
-      typedef typename boost::math::tools::promote_args<T0, T1>::type scalar_t;
-
-      double t0 = 0;
-      double ii_ = x_r.back();
-      const T1& amt = y(y.size() - 1);
-      double rate = x_r.at(cmt_ - 1);
-
-      vector<scalar_t> x0(x.size());
-      for (size_t i = 0; i < x0.size(); i++) x0[i] = x(i);
-
-      Eigen::Matrix<scalar_t, Eigen::Dynamic, 1> result(x.size());
-      std::vector<T1> theta(y.size() - 1);
-      for (size_t i = 0; i < theta.size(); i++) theta[i] = y(i);
-
-      static const char* function("Steady State Event");
-
-      if (rate == 0) {  // bolus dose
-        x0[cmt_ - 1] += amt;
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ii_, theta, x_r, x_i)[0];
-
-        for (int i = 0; i < result.size(); i++) {
-          result(i) = x(i) - pred[i];        
-        }
-      } else if (ii_ > 0) {  // multiple truncated infusions
-        T1 dt = amt / rate;
-
-        torsten::check_mti(amt, dt, ii_, function);
-      
-        x0 = integrator_(f_, to_array_1d(x), t0, dt, theta, x_r, x_i)[0];
-
-        dt = ii_ - dt;
-        std::vector<double> null_rate(x_r.size(), 0.0);
-        vector<scalar_t> pred = integrator_(f_, x0, t0, dt, theta, null_rate, x_i)[0];
-
-        for (int i = 0; i < result.size(); i++) result(i) = x(i) - pred[i];
-      } else {  // constant infusion
-        stan::math::check_less_or_equal(function, "AMT", amt, 0);
-        vector<scalar_t> derivative = f_(0, to_array_1d(x), theta, x_r, x_i, 0);
-        result = to_vector(derivative);
-      }
-
-      return result;
-    }
-
-    /*
-     * Append @c amt parameter to original parameter vector
-     */
-    template<typename T>
-    inline Eigen::Matrix<typename stan::return_type<T, T_amt>::type, -1, 1>
-    adapted_param(const std::vector<T> &par, const T_amt& amt, double rate, double ii) {
-      Eigen::Matrix<typename stan::return_type<T, T_amt>::type, -1, 1> res(npar_ + 1);
-      for (int i = 0; i < npar_; i++) res(i) = par[i];
-      res(npar_) = amt;
-      return res;
-    }
-
-    inline const std::vector<double>
-    adapted_x_r(const T_amt& amt, double rate, double ii) {
-      std::vector<double> res(ncmt_ + 1, 0.0);
-      res[cmt_ - 1] = rate;
-      res.back() = ii;
-      return res;
-   }
-  };
-
-  /**
-   * Partial specialization: @c amt, and @c ii are data.
-   */
-  template <PMXOdeIntegratorId It, typename T_rate, typename F>
-  struct PMXOdeFunctorSSAdaptor<It, double ,T_rate, double, F> {
-    PMXOdeFunctorRateAdaptor<F, T_rate> f_;
-    int cmt_;
-    int ncmt_;
-    int npar_;
-    const PMXOdeIntegrator<It> integrator_;
-
-    PMXOdeFunctorSSAdaptor() {}
-
-    PMXOdeFunctorSSAdaptor(const F& f, int npar, int cmt, int ncmt,
-                           const PMXOdeIntegrator<It>& integrator) :
-      f_(f, npar), cmt_(cmt), ncmt_(ncmt), npar_(npar), integrator_(integrator)
-    {}
-
-    /**
-     *  When rate is RV, it's attached to parameters vector.
-     * IN this case parameter @c y consists of {theta, rate}
-     */
-    template <typename T0, typename T1>
-    inline
-    Eigen::Matrix<typename boost::math::tools::promote_args<T0, T1>::type,
-                  Eigen::Dynamic, 1>
-    operator()(const Eigen::Matrix<T0, Eigen::Dynamic, 1>& x,
-               const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
-               const std::vector<double>& x_r,
-               const std::vector<int>& x_i,
-               std::ostream* msgs) const {
-      using stan::math::to_array_1d;
-      using stan::math::to_vector;
-      using std::vector;
-      using stan::math::invalid_argument;
-      using stan::math::value_of;
-
-      typedef typename stan::return_type<T0, T1>::type scalar_t;
-
-      double t0 = 0;
-      double ii_ = x_r.back();
-      const double amt = x_r.front();
-      const T1& rate = y(npar_ + cmt_ - 1);
-
-      vector<scalar_t> x0(x.size());
-      for (size_t i = 0; i < x0.size(); i++) x0[i] = x(i);
-
-      Eigen::Matrix<scalar_t, Eigen::Dynamic, 1> result(x.size());
-      std::vector<T1> theta(to_array_1d(y));
-      static const char* function("Steady State Event");
-
-      if (rate == 0) {  // bolus dose
-        x0[cmt_ - 1] += amt;
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ii_, theta, x_r, x_i)[0];
-        for (int i = 0; i < result.size(); i++) {
-          result(i) = x(i) - pred[i];        
-        }
-      } else if (ii_ > 0) {  // multiple truncated infusions
-        T1 dt = amt / rate;
-
-        torsten::check_mti(amt, dt, ii_, function);
-      
-        x0 = integrator_(f_, to_array_1d(x), t0, dt, theta, x_r, x_i)[0];
-
-        dt = ii_ - dt;
-        theta[npar_ + cmt_ - 1] = 0.0;
-        vector<scalar_t> pred = integrator_(f_, x0, t0, dt, theta, x_r, x_i)[0];
-        for (int i = 0; i < result.size(); i++) result(i) = x(i) - pred[i];
-      } else {  // constant infusion
-        stan::math::check_less_or_equal(function, "AMT", amt, 0);
-        vector<scalar_t> derivative = f_(0, to_array_1d(x), theta, x_r, x_i, 0);
-        result = to_vector(derivative);
-      }
-
-      return result;
-    }
-
-    /*
-     * Append @c rate parameter to original parameter vector
-     */
-    template<typename T>
-    inline Eigen::Matrix<typename stan::return_type<T, T_rate>::type, -1, 1>
-    adapted_param(const std::vector<T> &par, double amt, const T_rate& rate, double ii) {
-      std::vector<T_rate> rate_vec(ncmt_, 0.0);
-      rate_vec[cmt_ - 1] = rate;
-      return stan::math::to_vector(f_.adapted_param(par, rate_vec));
-    }
-
-    inline const std::vector<double>
-    adapted_x_r(double amt, const T_rate& rate, double ii) {
-      return {amt, ii};
     }
   };
 
@@ -1093,7 +1076,7 @@ namespace refactor {
       double ii_dbl = value_of(ii);
       Matrix<double, 1, Dynamic> init_dbl = Matrix<double, 1, Dynamic>::Zero(ncmt_);
       vector<double> x_r(ncmt_, 0);
-      vector<int> x_i(0);
+      vector<int> x_i{cmt, ncmt_, int(par_.size())};
 
       Matrix<double, Dynamic, 1> y(ncmt_);
       const double alge_rtol = 1e-10;
@@ -1101,14 +1084,15 @@ namespace refactor {
       const long int alge_max_steps = is_var_amt ? 1e4 : 1e3;  // default  // NOLINT
 
       // construct algebraic function
-      PMXOdeFunctorSSAdaptor<It, T_amt, T_r, T_ii, F> fss(f_, par_.size(), cmt, ncmt_, integrator); // NOLINT
+      PMXOdeFunctorSSAdaptorPacker<F, T_amt, T_r, T_ii> packer;
+      PMXOdeFunctorSSAdaptor<It, T_amt, T_r, T_ii, F> fss;
 
       if (rate == 0) {  // bolus dose
         init_dbl(cmt - 1) = value_of(amt); // bolus as initial condition
         y = integrate(x_r, init_dbl, ii_dbl, integrator); // NOLINT
         pred = algebra_solver(fss, y,
-                              fss.adapted_param(par_, amt, rate, ii),
-                              fss.adapted_x_r(amt, rate, ii),
+                              packer.adapted_param(par_, amt, rate, ii, x_i),
+                              packer.adapted_x_r(amt, rate, ii, x_i),
                               x_i, 0, alge_rtol, f_tol, alge_max_steps); // NOLINT
       } else {  // infusions (truncated or constant)
         x_r[cmt - 1] = value_of(rate);
@@ -1117,8 +1101,8 @@ namespace refactor {
         const double f_tol_rate = ii > 0 ? 1e-3 : f_tol;
         y = integrate(x_r, init_dbl, dt, integrator);
         pred = algebra_solver(fss, y,
-                              fss.adapted_param(par_, amt, rate, ii),
-                              fss.adapted_x_r(amt, rate, ii),
+                              packer.adapted_param(par_, amt, rate, ii, x_i),
+                              packer.adapted_x_r(amt, rate, ii, x_i),
                               x_i, 0, alge_rtol, f_tol_rate, alge_max_steps);
       }
       return pred;
@@ -1136,9 +1120,7 @@ namespace refactor {
                             const PMXOdeIntegrator<It>& integrator) const {
       return torsten::model_solve_d(*this, amt, rate, ii, cmt, integrator);
     }
-
   };
-
 }
 
 #endif
