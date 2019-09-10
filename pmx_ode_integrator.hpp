@@ -19,9 +19,6 @@ namespace torsten {
 }
 
 namespace torsten {
-  template<PMXOdeIntegratorId It>
-  struct PMXOdeIntegrator;
-
   using stan::math::integrate_ode_adams;
   using stan::math::integrate_ode_bdf;
   using stan::math::integrate_ode_rk45;
@@ -98,56 +95,50 @@ namespace torsten {
       return this -> solve_d(f, y0, t0, ts, theta, x_r, x_i);                \
     }
 
+  template<PMXOdeIntegratorId It>
+  struct PMXOdeIntegrator;
+
+#define DEF_TORSTEN_INTEGRATOR_MEMBER(RTOL, ATOL, MAXSTEP, AS_RTOL, AS_ATOL, AS_MAXSTEP)  \
+    const double rtol;                                                                    \
+    const double atol;                                                                    \
+    const long int max_num_step;                                                          \
+    const double as_rtol;                                                                 \
+    const double as_atol;                                                                 \
+    const long int as_max_num_step;                                                       \
+    std::ostream* msgs;                                                                   \
+    PMXOdeIntegrator() : rtol(RTOL), atol(ATOL), max_num_step(MAXSTEP),                   \
+                         as_rtol(AS_RTOL), as_atol(AS_ATOL), as_max_num_step(AS_MAXSTEP), \
+                         msgs(0) {}                                                       \
+    PMXOdeIntegrator(double rtol0, double atol0, long int max_num_step0,                  \
+                     std::ostream* msgs0) :                                               \
+      rtol(rtol0), atol(atol0), max_num_step(max_num_step0),                              \
+      as_rtol(AS_RTOL), as_atol(AS_ATOL), as_max_num_step(AS_MAXSTEP),                    \
+      msgs(msgs0) {}                                                                      \
+    PMXOdeIntegrator(double rtol0, double atol0, long int max_num_step0,                  \
+                     double as_rtol0, double as_atol0, long int as_max_num_step0,         \
+                     std::ostream* msgs0) :                                               \
+      rtol(rtol0), atol(atol0), max_num_step(max_num_step0),                              \
+      as_rtol(as_rtol0), as_atol(as_atol0), as_max_num_step(as_max_num_step0),            \
+      msgs(msgs0) {}
+
+
   template<>
   struct PMXOdeIntegrator<StanAdams> {
-    const double rtol;
-    const double atol;
-    const long int max_num_step;
-    std::ostream* msgs;
-
-    PMXOdeIntegrator() : rtol(1e-10), atol(1e-10), max_num_step(1e8), msgs(0) {}
-
-    PMXOdeIntegrator(const double rtol0, const double atol0, const long int max_num_step0,
-                     std::ostream* msgs0) :
-      rtol(rtol0), atol(atol0), max_num_step(max_num_step0), msgs(msgs0)
-    {}
-    
+    DEF_TORSTEN_INTEGRATOR_MEMBER(1e-10, 1e-10, 1e8, 1e-6, 1e-6, 1e2)
     DEF_STAN_INTEGRATOR(integrate_ode_adams)
     DEF_STAN_SINGLE_STEP_INTEGRATOR
   };
 
   template<>
   struct PMXOdeIntegrator<StanBdf> {
-    const double rtol;
-    const double atol;
-    const long int max_num_step;
-    std::ostream* msgs;
-
-    PMXOdeIntegrator() : rtol(1e-10), atol(1e-10), max_num_step(1e8), msgs(0) {}
-
-    PMXOdeIntegrator(const double rtol0, const double atol0, const long int max_num_step0,
-                     std::ostream* msgs0) :
-      rtol(rtol0), atol(atol0), max_num_step(max_num_step0), msgs(msgs0)
-    {}
-    
+    DEF_TORSTEN_INTEGRATOR_MEMBER(1e-10, 1e-10, 1e8, 1e-6, 1e-6, 1e2)
     DEF_STAN_INTEGRATOR(integrate_ode_bdf)
     DEF_STAN_SINGLE_STEP_INTEGRATOR
   };
 
   template<>
   struct PMXOdeIntegrator<StanRk45> {
-    const double rtol;
-    const double atol;
-    const long int max_num_step;
-    std::ostream* msgs;
-
-    PMXOdeIntegrator() : rtol(1e-10), atol(1e-10), max_num_step(1e8), msgs(0) {}
-
-    PMXOdeIntegrator(const double rtol0, const double atol0, const long int max_num_step0,
-                     std::ostream* msgs0) :
-      rtol(rtol0), atol(atol0), max_num_step(max_num_step0), msgs(msgs0)
-    {}
-    
+    DEF_TORSTEN_INTEGRATOR_MEMBER(1e-10, 1e-10, 1e8, 1e-6, 1e-6, 1e2)
     DEF_STAN_INTEGRATOR(integrate_ode_rk45)
     DEF_STAN_SINGLE_STEP_INTEGRATOR
   };
@@ -157,18 +148,7 @@ namespace torsten {
    */
   template<>
   struct PMXOdeIntegrator<PkBdf> {
-    const double rtol;
-    const double atol;
-    const long int max_num_step;
-    std::ostream* msgs;
-
-    PMXOdeIntegrator() : rtol(1e-10), atol(1e-10), max_num_step(1e8), msgs(0) {}
-
-    PMXOdeIntegrator(const double rtol0, const double atol0, const long int max_num_step0,
-                     std::ostream* msgs0) :
-      rtol(rtol0), atol(atol0), max_num_step(max_num_step0), msgs(msgs0)
-    {}
-
+    DEF_TORSTEN_INTEGRATOR_MEMBER(1e-10, 1e-10, 1e8, 1e-6, 1e-6, 1e2)
     DEF_TORSTEN_INTEGRATOR(pmx_integrate_ode_bdf)
     DEF_TORSTEN_SINGLE_STEP_INTEGRATOR
 
@@ -207,18 +187,7 @@ namespace torsten {
    */
   template<>
   struct PMXOdeIntegrator<PkAdams> {
-    const double rtol;
-    const double atol;
-    const long int max_num_step;
-    std::ostream* msgs;
-
-    PMXOdeIntegrator() : rtol(1e-10), atol(1e-10), max_num_step(1e8), msgs(0) {}
-
-    PMXOdeIntegrator(const double rtol0, const double atol0, const long int max_num_step0,
-                     std::ostream* msgs0) :
-      rtol(rtol0), atol(atol0), max_num_step(max_num_step0), msgs(msgs0)
-    {}
-
+    DEF_TORSTEN_INTEGRATOR_MEMBER(1e-10, 1e-10, 1e8, 1e-6, 1e-6, 1e2)
     DEF_TORSTEN_INTEGRATOR(pmx_integrate_ode_adams)
     DEF_TORSTEN_SINGLE_STEP_INTEGRATOR
 
@@ -257,18 +226,7 @@ namespace torsten {
    */
   template<>
   struct PMXOdeIntegrator<PkRk45> {
-    const double rtol;
-    const double atol;
-    const long int max_num_step;
-    std::ostream* msgs;
-
-    PMXOdeIntegrator() : rtol(1e-10), atol(1e-10), max_num_step(1e8), msgs(0) {}
-
-    PMXOdeIntegrator(const double rtol0, const double atol0, const long int max_num_step0,
-                     std::ostream* msgs0) :
-      rtol(rtol0), atol(atol0), max_num_step(max_num_step0), msgs(msgs0)
-    {}
-
+    DEF_TORSTEN_INTEGRATOR_MEMBER(1e-10, 1e-10, 1e8, 1e-6, 1e-6, 1e2)
     DEF_TORSTEN_INTEGRATOR(pmx_integrate_ode_rk45)
     DEF_TORSTEN_SINGLE_STEP_INTEGRATOR
 
@@ -303,8 +261,11 @@ namespace torsten {
   };
 }
 
+#undef DEF_TORSTEN_INTEGRATOR_MEMBER
 #undef DEF_TORSTEN_SINGLE_STEP_SOLVE_D
 #undef DEF_TORSTEN_SINGLE_STEP_INTEGRATOR
 #undef DEF_TORSTEN_INTEGRATOR
+#undef DEF_STAN_SINGLE_STEP_INTEGRATOR
+#undef DEF_STAN_INTEGRATOR
 
 #endif
