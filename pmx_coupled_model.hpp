@@ -5,13 +5,14 @@
 #include <stan/math/torsten/pmx_onecpt_model.hpp>
 #include <stan/math/torsten/pmx_twocpt_model.hpp>
 #include <stan/math/torsten/pmx_ode_model.hpp>
+#include <stan/math/torsten/return_type.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_oneCpt.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_twoCpt.hpp>
 #include <stan/math/torsten/PKModel/Pred/SS_system2.hpp>
 
 namespace refactor {
 
-  using boost::math::tools::promote_args;
+  using torsten::return_t;
   using Eigen::Matrix;
   using Eigen::Dynamic;
   using torsten::PMXOdeIntegrator;
@@ -31,27 +32,35 @@ namespace refactor {
    * numerical integrator to solve the ODE model. This
    * requires adapting the coupled model's functor to an ODE
    * functor that can be passed to ODE integrators.
-   *
-   * @tparam T_m (PK) model that will be solved analytically.
-   * @tparam F0 original ODE functor
-   * @tparam T_rate type of dosing rate.
+   * The fuctor returns the derivative of the base ODE system when
+   * @c rate is param.
+   * The base PK component is calculated analytically and passed into
+   * ODE functor as arguments.
+   *  
+   * @param t time
+   * @param y indepedent PD variable
+   * @param theta adapted coupled ODE params in the order of
+   *    - original ODE param (PK param followed by PD param)
+   *    - PK rate
+   *    - PD rate
+   *    - initial condition of PK ODE
+   * @param x_r real data in the order of
+   *    - dim PK states
+   *    - initial time of PK ODE
+   * @param x_i null int data
    */
   template <template<typename...> class T_m, typename F0, typename T_rate>
   struct PMXOdeFunctorCouplingAdaptor {
-    F0 f0_;
-
-    PMXOdeFunctorCouplingAdaptor() { }
-
-    explicit PMXOdeFunctorCouplingAdaptor(const F0& f0) : f0_(f0) { }
+    PMXOdeFunctorCouplingAdaptor() {}
 
     /**
-     *  Case 2: rate is a parameter, stored in theta.
+     *  default case: rate is a parameter, stored in theta.
      *  Theta contains in this order: ODE parameters, rates, and
      *  initial base PK states.
      */
     template <typename T0, typename T1, typename T2, typename T3>
     inline
-    std::vector<typename boost::math::tools::promote_args<T0, T1, T2, T3>::type>
+    std::vector<typename torsten::return_t<T0, T1, T2, T3>::type>
     operator()(const T0& t,
              const std::vector<T1>& y,
              const std::vector<T2>& theta,
@@ -61,71 +70,90 @@ namespace refactor {
       using std::vector;
       using stan::math::to_array_1d;
       using stan::math::to_vector;
-      typedef typename boost::math::tools::promote_args<T0, T1, T2, T3>::type
+      typedef typename torsten::return_t<T0, T1, T2, T3>::type
         scalar;
-      typedef typename boost::math::tools::promote_args<T0, T2, T3>::type
+      typedef typename torsten::return_t<T0, T2, T3>::type
         T_pk;  // return object of fTwoCpt  doesn't depend on T1
       using T_pkmodel = T_m<double, double, double, double>;
 
-      size_t
-        nTheta = theta.size(),
-        nPK = T_pkmodel::Ncmt,  // number of base PK states (equivalently rates and inits)
-        nPD = y.size(),  // number of other states
-        nODEparms = nTheta - 2 * nPK - nPD;  // number of ODE parameters
+      size_t nPK = T_pkmodel::Ncmt;              // number of base PK states (for rates and inits)
+      size_t nPD = y.size();                     // number of other states
+      size_t nODEparms = theta.size() - 2 * nPK - nPD; // number of ODE parameters
 
-      // Theta first contains the base PK parameters, followed by
-      // the other ODE parameters.
-      int nParmsPK = T_pkmodel::Npar;
-      vector<T2> thetaPK(theta.begin(), theta.begin() + nParmsPK);
-
-      // Next theta contains the rates for the base PK compartments.
-      vector<T2> ratePK(nPK);
-      for (size_t i = 0; i < nPK; i++)
-        ratePK[i] = theta[nODEparms + i];
-
-      // followed by the rates in the other compartments.
-      vector<T2> ratePD(nPD);
-      for (size_t i = 0; i < nPD; i++)
-        ratePD[i] = theta[nODEparms + nPK + i];
+      vector<T2> thetaPK(theta.begin(), theta.begin() + T_pkmodel::Npar);
+      vector<T2> ratePK(theta.begin() + nODEparms, theta.begin() + nODEparms + nPK);
 
       // The last elements of theta contain the initial base PK states
       refactor::PKRec<T2> init_pk(nPK);
-      for (size_t i = 0; i < nPK; ++i) init_pk(i) = theta[nTheta - nPK + i];
+      for (int i = 0; i < nPK; ++i) {
+        init_pk(nPK - i - 1) = *(theta.rbegin() + i);
+      }
 
       // Last element of x_r contains the initial time
       T_m<T0, T2, T2, T2> pkmodel(x_r.back(), init_pk, ratePK, thetaPK);
-      std::vector<T_pk> y_pk = to_array_1d(pkmodel.solve(t));
-      vector<scalar> dydt = f0_(t, y, y_pk, theta, x_r, x_i, pstream_);
+      vector<scalar> dydt = F0()(t, y, to_array_1d(pkmodel.solve(t)), theta, x_r, x_i, pstream_);
 
       for (size_t i = 0; i < dydt.size(); i++)
-        dydt[i] += ratePD[i];
+        dydt[i] += theta[nODEparms + nPK + i];
 
       return dydt;
+    }
+
+    /*
+     * when solving coupled model with @c var rate, we
+     * append rate and PK initial condition to
+     * parameter vector. 
+     * FIXME: spurious @c var parameters will be generated
+     * if the original parameters are data.
+     */
+    template<typename T, typename T0>
+    static std::vector<typename torsten::return_t<T, T0, T_rate>::type>
+    adapted_param(const std::vector<T> &par, const std::vector<T_rate> &rate,
+                  const refactor::PKRec<T0>& y0_pk) {
+      std::vector<stan::math::var> theta;
+      theta.reserve(par.size() + rate.size() + y0_pk.size());
+      theta.insert(theta.end(), par.begin(), par.end());
+      theta.insert(theta.end(), rate.begin(), rate.end());
+      for (int i = 0; i < y0_pk.size(); ++i) {
+        theta.push_back(y0_pk(i)); 
+      }
+      return theta;
+    }
+
+    /*
+     * when solving coupled model with @c var rate, @c x_r
+     * is filled with initial time
+     */
+    template<typename T0>
+    static std::vector<double>
+    adapted_x_r(const std::vector<T_rate> &rate, const refactor::PKRec<T0>& y0_pk, double t0) {
+      return {t0};
     }
   };
 
   template <template<typename...> class T_m, typename F0>
   struct PMXOdeFunctorCouplingAdaptor<T_m, F0, double> {
-    F0 f0_;
-
-    PMXOdeFunctorCouplingAdaptor() { }
-
-    explicit PMXOdeFunctorCouplingAdaptor(const F0& f0) : f0_(f0) { }
+    PMXOdeFunctorCouplingAdaptor() {}
 
     /**
-     *  Returns the derivative of the base ODE system. The base 1 PK
-     *  component is calculated analytically.
+     * Returns the derivative of the base ODE system when @c rate is data.
+     * The base PK component is calculated analytically and passed into
+     * ODE functor as arguments.
      *  
-     *  theta stores the ODE parameters, followed by the two initial
-     *  PK states.
-     *  x_r stores the rates for the FULL system, followed by the initial
-     *  time.
-     *
-     *  Case 1: rate is fixed data and is passed through x_r.
+     * @param t time
+     * @param y indepedent PD  variable
+     * @param theta adapted coupled ODE params in the order of
+     *    - original ODE param
+     *    - initial condition of PK ODE
+     * @param x_r real data in the order of
+     *    - PK rate
+     *    - PD rate
+     *    - initial time of PK ODE
+     * @param x_i null int data
      */
     template <typename T0, typename T1, typename T2, typename T3>
     inline
-    std::vector<typename boost::math::tools::promote_args<T0, T1, T2, T3>::type>
+    std::vector<typename torsten::return_t<T0, T1, T2, T3>::type>
     operator()(const T0& t,
              const std::vector<T1>& y,
              const std::vector<T2>& theta,
@@ -134,32 +162,63 @@ namespace refactor {
              std::ostream* pstream_) const {
       using stan::math::to_array_1d;
       using stan::math::to_vector;
-      typedef typename boost::math::tools::promote_args<T0, T1, T2, T3>::type
-        scalar;
-      typedef typename boost::math::tools::promote_args<T0, T2, T3>::type
-        T_pk;  // return object of fOneCpt  doesn't depend on T1
-
-      // Get PK parameters
+      using scalar = typename torsten::return_t<T0, T1, T2, T3>::type;
+      using T_pk = typename torsten::return_t<T0, T2, T3>::type;
       using T_pkmodel = T_m<double, double, double, double>;
-
-      int nParmsPK = T_pkmodel::Npar;
-      std::vector<T2> thetaPK(theta.begin(), theta.begin() + nParmsPK);
 
       // Get initial PK states stored at the end of @c theta
       int nPK = T_pkmodel::Ncmt;
       refactor::PKRec<T2> init_pk(nPK);
-      size_t nTheta = theta.size();
-      for (int i = 0; i < nPK; ++i) init_pk(i) = theta[nTheta - nPK + i];
+      for (int i = 0; i < nPK; ++i) {
+        init_pk(nPK - i - 1) = *(theta.rbegin() + i);
+      }
 
-      // The last element of x_r contains the absolutime
-      T_m<T0, T2, T3, T2> pkmodel(x_r.back(), init_pk, x_r, thetaPK);
+      // The last element of x_r contains the initial time,
+      // and the beginning of theta are for PK params.
+      T_m<T0, T2, T3, T2> pkmodel(x_r.back(), init_pk, x_r, theta);
+
+      // move PK RHS to current time then feed the solution to PD ODE
       std::vector<T_pk> y_pk = to_array_1d(pkmodel.solve(t));
-      std::vector<scalar> dydt = f0_(t, y, y_pk, theta, x_r, x_i, pstream_);
+      std::vector<scalar> dydt = F0()(t, y, y_pk, theta, x_r, x_i, pstream_);
 
-      for (size_t i = 0; i < dydt.size(); i++)
+      // x_r: {pk rate, pd rate, t0}
+      for (size_t i = 0; i < dydt.size(); ++i) {
         dydt[i] += x_r[nPK + i];
+      }
 
       return dydt;
+    }
+
+    /*
+     * when solving coupled model with @c var rate, we
+     * append rate and PK initial condition to
+     * parameter vector. 
+     * FIXME: spurious @c var parameters will be generated
+     * if the original parameters are data.
+     */
+    template<typename T, typename T0>
+    static std::vector<typename torsten::return_t<T, T0>::type>
+    adapted_param(const std::vector<T> &par, const std::vector<double> &rate,
+                  const refactor::PKRec<T0>& y0_pk) {
+      std::vector<typename torsten::return_t<T, T0>::type> theta;
+      theta.reserve(par.size() + y0_pk.size());
+      theta.insert(theta.end(), par.begin(), par.end());
+      for (int i = 0; i < y0_pk.size(); ++i) {
+        theta.push_back(y0_pk(i)); 
+      }
+      return theta;
+    }
+
+    /*
+     * when solving coupled model with @c var rate, @c x_r
+     * is filled with initial time
+     */
+    template<typename T0>
+    static std::vector<double>
+    adapted_x_r(const std::vector<double> &rate, const refactor::PKRec<T0>& y0_pk, double t0) {
+      std::vector<double> res(rate);
+      res.push_back(t0);
+      return res;
     }
   };
 
@@ -192,7 +251,6 @@ namespace refactor {
     const refactor::PKRec<T_init>& y0_;
     const refactor::PKRec<T_init> y0_pk;
     const refactor::PKRec<T_init> y0_ode;
-    const F& f_;
     PMXOdeFunctorCouplingAdaptor<T_m, F, T_rate> f;
 
   public:
@@ -228,136 +286,48 @@ namespace refactor {
       y0_(init),
       y0_pk{ y0_.head(y0_.size() - n_ode) },
       y0_ode{ y0_.segment(y0_pk.size(), n_ode) },
-      f_(f0),
-      f(f0),
+      f(),
       pk_model(t0, y0_pk, rate, par),
       ode_model(t0, y0_ode, rate, par, f)
     {}
     
   private:
 
-    /*
-     * Solve the transient model with rate being data
+    /**
+     * integrate coupled ODE.
      */
-  template<typename T_integrator>
-  refactor::PKRec<typename boost::math::tools::promote_args<T_time, T_par, T_init>::type> // NOLINT
-  integrate(const T_time& t_next,
-            const std::vector<double>& rate,
-            const T_integrator& integrator) const {
-    using std::vector;
-    using stan::math::to_array_1d;
-    using boost::math::tools::promote_args;
-
-    typedef typename promote_args<T_time, T_par, T_init>::type scalar;
-    typedef typename promote_args<T_par, T_init>::type T_theta;
-
-    auto parameter = ode_model.par();
-
-    assert((size_t) y0_.cols() == rate.size());
-
-    // pass fixed times to the integrator. FIX ME - see issue #30
-    T_time t0 = ode_model.t0();  // time of previous event
-    T_time t = t_next;  // time of current event
-    vector<double> t_dbl{stan::math::value_of(t)};
-    double t0_dbl = stan::math::value_of(t0);
-
-    vector<double> x_r(rate);
-    x_r.push_back(t0_dbl);  // need to pass the initial time!
-
-    size_t nParm = parameter.size();
-    vector<T_theta> theta(nParm);
-    for (size_t i = 0; i < nParm; i++) theta[i] = parameter[i];
-
-    refactor::PKRec<scalar> pred;
-    if (t_dbl[0] == t0_dbl) {
-      pred = y0_;
-    } else {
-      size_t nPK = pk_model.ncmt();
-
-      refactor::PKRec<scalar> xPK = pk_model.solve(t);
-
-      // Add PK inits to theta
-      for (size_t i = 0; i < nPK; i++) theta.push_back(y0_pk(i));
-
-      vector<T_init> y0_PD(to_array_1d(y0_ode));
-      vector<int> idummy;
-      PMXOdeFunctorCouplingAdaptor<T_m, F, double> f_coupled(f_);
-      vector<vector<scalar> >
-        pred_V = integrator(f_coupled, y0_PD, t0_dbl, t_dbl,
-                            theta, x_r, idummy);
-      size_t nOde = pred_V[0].size();
-
-      pred.resize(nPK + nOde);
-      for (size_t i = 0; i < nPK; i++) pred(i) = xPK(i);
-      for (size_t i = 0; i < nOde; i++) pred(nPK + i) = pred_V[0][i];
-    }
-    return pred;
-  }
-
-  /**
-  * Overload function for case rate is a vector of var.
-  * The parameters are stored in theta in this order:
-  *   (1) ODE parameters
-  *   (2) rate
-  *   (3) initial states for base PK
-  *
-  * Unlike the general solver (pred1_general_solver), we'll
-  * call the mix_rate_var_functor, which will know where rate
-  * is located inside theta.
-  */
   template<typename T_r, typename T_integrator>
-  refactor::PKRec<typename boost::math::tools::promote_args<T_time, T_r, T_par, T_init>::type> // NOLINT
+  refactor::PKRec<typename torsten::return_t<T_time, T_r, T_par, T_init>::type> // NOLINT
   integrate(const T_time& t_next,
             const std::vector<T_r>& rate,
             const T_integrator& integrator) const {
     using std::vector;
     using stan::math::to_array_1d;
-    using boost::math::tools::promote_args;
+    using torsten::return_t;
 
     typedef typename promote_args<T_time, T_r, T_par, T_init>::type scalar;
-    typedef typename promote_args<T_par, T_init, T_r>::type T_theta;
-
-    auto parameter = ode_model.par();
-
-    assert((size_t) y0_.cols() == rate.size());
 
     // pass fixed times to the integrator. FIX ME - see issue #30
     T_time t0 = ode_model.t0();
     T_time t = t_next;
-
     vector<double> t_dbl{stan::math::value_of(t)};
     double t0_dbl = stan::math::value_of(t0);
-
-    size_t nParm = parameter.size();
-    vector<T_theta> theta(nParm);
-    for (size_t i = 0; i < nParm; i++)
-      theta[i] = parameter[i];
 
     refactor::PKRec<scalar> pred;
     if (t_dbl[0] == t0_dbl) {
       pred = y0_;
     } else {
       size_t nPK = pk_model.ncmt();
-
       refactor::PKRec<scalar> xPK = pk_model.solve(t);
-
-      // Add rate and PK inits IN THIS ORDER to theta
-      for (size_t i = 0; i < rate.size(); i++) theta.push_back(rate[i]);
-      for (size_t i = 0; i < nPK; i++) theta.push_back(y0_pk(i));
 
       // create vector with PD initial states
       vector<T_init> y0_PD(to_array_1d(y0_ode));
-      vector<int> idummy;
-
-      vector<double> x_r(2);
-      x_r[0] = nPK;
-      x_r[1] = t0_dbl;
-
-      using F_c = PMXOdeFunctorCouplingAdaptor<T_m, F, T_r>;
-      F_c f_coupled(f_);
+      PMXOdeFunctorCouplingAdaptor<T_m, F, T_r> f_coupled;
       vector<vector<scalar> >
         pred_V = integrator(f_coupled, y0_PD, t0_dbl, t_dbl,
-                            theta, x_r, idummy);
+                            f_coupled.adapted_param(ode_model.par(), rate, y0_pk),
+                            f_coupled.adapted_x_r(rate, y0_pk, t0_dbl),
+                            vector<int>());
 
       size_t nOde = pred_V[0].size();
       pred.resize(nPK + nOde);
@@ -393,7 +363,7 @@ namespace refactor {
    *           compartment at the current event.
    */
   template<typename T_ii, typename T_integrator>
-  refactor::PKRec<typename boost::math::tools::promote_args<T_ii, T_par>::type>
+  refactor::PKRec<typename torsten::return_t<T_ii, T_par>::type>
   integrate(const double& amt,
               const double& rate,
               const T_ii& ii,
@@ -407,7 +377,7 @@ namespace refactor {
     using stan::math::to_vector;
     using stan::math::to_array_1d;
 
-    typedef typename boost::math::tools::promote_args<T_ii, T_par>::type scalar;
+    typedef typename torsten::return_t<T_ii, T_par>::type scalar;
 
     double ii_dbl = torsten::unpromote(ii);
 
@@ -443,7 +413,7 @@ namespace refactor {
     long int max_num_steps = 1e3;  // default // NOLINT
 
     using F_c = PMXOdeFunctorCouplingAdaptor<T_m, F, double>;
-    F_c f_coupled(f_);
+    F_c f_coupled;
 
     // construct algebraic system functor: note we adjust cmt
     // such that 1 corresponds to the first state we compute
@@ -539,11 +509,12 @@ namespace refactor {
     using stan::math::to_vector;
     using stan::math::to_array_1d;
     using stan::math::invalid_argument;
+    using stan::math::value_of;
 
-    typedef typename boost::math::tools::promote_args<T_ii, T_amt,
+    typedef typename torsten::return_t<T_ii, T_amt,
       T_par>::type scalar;
 
-    double ii_dbl = torsten::unpromote(ii);
+    double ii_dbl = value_of(ii);
 
     // Compute solution for base 1cpt PK
     Matrix<scalar, Dynamic, 1> predPK;
@@ -583,7 +554,7 @@ namespace refactor {
     long int max_num_steps = 1e3;  // default // NOLINT
 
     using F_c = PMXOdeFunctorCouplingAdaptor<T_m, F, double>;
-    F_c f_coupled(f_);
+    F_c f_coupled;
 
     torsten::SS_system2_vd<F_c, T_integrator >
       system(f_coupled, ii_dbl, cmt, integrator, nPK);

@@ -63,10 +63,10 @@ namespace refactor {
     }
 
     /*
-     * when solving ODE with @c var rate, we append it to
-     * parameter vector. Note that spurious @c var
-     * parameters will be generated if the original parameters
-     * are data.
+     * when solving ODE model with @c var rate, we
+     * append rate to parameter vector.
+     * FIXME: spurious @c var parameters will be generated
+     * if the original parameters are data.
      */
     template<typename T>
     static std::vector<stan::math::var>
