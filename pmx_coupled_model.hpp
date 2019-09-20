@@ -28,6 +28,215 @@ namespace refactor {
   struct PredSelector<PMXTwoCptModel> {using type = torsten::Pred1_twoCpt;};
 
   /**
+   * Packer in charge of packing & unpacking data when
+   * adatpor is used for integration and algebra solutioin.
+   * @tparam T_rate type of RATE
+   * @tparam T_amt type of AMT
+   * @tparam T_ii type of dosing interval II
+   */
+  template<typename T_rate, typename T_amt, typename T_ii>
+  struct PMXOdeFunctorCouplingAdaptorPacker;
+
+  /**
+   * Packer in charge of packing & unpacking data when
+   * adatpor is used for integration and algebra solutioin
+   * when AMT & II are data.
+   * @tparam T_rate type of RATE
+   */
+  template<typename T_rate>
+  struct PMXOdeFunctorCouplingAdaptorPacker<T_rate, double, double> {
+
+    /*
+     * when solving coupled model with @c var rate, we
+     * append rate and PK initial condition to
+     * parameter vector. 
+     * FIXME: spurious @c var parameters will be generated
+     * if the original parameters are data.
+     */
+    template<typename T, typename T0, int R, int C>
+    static std::vector<typename torsten::return_t<T, T0, T_rate>::type>
+    adapted_param(const std::vector<T> &par, const std::vector<T_rate> &rate,
+                  const Eigen::Matrix<T0, R, C>& y0_pk) {
+      std::vector<stan::math::var> theta;
+      theta.reserve(par.size() + rate.size() + y0_pk.size());
+      theta.insert(theta.end(), par.begin(), par.end());
+      theta.insert(theta.end(), rate.begin(), rate.end());
+      for (int i = 0; i < y0_pk.size(); ++i) {
+        theta.push_back(y0_pk(i)); 
+      }
+      return theta;
+    }
+
+    /*
+     * when solving coupled model with @c var rate, we
+     * append rate and PK initial condition to
+     * parameter vector. 
+     * FIXME: spurious @c var parameters will be generated
+     * if the original parameters are data.
+     */
+    template<typename T, typename T0, int R, int C>
+    static std::vector<typename torsten::return_t<T, T0, T_rate>::type>
+    adapted_param(const std::vector<T> &par, int cmt, int ncmt, const T_rate& rate,
+                  const Eigen::Matrix<T0, R, C>& y0_pk) {
+      std::vector<stan::math::var> theta(par.size() + ncmt + y0_pk.size(), 0.0);
+      std::copy(par.begin(), par.end(), theta.begin());
+      theta[par.size() + cmt - 1] = rate;
+      const int nPK = y0_pk.size();
+      for (int i = 0; i < nPK; ++i) {
+        *(theta.rbegin() + i) = y0_pk(nPK - i - 1);
+        // theta[par.size() + ]
+        // theta.push_back(y0_pk(i)); 
+      }
+      return theta;
+    }
+
+    /*
+     * when solving coupled model with @c var rate, @c x_r
+     * is filled with initial time
+     */
+    template<typename T0, int R, int C>
+    static std::vector<double>
+    adapted_x_r(const std::vector<T_rate> &rate,
+                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
+      return {t0};
+    }
+
+    /*
+     * when solving coupled model with @c var rate, @c x_r
+     * is filled with initial time
+     */
+    template<typename T0, int R, int C>
+    static std::vector<double>
+    adapted_x_r(int cmt, int ncmt, const T_rate& rate,
+                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
+      return {t0};
+    }
+  };
+
+  /**
+   * Packer in charge of packing & unpacking data when
+   * adatpor is used for integration and algebra solutioin
+   * when RATE, AMT & II are data.
+   * @tparam T_rate type of RATE
+   */
+  template<>
+  struct PMXOdeFunctorCouplingAdaptorPacker<double, double, double> {
+    /*
+     * when solving coupled model with @c var rate, we
+     * append rate and PK initial condition to
+     * parameter vector. 
+     * FIXME: spurious @c var parameters will be generated
+     * if the original parameters are data.
+     */
+    template<typename T, typename T0, int R, int C>
+    static std::vector<typename torsten::return_t<T, T0>::type>
+    adapted_param(const std::vector<T> &par, const std::vector<double> &rate,
+                  const Eigen::Matrix<T0, R, C>& y0_pk) {
+      std::vector<typename torsten::return_t<T, T0>::type> theta;
+      theta.reserve(par.size() + y0_pk.size());
+      theta.insert(theta.end(), par.begin(), par.end());
+      for (int i = 0; i < y0_pk.size(); ++i) {
+        theta.push_back(y0_pk(i)); 
+      }
+      return theta;
+    }
+
+    /*
+     * when solving coupled model with @c var rate, we
+     * append rate and PK initial condition to
+     * parameter vector. 
+     * FIXME: spurious @c var parameters will be generated
+     * if the original parameters are data.
+     */
+    template<typename T, typename T0, int R, int C>
+    static std::vector<typename torsten::return_t<T, T0>::type>
+    adapted_param(const std::vector<T> &par, int cmt, int ncmt, double rate,
+                  const Eigen::Matrix<T0, R, C>& y0_pk) {
+      return adapted_param(par, std::vector<double>(), y0_pk);
+    }
+
+    /*
+     * when solving coupled model with @c var rate, @c x_r
+     * is filled with initial time
+     */
+    template<typename T0, int R, int C>
+    static std::vector<double>
+    adapted_x_r(const std::vector<double> &rate,
+                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
+      std::vector<double> res(rate);
+      res.push_back(t0);
+      return res;
+    }
+
+    /*
+     * when solving coupled model with @c var rate, @c x_r
+     * is filled with initial time
+     */
+    template<typename T0, int R, int C>
+    static std::vector<double>
+    adapted_x_r(int cmt, int ncmt, double rate,
+                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
+      std::vector<double> res(ncmt + 1, 0.0);
+      res[cmt - 1] = rate;
+      res.back() = t0;
+      return res;
+    }
+  };
+
+  /**
+   * Packer in charge of packing & unpacking data when
+   * adatpor is used for integration and algebra solutioin.
+   * @tparam T_rate type of RATE
+   * @tparam T_amt type of AMT
+   * @tparam T_ii type of dosing interval II
+   */
+  template<typename T_rate, typename T_amt, typename T_ii>
+  struct PMXOdeFunctorCouplingSSAdaptorPacker;
+
+  /**
+   * Packer in charge of packing & unpacking data when
+   * adatpor is used for integration and algebra solutioin
+   * when RATE, AMT & II are data.
+   */
+  template<>
+  struct PMXOdeFunctorCouplingSSAdaptorPacker<double, double, double> {
+    /*
+     * when solving coupled model with @c var rate, we
+     * append rate and PK initial condition to
+     * parameter vector. 
+     * FIXME: spurious @c var parameters will be generated
+     * if the original parameters are data.
+     */
+    template<typename T, typename T0, int R, int C>
+    static Eigen::Matrix<typename torsten::return_t<T, T0>::type, -1, 1>
+    adapted_param(const std::vector<T> &par, int cmt, int ncmt, double rate,
+                  const Eigen::Matrix<T0, R, C>& y0_pk) {
+      Eigen::Matrix<typename torsten::return_t<T, T0>::type, -1, 1> theta(par.size() + y0_pk.size());
+      for (size_t i = 0; i < par.size(); ++i) {
+        theta(i) = par[i];
+      }
+      for (int i = 0; i < y0_pk.size(); ++i) {
+        theta(i + par.size()) = y0_pk(i);
+      }
+      return theta;
+    }
+
+    /*
+     * when solving coupled model with @c var rate, @c x_r
+     * is filled with initial time
+     */
+    template<typename T0, int R, int C>
+    static std::vector<double>
+    adapted_x_r(int cmt, int ncmt, double rate, double amt, double ii,
+                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
+      std::vector<double> res(PMXOdeFunctorCouplingAdaptorPacker<double, double, double>::
+                              adapted_x_r(cmt, ncmt, rate, y0_pk, t0));
+      res.push_back(amt);
+      return res;
+    }
+  };
+
+  /**
    * In a coupled model's ODE functor, we first solve the PK
    * model using analytical solution, then pass it to the
    * numerical integrator to solve the ODE model. This
@@ -99,72 +308,6 @@ namespace refactor {
 
       return dydt;
     }
-
-    /*
-     * when solving coupled model with @c var rate, we
-     * append rate and PK initial condition to
-     * parameter vector. 
-     * FIXME: spurious @c var parameters will be generated
-     * if the original parameters are data.
-     */
-    template<typename T, typename T0, int R, int C>
-    static std::vector<typename torsten::return_t<T, T0, T_rate>::type>
-    adapted_param(const std::vector<T> &par, const std::vector<T_rate> &rate,
-                  const Eigen::Matrix<T0, R, C>& y0_pk) {
-      std::vector<stan::math::var> theta;
-      theta.reserve(par.size() + rate.size() + y0_pk.size());
-      theta.insert(theta.end(), par.begin(), par.end());
-      theta.insert(theta.end(), rate.begin(), rate.end());
-      for (int i = 0; i < y0_pk.size(); ++i) {
-        theta.push_back(y0_pk(i)); 
-      }
-      return theta;
-    }
-
-    /*
-     * when solving coupled model with @c var rate, we
-     * append rate and PK initial condition to
-     * parameter vector. 
-     * FIXME: spurious @c var parameters will be generated
-     * if the original parameters are data.
-     */
-    template<typename T, typename T0, int R, int C>
-    static std::vector<typename torsten::return_t<T, T0, T_rate>::type>
-    adapted_param(const std::vector<T> &par, int cmt, int ncmt, const T_rate& rate,
-                  const Eigen::Matrix<T0, R, C>& y0_pk) {
-      std::vector<stan::math::var> theta(par.size() + ncmt + y0_pk.size(), 0.0);
-      std::copy(par.begin(), par.end(), theta.begin());
-      theta[par.size() + cmt - 1] = rate;
-      const int nPK = y0_pk.size();
-      for (int i = 0; i < nPK; ++i) {
-        *(theta.rbegin() + i) = y0_pk(nPK - i - 1);
-        // theta[par.size() + ]
-        // theta.push_back(y0_pk(i)); 
-      }
-      return theta;
-    }
-
-    /*
-     * when solving coupled model with @c var rate, @c x_r
-     * is filled with initial time
-     */
-    template<typename T0, int R, int C>
-    static std::vector<double>
-    adapted_x_r(const std::vector<T_rate> &rate,
-                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
-      return {t0};
-    }
-
-    /*
-     * when solving coupled model with @c var rate, @c x_r
-     * is filled with initial time
-     */
-    template<typename T0, int R, int C>
-    static std::vector<double>
-    adapted_x_r(int cmt, int ncmt, const T_rate& rate,
-                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
-      return {t0};
-    }
   };
 
   template <template<typename...> class T_m, typename F0>
@@ -223,67 +366,6 @@ namespace refactor {
       }
 
       return dydt;
-    }
-
-    /*
-     * when solving coupled model with @c var rate, we
-     * append rate and PK initial condition to
-     * parameter vector. 
-     * FIXME: spurious @c var parameters will be generated
-     * if the original parameters are data.
-     */
-    template<typename T, typename T0, int R, int C>
-    static std::vector<typename torsten::return_t<T, T0>::type>
-    adapted_param(const std::vector<T> &par, const std::vector<double> &rate,
-                  const Eigen::Matrix<T0, R, C>& y0_pk) {
-      std::vector<typename torsten::return_t<T, T0>::type> theta;
-      theta.reserve(par.size() + y0_pk.size());
-      theta.insert(theta.end(), par.begin(), par.end());
-      for (int i = 0; i < y0_pk.size(); ++i) {
-        theta.push_back(y0_pk(i)); 
-      }
-      return theta;
-    }
-
-    /*
-     * when solving coupled model with @c var rate, we
-     * append rate and PK initial condition to
-     * parameter vector. 
-     * FIXME: spurious @c var parameters will be generated
-     * if the original parameters are data.
-     */
-    template<typename T, typename T0, int R, int C>
-    static std::vector<typename torsten::return_t<T, T0>::type>
-    adapted_param(const std::vector<T> &par, int cmt, int ncmt, double rate,
-                  const Eigen::Matrix<T0, R, C>& y0_pk) {
-      return adapted_param(par, std::vector<double>(), y0_pk);
-    }
-
-    /*
-     * when solving coupled model with @c var rate, @c x_r
-     * is filled with initial time
-     */
-    template<typename T0, int R, int C>
-    static std::vector<double>
-    adapted_x_r(const std::vector<double> &rate,
-                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
-      std::vector<double> res(rate);
-      res.push_back(t0);
-      return res;
-    }
-
-    /*
-     * when solving coupled model with @c var rate, @c x_r
-     * is filled with initial time
-     */
-    template<typename T0, int R, int C>
-    static std::vector<double>
-    adapted_x_r(int cmt, int ncmt, double rate,
-                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
-      std::vector<double> res(ncmt + 1, 0.0);
-      res[cmt - 1] = rate;
-      res.back() = t0;
-      return res;
     }
   };
 
@@ -532,10 +614,11 @@ namespace refactor {
       // create vector with PD initial states
       vector<T_init> y0_PD(to_array_1d(y0_ode));
       PMXOdeFunctorCouplingAdaptor<T_m, F, T_r> f_coupled;
+      using packer_t = PMXOdeFunctorCouplingAdaptorPacker<T_r, double, double>;
       vector<vector<scalar> >
         pred_V = integrator(f_coupled, y0_PD, t0_dbl, t_dbl,
-                            f_coupled.adapted_param(ode_model.par(), rate, y0_pk),
-                            f_coupled.adapted_x_r(rate, y0_pk, t0_dbl),
+                            packer_t::adapted_param(ode_model.par(), rate, y0_pk),
+                            packer_t::adapted_x_r(rate, y0_pk, t0_dbl),
                             vector<int>());
 
       size_t nOde = pred_V[0].size();
@@ -579,12 +662,11 @@ namespace refactor {
             const T_integrator& integrator) const {
     typedef typename torsten::return_t<T_ii, T_par>::type scalar;
 
-    double ii_dbl = stan::math::value_of(ii);
-
-    // Compute solution for base 1cpt PK
-    int nPK = pk_model.ncmt();
-    int nPD = ode_model.ncmt();
+    const double ii_dbl = stan::math::value_of(ii);
+    const int nPK = pk_model.ncmt();
+    const int nPD = ode_model.ncmt();
     const double t0 = stan::math::value_of(ode_model.t0());
+
     Eigen::Matrix<T_par, -1, 1> predPK;
     if (cmt <= nPK) {  // check dosing occurs in a base state
       T_m<double, double, double, T_par> pkmodel(t0, refactor::PKRec<double>(), std::vector<double>(), pk_model.par());
@@ -594,7 +676,6 @@ namespace refactor {
     }
 
     using F_c = PMXOdeFunctorCouplingAdaptor<T_m, F, double>;
-    F_c f_coupled;
 
     // Tuning parameters for algebraic solver
     double rel_tol = 1e-10;  // default
@@ -606,7 +687,7 @@ namespace refactor {
     // numerically.
     using T_pred = typename PredSelector<T_m>::type;
     PMXOdeFunctorCouplingSSAdaptor<double, double, T_ii, F_c, T_pred, T_integrator>
-      system(f_coupled, T_pred(), ii_dbl, cmt, integrator, nPK);
+      system(F_c(), T_pred(), ii_dbl, cmt, integrator, nPK);
 
     Eigen::Matrix<double, -1, 1> predPD_guess;
     Eigen::Matrix<scalar, 1, -1> predPD;
@@ -620,21 +701,25 @@ namespace refactor {
       }
     }
 
-    std::vector<T_par> pkpar(f_coupled.adapted_param(ode_model.par(), cmt, nPK + nPD, rate, predPK));
-    std::vector<double> x_r(f_coupled.adapted_x_r(cmt, nPK + nPD, rate, predPK, t0));
+    using packer_t = PMXOdeFunctorCouplingAdaptorPacker<double, double, double>;
+    using ss_packer_t = PMXOdeFunctorCouplingSSAdaptorPacker<double, double, double>;
+    std::vector<T_par> pkpar(packer_t::adapted_param(ode_model.par(), cmt, nPK + nPD, rate, predPK));
+    std::vector<double> x_r(packer_t::adapted_x_r(cmt, nPK + nPD, rate, predPK, t0));
     std::vector<int> x_i;
 
     // for time step of initail guess, in const infusion we
     // dose for 24 hours, otherwise use dosing interval.
     double init_dt = (rate > 0.0 && ii == 0.0) ? 24.0 : ii_dbl;
-
-    predPD_guess = stan::math::to_vector(integrator(f_coupled, init_pd, 0.0, init_dt,
-                                                    stan::math::value_of(pkpar),
-                                                    x_r, x_i)[0]);
-    x_r.push_back(amt);
+    predPD_guess = stan::math::to_vector(integrator(F_c(), init_pd, 0.0, init_dt,
+                                                    packer_t::adapted_param(stan::math::value_of(ode_model.par()),
+                                                                            cmt, nPK + nPD, rate,
+                                                                            stan::math::value_of(predPK)),
+                                                    packer_t::adapted_x_r(cmt, nPK + nPD, rate, predPK, t0),
+                                                    x_i)[0]);
     predPD = stan::math::algebra_solver(system, predPD_guess,
-                                        stan::math::to_vector(pkpar),
-                                        x_r, x_i,
+                                        ss_packer_t::adapted_param(ode_model.par(), cmt, nPK + nPD, rate, predPK),
+                                        ss_packer_t::adapted_x_r(cmt, nPK + nPD, rate, amt, ii, predPK, t0),
+                                        x_i,
                                         0, rel_tol, f_tol, max_num_steps);
 
     if (rate == 0.0) {
