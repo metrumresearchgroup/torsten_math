@@ -107,10 +107,10 @@ namespace refactor {
      * FIXME: spurious @c var parameters will be generated
      * if the original parameters are data.
      */
-    template<typename T, typename T0>
+    template<typename T, typename T0, int R, int C>
     static std::vector<typename torsten::return_t<T, T0, T_rate>::type>
     adapted_param(const std::vector<T> &par, const std::vector<T_rate> &rate,
-                  const refactor::PKRec<T0>& y0_pk) {
+                  const Eigen::Matrix<T0, R, C>& y0_pk) {
       std::vector<stan::math::var> theta;
       theta.reserve(par.size() + rate.size() + y0_pk.size());
       theta.insert(theta.end(), par.begin(), par.end());
@@ -122,12 +122,47 @@ namespace refactor {
     }
 
     /*
+     * when solving coupled model with @c var rate, we
+     * append rate and PK initial condition to
+     * parameter vector. 
+     * FIXME: spurious @c var parameters will be generated
+     * if the original parameters are data.
+     */
+    template<typename T, typename T0, int R, int C>
+    static std::vector<typename torsten::return_t<T, T0, T_rate>::type>
+    adapted_param(const std::vector<T> &par, int cmt, int ncmt, const T_rate& rate,
+                  const Eigen::Matrix<T0, R, C>& y0_pk) {
+      std::vector<stan::math::var> theta(par.size() + ncmt + y0_pk.size(), 0.0);
+      std::copy(par.begin(), par.end(), theta.begin());
+      theta[par.size() + cmt - 1] = rate;
+      const int nPK = y0_pk.size();
+      for (int i = 0; i < nPK; ++i) {
+        *(theta.rbegin() + i) = y0_pk(nPK - i - 1);
+        // theta[par.size() + ]
+        // theta.push_back(y0_pk(i)); 
+      }
+      return theta;
+    }
+
+    /*
      * when solving coupled model with @c var rate, @c x_r
      * is filled with initial time
      */
-    template<typename T0>
+    template<typename T0, int R, int C>
     static std::vector<double>
-    adapted_x_r(const std::vector<T_rate> &rate, const refactor::PKRec<T0>& y0_pk, double t0) {
+    adapted_x_r(const std::vector<T_rate> &rate,
+                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
+      return {t0};
+    }
+
+    /*
+     * when solving coupled model with @c var rate, @c x_r
+     * is filled with initial time
+     */
+    template<typename T0, int R, int C>
+    static std::vector<double>
+    adapted_x_r(int cmt, int ncmt, const T_rate& rate,
+                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
       return {t0};
     }
   };
@@ -197,10 +232,10 @@ namespace refactor {
      * FIXME: spurious @c var parameters will be generated
      * if the original parameters are data.
      */
-    template<typename T, typename T0>
+    template<typename T, typename T0, int R, int C>
     static std::vector<typename torsten::return_t<T, T0>::type>
     adapted_param(const std::vector<T> &par, const std::vector<double> &rate,
-                  const refactor::PKRec<T0>& y0_pk) {
+                  const Eigen::Matrix<T0, R, C>& y0_pk) {
       std::vector<typename torsten::return_t<T, T0>::type> theta;
       theta.reserve(par.size() + y0_pk.size());
       theta.insert(theta.end(), par.begin(), par.end());
@@ -211,14 +246,43 @@ namespace refactor {
     }
 
     /*
+     * when solving coupled model with @c var rate, we
+     * append rate and PK initial condition to
+     * parameter vector. 
+     * FIXME: spurious @c var parameters will be generated
+     * if the original parameters are data.
+     */
+    template<typename T, typename T0, int R, int C>
+    static std::vector<typename torsten::return_t<T, T0>::type>
+    adapted_param(const std::vector<T> &par, int cmt, int ncmt, double rate,
+                  const Eigen::Matrix<T0, R, C>& y0_pk) {
+      return adapted_param(par, std::vector<double>(), y0_pk);
+    }
+
+    /*
      * when solving coupled model with @c var rate, @c x_r
      * is filled with initial time
      */
-    template<typename T0>
+    template<typename T0, int R, int C>
     static std::vector<double>
-    adapted_x_r(const std::vector<double> &rate, const refactor::PKRec<T0>& y0_pk, double t0) {
+    adapted_x_r(const std::vector<double> &rate,
+                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
       std::vector<double> res(rate);
       res.push_back(t0);
+      return res;
+    }
+
+    /*
+     * when solving coupled model with @c var rate, @c x_r
+     * is filled with initial time
+     */
+    template<typename T0, int R, int C>
+    static std::vector<double>
+    adapted_x_r(int cmt, int ncmt, double rate,
+                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
+      std::vector<double> res(ncmt + 1, 0.0);
+      res[cmt - 1] = rate;
+      res.back() = t0;
       return res;
     }
   };
@@ -307,10 +371,10 @@ namespace refactor {
       double rate = dat[cmt_ - 1];
 
       // real data, which gets passed to the integrator, shoud not have
-      // amt in it. Important for the mixed solver where the last element
-      // is expected to be the absolute time (in this case, 0).
-      vector<double> dat_ode = dat;
-      dat_ode.pop_back();
+      // amt in it, as the transient coupled solver needs to
+      // have the last element to be the absolute time (in this case, 0).
+      vector<double> x_r = dat;
+      x_r.pop_back();
 
       Eigen::Matrix<scalar, Eigen::Dynamic, 1> result(x.size());
 
@@ -318,7 +382,7 @@ namespace refactor {
         if ((cmt_ - nPK_) >= 0) x0[cmt_ - nPK_ - 1] += amt;
 
         vector<scalar> pred = integrator_(f_, x0, t0, ii_, to_array_1d(y),
-                                          dat_ode, x_i)[0];
+                                          x_r, x_i)[0];
 
         for (int i = 0; i < result.size(); i++)
           result(i) = x(i) - pred[i];
@@ -331,7 +395,7 @@ namespace refactor {
         vector<scalar> pred;
         ts[0] = delta;  // time at which infusion stops
         x0 = integrator_(f_, to_array_1d(x), t0, ts, to_array_1d(y),
-                         dat_ode, x_i)[0];
+                         x_r, x_i)[0];
 
         Matrix<T1, Dynamic, 1> y2(y.size());
         int nParms = y.size() - nPK_;
@@ -346,20 +410,20 @@ namespace refactor {
                        torsten::ModelParameters<double, T1, double, double>
                        (0, to_array_1d(y), vector<double>(),
                         vector<double>()),
-                       x0_pk, dat_ode);
+                       x0_pk, x_r);
 
           for (int i = 0; i < nPK_; i++) y2(nParms + i) = x_pk(i);
         }
 
         ts[0] = ii_ - delta;
-        dat_ode[cmt_ - 1] = 0;
-        pred = integrator_(f_, x0, t0, ts, to_array_1d(y2), dat_ode, x_i)[0];
+        x_r[cmt_ - 1] = 0;
+        pred = integrator_(f_, x0, t0, ts, to_array_1d(y2), x_r, x_i)[0];
 
         for (int i = 0; i < result.size(); i++)
           result(i) = x(i) - pred[i];
       } else {  // constant infusion
         vector<T_deriv> derivative = f_(0, to_array_1d(x), to_array_1d(y),
-                                        dat_ode, x_i, 0);
+                                        x_r, x_i, 0);
         result = to_vector(derivative);
       }
 
@@ -513,110 +577,68 @@ namespace refactor {
             const T_ii& ii,
             const int& cmt,
             const T_integrator& integrator) const {
-    using Eigen::Matrix;
-    using Eigen::Dynamic;
-    using Eigen::VectorXd;
-    using std::vector;
-    using stan::math::algebra_solver;
-    using stan::math::to_vector;
-    using stan::math::to_array_1d;
-
     typedef typename torsten::return_t<T_ii, T_par>::type scalar;
 
     double ii_dbl = stan::math::value_of(ii);
 
     // Compute solution for base 1cpt PK
-    Matrix<T_par, Dynamic, 1> predPK;
-    std::vector<T_par> pkpar = ode_model.par();
     int nPK = pk_model.ncmt();
     int nPD = ode_model.ncmt();
-    const double t0 = 0.0;
+    const double t0 = stan::math::value_of(ode_model.t0());
+    Eigen::Matrix<T_par, -1, 1> predPK;
     if (cmt <= nPK) {  // check dosing occurs in a base state
       T_m<double, double, double, T_par> pkmodel(t0, refactor::PKRec<double>(), std::vector<double>(), pk_model.par());
       predPK = pkmodel.solve(amt, rate, ii_dbl, cmt);
     } else {
-      predPK = Matrix<scalar, Dynamic, 1>::Zero(nPK);
+      predPK = Eigen::Matrix<scalar, -1, 1>::Zero(nPK);
     }
 
-    // Arguments for ODE integrator (and initial guess)
-    std::vector<double> init_pd(nPD, 0.0);
-    vector<double> x_r(nPK + nPD, 0);  // rate for the full system
-    x_r.push_back(t0);  // include initial time (at SS, t0 = 0)
-    vector<int> x_i;
+    using F_c = PMXOdeFunctorCouplingAdaptor<T_m, F, double>;
+    F_c f_coupled;
 
     // Tuning parameters for algebraic solver
     double rel_tol = 1e-10;  // default
     double f_tol = 1e-4;  // empirical
     long int max_num_steps = 1e3;  // default // NOLINT
 
-    using F_c = PMXOdeFunctorCouplingAdaptor<T_m, F, double>;
-    F_c f_coupled;
-
     // construct algebraic system functor: note we adjust cmt
     // such that 1 corresponds to the first state we compute
     // numerically.
     using T_pred = typename PredSelector<T_m>::type;
-    PMXOdeFunctorCouplingSSAdaptor<double, double, T_ii, F_c, T_pred, T_integrator >
-      system(f_coupled, T_pred(), ii_dbl, cmt,
-             integrator, nPK);
+    PMXOdeFunctorCouplingSSAdaptor<double, double, T_ii, F_c, T_pred, T_integrator>
+      system(f_coupled, T_pred(), ii_dbl, cmt, integrator, nPK);
 
-    Matrix<double, Dynamic, 1> predPD_guess;
-    Matrix<scalar, 1, Dynamic> predPD;
+    Eigen::Matrix<double, -1, 1> predPD_guess;
+    Eigen::Matrix<scalar, 1, -1> predPD;
 
+    std::vector<double> init_pd(nPD, 0.0);
     if (rate == 0) {  // bolus dose
       if (cmt > nPK) {
         init_pd[cmt - 1] = amt; 
       } else {
         predPK(cmt - 1) += amt;        
       }
+    }
 
-      pkpar.insert(pkpar.end(), predPK.data(), predPK.data() + predPK.size());
-      predPD_guess = to_vector(integrator(f_coupled, init_pd,
-                                          0.0, ii_dbl,
-                                          stan::math::value_of(pkpar),
-                                          x_r, x_i)[0]);
-      x_r.push_back(amt);
-      predPD = algebra_solver(system, predPD_guess,
-                              to_vector(pkpar),
-                              x_r, x_i,
-                              0, rel_tol, f_tol, max_num_steps);
+    std::vector<T_par> pkpar(f_coupled.adapted_param(ode_model.par(), cmt, nPK + nPD, rate, predPK));
+    std::vector<double> x_r(f_coupled.adapted_x_r(cmt, nPK + nPD, rate, predPK, t0));
+    std::vector<int> x_i;
 
-      // Remove dose input in dosing compartment. Pred will add it
-      // later, so we want to avoid redundancy.
+    // for time step of initail guess, in const infusion we
+    // dose for 24 hours, otherwise use dosing interval.
+    double init_dt = (rate > 0.0 && ii == 0.0) ? 24.0 : ii_dbl;
+
+    predPD_guess = stan::math::to_vector(integrator(f_coupled, init_pd, 0.0, init_dt,
+                                                    stan::math::value_of(pkpar),
+                                                    x_r, x_i)[0]);
+    x_r.push_back(amt);
+    predPD = stan::math::algebra_solver(system, predPD_guess,
+                                        stan::math::to_vector(pkpar),
+                                        x_r, x_i,
+                                        0, rel_tol, f_tol, max_num_steps);
+
+    if (rate == 0.0) {
       if (cmt <= nPK) predPK(cmt - 1) -= amt;
-
-    } else if (ii > 0) {  // multiple truncated infusions
-      x_r[cmt - 1] = rate;
-
-      pkpar.insert(pkpar.end(), predPK.data(),
-                   predPK.data() + predPK.size());
-      predPD_guess = to_vector(integrator(f_coupled,
-                                         init_pd,
-                                         0.0, std::vector<double>(1, ii_dbl),
-                                         torsten::unpromote(pkpar),
-                                         x_r, x_i)[0]);
-
-      x_r.push_back(amt);  // needed?
-      predPD = algebra_solver(system, predPD_guess,
-                            to_vector(pkpar),
-                            x_r, x_i,
-                            0, rel_tol, f_tol, max_num_steps);
-    } else {  // constant infusion
-      x_r[cmt - 1] = rate;
-
-      pkpar.insert(pkpar.end(), predPK.data(),
-                   predPK.data() + predPK.size());
-      predPD_guess = to_vector(integrator(f_coupled,
-                                         init_pd,
-                                         0.0, std::vector<double>(1, 100),
-                                         torsten::unpromote(pkpar),
-                                         x_r, x_i)[0]);
-
-      x_r.push_back(amt);
-      predPD = algebra_solver(system, predPD_guess,
-                              to_vector(pkpar),
-                              x_r, x_i,
-                              0, rel_tol, f_tol, max_num_steps);
     }
 
     refactor::PKRec<scalar> pred(nPK + nPD);
