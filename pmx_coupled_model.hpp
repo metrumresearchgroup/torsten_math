@@ -381,7 +381,7 @@ namespace refactor {
    * @tparam F2 type of the ODE that has analytical solution
    * @tparam T_integrator integrator type
    */
-  template <typename T_amt, typename T_rate, typename T_ii, typename F, typename F2, typename T_integrator>
+  template <template<typename...> class T_m, typename F, typename T_amt, typename T_rate, typename T_ii, typename T_integrator>
   struct PMXOdeFunctorCouplingSSAdaptor;
 
   /**
@@ -392,10 +392,9 @@ namespace refactor {
    * In this structure, both amt and rate are fixed
    * variables.
    */
-  template <typename F, typename F2, typename T_integrator>
-  struct PMXOdeFunctorCouplingSSAdaptor<double, double, double, F, F2, T_integrator> {
+  template <template<typename...> class T_m, typename F, typename T_integrator>
+  struct PMXOdeFunctorCouplingSSAdaptor<T_m, F, double, double, double, T_integrator> {
     F f_;
-    F2 f2_;
     double ii_;
     int cmt_;  // dosing compartment
     const T_integrator integrator_;
@@ -403,22 +402,10 @@ namespace refactor {
 
     PMXOdeFunctorCouplingSSAdaptor() {}
 
-    PMXOdeFunctorCouplingSSAdaptor(const F& f,
-                                   const F2& f2,
-                                   double ii,
-                                   int cmt,
-                                   const T_integrator& integrator)
-      : f_(f), f2_(f2), ii_(ii), cmt_(cmt), integrator_(integrator),
-        nPK_(0) { }
-
-    PMXOdeFunctorCouplingSSAdaptor(const F& f,
-                                   const F2& f2,
-                                   double ii,
-                                   int cmt,
-                                   const T_integrator& integrator,
-                                   int nPK)
-      : f_(f), f2_(f2), ii_(ii), cmt_(cmt), integrator_(integrator),
-        nPK_(nPK) { }
+    PMXOdeFunctorCouplingSSAdaptor(const F& f, double ii, int cmt,
+                                   const T_integrator& integrator, int nPK)
+      : f_(f), ii_(ii), cmt_(cmt), integrator_(integrator),
+        nPK_(nPK) {}
 
     /**
      *  dd regime.
@@ -445,7 +432,6 @@ namespace refactor {
       typedef typename stan::return_type<T0, T1>::type T_deriv;
 
       double t0 = 0;
-      vector<double> ts(1);
 
       vector<scalar> x0(x.size());
       for (size_t i = 0; i < x0.size(); i++) x0[i] = x(i);
@@ -459,53 +445,45 @@ namespace refactor {
       x_r.pop_back();
 
       Eigen::Matrix<scalar, Eigen::Dynamic, 1> result(x.size());
+      vector<T1> y_vec(to_array_1d(y));
+      vector<T0> x_vec(to_array_1d(x));
 
       if (rate == 0) {  // bolus dose
         if ((cmt_ - nPK_) >= 0) x0[cmt_ - nPK_ - 1] += amt;
 
-        vector<scalar> pred = integrator_(f_, x0, t0, ii_, to_array_1d(y),
-                                          x_r, x_i)[0];
-
-        for (int i = 0; i < result.size(); i++)
-          result(i) = x(i) - pred[i];
+        vector<scalar> pred = integrator_(f_, x0, t0, ii_, y_vec, x_r, x_i)[0];
+        for (int i = 0; i < pred.size(); ++i) {
+          pred[i] = x(i) - pred[i];          
+        }
+        result = stan::math::to_vector(pred);
       } else if (ii_ > 0) {  // multiple truncated infusions
         double delta = amt / rate;
 
         static const char* function("Steady State Event");
         torsten::check_mti(amt, delta, ii_, function);
 
-        vector<scalar> pred;
-        ts[0] = delta;  // time at which infusion stops
-        x0 = integrator_(f_, to_array_1d(x), t0, ts, to_array_1d(y),
-                         x_r, x_i)[0];
+        // PD solution of infusion, note that @c f_ is coupled adaptor functor
+        x0 = integrator_(f_, x_vec, t0, delta, y_vec, x_r, x_i)[0];
 
-        Matrix<T1, Dynamic, 1> y2(y.size());
+        Matrix<T1, 1, Dynamic> x0_pk(nPK_);
         int nParms = y.size() - nPK_;
-        for (int i = 0; i < nParms; i++) y2(i) = y(i);
+        for (int i = 0; i < nPK_; i++) x0_pk(i) = y(nParms + i);
 
-        if (nPK_ != 0) {
-          Matrix<T1, 1, Dynamic> x0_pk(nPK_);
-          for (int i = 0; i < nPK_; i++) x0_pk(i) = y(nParms + i);
+        Matrix<T1, 1, Dynamic> x_pk = T_m<double, T1, double, T1>(t0, x0_pk, x_r, y_vec)
+          .solve(delta);
 
-          Matrix<T1, 1, Dynamic>
-            x_pk = f2_(delta,
-                       torsten::ModelParameters<double, T1, double, double>
-                       (0, to_array_1d(y), vector<double>(),
-                        vector<double>()),
-                       x0_pk, x_r);
-
-          for (int i = 0; i < nPK_; i++) y2(nParms + i) = x_pk(i);
-        }
-
-        ts[0] = ii_ - delta;
+        // no more infusion after amt/rate
         x_r[cmt_ - 1] = 0;
-        pred = integrator_(f_, x0, t0, ts, to_array_1d(y2), x_r, x_i)[0];
+
+        std::vector<T1> y2(y.data(), y.data() + y.size());
+        // Matrix<T1, Dynamic, 1> y2(y);
+        for (int i = 0; i < nPK_; ++i) y2[nParms + i] = x_pk(i);
+        vector<scalar> pred = integrator_(f_, x0, t0, ii_ - delta, y2, x_r, x_i)[0];
 
         for (int i = 0; i < result.size(); i++)
           result(i) = x(i) - pred[i];
       } else {  // constant infusion
-        vector<T_deriv> derivative = f_(0, to_array_1d(x), to_array_1d(y),
-                                        x_r, x_i, 0);
+        vector<T_deriv> derivative = f_(0, x_vec, y_vec, x_r, x_i, 0);
         result = to_vector(derivative);
       }
 
@@ -686,8 +664,8 @@ namespace refactor {
     // such that 1 corresponds to the first state we compute
     // numerically.
     using T_pred = typename PredSelector<T_m>::type;
-    PMXOdeFunctorCouplingSSAdaptor<double, double, T_ii, F_c, T_pred, T_integrator>
-      system(F_c(), T_pred(), ii_dbl, cmt, integrator, nPK);
+    PMXOdeFunctorCouplingSSAdaptor<T_m, F_c, double, double, T_ii, T_integrator>
+      system(F_c(), ii_dbl, cmt, integrator, nPK);
 
     Eigen::Matrix<double, -1, 1> predPD_guess;
     Eigen::Matrix<scalar, 1, -1> predPD;
