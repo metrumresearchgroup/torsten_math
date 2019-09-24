@@ -25,17 +25,7 @@ namespace refactor {
    */
   template<typename F, typename T_rate>
   struct PMXOdeFunctorRateAdaptor {
-    const F f;
-    const int index_rate = -1;
-    PMXOdeFunctorRateAdaptor(const F& f0, int i) : f(f0), index_rate(i) {}
-
-    /*
-     * @c algebra_solver requires a default constructor. In
-     * this case, the index of @c rate in @c theta is
-     * calculated by assumption that @c theta is laid out as
-     * @c [theta, rate]
-     */
-    PMXOdeFunctorRateAdaptor() : f() {}
+    PMXOdeFunctorRateAdaptor() {}
 
     /*
      * Evaluate ODE functor, with @c theta contains original
@@ -52,12 +42,8 @@ namespace refactor {
                const std::vector<int>& x_i,
                std::ostream* msgs) const {
       std::vector<typename stan::return_type<T1, T2>::type> res;
-      res = f(t, y, theta, x_r, x_i, msgs);
-      if (index_rate == -1) {
-        for (size_t i = 0; i < y.size(); i++) res.at(i) += theta.at(i + theta.size() - res.size()); // NOLINT
-      } else {
-        for (size_t i = 0; i < y.size(); i++) res.at(i) += theta.at(i + index_rate); // NOLINT
-      }
+      res = F()(t, y, theta, x_r, x_i, msgs);
+      for (size_t i = 0; i < y.size(); i++) res.at(i) += theta.at(i + theta.size() - res.size()); // NOLINT
 
       return res;
     }
@@ -92,18 +78,8 @@ namespace refactor {
    */
   template<typename F>
   struct PMXOdeFunctorRateAdaptor<F, double> {
-    const F f;
-    explicit PMXOdeFunctorRateAdaptor(const F& f0) : f(f0) {}
-    PMXOdeFunctorRateAdaptor(const F& f0, const int i) : f(f0) {}
 
-    /*
-     * @c algebra_solver requires a default constructor for
-     * the functor type passed as its 1st argument. In this
-     * case the ODE functor @c F has default constructor, so
-     * we add a default value of @c dummy, as it is not
-     * relevant when @c rate is data anyway.
-     */
-    PMXOdeFunctorRateAdaptor() : f() {}
+    PMXOdeFunctorRateAdaptor() {}
 
     /*
      * Evaluate ODE functor and add @c rate data afterwards.
@@ -117,7 +93,7 @@ namespace refactor {
                const std::vector<int>& x_i,
                std::ostream* msgs) const {
       std::vector<typename stan::return_type<T1, T2>::type> res;
-      res = f(t, y, theta, x_r, x_i, msgs);
+      res = F()(t, y, theta, x_r, x_i, msgs);
       for (size_t i = 0; i < y.size(); i++) res.at(i) += x_r.at(i);
       return res;
     }
@@ -923,7 +899,7 @@ namespace refactor {
                const std::vector<T_rate> &rate,
                const std::vector<T_par> &par,
                const F& f) :
-      t0_(t0), y0_(y0), rate_(rate), par_(par), f_(f), f1(f_, par_.size()), ncmt_(y0.size()) // NOLINT
+      t0_(t0), y0_(y0), rate_(rate), par_(par), f_(f), f1(), ncmt_(y0.size()) // NOLINT
     {}
 
     /**
@@ -941,7 +917,7 @@ namespace refactor {
       rate_(m.rate()),
       par_(m.par()),
       f_(m.f()),
-      f1(f_, par_.size()),
+      f1(),
       ncmt_(m.ncmt())
     {}
     
@@ -1159,7 +1135,7 @@ namespace refactor {
         res = y0;
       } else {
         auto y = stan::math::to_array_1d(y0);
-        PMXOdeFunctorRateAdaptor<F, double> f(f_);
+        PMXOdeFunctorRateAdaptor<F, double> f;
         std::vector<int> x_i;
         const std::vector<double> pars{value_of(par_)};
         std::vector<std::vector<double> > res_v =
