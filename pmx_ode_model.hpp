@@ -1275,49 +1275,30 @@ namespace refactor {
     Eigen::Matrix<typename torsten::return_t<T_amt, T_r, T_par, T_ii>::type, Eigen::Dynamic, 1> // NOLINT
     solve(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
           const PMXOdeIntegrator<It>& integrator) const {
-      using Eigen::Matrix;
-      using std::vector;
       using stan::math::value_of;
       using stan::math::algebra_solver;
-      using stan::math::to_vector;
 
       typedef typename promote_args<T_amt, T_r, T_par, T_ii>::type scalar;
-      bool is_var_amt = stan::is_var<T_amt>::value;
-      bool is_var_rate = stan::is_var<T_r>::value;
 
-      Matrix<scalar, Dynamic, 1> pred;
-
-      // Arguments for the ODE integrator
       double ii_dbl = value_of(ii);
-      Matrix<double, 1, Dynamic> init_dbl = Matrix<double, 1, Dynamic>::Zero(ncmt_);
-      vector<double> x_r(ncmt_, 0);
-      vector<int> x_i{cmt, ncmt_, int(par_.size())};
+      Eigen::Matrix<double, 1, -1> init_dbl(Eigen::Matrix<double, 1, -1>::Zero(ncmt_));
+      std::vector<double> x_r(ncmt_, 0);
+      std::vector<int> x_i{cmt, ncmt_, int(par_.size())};
 
-      Matrix<double, Dynamic, 1> y(ncmt_);
-
-      // construct algebraic function
-      PMXOdeFunctorSSAdaptorPacker<F, T_amt, T_r, T_ii> packer;
-      PMXOdeFunctorSSAdaptor<It, T_amt, T_r, T_ii, F> fss;
-
-      if (rate == 0) {  // bolus dose
+      if (rate == 0) {                     // bolus dose
         init_dbl(cmt - 1) = value_of(amt); // bolus as initial condition
-        y = integrate(x_r, init_dbl, ii_dbl, integrator); // NOLINT
-        pred = algebra_solver(fss, y,
-                              packer.adapted_param(par_, amt, rate, ii, x_i),
-                              packer.adapted_x_r(amt, rate, ii, x_i),
-                              x_i, 0,
-                              integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step);
-      } else {  // infusions (truncated or constant)
+      } else {                             // infusion
         x_r[cmt - 1] = value_of(rate);
-        const double dt = ii > 0 ? ii_dbl : 24.0;
-        y = integrate(x_r, init_dbl, dt, integrator);
-        pred = algebra_solver(fss, y,
-                              packer.adapted_param(par_, amt, rate, ii, x_i),
-                              packer.adapted_x_r(amt, rate, ii, x_i),
-                              x_i, 0,
-                              integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step);
       }
-      return pred;
+
+      const double init_dt = (rate == 0.0 || ii > 0) ? ii_dbl : 24.0;
+      PMXOdeFunctorSSAdaptor<It, T_amt, T_r, T_ii, F> fss;
+      PMXOdeFunctorSSAdaptorPacker<F, T_amt, T_r, T_ii> packer;
+      return algebra_solver(fss, integrate(x_r, init_dbl, init_dt, integrator),
+                            packer.adapted_param(par_, amt, rate, ii, x_i),
+                            packer.adapted_x_r(amt, rate, ii, x_i),
+                            x_i, 0,
+                            integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step);
     }
 
     /*
