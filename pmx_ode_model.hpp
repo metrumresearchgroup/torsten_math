@@ -178,9 +178,11 @@ namespace refactor {
       return stan::math::to_vector(f_.adapted_param(par, vec));
     }
 
+    template<typename integrator_t>
     inline const std::vector<double>
     adapted_x_r(const T_amt& amt, const T_rate& rate, const T_ii& ii,
-                  const std::vector<int>& x_i) const {
+                const std::vector<int>& x_i,
+                const integrator_t& integrator) const {
       using stan::math::value_of;
       std::vector<double> res;
       if (!is_var_amt) {
@@ -189,6 +191,8 @@ namespace refactor {
       if (!is_var_ii) {
         res.push_back(value_of(ii));
       }
+      res.push_back(integrator.rtol);
+      res.push_back(integrator.atol);
       return res;
     }
     
@@ -253,6 +257,10 @@ namespace refactor {
   /**
    * Partial specialization of @c PMXOdeFunctorSSAdaptorPacker:
    * @c rate is data.
+   *
+   * @tparam F ODE RHS functor type
+   * @tparam T_amt @c amt type
+   * @tparam T_ii @c dosing interval type
    */
   template <typename F, typename T_amt, typename T_ii>
   struct PMXOdeFunctorSSAdaptorPacker<F, T_amt, double, T_ii> {
@@ -282,9 +290,11 @@ namespace refactor {
       return stan::math::to_vector(f_.adapted_param(par, vec));
     }
 
+    template<typename integrator_t>
     inline const std::vector<double>
     adapted_x_r(const T_amt& amt, double rate, const T_ii& ii,
-                const std::vector<int>& x_i) const {
+                const std::vector<int>& x_i,
+                const integrator_t& integrator) const {
       using stan::math::value_of;
       int cmt_ = x_i[0];
       int ncmt_ = x_i[1];
@@ -296,6 +306,8 @@ namespace refactor {
       if (!is_var_ii) {
         res.push_back(value_of(ii));
       }
+      res.push_back(integrator.rtol);
+      res.push_back(integrator.atol);
       return res;
    }
 
@@ -390,13 +402,10 @@ namespace refactor {
                std::ostream* msgs) const {
       using stan::math::to_array_1d;
       using stan::math::to_vector;
-      using std::vector;
-      using stan::math::invalid_argument;
-      using stan::math::value_of;
 
       typedef typename stan::return_type<T0, T1>::type scalar_t;
       const PMXOdeFunctorSSAdaptorPacker<F, T_amt, T_rate, T_ii> packer_;
-      const PMXOdeIntegrator<It> integrator_;
+      const PMXOdeIntegrator<It> integrator_(*(x_r.rbegin() + 1), x_r.back(), x_i.back(), msgs);
       const PMXOdeFunctorRateAdaptor<F, T_rate> f_;
       int cmt_ = x_i[0];
       int ncmt_ = x_i[1];
@@ -408,9 +417,7 @@ namespace refactor {
 
       double t0 = 0;
 
-      vector<scalar_t> x0(x.size());
-      for (size_t i = 0; i < x0.size(); i++) x0[i] = x(i);
-
+      std::vector<scalar_t> x0(x.data(), x.data() + x.size());
       std::vector<T1> ode_theta(packer_.unpack_ode_theta(y, x_i));
       std::vector<double> ode_x_r(packer_.unpack_ode_x_r(x_r, x_i));
 
@@ -420,7 +427,7 @@ namespace refactor {
 
       if (rate == 0) {  // bolus dose
         x0[cmt_ - 1] += amt;
-        vector<scalar_t> pred = integrator_(f_, x0, t0, ii_, ode_theta, ode_x_r, x_i)[0];
+        std::vector<scalar_t> pred = integrator_(f_, x0, t0, ii_, ode_theta, ode_x_r, x_i)[0];
         for (int i = 0; i < result.size(); i++) {
           result(i) = x(i) - pred[i];
         }
@@ -432,11 +439,11 @@ namespace refactor {
 
         dt = ii_ - dt;
         packer_.nullify_truncated_rate(ode_theta, ode_x_r, x_i);
-        vector<scalar_t> pred = integrator_(f_, x0, t0, dt, ode_theta, ode_x_r, x_i)[0];
+        std::vector<scalar_t> pred = integrator_(f_, x0, t0, dt, ode_theta, ode_x_r, x_i)[0];
         for (int i = 0; i < result.size(); i++) result(i) = x(i) - pred[i];
       } else {  // constant infusion
         stan::math::check_less_or_equal(function, "AMT", amt, 0);
-        vector<scalar_t> derivative = f_(0, to_array_1d(x), ode_theta, ode_x_r, x_i, 0);
+        std::vector<scalar_t> derivative = f_(0, to_array_1d(x), ode_theta, ode_x_r, x_i, 0);
         result = to_vector(derivative);
       }
 
@@ -870,21 +877,21 @@ namespace refactor {
 
       double ii_dbl = value_of(ii);
       Eigen::Matrix<double, 1, -1> init_dbl(Eigen::Matrix<double, 1, -1>::Zero(ncmt_));
-      std::vector<double> x_r(ncmt_, 0);
-      std::vector<int> x_i{cmt, ncmt_, int(par_.size())};
+      std::vector<double> rate_vec(ncmt_, 0);
+      std::vector<int> x_i{cmt, ncmt_, int(par_.size()), int(integrator.max_num_step)};
 
       if (rate == 0) {                     // bolus dose
         init_dbl(cmt - 1) = value_of(amt); // bolus as initial condition
       } else {                             // infusion
-        x_r[cmt - 1] = value_of(rate);
+        rate_vec[cmt - 1] = value_of(rate);
       }
 
       const double init_dt = (rate == 0.0 || ii > 0) ? ii_dbl : 24.0;
       PMXOdeFunctorSSAdaptor<It, T_amt, T_r, T_ii, F> fss;
       PMXOdeFunctorSSAdaptorPacker<F, T_amt, T_r, T_ii> packer;
-      return algebra_solver(fss, integrate(x_r, init_dbl, init_dt, integrator),
+      return algebra_solver(fss, integrate(rate_vec, init_dbl, init_dt, integrator),
                             packer.adapted_param(par_, amt, rate, ii, x_i),
-                            packer.adapted_x_r(amt, rate, ii, x_i),
+                            packer.adapted_x_r(amt, rate, ii, x_i, integrator),
                             x_i, 0,
                             integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step);
     }
