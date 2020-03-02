@@ -1,13 +1,15 @@
 #ifndef STAN_MATH_TORSTEN_REFACTOR_ODE_MODEL_HPP
 #define STAN_MATH_TORSTEN_REFACTOR_ODE_MODEL_HPP
 
-#include <stan/math/rev/mat/functor/algebra_solver.hpp>
-#include <stan/math/prim/scal/err/check_less_or_equal.hpp>
+#include <stan/math/prim/fun/to_vector.hpp>
+#include <stan/math/rev/fun/to_var.hpp>
+#include <stan/math/rev/functor/algebra_solver_powell.hpp>
+#include <stan/math/prim/err/check_less_or_equal.hpp>
 #include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
-#include <stan/math/torsten/PKModel/Pred/unpromote.hpp>
+#include <stan/math/torsten/PKModel/functors/check_mti.hpp>
 
-namespace refactor {
+namespace torsten {
 
   using Eigen::Matrix;
   using Eigen::Dynamic;
@@ -393,7 +395,7 @@ namespace refactor {
      */
     template <typename T0, typename T1>
     inline
-    Eigen::Matrix<typename torsten::return_t<T0, T1>::type,
+    Eigen::Matrix<typename stan::return_type_t<T0, T1>,
                   Eigen::Dynamic, 1>
     operator()(const Eigen::Matrix<T0, Eigen::Dynamic, 1>& x,
                const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
@@ -471,8 +473,8 @@ namespace refactor {
     const PMXOdeFunctorRateAdaptor<F, T_rate> f1;
     const int ncmt_;
   public:
-    using scalar_type = typename torsten::return_t<T_time, T_rate, T_par, T_init>::type; // NOLINT
-    using aug_par_type = typename torsten::return_t<T_rate, T_par, T_init>::type;
+    using scalar_type = typename stan::return_type_t<T_time, T_rate, T_par, T_init>; // NOLINT
+    using aug_par_type = typename stan::return_type_t<T_rate, T_par, T_init>;
     using init_type   = T_init;
     using time_type   = T_time;
     using par_type    = T_par;
@@ -867,13 +869,13 @@ namespace refactor {
      *
      */
     template<PMXOdeIntegratorId It, typename T_amt, typename T_r, typename T_ii>
-    Eigen::Matrix<typename torsten::return_t<T_amt, T_r, T_par, T_ii>::type, Eigen::Dynamic, 1> // NOLINT
+    Eigen::Matrix<typename stan::return_type_t<T_amt, T_r, T_par, T_ii>, Eigen::Dynamic, 1> // NOLINT
     solve(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
           const PMXOdeIntegrator<It>& integrator) const {
       using stan::math::value_of;
-      using stan::math::algebra_solver;
+      using stan::math::algebra_solver_powell;
 
-      typedef typename torsten::return_t<T_amt, T_r, T_par, T_ii>::type scalar;
+      typedef typename stan::return_type_t<T_amt, T_r, T_par, T_ii> scalar;
 
       double ii_dbl = value_of(ii);
       Eigen::Matrix<double, 1, -1> init_dbl(Eigen::Matrix<double, 1, -1>::Zero(ncmt_));
@@ -889,7 +891,7 @@ namespace refactor {
       const double init_dt = (rate == 0.0 || ii > 0) ? ii_dbl : 24.0;
       PMXOdeFunctorSSAdaptor<It, T_amt, T_r, T_ii, F> fss;
       PMXOdeFunctorSSAdaptorPacker<F, T_amt, T_r, T_ii> packer;
-      return algebra_solver(fss, integrate(rate_vec, init_dbl, init_dt, integrator),
+      return algebra_solver_powell(fss, integrate(rate_vec, init_dbl, init_dt, integrator),
                             packer.adapted_param(par_, amt, rate, ii, x_i),
                             packer.adapted_x_r(amt, rate, ii, x_i, integrator),
                             x_i, 0,

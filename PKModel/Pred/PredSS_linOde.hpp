@@ -2,9 +2,9 @@
 #define STAN_MATH_TORSTEN_PKMODEL_PRED_PREDSS_LINODE_HPP
 
 #include <stan/math/torsten/PKModel/functors/check_mti.hpp>
-#include <stan/math/rev/mat/fun/mdivide_left.hpp>
-#include <stan/math/rev/mat/fun/multiply.hpp>
-#include <stan/math/prim/mat/fun/matrix_exp.hpp>
+#include <stan/math/rev/fun/mdivide_left.hpp>
+#include <stan/math/rev/fun/multiply.hpp>
+#include <stan/math/prim/fun/matrix_exp.hpp>
 #include <iostream>
 
 namespace torsten {

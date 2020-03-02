@@ -54,7 +54,7 @@ namespace torsten {
 
     struct dummy_functor {
       template <typename T0, typename T1, typename T2>
-      inline std::vector<typename torsten::return_t<T0, T1, T2>::type>
+      inline std::vector<typename stan::return_type_t<T0, T1, T2>>
       operator()(const T0& t_in, const std::vector<T1>& y_in,
                  const std::vector<T2>& theta, const std::vector<double>& x_r,
                  const std::vector<int>& x_i,

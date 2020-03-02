@@ -2,11 +2,11 @@
 #define STAN_MATH_TORSTEN_PKMODEL_PRED_PRED1_GENERAL_SOLVER_HPP
 
 #include <stan/math/rev/core.hpp>
-#include <stan/math/prim/mat/fun/to_matrix.hpp>
+#include <stan/math/prim/fun/to_matrix.hpp>
 #include <stan/math/torsten/PKModel/integrator.hpp>
 #include <stan/math/torsten/PKModel/Pred/unpromote.hpp>
 #include <stan/math/torsten/PKModel/functors/functor.hpp>
-#include <stan/math/prim/mat/fun/to_array_1d.hpp>
+#include <stan/math/prim/fun/to_array_1d.hpp>
 #include <iostream>
 #include <vector>
 #include <string>

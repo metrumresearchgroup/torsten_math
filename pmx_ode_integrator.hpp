@@ -1,11 +1,11 @@
 #ifndef STAN_MATH_TORSTEN_PMX_ODE_INTEGRATOR_HPP
 #define STAN_MATH_TORSTEN_PMX_ODE_INTEGRATOR_HPP
 
-#include <stan/math/prim/scal/meta/return_type.hpp>
-#include <stan/math/prim/arr/fun/value_of.hpp>
-#include <stan/math/prim/arr/functor/integrate_ode_rk45.hpp>
-#include <stan/math/rev/mat/functor/integrate_ode_adams.hpp>
-#include <stan/math/rev/mat/functor/integrate_ode_bdf.hpp>
+#include <stan/math/prim/meta/return_type.hpp>
+#include <stan/math/prim/fun/value_of.hpp>
+#include <stan/math/prim/functor/integrate_ode_rk45.hpp>
+#include <stan/math/rev/functor/integrate_ode_adams.hpp>
+#include <stan/math/rev/functor/integrate_ode_bdf.hpp>
 #include <stan/math/torsten/dsolve.hpp>
 #include <ostream>
 #include <vector>
@@ -28,7 +28,7 @@ namespace torsten {
 
 #define DEF_STAN_INTEGRATOR(INT_NAME)                                                 \
   template <typename F, typename Tt, typename T_initial, typename T_param>            \
-  std::vector<std::vector<typename torsten::return_t<Tt, T_initial, T_param>::type> > \
+  std::vector<std::vector<typename stan::return_type_t<Tt, T_initial, T_param>> > \
   operator()(const F& f,                                                              \
              const std::vector<T_initial>& y0,                                        \
              double t0,                                                               \
@@ -42,7 +42,7 @@ namespace torsten {
 
 #define DEF_STAN_SINGLE_STEP_INTEGRATOR                                               \
   template <typename F, typename Tt, typename T_initial, typename T_param>            \
-  std::vector<std::vector<typename torsten::return_t<Tt, T_initial, T_param>::type> > \
+  std::vector<std::vector<typename stan::return_type_t<Tt, T_initial, T_param>> > \
   operator()(const F& f,                                                              \
              const std::vector<T_initial>& y0,                                        \
              double t0,                                                               \
@@ -56,7 +56,7 @@ namespace torsten {
 
 #define DEF_TORSTEN_INTEGRATOR(INT_NAME)                                              \
   template <typename F, typename Tt, typename T_initial, typename T_param>            \
-  std::vector<std::vector<typename torsten::return_t<Tt, T_initial, T_param>::type> > \
+  std::vector<std::vector<typename stan::return_type_t<Tt, T_initial, T_param>> > \
   operator()(const F& f,                                                              \
              const std::vector<T_initial>& y0,                                        \
              double t0,                                                               \
@@ -69,7 +69,7 @@ namespace torsten {
 
 #define DEF_TORSTEN_SINGLE_STEP_INTEGRATOR                                            \
   template <typename F, typename Tt, typename T_initial, typename T_param>            \
-  std::vector<std::vector<typename torsten::return_t<Tt, T_initial, T_param>::type> > \
+  std::vector<std::vector<typename stan::return_type_t<Tt, T_initial, T_param>> > \
   operator()(const F& f,                                                              \
              const std::vector<T_initial>& y0,                                        \
              double t0,                                                               \

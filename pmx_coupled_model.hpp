@@ -5,13 +5,12 @@
 #include <stan/math/torsten/pmx_onecpt_model.hpp>
 #include <stan/math/torsten/pmx_twocpt_model.hpp>
 #include <stan/math/torsten/pmx_ode_model.hpp>
-#include <stan/math/torsten/return_type.hpp>
+#include <stan/math/prim/meta/return_type.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_oneCpt.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_twoCpt.hpp>
 #include <stan/math/torsten/PKModel/functors/check_mti.hpp>
 
-namespace refactor {
-  using torsten::return_t;
+namespace torsten {
   using Eigen::Matrix;
   using Eigen::Dynamic;
   using torsten::PMXOdeIntegrator;
@@ -43,7 +42,7 @@ namespace refactor {
      * if the original parameters are data.
      */
     template<typename T, typename T0, int R, int C>
-    static std::vector<typename torsten::return_t<T, T0, T_rate>::type>
+    static std::vector<typename stan::return_type_t<T, T0, T_rate>>
     adapted_param(const std::vector<T> &par, const std::vector<T_rate> &rate,
                   const Eigen::Matrix<T0, R, C>& y0_pk) {
       std::vector<stan::math::var> theta;
@@ -64,7 +63,7 @@ namespace refactor {
      * if the original parameters are data.
      */
     template<typename T, typename T0, int R, int C>
-    static std::vector<typename torsten::return_t<T, T0, T_rate>::type>
+    static std::vector<typename stan::return_type_t<T, T0, T_rate>>
     adapted_param(const std::vector<T> &par, int cmt, int ncmt, const T_rate& rate,
                   const Eigen::Matrix<T0, R, C>& y0_pk) {
       std::vector<stan::math::var> theta(par.size() + ncmt + y0_pk.size(), 0.0);
@@ -118,10 +117,10 @@ namespace refactor {
      * if the original parameters are data.
      */
     template<typename T, typename T0, int R, int C>
-    static std::vector<typename torsten::return_t<T, T0>::type>
+    static std::vector<typename stan::return_type_t<T, T0>>
     adapted_param(const std::vector<T> &par, const std::vector<double> &rate,
                   const Eigen::Matrix<T0, R, C>& y0_pk) {
-      std::vector<typename torsten::return_t<T, T0>::type> theta;
+      std::vector<typename stan::return_type_t<T, T0>> theta;
       theta.reserve(par.size() + y0_pk.size());
       theta.insert(theta.end(), par.begin(), par.end());
       for (int i = 0; i < y0_pk.size(); ++i) {
@@ -138,7 +137,7 @@ namespace refactor {
      * if the original parameters are data.
      */
     template<typename T, typename T0, int R, int C>
-    static std::vector<typename torsten::return_t<T, T0>::type>
+    static std::vector<typename stan::return_type_t<T, T0>>
     adapted_param(const std::vector<T> &par, int cmt, int ncmt, double rate,
                   const Eigen::Matrix<T0, R, C>& y0_pk) {
       return adapted_param(par, std::vector<double>(), y0_pk);
@@ -197,10 +196,10 @@ namespace refactor {
      * if the original parameters are data.
      */
     template<typename T, typename T0, int R, int C>
-    static Eigen::Matrix<typename torsten::return_t<T, T0>::type, -1, 1>
+    static Eigen::Matrix<typename stan::return_type_t<T, T0>, -1, 1>
     adapted_param(const std::vector<T> &par, int cmt, int ncmt, double rate,
                   const Eigen::Matrix<T0, R, C>& y0_pk) {
-      Eigen::Matrix<typename torsten::return_t<T, T0>::type, -1, 1> theta(par.size() + y0_pk.size());
+      Eigen::Matrix<typename stan::return_type_t<T, T0>, -1, 1> theta(par.size() + y0_pk.size());
       for (size_t i = 0; i < par.size(); ++i) {
         theta(i) = par[i];
       }
@@ -259,7 +258,7 @@ namespace refactor {
      */
     template <typename T0, typename T1, typename T2, typename T3>
     inline
-    std::vector<typename torsten::return_t<T0, T1, T2, T3>::type>
+    std::vector<typename stan::return_type_t<T0, T1, T2, T3>>
     operator()(const T0& t,
              const std::vector<T1>& y,
              const std::vector<T2>& theta,
@@ -269,9 +268,9 @@ namespace refactor {
       using std::vector;
       using stan::math::to_array_1d;
       using stan::math::to_vector;
-      typedef typename torsten::return_t<T0, T1, T2, T3>::type
+      typedef typename stan::return_type_t<T0, T1, T2, T3>
         scalar;
-      typedef typename torsten::return_t<T0, T2, T3>::type
+      typedef typename stan::return_type_t<T0, T2, T3>
         T_pk;  // return object of fTwoCpt  doesn't depend on T1
       using T_pkmodel = T_m<double, double, double, double>;
 
@@ -283,7 +282,7 @@ namespace refactor {
       vector<T2> ratePK(theta.begin() + nODEparms, theta.begin() + nODEparms + nPK);
 
       // The last elements of theta contain the initial base PK states
-      refactor::PKRec<T2> init_pk(nPK);
+      torsten::PKRec<T2> init_pk(nPK);
       for (int i = 0; i < nPK; ++i) {
         init_pk(nPK - i - 1) = *(theta.rbegin() + i);
       }
@@ -321,7 +320,7 @@ namespace refactor {
      */
     template <typename T0, typename T1, typename T2, typename T3>
     inline
-    std::vector<typename torsten::return_t<T0, T1, T2, T3>::type>
+    std::vector<typename stan::return_type_t<T0, T1, T2, T3>>
     operator()(const T0& t,
              const std::vector<T1>& y,
              const std::vector<T2>& theta,
@@ -330,13 +329,13 @@ namespace refactor {
              std::ostream* pstream_) const {
       using stan::math::to_array_1d;
       using stan::math::to_vector;
-      using scalar = typename torsten::return_t<T0, T1, T2, T3>::type;
-      using T_pk = typename torsten::return_t<T0, T2, T3>::type;
+      using scalar = typename stan::return_type_t<T0, T1, T2, T3>;
+      using T_pk = typename stan::return_type_t<T0, T2, T3>;
       using T_pkmodel = T_m<double, double, double, double>;
 
       // Get initial PK states stored at the end of @c theta
       int nPK = T_pkmodel::Ncmt;
-      refactor::PKRec<T2> init_pk(nPK);
+      torsten::PKRec<T2> init_pk(nPK);
       for (int i = 0; i < nPK; ++i) {
         init_pk(nPK - i - 1) = *(theta.rbegin() + i);
       }
@@ -586,20 +585,20 @@ namespace refactor {
   template <template<typename...> class T_m,
             typename T_time, typename T_init, typename T_rate, typename T_par, typename F> // NOLINT
   class PKCoupledModel<T_m<T_time, T_init, T_rate, T_par>,
-                       PKODEModel<T_time, T_init, T_rate, T_par,
+                       torsten::PKODEModel<T_time, T_init, T_rate, T_par,
                                   PMXOdeFunctorCouplingAdaptor<T_m, F, T_rate>> > { // NOLINT
-    const refactor::PKRec<T_init>& y0_;
-    const refactor::PKRec<T_init> y0_pk;
-    const refactor::PKRec<T_init> y0_ode;
+    const torsten::PKRec<T_init>& y0_;
+    const torsten::PKRec<T_init> y0_pk;
+    const torsten::PKRec<T_init> y0_ode;
     PMXOdeFunctorCouplingAdaptor<T_m, F, T_rate> f;
 
   public:
     using Fa = PMXOdeFunctorCouplingAdaptor<T_m, F, T_rate>;
     const T_m<T_time, T_init, T_rate, T_par> pk_model;
-    const PKODEModel<T_time, T_init, T_rate, T_par, Fa> ode_model;
+    const torsten::PKODEModel<T_time, T_init, T_rate, T_par, Fa> ode_model;
 
     using pk_scalar_type = torsten::scalar_t<T_m<T_time, T_init, T_rate, T_par>>; // NOLINT 
-    using ode_scalar_type = torsten::scalar_t<PKODEModel<T_time, T_init, T_rate, T_par, Fa> >; // NOLINT
+    using ode_scalar_type = torsten::scalar_t<torsten::PKODEModel<T_time, T_init, T_rate, T_par, Fa> >; // NOLINT
     using scalar_type = typename stan::return_type<pk_scalar_type, ode_scalar_type>::type; // NOLINT 
     using init_type   = T_init;
     using time_type   = T_time;
@@ -618,7 +617,7 @@ namespace refactor {
      * @param n_ode the size of ode_model's ODE system
      */
     PKCoupledModel(const T_time& t0,
-                   const PKRec<T_init>& init,
+                   const torsten::PKRec<T_init>& init,
                    const std::vector<T_rate>& rate,
                    const std::vector<T_par> & par,
                    const F& f0,
@@ -637,13 +636,12 @@ namespace refactor {
      * integrate coupled ODE.
      */
   template<typename T_r, typename T_integrator>
-  refactor::PKRec<typename torsten::return_t<T_time, T_r, T_par, T_init>::type> // NOLINT
+  torsten::PKRec<typename stan::return_type_t<T_time, T_r, T_par, T_init>> // NOLINT
   integrate(const T_time& t_next,
             const std::vector<T_r>& rate,
             const T_integrator& integrator) const {
     using std::vector;
     using stan::math::to_array_1d;
-    using torsten::return_t;
 
     typedef typename promote_args<T_time, T_r, T_par, T_init>::type scalar;
 
@@ -653,12 +651,12 @@ namespace refactor {
     vector<double> t_dbl{stan::math::value_of(t)};
     double t0_dbl = stan::math::value_of(t0);
 
-    refactor::PKRec<scalar> pred;
+    torsten::PKRec<scalar> pred;
     if (t_dbl[0] == t0_dbl) {
       pred = y0_;
     } else {
       size_t nPK = pk_model.ncmt();
-      refactor::PKRec<scalar> xPK = pk_model.solve(t);
+      torsten::PKRec<scalar> xPK = pk_model.solve(t);
 
       // create vector with PD initial states
       vector<T_init> y0_PD(to_array_1d(y0_ode));
@@ -703,13 +701,13 @@ namespace refactor {
    *           compartment at the current event.
    */
   template<typename T_ii, typename T_integrator>
-  refactor::PKRec<typename torsten::return_t<T_ii, T_par>::type>
+  torsten::PKRec<typename stan::return_type_t<T_ii, T_par>>
   integrate(const double& amt,
             const double& rate,
             const T_ii& ii,
             const int& cmt,
             const T_integrator& integrator) const {
-    typedef typename torsten::return_t<T_ii, T_par>::type scalar;
+    typedef typename stan::return_type_t<T_ii, T_par> scalar;
 
     const double ii_dbl = stan::math::value_of(ii);
     const int nPK = pk_model.ncmt();
@@ -718,7 +716,7 @@ namespace refactor {
 
     Eigen::Matrix<T_par, -1, 1> predPK;
     if (cmt <= nPK) {  // check dosing occurs in a base state
-      T_m<double, double, double, T_par> pkmodel(t0, refactor::PKRec<double>(), std::vector<double>(), pk_model.par());
+      T_m<double, double, double, T_par> pkmodel(t0, torsten::PKRec<double>(), std::vector<double>(), pk_model.par());
       predPK = pkmodel.solve(amt, rate, ii_dbl, cmt);
     } else {
       predPK = Eigen::Matrix<scalar, -1, 1>::Zero(nPK);
@@ -764,7 +762,7 @@ namespace refactor {
                                                                             stan::math::value_of(predPK)),
                                                     packer_t::adapted_x_r(cmt, nPK + nPD, rate, predPK, t0),
                                                     x_i)[0]);
-    predPD = stan::math::algebra_solver(system, predPD_guess,
+    predPD = stan::math::algebra_solver_powell(system, predPD_guess,
                                         ss_packer_t::adapted_param(ode_model.par(), cmt, nPK + nPD, rate, predPK),
                                         ss_packer_t::adapted_x_r(cmt, nPK + nPD, rate, amt, ii, predPK, t0),
                                         x_i,
@@ -774,7 +772,7 @@ namespace refactor {
       if (cmt <= nPK) predPK(cmt - 1) -= amt;
     }
 
-    refactor::PKRec<scalar> pred(nPK + nPD);
+    torsten::PKRec<scalar> pred(nPK + nPD);
     for (int i = 0; i < nPK; i++) pred(i) = predPK(i);
     for (int i = 0; i < nPD; i++) pred(nPK + i) = predPD(i);
 
@@ -785,13 +783,13 @@ namespace refactor {
    * Case 2 (vd): amt is random, rate is fixed.
    */
   template<typename T_ii, typename T_amt, typename T_integrator>
-  refactor::PKRec<typename stan::return_type<T_ii, T_amt, T_par>::type>
+  torsten::PKRec<typename stan::return_type<T_ii, T_amt, T_par>::type>
   integrate(const T_amt& amt,
             const double& rate,
             const T_ii& ii,
             const int& cmt,
             const T_integrator& integrator) const {
-    typedef typename torsten::return_t<T_ii, T_amt, T_par>::type scalar;
+    typedef typename stan::return_type_t<T_ii, T_amt, T_par> scalar;
 
     const double ii_dbl = stan::math::value_of(ii);
     const int nPK = pk_model.ncmt();
@@ -802,7 +800,7 @@ namespace refactor {
     std::vector<T_par> pkpar = ode_model.par();
     if (cmt <= nPK) {  // check dosing occurs in a base state
       const double t0 = 0.0;
-      T_m<double, double, T_amt, T_par> pkmodel(t0, refactor::PKRec<double>(), std::vector<T_amt>(), pk_model.par());
+      T_m<double, double, T_amt, T_par> pkmodel(t0, torsten::PKRec<double>(), std::vector<T_amt>(), pk_model.par());
       predPK = pkmodel.solve(amt, rate, ii_dbl, cmt);
       predPK(cmt - 1) += amt;
     } else {
@@ -841,7 +839,7 @@ namespace refactor {
                                         torsten::unpromote(theta2),
                                         x_r, x_i)[0]);
 
-      predPD = algebra_solver(system, predPD_guess,
+      predPD = algebra_solver_powell(system, predPD_guess,
                               to_vector(theta2),
                               x_r, x_i,
                               0, rel_tol, f_tol, max_num_steps);
@@ -860,7 +858,7 @@ namespace refactor {
                                                       torsten::unpromote(theta2),
                                                       x_r, x_i)[0]);
 
-      predPD = algebra_solver(system, predPD_guess,
+      predPD = algebra_solver_powell(system, predPD_guess,
                               stan::math::to_vector(theta2),
                               x_r, x_i,
                               0, rel_tol, f_tol, max_num_steps);
@@ -877,10 +875,10 @@ namespace refactor {
     /* 
      * solve the coupled model.
      */
-    template<PMXOdeIntegratorId It>
-    refactor::PKRec<scalar_type>
+    template<torsten::PMXOdeIntegratorId It>
+    torsten::PKRec<scalar_type>
     solve(const T_time& t_next,
-          const PMXOdeIntegrator<It>& integrator) const {
+          const torsten::PMXOdeIntegrator<It>& integrator) const {
       return integrate(t_next, ode_model.rate(), integrator);
     }
 
@@ -889,10 +887,10 @@ namespace refactor {
      * the solution to @c integrate, in which the type of @c
      * amt will be used for template partial specification.
      */
-    template<PMXOdeIntegratorId It, typename T_ii, typename T_amt>
-    refactor::PKRec<scalar_type>
+    template<torsten::PMXOdeIntegratorId It, typename T_ii, typename T_amt>
+    torsten::PKRec<scalar_type>
     solve(const T_amt& amt, const double& rate, const T_ii& ii, const int& cmt,
-          const PMXOdeIntegrator<It>& integrator) const {
+          const torsten::PMXOdeIntegrator<It>& integrator) const {
       return integrate(amt, rate, ii, cmt, integrator);
     }
   };
@@ -900,13 +898,13 @@ namespace refactor {
   template<typename T_time, typename T_init, typename T_rate, typename T_par, typename F> // NOLINT
   using PkOneCptOdeModel =
     PKCoupledModel< PMXOneCptModel<T_time, T_init, T_rate, T_par>,
-                    PKODEModel<T_time, T_init, T_rate, T_par,
+                    torsten::PKODEModel<T_time, T_init, T_rate, T_par,
                                PMXOdeFunctorCouplingAdaptor<PMXOneCptModel, F, T_rate>> >; // NOLINT
 
   template<typename T_time, typename T_init, typename T_rate, typename T_par, typename F> // NOLINT
   using PkTwoCptOdeModel =
     PKCoupledModel< PMXTwoCptModel<T_time, T_init, T_rate, T_par>,
-                    PKODEModel<T_time, T_init, T_rate, T_par,
+                    torsten::PKODEModel<T_time, T_init, T_rate, T_par,
                                PMXOdeFunctorCouplingAdaptor<PMXTwoCptModel, F, T_rate>> >; // NOLINT
 }
 

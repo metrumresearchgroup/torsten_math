@@ -3,13 +3,12 @@
 
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
 #include <stan/math/torsten/dsolve/ode_forms.hpp>
-#include <stan/math/torsten/return_type.hpp>
+#include <stan/math/prim/meta/return_type.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
-#include <stan/math/prim/arr/meta/get.hpp>
-#include <stan/math/prim/arr/meta/length.hpp>
-#include <stan/math/prim/arr/fun/value_of.hpp>
-#include <stan/math/prim/scal/err/check_size_match.hpp>
-#include <stan/math/rev/scal/fun/value_of_rec.hpp>
+#include <stan/math/prim/fun/get.hpp>
+#include <stan/math/prim/fun/value_of.hpp>
+#include <stan/math/prim/err/check_size_match.hpp>
+#include <stan/math/rev/fun/value_of_rec.hpp>
 #include <stan/math/rev/core.hpp>
 #include <ostream>
 #include <stdexcept>
@@ -33,7 +32,7 @@ namespace dsolve {
   template <typename F, typename Tt, typename T_init, typename T_par>
   struct PMXOdeintSystem {
     using Ode = PMXOdeintSystem<F, Tt, T_init, T_par>;
-    using scalar_t = typename torsten::return_t<Tt, T_init, T_par>::type;
+    using scalar_t = typename stan::return_type_t<Tt, T_init, T_par>;
     static constexpr bool is_var_ts  = stan::is_var<Tt>::value;
     static constexpr bool is_var_y0  = stan::is_var<T_init>::value;
     static constexpr bool is_var_par = stan::is_var<T_par>::value;

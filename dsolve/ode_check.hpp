@@ -1,14 +1,14 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_ODE_CHECK_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_ODE_CHECK_HPP
 
-#include <stan/math/prim/scal/err/check_greater_or_equal.hpp>
-#include <stan/math/prim/scal/err/check_less_or_equal.hpp>
-#include <stan/math/prim/scal/err/check_finite.hpp>
-#include <stan/math/prim/scal/err/check_less.hpp>
-#include <stan/math/prim/scal/err/system_error.hpp>
-#include <stan/math/prim/arr/err/check_nonzero_size.hpp>
-#include <stan/math/prim/arr/err/check_ordered.hpp>
-#include <stan/math/prim/scal/err/check_consistent_sizes.hpp>
+#include <stan/math/prim/err/check_greater_or_equal.hpp>
+#include <stan/math/prim/err/check_less_or_equal.hpp>
+#include <stan/math/prim/err/check_finite.hpp>
+#include <stan/math/prim/err/check_less.hpp>
+#include <stan/math/prim/err/system_error.hpp>
+#include <stan/math/prim/err/check_nonzero_size.hpp>
+#include <stan/math/prim/err/check_ordered.hpp>
+#include <stan/math/prim/err/check_consistent_sizes.hpp>
 
 namespace torsten {
   namespace dsolve {

@@ -1,12 +1,12 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_IDAS_FWD_SYSTEM_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_IDAS_FWD_SYSTEM_HPP
 
-#include <stan/math/prim/arr/fun/value_of.hpp>
-#include <stan/math/prim/scal/err/check_greater.hpp>
-#include <stan/math/prim/mat/fun/typedefs.hpp>
-#include <stan/math/rev/mat/fun/typedefs.hpp>
+#include <stan/math/prim/fun/value_of.hpp>
+#include <stan/math/prim/err/check_greater.hpp>
+#include <stan/math/prim/fun/typedefs.hpp>
+#include <stan/math/rev/fun/typedefs.hpp>
 #include <stan/math/torsten/dsolve/pmx_idas_system.hpp>
-#include <stan/math/rev/mat/functor/jacobian.hpp>
+#include <stan/math/rev/functor/jacobian.hpp>
 #include <stan/math/torsten/to_matrix.hpp>
 #include <idas/idas.h>
 #include <ostream>

@@ -1,16 +1,16 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_IDAS_SYSTEM_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_IDAS_SYSTEM_HPP
 
-#include <stan/math/prim/arr/fun/value_of.hpp>
-#include <stan/math/prim/arr/fun/dot_self.hpp>
-#include <stan/math/prim/scal/err/check_greater_or_equal.hpp>
-#include <stan/math/prim/scal/err/check_less_or_equal.hpp>
-#include <stan/math/prim/scal/err/check_finite.hpp>
-#include <stan/math/prim/arr/err/check_nonzero_size.hpp>
-#include <stan/math/rev/scal/meta/is_var.hpp>
-#include <stan/math/prim/scal/meta/return_type.hpp>
-#include <stan/math/prim/mat/fun/typedefs.hpp>
-#include <stan/math/rev/mat/fun/typedefs.hpp>
+#include <stan/math/prim/fun/value_of.hpp>
+#include <stan/math/prim/fun/dot_self.hpp>
+#include <stan/math/prim/err/check_greater_or_equal.hpp>
+#include <stan/math/prim/err/check_less_or_equal.hpp>
+#include <stan/math/prim/err/check_finite.hpp>
+#include <stan/math/prim/err/check_nonzero_size.hpp>
+#include <stan/math/rev/meta/is_var.hpp>
+#include <stan/math/prim/meta/return_type.hpp>
+#include <stan/math/prim/fun/typedefs.hpp>
+#include <stan/math/rev/fun/typedefs.hpp>
 #include <idas/idas.h>
 #include <nvector/nvector_serial.h>
 #include <ostream>

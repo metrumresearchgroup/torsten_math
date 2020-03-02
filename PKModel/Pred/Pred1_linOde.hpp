@@ -2,10 +2,10 @@
 #define STAN_MATH_TORSTEN_PKMODEL_PRED_PRED1_LINODE_HPP
 
 #include <stan/math/torsten/PKModel/ModelParameters.hpp>
-#include <stan/math/prim/mat/fun/mdivide_left.hpp>
-#include <stan/math/rev/mat/fun/mdivide_left.hpp>
-#include <stan/math/rev/mat/fun/multiply.hpp>
-#include <stan/math/prim/mat/fun/matrix_exp.hpp>
+#include <stan/math/prim/fun/mdivide_left.hpp>
+#include <stan/math/rev/fun/mdivide_left.hpp>
+#include <stan/math/rev/fun/multiply.hpp>
+#include <stan/math/prim/fun/matrix_exp.hpp>
 #include <iostream>
 #include <vector>
 

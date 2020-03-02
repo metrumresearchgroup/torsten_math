@@ -1,8 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_PKMODEL_HPP
 #define STAN_MATH_TORSTEN_PKMODEL_HPP
 
-#include <stan/math/prim/arr/meta/get.hpp>
-#include <stan/math/prim/mat/meta/get.hpp>
+#include <stan/math/prim/fun/get.hpp>
 
 #include <stan/math/torsten/PKModel/pmx_check.hpp>
 #include <stan/math/torsten/PKModel/functions.hpp>

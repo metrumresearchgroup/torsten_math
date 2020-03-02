@@ -1,8 +1,8 @@
 #ifndef TORSTEN_COMPLEX_STEP_DERIVATIVE_HPP
 #define TORSTEN_COMPLEX_STEP_DERIVATIVE_HPP
 
-#include <stan/math/prim/scal/fun/value_of.hpp>
-#include <stan/math/prim/scal/meta/return_type.hpp>
+#include <stan/math/prim/fun/value_of.hpp>
+#include <stan/math/prim/meta/return_type.hpp>
 #include <stan/math/rev/core/precomp_v_vari.hpp>
 #include <stan/math/rev/core/vari.hpp>
 #include <stan/math/rev/core/var.hpp>

@@ -2,12 +2,12 @@
 #define STAN_MATH_TORSTEN_DEF_HPP
 
 #include <Eigen/Dense>
-#include <stan/math/prim/scal/meta/return_type.hpp>
-#include <stan/math/prim/scal/meta/is_var.hpp>
-#include <stan/math/rev/scal/meta/is_var.hpp>
+#include <stan/math/prim/meta/return_type.hpp>
+#include <stan/math/prim/meta/is_var.hpp>
+#include <stan/math/rev/meta/is_var.hpp>
 #include <stan/math/torsten/is_detected.hpp>
 
-namespace refactor {
+namespace torsten {
     template<typename T>
     using PKRec = Eigen::Matrix<T, 1, Eigen::Dynamic>;
 

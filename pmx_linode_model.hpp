@@ -1,15 +1,15 @@
 #ifndef STAN_MATH_PMX_LINODE_MODEL_HPP
 #define STAN_MATH_PMX_LINODE_MODEL_HPP
 
-#include <stan/math/rev/mat/fun/multiply.hpp>
-#include <stan/math/prim/mat/fun/matrix_exp.hpp>
-#include <stan/math/prim/mat/fun/mdivide_left.hpp>
-#include <stan/math/rev/mat/fun/mdivide_left.hpp>
+#include <stan/math/rev/fun/multiply.hpp>
+#include <stan/math/prim/fun/matrix_exp.hpp>
+#include <stan/math/prim/fun/mdivide_left.hpp>
+#include <stan/math/rev/fun/mdivide_left.hpp>
 #include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/torsten/PKModel/functors/check_mti.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 
-namespace refactor {
+namespace torsten {
 
   using boost::math::tools::promote_args;
   using Eigen::Matrix;
@@ -47,7 +47,7 @@ namespace refactor {
       Matrix<scalar, Dynamic, 1> v(n);
       for (size_t i = 0; i < n * n; ++i) m(i) = parms[i];
       for (size_t i = 0; i < n; ++i) v(i) = x[i];
-      PMXLin<scalar> rv = m * v;
+      torsten::PMXLin<scalar> rv = m * v;
       for (size_t i = 0; i < n; ++i) res[i] = rv(i);
 
       return res;
@@ -132,7 +132,7 @@ namespace refactor {
      *
      */
     const T_time              & t0()    const { return t0_; }
-    const PKRec<T_init>       & y0()    const { return y0_; }
+    const torsten::PKRec<T_init>       & y0()    const { return y0_; }
     const std::vector<T_rate> & rate()  const { return rate_; }
     const Eigen::Matrix<T_par,-1,-1>  & par ()  const { return par_; }
     const PMXLinODE            & f()     const { return f_; }

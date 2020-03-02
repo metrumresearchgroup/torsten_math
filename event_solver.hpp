@@ -1,9 +1,12 @@
 #ifndef STAN_MATH_TORSTEN_PKMODEL_REFACTOR_PRED_HPP
 #define STAN_MATH_TORSTEN_PKMODEL_REFACTOR_PRED_HPP
 
+#include <stan/math/prim/fun/multiply.hpp>
+#include <stan/math/rev/fun/multiply.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/events_manager.hpp>
 #include <stan/math/torsten/mpi/session.hpp>
+#include <stan/math/torsten/mpi/my_worker.hpp>
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
 #include <Eigen/Dense>
 #include <vector>
@@ -89,8 +92,7 @@ namespace torsten{
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using std::vector;
-      using::stan::math::multiply;
-      using refactor::PKRec;
+      using torsten::PKRec;
       using EM = EventsManager<T_events_record>;
 
       using scalar = typename EM::T_scalar;
@@ -122,7 +124,7 @@ namespace torsten{
      * Step through a range of events.
      */
     template<typename T_em, typename... Ts>
-    void stepper(int i, refactor::PKRec<typename T_em::T_scalar>& init,
+    void stepper(int i, torsten::PKRec<typename T_em::T_scalar>& init,
                         const T_em& em, const T_pred... pred_pars, const Ts... model_pars) {
       auto events = em.events();
 
@@ -164,8 +166,8 @@ namespace torsten{
     }
 
     template<typename T_em, typename... Ts>
-    void stepper_solve(int i, refactor::PKRec<typename T_em::T_scalar>& init,
-                        refactor::PKRec<double>& sol_d,
+    void stepper_solve(int i, torsten::PKRec<typename T_em::T_scalar>& init,
+                        torsten::PKRec<double>& sol_d,
                         const T_em& em, const T_pred... pred_pars, const Ts... model_pars) {
       using std::vector;
       using stan::math::var;
@@ -203,8 +205,8 @@ namespace torsten{
     }
 
     template<typename T_em, typename... Ts>
-    void stepper_sync(int i, refactor::PKRec<typename T_em::T_scalar>& init,
-                      refactor::PKRec<double>& sol_d,
+    void stepper_sync(int i, torsten::PKRec<typename T_em::T_scalar>& init,
+                      torsten::PKRec<double>& sol_d,
                       const T_em& em, const T_pred... pred_pars, const Ts... model_pars) {
       using std::vector;
       using stan::math::var;
@@ -259,8 +261,7 @@ namespace torsten{
       using Eigen::Dynamic;
       using std::vector;
       using::stan::math::var;
-      using::stan::math::multiply;
-      using refactor::PKRec;
+      using torsten::PKRec;
 
       using ER = T_events_record;
       using EM = EventsManager<ER>;
@@ -412,8 +413,7 @@ namespace torsten{
       using Eigen::Dynamic;
       using std::vector;
       using::stan::math::var;
-      using::stan::math::multiply;
-      using refactor::PKRec;
+      using torsten::PKRec;
 
       using ER = NONMENEventsRecord<double, double, double, double, std::vector<double>, double, double>;
       using EM = EventsManager<ER>;

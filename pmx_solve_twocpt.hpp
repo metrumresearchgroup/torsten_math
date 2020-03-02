@@ -2,8 +2,10 @@
 #define STAN_MATH_TORSTEN_PKMODELTWOCPT2_HPP
 
 #include <Eigen/Dense>
-#include <stan/math/prim/scal/err/check_greater_or_equal.hpp>
+#include <stan/math/prim/err/check_greater_or_equal.hpp>
 #include <boost/math/tools/promotion.hpp>
+#include <stan/math/torsten/to_array_2d.hpp>
+#include <stan/math/torsten/is_std_vector.hpp>
 #include <stan/math/torsten/event_solver.hpp>
 #include <stan/math/torsten/events_manager.hpp>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
@@ -11,7 +13,7 @@
 #include <stan/math/torsten/PKModel/Pred/PredSS_twoCpt.hpp>
 #include <stan/math/torsten/pmx_twocpt_model.hpp>
 #include <stan/math/torsten/pmx_population_check.hpp>
-#include <stan/math/torsten/return_type.hpp>
+#include <stan/math/prim/meta/return_type.hpp>
 #include <string>
 #include <vector>
 
@@ -46,7 +48,7 @@ namespace torsten {
  */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6>
-Eigen::Matrix<typename torsten::return_t<T0, T1, T2, T3, T4, T5, T6>::type,
+Eigen::Matrix<typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
               Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_twocpt(const std::vector<T0>& time,
               const std::vector<T1>& amt,
@@ -64,10 +66,10 @@ pmx_solve_twocpt(const std::vector<T0>& time,
   using Eigen::Matrix;
   using boost::math::tools::promote_args;
   using stan::math::check_positive_finite;
-  using refactor::PKRec;
+  using torsten::PKRec;
 
-  int nCmt = refactor::PMXTwoCptModel<double, double, double, double>::Ncmt;
-  int nParms = refactor::PMXTwoCptModel<double, double, double, double>::Npar;
+  int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int nParms = torsten::PMXTwoCptModel<double, double, double, double>::Npar;
   static const char* function("pmx_solve_twocpt");
 
   // Check arguments
@@ -128,7 +130,7 @@ pmx_solve_twocpt(const std::vector<T0>& time,
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
-  using model_type = refactor::PMXTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
+  using model_type = torsten::PMXTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   EventSolver<model_type> pr;
   pr.pred(0, events_rec, pred);
   return pred;
@@ -145,10 +147,10 @@ pmx_solve_twocpt(const std::vector<T0>& time,
                typename
             std::enable_if_t<
               !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
-  Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3,
+  Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
                                             typename torsten::value_type<T_par>::type,
                                             typename torsten::value_type<T_biovar>::type,
-                                            typename torsten::value_type<T_tlag>::type>::type,
+                                            typename torsten::value_type<T_tlag>::type>,
                  Eigen::Dynamic, Eigen::Dynamic>
   pmx_solve_twocpt(const std::vector<T0>& time,
                    const std::vector<T1>& amt,
@@ -172,7 +174,7 @@ pmx_solve_twocpt(const std::vector<T0>& time,
   // old version
   template <typename T0, typename T1, typename T2, typename T3, typename T4,
             typename T5, typename T6>
-  Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3, T4, T5, T6>::type,
+  Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
                  Eigen::Dynamic, Eigen::Dynamic>
   PKModelTwoCpt(const std::vector<T0>& time,
                 const std::vector<T1>& amt,
@@ -195,10 +197,10 @@ pmx_solve_twocpt(const std::vector<T0>& time,
                typename
             std::enable_if_t<
               !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
-  Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3,
+  Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
                                             typename torsten::value_type<T_par>::type,
                                             typename torsten::value_type<T_biovar>::type,
-                                            typename torsten::value_type<T_tlag>::type>::type,
+                                            typename torsten::value_type<T_tlag>::type>,
                  Eigen::Dynamic, Eigen::Dynamic>
   PKModelTwoCpt(const std::vector<T0>& time,
                    const std::vector<T1>& amt,
@@ -241,14 +243,14 @@ pmx_solve_group_twocpt(const std::vector<int>& len,
   using ER = NONMENEventsRecord<T0, T1, T2, T3, std::vector<T4>, T5, T6>;
   using EM = EventsManager<ER>;
 
-  int nCmt = refactor::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
   ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
   static const char* caller("pmx_solve_group_twocpt");
   torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
                                 pMatrix, biovar, tlag, caller);
 
-  using model_type = refactor::PMXTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
+  using model_type = torsten::PMXTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   EventSolver<model_type> pr;
 
   Eigen::Matrix<typename EM::T_scalar, -1, -1> pred(events_rec.total_num_event_times, nCmt);

@@ -3,7 +3,9 @@
 
 #include <Eigen/Dense>
 #include <boost/math/tools/promotion.hpp>
-#include <stan/math/prim/scal/err/check_positive_finite.hpp>
+#include <stan/math/torsten/to_array_2d.hpp>
+#include <stan/math/torsten/is_std_vector.hpp>
+#include <stan/math/prim/err/check_positive_finite.hpp>
 #include <stan/math/torsten/event_solver.hpp>
 #include <stan/math/torsten/events_manager.hpp>
 #include <stan/math/torsten/PKModel/PKModel.hpp>
@@ -45,7 +47,7 @@ namespace torsten {
  */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6>
-Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3, T4, T5, T6>::type,
+Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
                Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_onecpt(const std::vector<T0>& time,
               const std::vector<T1>& amt,
@@ -63,7 +65,7 @@ pmx_solve_onecpt(const std::vector<T0>& time,
   using Eigen::Matrix;
   using boost::math::tools::promote_args;
   using stan::math::check_positive_finite;
-  using refactor::PKRec;
+  using torsten::PKRec;
 
   int nCmt = 2;
   int nParm = 3;
@@ -118,7 +120,7 @@ pmx_solve_onecpt(const std::vector<T0>& time,
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
-  using model_type = refactor::PMXOneCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
+  using model_type = torsten::PMXOneCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
   EventSolver<model_type> pr;
   pr.pred(0, events_rec, pred);
   return pred;
@@ -134,10 +136,10 @@ pmx_solve_onecpt(const std::vector<T0>& time,
                typename
             std::enable_if_t<
               !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
-  Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3,
+  Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
                                             typename torsten::value_type<T_par>::type,
                                             typename torsten::value_type<T_biovar>::type,
-                                            typename torsten::value_type<T_tlag>::type>::type,
+                                            typename torsten::value_type<T_tlag>::type>,
                  Eigen::Dynamic, Eigen::Dynamic>
   pmx_solve_onecpt(const std::vector<T0>& time,
                    const std::vector<T1>& amt,
@@ -161,7 +163,7 @@ pmx_solve_onecpt(const std::vector<T0>& time,
   // old version
   template <typename T0, typename T1, typename T2, typename T3, typename T4,
             typename T5, typename T6>
-  Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3, T4, T5, T6>::type,
+  Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
                  Eigen::Dynamic, Eigen::Dynamic>
   PKModelOneCpt(const std::vector<T0>& time,
                 const std::vector<T1>& amt,
@@ -184,10 +186,10 @@ pmx_solve_onecpt(const std::vector<T0>& time,
             typename
             std::enable_if_t<
               !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
-  Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3,
+  Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
                                             typename torsten::value_type<T_par>::type,
                                             typename torsten::value_type<T_biovar>::type,
-                                            typename torsten::value_type<T_tlag>::type>::type,
+                                            typename torsten::value_type<T_tlag>::type>,
                  Eigen::Dynamic, Eigen::Dynamic>
   PKModelOneCpt(const std::vector<T0>& time,
                    const std::vector<T1>& amt,

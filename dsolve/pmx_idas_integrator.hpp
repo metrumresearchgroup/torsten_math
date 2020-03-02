@@ -1,11 +1,11 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_IDAS_INTEGRATOR_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_IDAS_INTEGRATOR_HPP
 
-#include <stan/math/prim/scal/err/check_less.hpp>
-#include <stan/math/prim/scal/err/check_finite.hpp>
-#include <stan/math/prim/arr/err/check_nonzero_size.hpp>
-#include <stan/math/prim/arr/err/check_ordered.hpp>
-#include <stan/math/rev/scal/meta/is_var.hpp>
+#include <stan/math/prim/err/check_less.hpp>
+#include <stan/math/prim/err/check_finite.hpp>
+#include <stan/math/prim/err/check_nonzero_size.hpp>
+#include <stan/math/prim/err/check_ordered.hpp>
+#include <stan/math/rev/meta/is_var.hpp>
 #include <stan/math/torsten/dsolve/pmx_idas_fwd_system.hpp>
 #include <stan/math/torsten/dsolve/sundials_check.hpp>
 #include <idas/idas.h>

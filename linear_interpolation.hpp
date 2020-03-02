@@ -1,11 +1,11 @@
 #ifndef STAN_MATH_TORSTEN_LINEAR_INTERPOLATION_HPP
 #define STAN_MATH_TORSTEN_LINEAR_INTERPOLATION_HPP
 
-#include <stan/math/rev/mat.hpp>
-#include <stan/math/prim/arr.hpp>
-#include <stan/math/prim/arr/err/check_nonzero_size.hpp>
+#include <stan/math/rev.hpp>
+#include <stan/math/prim.hpp>
+#include <stan/math/prim/err/check_nonzero_size.hpp>
 #include <stan/math/torsten/PKModel/SearchReal.hpp>
-#include <stan/math/torsten/return_type.hpp>
+#include <stan/math/prim/meta/return_type.hpp>
 #include <vector>
 #include <algorithm>
 
@@ -25,7 +25,7 @@ namespace torsten {
    */
 
   template <typename T0, typename T1, typename T2>
-  typename torsten::return_t<T0, T1, T2>::type
+  typename stan::return_type_t<T0, T1, T2>
   inline linear_interpolation(const T0& xout,
                               const std::vector<T1>& x,
                               const std::vector<T2>& y) {
@@ -37,7 +37,7 @@ namespace torsten {
     stan::math::check_ordered("linear_interpolation", "x", x);
     stan::math::check_matching_sizes("linear_interpolation", "x", x, "y", y);
 
-    typename torsten::return_t<T0, T1, T2>::type yout;
+    typename stan::return_type_t<T0, T1, T2> yout;
     if (xout < x.front()) {
       yout = y.front();
     } else if (xout > x.back()) {
@@ -50,14 +50,14 @@ namespace torsten {
   }
 
   template <typename T0, typename T1, typename T2>
-  std::vector<typename torsten::return_t<T0, T1, T2>::type>
+  std::vector<typename stan::return_type_t<T0, T1, T2>>
   inline linear_interpolation(const std::vector<T0>& xout,
                               const std::vector<T1>& x,
                               const std::vector<T2>& y) {
     stan::math::check_nonzero_size("linear_interpolation", "xout", xout);
     stan::math::check_finite("linear_interpolation", "xout", xout);
 
-    std::vector<typename torsten::return_t<T0, T1, T2>::type> yout(xout.size());
+    std::vector<typename stan::return_type_t<T0, T1, T2>> yout(xout.size());
     std::transform(xout.begin(), xout.end(), yout.begin(),
                    [&x, &y](const T0& xi) { return linear_interpolation(xi, x, y); });
     return yout;

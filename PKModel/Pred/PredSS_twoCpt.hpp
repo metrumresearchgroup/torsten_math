@@ -3,7 +3,7 @@
 
 #include <stan/math/torsten/PKModel/Pred/PolyExp.hpp>
 #include <stan/math/torsten/PKModel/ModelParameters.hpp>
-#include <stan/math/prim/mat/fun/Eigen.hpp>
+#include <stan/math/prim/fun/Eigen.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <iostream>
 #include <vector>

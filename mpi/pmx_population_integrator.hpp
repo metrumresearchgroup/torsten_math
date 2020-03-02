@@ -1,12 +1,13 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_PMX_POPULATION_INTEGRATOR_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_PMX_POPULATION_INTEGRATOR_HPP
 
-#include <stan/math/prim/mat/fun/to_matrix.hpp>
+#include <stan/math/prim/fun/to_matrix.hpp>
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
 #include <stan/math/torsten/mpi/session.hpp>
+#include <stan/math/torsten/mpi/communicator.hpp>
 #include <stan/math/torsten/mpi/my_worker.hpp>
 #include <stan/math/torsten/mpi/dynamic_load.hpp>
-#include <stan/math/torsten/return_type.hpp>
+#include <stan/math/prim/meta/return_type.hpp>
 #include <stan/math/torsten/is_var.hpp>
 #include <algorithm>
 #include <vector>
@@ -57,7 +58,7 @@ namespace torsten {
        */ 
       template <typename Tt, typename T_initial, typename T_param>
       inline
-      Eigen::Matrix<typename torsten::return_t<Tt, T_initial, T_param>::type, // NOLINT
+      Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param>, // NOLINT
                     Eigen::Dynamic, Eigen::Dynamic>
       operator()(const F& f,
                  const std::vector<std::vector<T_initial> >& y0,
@@ -99,7 +100,7 @@ namespace torsten {
        */ 
       template <typename Tt, typename T_initial, typename T_param>
       inline
-      Eigen::Matrix<typename torsten::return_t<Tt, T_initial, T_param>::type, // NOLINT
+      Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param>, // NOLINT
                     Eigen::Dynamic, Eigen::Dynamic>
       operator()(const F& f,
                  const std::vector<std::vector<T_initial> >& y0,
@@ -126,7 +127,7 @@ namespace torsten {
         int rank = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM].rank;
         int size = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM].size;
 
-        using scalar_type = typename torsten::return_t<Tt, T_initial, T_param>::type;
+        using scalar_type = typename stan::return_type_t<Tt, T_initial, T_param>;
 
         vector<MatrixXd> res_d(np);
         Matrix<scalar_type, -1, -1> res(n, ts.size());
@@ -223,7 +224,7 @@ namespace torsten {
        */ 
       template <typename Tt, typename T_initial, typename T_param>
       inline
-      Eigen::Matrix<typename torsten::return_t<Tt, T_initial, T_param>::type, // NOLINT
+      Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param>, // NOLINT
                     Eigen::Dynamic, Eigen::Dynamic>
       operator()(const F& f,
                  const std::vector<std::vector<T_initial> >& y0,
@@ -251,7 +252,7 @@ namespace torsten {
         int rank = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM].rank;
         int size = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM].size;
 
-        using scalar_type = typename torsten::return_t<Tt, T_initial, T_param>::type;
+        using scalar_type = typename stan::return_type_t<Tt, T_initial, T_param>;
 
         vector<MatrixXd> res_d(np);
         Matrix<scalar_type, -1, -1> res(n, ts.size());
@@ -477,7 +478,7 @@ namespace torsten {
        * In sequential run we simply solve the ODEs one-by-one.
        */
       template <typename Tt, typename T_initial, typename T_param>
-      inline Eigen::Matrix<typename torsten::return_t<Tt, T_initial, T_param>::type, // NOLINT
+      inline Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param>, // NOLINT
                            Eigen::Dynamic, Eigen::Dynamic>
       operator()(const F& f,
                  const std::vector<std::vector<T_initial> >& y0,
@@ -505,7 +506,7 @@ namespace torsten {
 
         static torsten::dsolve::PMXOdeService<Ode> serv(n, m);
 
-        using scalar_type = typename torsten::return_t<Tt, T_initial, T_param>::type;
+        using scalar_type = typename stan::return_type_t<Tt, T_initial, T_param>;
         Matrix<scalar_type, Dynamic, Dynamic> res(n, ts.size());
 
         typename std::vector<Tt>::const_iterator iter = ts.begin();
@@ -528,7 +529,7 @@ namespace torsten {
        * In sequential run we simply solve the ODEs one-by-one.
        */
       template <typename Tt, typename T_initial, typename T_param>
-      inline Eigen::Matrix<typename torsten::return_t<Tt, T_initial, T_param>::type, // NOLINT
+      inline Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param>, // NOLINT
                            Eigen::Dynamic, Eigen::Dynamic>
       operator()(const F& f,
                  const std::vector<std::vector<T_initial> >& y0,
@@ -557,7 +558,7 @@ namespace torsten {
 
         static torsten::dsolve::PMXOdeService<Ode> serv(n, m);
 
-        using scalar_type = typename torsten::return_t<Tt, T_initial, T_param>::type;
+        using scalar_type = typename stan::return_type_t<Tt, T_initial, T_param>;
         Matrix<scalar_type, Dynamic, Dynamic> res(n, ts.size());
 
         vector<T_param> theta_i(m);

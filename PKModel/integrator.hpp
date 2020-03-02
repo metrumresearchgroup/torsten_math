@@ -2,8 +2,8 @@
 #define STAN_MATH_PMETRICS_PKMODEL_INTEGRATOR_HPP
 
 #include <Eigen/Dense>
-#include <stan/math/prim/arr/functor/integrate_ode_rk45.hpp>
-#include <stan/math/rev/mat/functor/integrate_ode_bdf.hpp>
+#include <stan/math/prim/functor/integrate_ode_rk45.hpp>
+#include <stan/math/rev/functor/integrate_ode_bdf.hpp>
 #include <iostream>
 #include <string>
 #include <vector>

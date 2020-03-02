@@ -6,10 +6,10 @@
 #include <stan/math/torsten/PKModel/functors/SS_system.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_general.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_void.hpp>
-#include <stan/math/rev/mat/functor/algebra_solver.hpp>
-#include <stan/math/rev/mat/functor/algebra_system.hpp>
-#include <stan/math/prim/mat/fun/to_vector.hpp>
-#include <stan/math/prim/mat/fun/to_array_1d.hpp>
+#include <stan/math/rev/functor/algebra_solver_powell.hpp>
+#include <stan/math/rev/functor/algebra_system.hpp>
+#include <stan/math/prim/fun/to_vector.hpp>
+#include <stan/math/prim/fun/to_array_1d.hpp>
 #include <vector>
 #include <iostream>
 #include <string>
@@ -77,7 +77,7 @@ struct PredSS_general {
     using Eigen::Dynamic;
     using Eigen::VectorXd;
     using std::vector;
-    using stan::math::algebra_solver;
+    using stan::math::algebra_solver_powell;
     using stan::math::to_vector;
 
     typedef typename boost::math::tools::promote_args<T_ii,
@@ -111,7 +111,7 @@ struct PredSS_general {
       init_dbl(cmt - 1) = amt;
       y = Pred1(ii_dbl, unpromote(parameter), init_dbl, x_r);
       x_r.push_back(amt);
-      pred = algebra_solver(system, y,
+      pred = algebra_solver_powell(system, y,
                             to_vector(parameter.get_RealParameters(false)),
                             x_r, x_i,
                             0, rel_tol, f_tol, max_num_steps);
@@ -122,7 +122,7 @@ struct PredSS_general {
       // compute initial guess
       y = Pred1(ii_dbl, unpromote(parameter), init_dbl, x_r);
       x_r.push_back(amt);
-      pred = algebra_solver(system, y,
+      pred = algebra_solver_powell(system, y,
                             to_vector(parameter.get_RealParameters(false)),
                             x_r, x_i,
                             0, rel_tol, 1e-3, max_num_steps);  // FIX ME
@@ -132,7 +132,7 @@ struct PredSS_general {
       y = Pred1(100.0, unpromote(parameter), init_dbl, x_r);
 
       x_r.push_back(amt);
-      pred = algebra_solver(system, y,
+      pred = algebra_solver_powell(system, y,
                             to_vector(parameter.get_RealParameters(false)),
                             x_r, x_i,
                             0, rel_tol, f_tol, max_num_steps);
@@ -164,7 +164,7 @@ struct PredSS_general {
     using Eigen::Dynamic;
     using Eigen::VectorXd;
     using std::vector;
-    using stan::math::algebra_solver;
+    using stan::math::algebra_solver_powell;
     using stan::math::to_vector;
     using stan::math::invalid_argument;
 
@@ -204,20 +204,20 @@ struct PredSS_general {
       init_dbl(cmt - 1) = unpromote(amt);
       y = Pred1(ii_dbl, unpromote(parameter), init_dbl, x_r);
 
-      pred = algebra_solver(system, y, parms, x_r, x_i,
+      pred = algebra_solver_powell(system, y, parms, x_r, x_i,
                             0, rel_tol, f_tol, max_num_steps);
     }  else if (ii > 0) {  // multiple truncated infusions
       // compute initial guess
       x_r[cmt - 1] = rate;
       y = Pred1(ii_dbl, unpromote(parameter), init_dbl, x_r);
 
-      pred = algebra_solver(system, y, parms, x_r, x_i,
+      pred = algebra_solver_powell(system, y, parms, x_r, x_i,
                             0, rel_tol, 1e-3, max_num_steps);  // use ftol
     } else {  // constant infusion
       x_r[cmt - 1] = rate;
       y = Pred1(100.0, unpromote(parameter), init_dbl, x_r);
 
-      pred = algebra_solver(system, y, parms, x_r, x_i,
+      pred = algebra_solver_powell(system, y, parms, x_r, x_i,
                             0, rel_tol, f_tol, max_num_steps);
     }
 

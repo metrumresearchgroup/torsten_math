@@ -1,8 +1,9 @@
 #ifndef STAN_MATH_TORSTEN_EVENTS_MANAGER_HPP
 #define STAN_MATH_TORSTEN_EVENTS_MANAGER_HPP
 
-#include <stan/math/torsten/PKModel/PKModel.hpp>
+// #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
+#include <stan/math/torsten/event_history.hpp>
 #include <stan/math/torsten/events_record.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <Eigen/Dense>
@@ -23,7 +24,7 @@ namespace torsten {
     using T_par    = typename ER::T_par;
     using T_par_rate = typename ER::T_par_rate;
     using T_par_ii   = typename ER::T_par_ii;
-    using T4 = typename stan::math::value_type<T4_container>::type;
+    using T4 = typename stan::value_type<T4_container>::type;
 
     EventHistory<T0, T1, T2, T3, T4_container, T5, T6> event_his;
 

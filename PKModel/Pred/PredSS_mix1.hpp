@@ -6,9 +6,9 @@
 #include <stan/math/torsten/PKModel/functors/SS_system.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_oneCpt.hpp>
 #include <stan/math/torsten/PKModel/Pred/PredSS_oneCpt.hpp>
-#include <stan/math/rev/mat/functor/algebra_solver.hpp>
-#include <stan/math/prim/mat/fun/to_vector.hpp>
-#include <stan/math/prim/mat/fun/to_array_1d.hpp>
+#include <stan/math/rev/functor/algebra_solver_powell.hpp>
+#include <stan/math/prim/fun/to_vector.hpp>
+#include <stan/math/prim/fun/to_array_1d.hpp>
 #include <vector>
 #include <iostream>
 #include <string>
@@ -76,7 +76,7 @@ struct PredSS_mix1 {
     using Eigen::Dynamic;
     using Eigen::VectorXd;
     using std::vector;
-    using stan::math::algebra_solver;
+    using stan::math::algebra_solver_powell;
     using stan::math::to_vector;
     using stan::math::to_array_1d;
 
@@ -136,7 +136,7 @@ struct PredSS_mix1 {
                                         x_r, x_i)[0]);
 
       x_r.push_back(amt);
-      predPD = algebra_solver(system, predPD_guess,
+      predPD = algebra_solver_powell(system, predPD_guess,
                               to_vector(theta.get_RealParameters(false)),
                               x_r, x_i,
                               0, rel_tol, f_tol, max_num_steps);
@@ -160,7 +160,7 @@ struct PredSS_mix1 {
                                          x_r, x_i)[0]);
 
       x_r.push_back(amt);  // needed?
-      predPD = algebra_solver(system, predPD_guess,
+      predPD = algebra_solver_powell(system, predPD_guess,
                             to_vector(theta.get_RealParameters(false)),
                             x_r, x_i,
                             0, rel_tol, f_tol, max_num_steps);
@@ -179,7 +179,7 @@ struct PredSS_mix1 {
                                          x_r, x_i)[0]);
 
       x_r.push_back(amt);
-      predPD = algebra_solver(system, predPD_guess,
+      predPD = algebra_solver_powell(system, predPD_guess,
                               to_vector(theta.get_RealParameters(false)),
                               x_r, x_i,
                               0, rel_tol, f_tol, max_num_steps);
@@ -215,7 +215,7 @@ struct PredSS_mix1 {
     using Eigen::Dynamic;
     using Eigen::VectorXd;
     using std::vector;
-    using stan::math::algebra_solver;
+    using stan::math::algebra_solver_powell;
     using stan::math::to_vector;
     using stan::math::to_array_1d;
     using stan::math::invalid_argument;
@@ -269,7 +269,7 @@ struct PredSS_mix1 {
                                         unpromote(theta.get_RealParameters(false)),
                                         x_r, x_i)[0]);
 
-      predPD = algebra_solver(system, predPD_guess,
+      predPD = algebra_solver_powell(system, predPD_guess,
                               to_vector(theta.get_RealParameters(false)),
                               x_r, x_i,
                               0, rel_tol, f_tol, max_num_steps);
@@ -289,7 +289,7 @@ struct PredSS_mix1 {
                                          unpromote(theta.get_RealParameters(false)),
                                          x_r, x_i)[0]);
 
-      predPD = algebra_solver(system, predPD_guess,
+      predPD = algebra_solver_powell(system, predPD_guess,
                               to_vector(theta.get_RealParameters(false)),
                               x_r, x_i,
                               0, rel_tol, f_tol, max_num_steps);

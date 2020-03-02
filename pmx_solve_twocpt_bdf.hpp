@@ -62,7 +62,7 @@ namespace torsten {
  */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
-Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3, T4, T5, T6>::type,
+Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
                Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_twocpt_bdf(const F& f,
                      const int nOde,
@@ -88,7 +88,7 @@ pmx_solve_twocpt_bdf(const F& f,
   using Eigen::Dynamic;
   using Eigen::Matrix;
   using boost::math::tools::promote_args;
-  using refactor::PKRec;
+  using torsten::PKRec;
 
   // check arguments
   static const char* function("pmx_solve_twocpt_bdf");
@@ -102,7 +102,7 @@ pmx_solve_twocpt_bdf(const F& f,
 
   typedef mix2_functor<F> F0;
 
-  const int &nPK = refactor::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  const int &nPK = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
   
   PMXOdeIntegrator<StanBdf> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
 
@@ -125,7 +125,7 @@ pmx_solve_twocpt_bdf(const F& f,
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
-  using model_type = refactor::PkTwoCptOdeModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
+  using model_type = torsten::PkTwoCptOdeModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
   EventSolver<model_type, PMXOdeIntegrator<StanBdf>&> pr;
   pr.pred(0, events_rec, pred, integrator, f, nOde);
   return pred;
@@ -142,10 +142,10 @@ pmx_solve_twocpt_bdf(const F& f,
             typename
             std::enable_if_t<
               !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
-  Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3,
+  Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
                                             typename torsten::value_type<T_par>::type,
                                             typename torsten::value_type<T_biovar>::type,
-                                            typename torsten::value_type<T_tlag>::type>::type,
+                                            typename torsten::value_type<T_tlag>::type>,
                  Eigen::Dynamic, Eigen::Dynamic>
   pmx_solve_twocpt_bdf(const F& f,
                        const int nOde,
@@ -214,10 +214,10 @@ mixOde2CptModel_bdf(const F& f,
             typename
             std::enable_if_t<
               !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
-  Eigen::Matrix <typename torsten::return_t<T0, T1, T2, T3,
+  Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
                                             typename torsten::value_type<T_par>::type,
                                             typename torsten::value_type<T_biovar>::type,
-                                            typename torsten::value_type<T_tlag>::type>::type,
+                                            typename torsten::value_type<T_tlag>::type>,
                  Eigen::Dynamic, Eigen::Dynamic>
   mixOde2CptModel_bdf(const F& f,
                         const int nOde,

@@ -1,8 +1,10 @@
 #ifndef STAN_MATH_TORSTEN_NONMEN_EVENTS_RECORD_HPP
 #define STAN_MATH_TORSTEN_NONMEN_EVENTS_RECORD_HPP
 
+#include <stan/math/prim/fun/value_of.hpp>
+#include <stan/math/rev/fun/value_of.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
-#include <stan/math/torsten/return_type.hpp>
+#include <stan/math/prim/meta/return_type.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <Eigen/Dense>
 #include <numeric>
@@ -25,11 +27,11 @@ namespace torsten {
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4_container, typename T5, typename T6>
 struct NONMENEventsRecord {
-  using T4 = typename stan::math::value_type<T4_container>::type;
-  using T_scalar = typename torsten::return_t<T0, T1, T2, T3, T4, T5, T6>::type;
-  using T_time = typename torsten::return_t<T0, T1, T3, T6, T2>::type;
-  using T_rate = typename torsten::return_t<T2, T5>::type;
-  using T_amt = typename torsten::return_t<T1, T5>::type;
+  using T4 = typename stan::value_type<T4_container>::type;
+  using T_scalar = typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>;
+  using T_time = typename stan::return_type_t<T0, T1, T3, T6, T2>;
+  using T_rate = typename stan::return_type_t<T2, T5>;
+  using T_amt = typename stan::return_type_t<T1, T5>;
   using T_par = T4;
   using T_par_rate = T2;
   using T_par_ii = T3;

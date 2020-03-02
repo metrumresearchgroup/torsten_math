@@ -6,11 +6,11 @@
 #include <stan/math/torsten/pmx_ode_integrator.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
-#include <stan/math/prim/scal/err/check_positive_finite.hpp>
-#include <stan/math/prim/scal/err/check_finite.hpp>
-#include <stan/math/prim/scal/err/check_nonnegative.hpp>
+#include <stan/math/prim/err/check_positive_finite.hpp>
+#include <stan/math/prim/err/check_finite.hpp>
+#include <stan/math/prim/err/check_nonnegative.hpp>
 
-namespace refactor {
+namespace torsten {
 
   using boost::math::tools::promote_args;
 
@@ -64,7 +64,7 @@ namespace refactor {
   template<typename T_time, typename T_init, typename T_rate, typename T_par>
   class PMXOneCptModel {
     const T_time &t0_;
-    const refactor::PKRec<T_init>& y0_;
+    const torsten::PKRec<T_init>& y0_;
     const std::vector<T_rate> &rate_;
     const T_par &CL_;
     const T_par &V2_;
@@ -96,11 +96,11 @@ namespace refactor {
    * @param ka absorption
    */
     PMXOneCptModel(const T_time& t0,
-                  const refactor::PKRec <T_init>& y0,
-                  const std::vector<T_rate> &rate,
-                  const T_par& CL,
-                  const T_par& V2,
-                  const T_par& ka) :
+                   const torsten::PKRec<T_init>& y0,
+                   const std::vector<T_rate> &rate,
+                   const T_par& CL,
+                   const T_par& V2,
+                   const T_par& ka) :
       t0_(t0),
       y0_(y0),
       rate_(rate),
@@ -221,7 +221,7 @@ namespace refactor {
    * One-compartment PK model get methods
    */
     const T_time              & t0()      const { return t0_;    }
-    const PKRec<T_init>       & y0()      const { return y0_;    }
+    const torsten::PKRec<T_init>       & y0()      const { return y0_;    }
     const std::vector<T_rate> & rate()    const { return rate_;  }
     const std::vector<T_par>  & alpha()   const { return alpha_; }
     const std::vector<T_par>  & par()     const { return par_;   }
@@ -240,10 +240,10 @@ namespace refactor {
       using Eigen::Dynamic;
 
       T_time dt = t_next - t0_;
-      Matrix<scalar_type, -1, 1> pred = PKRec<scalar_type>::Zero(Ncmt);
+      Matrix<scalar_type, -1, 1> pred = torsten::PKRec<scalar_type>::Zero(Ncmt);
 
-      typename torsten::return_t<T_par, T_time>::type exp1 = exp(-k10_ * dt);
-      typename torsten::return_t<T_par, T_time>::type exp2 = exp(-ka_ * dt);
+      typename stan::return_type_t<T_par, T_time> exp1 = exp(-k10_ * dt);
+      typename stan::return_type_t<T_par, T_time> exp2 = exp(-ka_ * dt);
 
       // contribution from cpt 1 bolus dose
       pred(1) += y0_[1] * exp1;
@@ -310,7 +310,7 @@ namespace refactor {
           break;
         }
       } else if (ii > 0) {  // multiple truncated infusions
-        typename torsten::return_t<T_amt, T_r>::type dt_infus = amt/rate;
+        typename stan::return_type_t<T_amt, T_r> dt_infus = amt/rate;
         static const char* function("Steady State Event");
         torsten::check_mti(amt, stan::math::value_of(dt_infus), ii, function);
 

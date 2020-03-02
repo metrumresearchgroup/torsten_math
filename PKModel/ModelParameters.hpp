@@ -1,7 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_PKMODEL_MODELPARAMETERS_HPP
 #define STAN_MATH_TORSTEN_PKMODEL_MODELPARAMETERS_HPP
 
-#include <stan/math/prim/mat/fun/to_array_1d.hpp>
+#include <stan/math/prim/fun/to_array_1d.hpp>
 #include <stan/math/torsten/event_history.hpp>
 #include <stan/math/torsten/PKModel/ExtractVector.hpp>
 #include <stan/math/torsten/PKModel/SearchReal.hpp>
@@ -112,7 +112,7 @@ struct ModelParameters {
  */
 template<typename T_time, typename T4_container, typename T5, typename T6>
 struct ModelParameterHistory {
-  using T4 = typename stan::math::value_type<T4_container>::type;
+  using T4 = typename stan::value_type<T4_container>::type;
   using Param = std::pair<double, std::array<int, 3> >;
 
   static const bool has_matrix_param;

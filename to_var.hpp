@@ -1,8 +1,10 @@
 #ifndef STAN_MATH_TORSTEN_TO_VAR
 #define STAN_MATH_TORSTEN_TO_VAR
 
-#include <stan/math/rev/mat/fun/typedefs.hpp>
-#include <stan/math/prim/arr/fun/value_of.hpp>
+#include <stan/math/rev/fun/typedefs.hpp>
+#include <stan/math/prim/fun/value_of.hpp>
+#include <stan/math/rev/fun/value_of.hpp>
+#include <stan/math/rev/fun/to_var.hpp>
 #include <stan/math/rev/core/var.hpp>
 #include <iostream>
 #include <sstream>

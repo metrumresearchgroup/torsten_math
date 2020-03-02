@@ -1,16 +1,20 @@
 #ifndef STAN_MATH_TORSTEN_TWOCPT_MODEL_HPP
 #define STAN_MATH_TORSTEN_TWOCPT_MODEL_HPP
 
+#include <stan/math/rev/fun/sqrt.hpp>
+#include <stan/math/prim/fun/sqrt.hpp>
+#include <stan/math/rev/fun/exp.hpp>
+#include <stan/math/prim/fun/exp.hpp>
 #include <stan/math/torsten/PKModel/functors/check_mti.hpp>
 #include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/torsten/pmx_ode_integrator.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
-#include <stan/math/prim/scal/err/check_positive_finite.hpp>
-#include <stan/math/prim/scal/err/check_finite.hpp>
-#include <stan/math/prim/scal/err/check_nonnegative.hpp>
+#include <stan/math/prim/err/check_positive_finite.hpp>
+#include <stan/math/prim/err/check_finite.hpp>
+#include <stan/math/prim/err/check_nonnegative.hpp>
 
-namespace refactor {
+namespace torsten {
 
   using boost::math::tools::promote_args;
   using torsten::PMXOdeIntegrator;
@@ -75,7 +79,7 @@ namespace refactor {
   template<typename T_time, typename T_init, typename T_rate, typename T_par>
   class PMXTwoCptModel {
     const T_time &t0_;
-    const refactor::PKRec<T_init>& y0_;
+    const torsten::PKRec<T_init>& y0_;
     const std::vector<T_rate> &rate_;
     const T_par &CL_;
     const T_par &Q_;
@@ -86,7 +90,7 @@ namespace refactor {
     const T_par k12_;
     const T_par k21_;
     const T_par ksum_;
-    const std::vector<T_par> alpha_;
+    std::vector<T_par> alpha_;
     const std::vector<T_par> par_;
 
   public:
@@ -114,7 +118,7 @@ namespace refactor {
    * @param ka absorption
    */
     PMXTwoCptModel(const T_time& t0,
-                  const refactor::PKRec<T_init>& y0,
+                  const torsten::PKRec<T_init>& y0,
                   const std::vector<T_rate> &rate,
                   const T_par& CL,
                   const T_par& Q,
@@ -133,8 +137,8 @@ namespace refactor {
       k12_(Q_ / V2_),
       k21_(Q_ / V3_),
       ksum_(k10_ + k12_ + k21_),
-      alpha_{0.5 * (ksum_ + sqrt(ksum_ * ksum_ - 4 * k10_ * k21_)),
-        0.5 * (ksum_ - sqrt(ksum_ * ksum_ - 4 * k10_ * k21_)),
+      alpha_{0.5 * (ksum_ + stan::math::sqrt(ksum_ * ksum_ - 4 * k10_ * k21_)),
+        0.5 * (ksum_ - stan::math::sqrt(ksum_ * ksum_ - 4 * k10_ * k21_)),
         ka_},
       par_{CL_, Q_, V2_, V3_, ka_}
     {
@@ -251,7 +255,7 @@ namespace refactor {
    * two-compartment PK model get methods
    */
     const T_time              & t0()      const { return t0_;    }
-    const PKRec<T_init>    & y0()         const { return y0_;    }
+    const torsten::PKRec<T_init>    & y0()         const { return y0_;    }
     const std::vector<T_rate> & rate()    const { return rate_;  }
     const T_par               & CL()      const { return CL_;    }
     const T_par               & Q()       const { return Q_;     }
@@ -275,11 +279,12 @@ namespace refactor {
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using std::vector;
+      using stan::math::exp;
 
       T_time dt = t_next - t0_;
 
       std::vector<scalar_type> a(Ncmt, 0);
-      Matrix<scalar_type, -1, 1> pred = PKRec<scalar_type>::Zero(Ncmt);
+      Matrix<scalar_type, -1, 1> pred = torsten::PKRec<scalar_type>::Zero(Ncmt);
 
       // contribution from cpt 0
       {
@@ -359,6 +364,7 @@ namespace refactor {
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using std::vector;
+      using stan::math::exp;
 
       using ss_scalar_type = typename stan::return_type<T_par, T_amt, T_r, T_ii>::type;
 
@@ -402,7 +408,7 @@ namespace refactor {
           break;
         }
       } else if (ii > 0) {  // multiple truncated infusions
-        typename torsten::return_t<T_amt, T_r>::type dt_infus = amt/rate;
+        typename stan::return_type_t<T_amt, T_r> dt_infus = amt/rate;
         static const char* function("Steady State Event");
         torsten::check_mti(amt, stan::math::value_of(dt_infus), ii, function);
         switch (cmt) {
@@ -495,7 +501,7 @@ namespace refactor {
     }
 
     template<typename T1, typename T2>
-    inline typename torsten::return_t<T1, T2, T_par>::type
+    inline typename stan::return_type_t<T1, T2, T_par>
     trunc_infus_ss(const T_par& p, const T1& dt, const T2& ii) const {
       return (1 - exp(-p * dt)) * exp(-p * (ii - dt)) / (1 - exp(-p * ii)) / p;
     }

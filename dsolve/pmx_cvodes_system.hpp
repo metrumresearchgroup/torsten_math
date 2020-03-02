@@ -1,12 +1,12 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_CVODES_SYSTEM_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_CVODES_SYSTEM_HPP
 
-#include <stan/math/prim/arr/fun/value_of.hpp>
-#include <stan/math/prim/arr/fun/dot_self.hpp>
-#include <stan/math/prim/scal/err/system_error.hpp>
-#include <stan/math/prim/scal/meta/return_type.hpp>
-#include <stan/math/prim/mat/fun/typedefs.hpp>
-#include <stan/math/rev/mat/fun/typedefs.hpp>
+#include <stan/math/prim/fun/value_of.hpp>
+#include <stan/math/prim/fun/dot_self.hpp>
+#include <stan/math/prim/err/system_error.hpp>
+#include <stan/math/prim/meta/return_type.hpp>
+#include <stan/math/prim/fun/typedefs.hpp>
+#include <stan/math/rev/fun/typedefs.hpp>
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
 

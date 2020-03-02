@@ -32,7 +32,7 @@ namespace torsten {
    * (individual i, time j, equation k)
    **/
   template <typename F, typename Tt, typename T_initial, typename T_param>
-  Eigen::Matrix<typename torsten::return_t<Tt, T_initial, T_param>::type,
+  Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param>,
                 Eigen::Dynamic, Eigen::Dynamic>
   pmx_integrate_ode_group_adams(const F& f,
                                 const std::vector<std::vector<T_initial> >& y0,
@@ -84,7 +84,7 @@ namespace torsten {
    * (individual i, time j, equation k)
    **/
   template <typename F, typename Tt, typename T_initial, typename T_param>
-  Eigen::Matrix<typename torsten::return_t<Tt, T_initial, T_param>::type,
+  Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param>,
                 Eigen::Dynamic, Eigen::Dynamic>
   pmx_integrate_ode_group_adams(const F& f,
                                 const std::vector<std::vector<T_initial> >& y0,

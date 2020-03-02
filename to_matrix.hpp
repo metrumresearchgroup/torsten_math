@@ -1,7 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_TO_MATRIX_HPP
 #define STAN_MATH_TORSTEN_TO_MATRIX_HPP
 
-#include <stan/math/prim/mat/fun/to_matrix.hpp>
+#include <stan/math/prim/fun/to_matrix.hpp>
 #include <nvector/nvector_serial.h>
 
 namespace torsten {

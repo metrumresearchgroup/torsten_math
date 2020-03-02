@@ -1,11 +1,12 @@
 #ifndef STAN_MATH_TORSTEN_MPI_DYNAMIC_LOAD_HPP
 #define STAN_MATH_TORSTEN_MPI_DYNAMIC_LOAD_HPP
 
+#include <stan/math/torsten/mpi/communicator.hpp>
 #include <stan/math/torsten/dsolve/group_functor.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
 #include <stan/math/torsten/is_var.hpp>
-#include <stan/math/prim/scal/err/check_greater.hpp>
-#include <stan/math/prim/scal/err/check_less.hpp>
+#include <stan/math/prim/err/check_greater.hpp>
+#include <stan/math/prim/err/check_less.hpp>
 #include <vector>
 
 #ifdef TORSTEN_MPI_DYN
@@ -298,7 +299,7 @@ namespace torsten {
        * convert recved data to var results.
        */
       template<typename Tt, typename Ty, typename Tp>
-      inline void complete_recv(Eigen::Matrix<typename torsten::return_t<Tt, Ty, Tp>::type, -1, -1>& res,
+      inline void complete_recv(Eigen::Matrix<typename stan::return_type_t<Tt, Ty, Tp>, -1, -1>& res,
                                 std::vector<Eigen::MatrixXd>& res_d,
                                 const std::vector<std::vector<Ty> >& y0,
                                 const std::vector<int>& len,
@@ -318,7 +319,7 @@ namespace torsten {
             if (flag) {
               finished++;
               auto its = ts_range(index, len, ts);
-              Eigen::Matrix<typename torsten::return_t<Tt, Ty, Tp>::type, -1, -1>::
+              Eigen::Matrix<typename stan::return_type_t<Tt, Ty, Tp>, -1, -1>::
                 Map(&res(n * std::distance(ts.begin(), its[0])), n, len[index]) =
                 torsten::precomputed_gradients(res_d[index],
                                                dsolve::pmx_ode_vars<Tt, Ty, Tp>(y0[index], theta[index], its[0], its[1]));
@@ -332,7 +333,7 @@ namespace torsten {
        * available tasks to vacant slaves.
        */
       template<typename F, typename Tt, typename Ty, typename Tp>
-      inline Eigen::Matrix<typename torsten::return_t<Tt, Ty, Tp>::type, -1, -1>
+      inline Eigen::Matrix<typename stan::return_type_t<Tt, Ty, Tp>, -1, -1>
       master(const F& f,
              int integ_id,
              const std::vector<std::vector<Ty> >& y0,
@@ -346,7 +347,7 @@ namespace torsten {
         using Eigen::MatrixXd;
         using Eigen::Matrix;
 
-        using scalar_t = typename torsten::return_t<Tt, Ty, Tp>::type;
+        using scalar_t = typename stan::return_type_t<Tt, Ty, Tp>;
 
         static const char* caller = "PMXDynamicLoad::master";
         stan::math::check_less(caller, "MPI comm rank", pmx_comm.rank, 1);
