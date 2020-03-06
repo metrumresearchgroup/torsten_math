@@ -6,7 +6,7 @@
 #include <stan/math/prim/functor/integrate_ode_rk45.hpp>
 #include <stan/math/torsten/ftwoCpt.hpp>
 #include <stan/math/rev/core.hpp>
-#include <test/unit/math/torsten/mixSolver/f2CptMix.hpp>
+#include <stan/math/torsten/test/unit/mixSolver/f2CptMix.hpp>
 #include <test/unit/math/rev/functor/util.hpp>
 #include <test/unit/util.hpp>
 

@@ -6,7 +6,7 @@
 #include <stan/math/torsten/dsolve/pmx_cvodes_integrator.hpp>
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
 #include <stan/math/torsten/dsolve/cvodes_rhs.hpp>
-#include <test/unit/math/torsten/pmx_ode_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/pmx_ode_test_fixture.hpp>
 #include <cvodes/cvodes.h>
 #include <cvodes/cvodes_direct.h>
 #include <sunmatrix/sunmatrix_dense.h>

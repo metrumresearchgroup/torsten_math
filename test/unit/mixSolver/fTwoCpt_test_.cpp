@@ -1,7 +1,7 @@
 //  // FIX ME - more specific
 #include <gtest/gtest.h>
-#include <test/unit/math/torsten/expect_near_matrix_eq.hpp>
-#include <test/unit/math/torsten/expect_matrix_eq.hpp>
+#include <stan/math/torsten/test/unit/expect_near_matrix_eq.hpp>
+#include <stan/math/torsten/test/unit/expect_matrix_eq.hpp>
 
 TEST(Torsten, fTwoCpt) {
   double dt = 0.25;

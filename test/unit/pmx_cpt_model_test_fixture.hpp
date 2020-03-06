@@ -8,7 +8,7 @@
 #include <stan/math/torsten/pmx_twocpt_model.hpp>
 #include <stan/math/torsten/pmx_linode_model.hpp>
 #include <stan/math/torsten/pmx_ode_model.hpp>
-#include <test/unit/math/torsten/pmx_ode_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/pmx_ode_test_fixture.hpp>
 #include <iostream>
 #include <sstream>
 #include <vector>

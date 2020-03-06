@@ -4,8 +4,8 @@
 #include <test/unit/math/rev/fun/util.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_adams.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_bdf.hpp>
-#include <test/unit/math/torsten/pmx_ode_test_fixture.hpp>
-#include <test/unit/math/torsten/test_util.hpp>
+#include <stan/math/torsten/test/unit/pmx_ode_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/test_util.hpp>
 #include <stan/math/rev/functor/integrate_ode_bdf.hpp>
 #include <nvector/nvector_serial.h>
 #include <stan/math/torsten/mpi/envionment.hpp>
@@ -47,7 +47,7 @@ TEST_F(TorstenOdeTest_chem, cvodes_ivp_system_bdf_mpi) {
   vector<vector<int> > x_i_m (np, x_i);
 
   vector<vector<double> > y = integrate_ode_bdf(f, y0, t0, ts, theta , x_r, x_i); // NOLINT
-  Eigen::MatrixXd y_m = pmx_integrate_ode_group_bdf(f, y0_m, t0, len, ts_m, theta_m , x_r_m, x_i_m);
+  Eigen::MatrixXd y_m = pmx_integrate_ode_group_bdf(f, y0_m, t0, len, ts_m, theta_m, x_r_m, x_i_m);
 
   EXPECT_EQ(y_m.cols(), ts_m.size());
   int icol = 0;
@@ -454,10 +454,10 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_rank_exception_data_only) {
   theta_m[id][1] = -1.0E+30;
   theta_m[id][4] = -1.0E+30;
   EXPECT_THROW(torsten::pmx_integrate_ode_group_bdf(f, y0_m, t0, len, ts_m, theta_m , x_r_m, x_i_m,
-                                                     0, 1e-6, 1e-6, 1e2),
+                                                    1e-6, 1e-6, 1e2),
                std::exception);
   EXPECT_THROW(torsten::pmx_integrate_ode_group_adams(f, y0_m, t0, len, ts_m, theta_m , x_r_m, x_i_m,
-                                                       0, 1e-6, 1e-6, 1e2),
+                                                      1e-6, 1e-6, 1e2),
                std::exception);
 #ifdef TORSTEN_MPI
   MPI_Barrier(comm);
@@ -491,7 +491,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_rank_exception_data_only) {
   id = 4;
   theta_m[id][0] = std::numeric_limits<double>::infinity();
   EXPECT_THROW(torsten::pmx_integrate_ode_group_bdf(f, y0_m, t0, len, ts_m, theta_m , x_r_m, x_i_m,
-                                                     0, 1e-6, 1e-6, 1e2),
+                                                    1e-6, 1e-6, 1e2),
                std::exception);
 #ifdef TORSTEN_MPI
   MPI_Barrier(comm);
@@ -538,10 +538,10 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_rank_exception_par_var) {
   theta_m_v[id][1] = -1.0E+30;
   theta_m_v[id][4] = -1.0E+30;
   EXPECT_THROW(torsten::pmx_integrate_ode_group_bdf(f, y0_m, t0, len, ts_m, theta_m_v , x_r_m, x_i_m,
-                                                     0, 1e-6, 1e-6, 1e2),
+                                                    1e-6, 1e-6, 1e2),
                std::exception);
   EXPECT_THROW(torsten::pmx_integrate_ode_group_adams(f, y0_m, t0, len, ts_m, theta_m_v , x_r_m, x_i_m,
-                                                       0, 1e-6, 1e-6, 1e2),
+                                                      1e-6, 1e-6, 1e2),
                std::exception);
 #ifdef TORSTEN_MPI
   MPI_Barrier(comm);
@@ -575,7 +575,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_rank_exception_par_var) {
   id = 4;
   theta_m_v[id][0] = std::numeric_limits<double>::infinity();
   EXPECT_THROW(torsten::pmx_integrate_ode_group_bdf(f, y0_m, t0, len, ts_m, theta_m_v , x_r_m, x_i_m,
-                                                     0, 1e-6, 1e-6, 1e2),
+                                                    1e-6, 1e-6, 1e2),
                std::exception);
 #ifdef TORSTEN_MPI
   MPI_Barrier(comm);

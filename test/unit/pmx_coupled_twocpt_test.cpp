@@ -1,12 +1,11 @@
 #include <stan/math/rev/core.hpp>
 #include <stan/math/torsten/pmx_solve_bdf.hpp>
 #include <stan/math/torsten/pmx_solve_rk45.hpp>
-#include <test/unit/math/torsten/test_util.hpp>
+#include <stan/math/torsten/test/unit/test_util.hpp>
 #include <gtest/gtest.h>
-#include <test/unit/math/torsten/util_mixOdeCptModel.hpp>
-#include <test/unit/math/torsten/expect_near_matrix_eq.hpp>
-#include <test/unit/math/torsten/pmx_coupled_model_fixture.hpp>
-#include <test/unit/math/torsten/test_util.hpp>
+#include <stan/math/torsten/test/unit/util_mixOdeCptModel.hpp>
+#include <stan/math/torsten/test/unit/expect_near_matrix_eq.hpp>
+#include <stan/math/torsten/test/unit/pmx_coupled_model_fixture.hpp>
 
 using std::vector;
 using Eigen::Matrix;
@@ -59,7 +58,6 @@ TEST_F(TorstenCoupledTwoCptTest, single_bolus) {
     x_rk45 = torsten::pmx_solve_twocpt_rk45(f, nPD,
                                   time, amt, rate, ii, evid, cmt, addl, ss,
                                   parameters, biovar, tlag,
-                                  0,
                                   rel_tol, abs_tol, max_num_steps);
 
   rel_tol = 1e-10, abs_tol = 1e-10;
@@ -68,7 +66,6 @@ TEST_F(TorstenCoupledTwoCptTest, single_bolus) {
     x_bdf = torsten::pmx_solve_twocpt_bdf(f, nPD,
                                 time, amt, rate, ii, evid, cmt, addl, ss,
                                 parameters, biovar, tlag,
-                                0,
                                 rel_tol, abs_tol, max_num_steps);
 
   // Solution from mrgsolve (uses an LSODA integrator)
@@ -137,7 +134,6 @@ TEST_F(TorstenCoupledTwoCptTest, truncated_infusion) {
     x_rk45 = torsten::pmx_solve_twocpt_rk45(f, nPD,
                                   time, amt, rate, ii, evid, cmt, addl, ss,
                                   parameters, biovar, tlag,
-                                  0,
                                   rel_tol, abs_tol, max_num_steps);
 
   rel_tol = 1e-10, abs_tol = 1e-10;
@@ -146,7 +142,6 @@ TEST_F(TorstenCoupledTwoCptTest, truncated_infusion) {
     x_bdf = torsten::pmx_solve_twocpt_bdf(f, nPD,
                                 time, amt, rate, ii, evid, cmt, addl, ss,
                                 parameters, biovar, tlag,
-                                0,
                                 rel_tol, abs_tol, max_num_steps);
 
   // Solution from mrgsolve (uses an LSODA integrator)
@@ -202,7 +197,6 @@ TEST_F(TorstenCoupledTwoCptTest, ss_bolus) {
     x_rk45 = torsten::pmx_solve_twocpt_rk45(f, nPD,
                                   time, amt, rate, ii, evid, cmt, addl, ss,
                                   parameters, biovar, tlag,
-                                  0,
                                   rel_tol_rk, abs_tol_rk, max_num_steps_rk);
 
   double rel_tol_bdf = 1e-10, abs_tol_bdf = 1e-10;
@@ -211,7 +205,6 @@ TEST_F(TorstenCoupledTwoCptTest, ss_bolus) {
     x_bdf = torsten::pmx_solve_twocpt_bdf(f, nPD,
                                 time, amt, rate, ii, evid, cmt, addl, ss,
                                 parameters, biovar, tlag,
-                                0,
                                 rel_tol_bdf, abs_tol_bdf, max_num_steps_bdf);
 
   // Solution from mrgsolve (uses an LSODA integrator)
@@ -267,7 +260,6 @@ TEST_F(TorstenCoupledTwoCptTest, ss_infusion) {
     x_rk45 = torsten::pmx_solve_twocpt_rk45(f, nPD,
                                   time, amt, rate, ii, evid, cmt, addl, ss,
                                   parameters, biovar, tlag,
-                                  0,
                                   rel_tol_rk, abs_tol_rk, max_num_steps_rk);
 
   //std::cout << x_rk45 << std::endl << std::endl;
@@ -278,7 +270,6 @@ TEST_F(TorstenCoupledTwoCptTest, ss_infusion) {
     x_bdf = torsten::pmx_solve_twocpt_bdf(f, nPD,
                                 time, amt, rate, ii, evid, cmt, addl, ss,
                                 parameters, biovar, tlag,
-                                0,
                                 rel_tol_bdf, abs_tol_bdf, max_num_steps_bdf);
 
   // Solution from mrgsolve (uses an LSODA integrator)
@@ -337,7 +328,6 @@ TEST_F(TorstenCoupledTwoCptTest, ss_constant_infusion) {
     x_rk45 = torsten::pmx_solve_twocpt_rk45(f, nPD,
                                             time, amt, rate, ii, evid, cmt, addl, ss,
                                             parameters, biovar, tlag,
-                                            0,
                                             rel_tol_rk, abs_tol_rk, max_num_steps_rk,
                                             1.e-10, 1.e-3, 100);
 
@@ -347,7 +337,6 @@ TEST_F(TorstenCoupledTwoCptTest, ss_constant_infusion) {
     x_bdf = torsten::pmx_solve_twocpt_bdf(f, nPD,
                                           time, amt, rate, ii, evid, cmt, addl, ss,
                                           parameters, biovar, tlag,
-                                          0,
                                           rel_tol_bdf, abs_tol_bdf, max_num_steps_bdf,
                                           1.e-10, 1.e-3, 100);
 
@@ -357,7 +346,6 @@ TEST_F(TorstenCoupledTwoCptTest, ss_constant_infusion) {
     x = torsten::pmx_solve_rk45(f, nOde,
                                 time, amt, rate, ii, evid, cmt, addl, ss,
                                 parameters, biovar, tlag,
-                                0,
                                 rel_tol_bdf, abs_tol_bdf, max_num_steps_bdf,
                                 1.e-10, 1.e-3, 100);
 

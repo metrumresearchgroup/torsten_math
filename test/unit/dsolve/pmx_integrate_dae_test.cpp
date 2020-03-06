@@ -2,7 +2,7 @@
 #include <stan/math/rev/core.hpp>
 #include <test/unit/math/rev/fun/util.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_dae.hpp>
-#include <test/unit/math/torsten/dae_systems.hpp>
+#include <stan/math/torsten/test/unit/dae_systems.hpp>
 
 #include <nvector/nvector_serial.h>
 

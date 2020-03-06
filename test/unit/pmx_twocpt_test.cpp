@@ -1,7 +1,7 @@
-#include <test/unit/math/torsten/test_util.hpp>
-#include <test/unit/math/torsten/expect_near_matrix_eq.hpp>
-#include <test/unit/math/torsten/pmx_twocpt_test_fixture.hpp>
-#include <test/unit/math/torsten/pmx_twocpt_mpi_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/test_util.hpp>
+#include <stan/math/torsten/test/unit/expect_near_matrix_eq.hpp>
+#include <stan/math/torsten/test/unit/pmx_twocpt_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/pmx_twocpt_mpi_test_fixture.hpp>
 #include <stan/math/torsten/pmx_solve_twocpt.hpp>
 #include <stan/math/torsten/pmx_solve_bdf.hpp>
 #include <stan/math/torsten/pmx_solve_rk45.hpp>

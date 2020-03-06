@@ -2,7 +2,7 @@
 #include <stan/math/rev/core.hpp>
 #include <stan/math/torsten/pmx_ode_integrator.hpp>
 #include <test/unit/math/rev/fun/util.hpp>
-#include <test/unit/math/torsten/pmx_cpt_model_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/pmx_cpt_model_test_fixture.hpp>
 #include <test/unit/util.hpp>
 #include <gtest/gtest.h>
 

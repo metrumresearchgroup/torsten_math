@@ -35,17 +35,17 @@ namespace torsten {
   Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param>,
                 Eigen::Dynamic, Eigen::Dynamic>
   pmx_integrate_ode_group_rk45(const F& f,
-                              const std::vector<std::vector<T_initial> >& y0,
-                              double t0,
-                              const std::vector<int>& len,
-                              const std::vector<Tt>& ts,
-                              const std::vector<std::vector<T_param> >& theta,
-                              const std::vector<std::vector<double> >& x_r,
-                              const std::vector<std::vector<int> >& x_i,
-                              std::ostream* msgs = nullptr,
-                              double rtol = 1e-6,
-                              double atol = 1e-6,
-                              long int max_num_step = 1e6) {  // NOLINT(runtime/int)
+                               const std::vector<std::vector<T_initial> >& y0,
+                               double t0,
+                               const std::vector<int>& len,
+                               const std::vector<Tt>& ts,
+                               const std::vector<std::vector<T_param> >& theta,
+                               const std::vector<std::vector<double> >& x_r,
+                               const std::vector<std::vector<int> >& x_i,
+                               double rtol,
+                               double atol,
+                               long int max_num_step,
+                               std::ostream* msgs = nullptr) {
     static const char* caller("pmx_integrate_ode_rk45");
     dsolve::ode_group_check(y0, t0, len, ts, theta, x_r, x_i, caller);
 
@@ -56,6 +56,27 @@ namespace torsten {
 
     return solver(f, y0, t0, len, ts, theta, x_r, x_i, msgs);
   }
+
+  /*
+   * overload with default ode integrator controls
+   */
+  template <typename F, typename Tt, typename T_initial, typename T_param>
+  Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param>,
+                Eigen::Dynamic, Eigen::Dynamic>
+  pmx_integrate_ode_group_rk45(const F& f,
+                               const std::vector<std::vector<T_initial> >& y0,
+                               double t0,
+                               const std::vector<int>& len,
+                               const std::vector<Tt>& ts,
+                               const std::vector<std::vector<T_param> >& theta,
+                               const std::vector<std::vector<double> >& x_r,
+                               const std::vector<std::vector<int> >& x_i,
+                               std::ostream* msgs = nullptr) {
+    return pmx_integrate_ode_group_rk45(f, y0, t0, len, ts, theta, x_r, x_i, 
+                                        1.e-6, 1.e-6, 1e6,
+                                        msgs);
+  }
+
 
 }
 #endif

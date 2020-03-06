@@ -3,10 +3,10 @@
 #include <stan/math/torsten/pmx_solve_onecpt_rk45.hpp>
 #include <stan/math/torsten/pmx_solve_rk45.hpp>
 #include <stan/math/torsten/pmx_solve_onecpt_bdf.hpp>
-#include <test/unit/math/torsten/test_util.hpp>
-#include <test/unit/math/torsten/util_mixOdeCptModel.hpp>
-#include <test/unit/math/torsten/pmx_coupled_model_fixture.hpp>
-#include <test/unit/math/torsten/test_util.hpp>
+#include <stan/math/torsten/test/unit/test_util.hpp>
+#include <stan/math/torsten/test/unit/util_mixOdeCptModel.hpp>
+#include <stan/math/torsten/test/unit/pmx_coupled_model_fixture.hpp>
+#include <stan/math/torsten/test/unit/test_util.hpp>
 #include <gtest/gtest.h>
 
 using std::vector;
@@ -25,7 +25,6 @@ TEST_F(TorstenCoupledOneCptTest, single_bolus) {
   MatrixXd x_rk45 = pmx_solve_onecpt_rk45(f, nPD,
                                          time, amt, rate, ii, evid, cmt, addl, ss,
                                          parameters, biovar, tlag,
-                                         0,
                                          rel_tol, abs_tol, max_num_steps);
 
   rel_tol = 1e-10, abs_tol = 1e-10;
@@ -33,7 +32,6 @@ TEST_F(TorstenCoupledOneCptTest, single_bolus) {
   MatrixXd x_bdf = pmx_solve_onecpt_bdf(f, nPD,
                                        time, amt, rate, ii, evid, cmt, addl, ss,
                                        parameters, biovar, tlag,
-                                       0,
                                        rel_tol, abs_tol, max_num_steps);
 
   // Solution from mrgsolve (uses an LSODA integrator)
@@ -103,7 +101,6 @@ TEST_F(TorstenCoupledOneCptTest, trucated_infusion) {
   MatrixXd x_rk45 = pmx_solve_onecpt_rk45(f, nPD,
                                           time, amt, rate, ii, evid, cmt, addl, ss,
                                           parameters, biovar, tlag,
-                                          0,
                                           rel_tol, abs_tol, max_num_steps);
 
   rel_tol = 1e-10, abs_tol = 1e-10;
@@ -111,7 +108,6 @@ TEST_F(TorstenCoupledOneCptTest, trucated_infusion) {
   MatrixXd x_bdf = pmx_solve_onecpt_bdf(f, nPD,
                                         time, amt, rate, ii, evid, cmt, addl, ss,
                                         parameters, biovar, tlag,
-                                        0,
                                         rel_tol, abs_tol, max_num_steps);
 
   // Solution from mrgsolve (uses an LSODA integrator)
@@ -167,7 +163,6 @@ TEST_F(TorstenCoupledOneCptTest, ss_bolus) {
   MatrixXd x_rk45 = torsten::pmx_solve_onecpt_rk45(f, nPD,
                                   time, amt, rate, ii, evid, cmt, addl, ss,
                                   parameters, biovar, tlag,
-                                  0,
                                   rel_tol, abs_tol, max_num_steps);
   
   rel_tol = 1e-10;
@@ -176,7 +171,6 @@ TEST_F(TorstenCoupledOneCptTest, ss_bolus) {
   MatrixXd x_bdf = torsten::pmx_solve_onecpt_bdf(f, nPD,
                                 time, amt, rate, ii, evid, cmt, addl, ss,
                                 parameters, biovar, tlag,
-                                0,
                                 rel_tol, abs_tol, max_num_steps);
   
   // Solution from mrgsolve (uses an LSODA integrator)
@@ -231,7 +225,6 @@ TEST_F(TorstenCoupledOneCptTest, ss_truncated_infusion) {
   MatrixXd x_rk45 = torsten::pmx_solve_onecpt_rk45(f, nPD,
                                   time, amt, rate, ii, evid, cmt, addl, ss,
                                   parameters, biovar, tlag,
-                                  0,
                                   rel_tol, abs_tol, max_num_steps);
   
   rel_tol = 1e-10, abs_tol = 1e-10;
@@ -239,7 +232,6 @@ TEST_F(TorstenCoupledOneCptTest, ss_truncated_infusion) {
   MatrixXd x_bdf = torsten::pmx_solve_onecpt_bdf(f, nPD,
                                 time, amt, rate, ii, evid, cmt, addl, ss,
                                 parameters, biovar, tlag,
-                                0,
                                 rel_tol, abs_tol, max_num_steps);
   
   // Solution from mrgsolve (uses an LSODA integrator)
@@ -295,7 +287,6 @@ TEST_F(TorstenCoupledOneCptTest, ss_const_infusion) {
   MatrixXd x_rk45 = torsten::pmx_solve_onecpt_rk45(f, nPD,
                                   time, amt, rate, ii, evid, cmt, addl, ss,
                                   parameters, biovar, tlag,
-                                  0,
                                   rel_tol_rk, abs_tol_rk, max_num_steps_rk);
   
   double rel_tol_bdf = 1e-10, abs_tol_bdf = 1e-10;
@@ -303,7 +294,6 @@ TEST_F(TorstenCoupledOneCptTest, ss_const_infusion) {
   MatrixXd x_bdf = torsten::pmx_solve_onecpt_bdf(f, nPD,
                                 time, amt, rate, ii, evid, cmt, addl, ss,
                                 parameters, biovar, tlag,
-                                0,
                                 rel_tol_bdf, abs_tol_bdf, max_num_steps_bdf);
   
   // can't do constant rate in mrgsolve. Comparing to result obtained
@@ -311,7 +301,6 @@ TEST_F(TorstenCoupledOneCptTest, ss_const_infusion) {
   MatrixXd x = torsten::pmx_solve_rk45(f, nOde,
                              time, amt, rate, ii, evid, cmt, addl, ss,
                              parameters, biovar, tlag,
-                             0,
                              rel_tol_rk, abs_tol_rk, max_num_steps_rk);
   torsten::test::test_val(x, x_rk45, 1.5e-2, 1.0e-5);
   torsten::test::test_val(x, x_bdf, 1.5e-2, 1.0e-5);

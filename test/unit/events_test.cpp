@@ -2,10 +2,10 @@
 #include <stan/math/torsten/pmx_onecpt_model.hpp>
 #include <stan/math/torsten/pmx_twocpt_model.hpp>
 #include <stan/math/torsten/events_manager.hpp>
-#include <test/unit/math/torsten/pmx_onecpt_test_fixture.hpp>
-#include <test/unit/math/torsten/pmx_twocpt_test_fixture.hpp>
-#include <test/unit/math/torsten/pmx_twocpt_mpi_test_fixture.hpp>
-#include <test/unit/math/torsten/test_util.hpp>
+#include <stan/math/torsten/test/unit/pmx_onecpt_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/pmx_twocpt_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/pmx_twocpt_mpi_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/test_util.hpp>
 #include <Eigen/Dense>
 #include <Eigen/src/Core/NumTraits.h>
 #include <gtest/gtest.h>

@@ -79,13 +79,13 @@ pmx_solve_onecpt_bdf(const F& f,
                      const std::vector<std::vector<T4> >& theta,
                      const std::vector<std::vector<T5> >& biovar,
                      const std::vector<std::vector<T6> >& tlag,
-                     std::ostream* msgs = 0,
-                     double rel_tol = 1e-6,
-                     double abs_tol = 1e-6,
-                     long int max_num_steps = 1e6,
-                     double as_rel_tol = 1e-6,
-                     double as_abs_tol = 1e-6,
-                     long int as_max_num_steps = 1e2) {
+                     double rel_tol,
+                     double abs_tol,
+                     long int max_num_steps,
+                     double as_rel_tol,
+                     double as_abs_tol,
+                     long int as_max_num_steps,
+                     std::ostream* msgs = 0) {
   using std::vector;
   using Eigen::Dynamic;
   using Eigen::Matrix;
@@ -136,6 +136,67 @@ pmx_solve_onecpt_bdf(const F& f,
 #endif
 }
 
+  /*
+   * overload with default ode & algebra solver controls.
+   */
+template <typename T0, typename T1, typename T2, typename T3, typename T4,
+          typename T5, typename T6, typename F>
+Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
+               Eigen::Dynamic, Eigen::Dynamic>
+pmx_solve_onecpt_bdf(const F& f,
+                     const int nOde,
+                     const std::vector<T0>& time,
+                     const std::vector<T1>& amt,
+                     const std::vector<T2>& rate,
+                     const std::vector<T3>& ii,
+                     const std::vector<int>& evid,
+                     const std::vector<int>& cmt,
+                     const std::vector<int>& addl,
+                     const std::vector<int>& ss,
+                     const std::vector<std::vector<T4> >& theta,
+                     const std::vector<std::vector<T5> >& biovar,
+                     const std::vector<std::vector<T6> >& tlag,
+                     std::ostream* msgs = 0) {
+    return pmx_solve_onecpt_bdf(f, nOde,
+                                time, amt, rate, ii, evid, cmt, addl, ss,
+                                theta, biovar, tlag,
+                                1.e-6, 1.e-6, 1e6,
+                                1.e-6, 1.e-6, 1e2,
+                                msgs);
+}
+
+  /*
+   * overload with default algebra solver controls.
+   */
+template <typename T0, typename T1, typename T2, typename T3, typename T4,
+          typename T5, typename T6, typename F>
+Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
+               Eigen::Dynamic, Eigen::Dynamic>
+pmx_solve_onecpt_bdf(const F& f,
+                     const int nOde,
+                     const std::vector<T0>& time,
+                     const std::vector<T1>& amt,
+                     const std::vector<T2>& rate,
+                     const std::vector<T3>& ii,
+                     const std::vector<int>& evid,
+                     const std::vector<int>& cmt,
+                     const std::vector<int>& addl,
+                     const std::vector<int>& ss,
+                     const std::vector<std::vector<T4> >& theta,
+                     const std::vector<std::vector<T5> >& biovar,
+                     const std::vector<std::vector<T6> >& tlag,
+                     double rel_tol,
+                     double abs_tol,
+                     long int max_num_steps,
+                     std::ostream* msgs = 0) {
+    return pmx_solve_onecpt_bdf(f, nOde,
+                                time, amt, rate, ii, evid, cmt, addl, ss,
+                                theta, biovar, tlag,
+                                rel_tol, abs_tol, max_num_steps,
+                                1.e-6, 1.e-6, 1e2,
+                                msgs);
+}
+
 /**
  * Overload function to allow user to pass an std::vector for 
  * pMatrix/bioavailability/tlag
@@ -164,13 +225,13 @@ pmx_solve_onecpt_bdf(const F& f,
                        const std::vector<T_par>& pMatrix,
                        const std::vector<T_biovar>& biovar,
                        const std::vector<T_tlag>& tlag,
-                       std::ostream* msgs = 0,
-                       double rel_tol = 1e-6,
-                       double abs_tol = 1e-6,
-                       long int max_num_steps = 1e6,
-                       double as_rel_tol = 1e-6,
-                       double as_abs_tol = 1e-6,
-                       long int as_max_num_steps = 1e2) {
+                       double rel_tol,
+                       double abs_tol,
+                       long int max_num_steps,
+                       double as_rel_tol,
+                       double as_abs_tol,
+                       long int as_max_num_steps,
+                       std::ostream* msgs = 0) {
     auto param_ = torsten::to_array_2d(pMatrix);
     auto biovar_ = torsten::to_array_2d(biovar);
     auto tlag_ = torsten::to_array_2d(tlag);
@@ -178,8 +239,89 @@ pmx_solve_onecpt_bdf(const F& f,
     return pmx_solve_onecpt_bdf(f, nOde,
                                 time, amt, rate, ii, evid, cmt, addl, ss,
                                 param_, biovar_, tlag_,
-                                msgs, rel_tol, abs_tol, max_num_steps,
-                                as_rel_tol, as_abs_tol, as_max_num_steps);
+                                rel_tol, abs_tol, max_num_steps,
+                                as_rel_tol, as_abs_tol, as_max_num_steps,
+                                msgs);
+  }
+
+/**
+ * Overload function to allow user to pass an std::vector for 
+ * pMatrix/bioavailability/tlag, with default ode & algerba
+ * solver controsl
+ */
+  template <typename T0, typename T1, typename T2, typename T3,
+            typename T_par, typename T_biovar, typename T_tlag,
+            typename F,
+            typename
+            std::enable_if_t<
+              !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
+  Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
+                                            typename torsten::value_type<T_par>::type,
+                                            typename torsten::value_type<T_biovar>::type,
+                                            typename torsten::value_type<T_tlag>::type>,
+                 Eigen::Dynamic, Eigen::Dynamic>
+  pmx_solve_onecpt_bdf(const F& f,
+                       const int nOde,
+                       const std::vector<T0>& time,
+                       const std::vector<T1>& amt,
+                       const std::vector<T2>& rate,
+                       const std::vector<T3>& ii,
+                       const std::vector<int>& evid,
+                       const std::vector<int>& cmt,
+                       const std::vector<int>& addl,
+                       const std::vector<int>& ss,
+                       const std::vector<T_par>& pMatrix,
+                       const std::vector<T_biovar>& biovar,
+                       const std::vector<T_tlag>& tlag,
+                       std::ostream* msgs = 0) {
+    return pmx_solve_onecpt_bdf(f, nOde,
+                                time, amt, rate, ii, evid, cmt, addl, ss,
+                                pMatrix, biovar, tlag,
+                                1.e-6, 1.e-6, 1e6,
+                                1.e-6, 1.e-6, 1e2,
+                                msgs);
+  }
+
+
+/**
+ * Overload function to allow user to pass an std::vector for 
+ * pMatrix/bioavailability/tlag, with default algerba
+ * solver controsl
+ */
+  template <typename T0, typename T1, typename T2, typename T3,
+            typename T_par, typename T_biovar, typename T_tlag,
+            typename F,
+            typename
+            std::enable_if_t<
+              !(torsten::is_std_vector<T_par>::value && torsten::is_std_vector<T_biovar>::value && torsten::is_std_vector<T_tlag>::value)>* = nullptr> //NOLINT
+  Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
+                                            typename torsten::value_type<T_par>::type,
+                                            typename torsten::value_type<T_biovar>::type,
+                                            typename torsten::value_type<T_tlag>::type>,
+                 Eigen::Dynamic, Eigen::Dynamic>
+  pmx_solve_onecpt_bdf(const F& f,
+                       const int nOde,
+                       const std::vector<T0>& time,
+                       const std::vector<T1>& amt,
+                       const std::vector<T2>& rate,
+                       const std::vector<T3>& ii,
+                       const std::vector<int>& evid,
+                       const std::vector<int>& cmt,
+                       const std::vector<int>& addl,
+                       const std::vector<int>& ss,
+                       const std::vector<T_par>& pMatrix,
+                       const std::vector<T_biovar>& biovar,
+                       const std::vector<T_tlag>& tlag,
+                       double rel_tol,
+                       double abs_tol,
+                       long int max_num_steps,
+                       std::ostream* msgs = 0) {
+    return pmx_solve_onecpt_bdf(f, nOde,
+                                time, amt, rate, ii, evid, cmt, addl, ss,
+                                pMatrix, biovar, tlag,
+                                rel_tol, abs_tol, max_num_steps,
+                                1.e-6, 1.e-6, 1e2,
+                                msgs);
   }
 
   // old version
@@ -189,26 +331,27 @@ Eigen::Matrix <typename boost::math::tools::promote_args<T0, T1, T2, T3,
   typename boost::math::tools::promote_args<T4, T5, T6>::type>::type,
   Eigen::Dynamic, Eigen::Dynamic>
 mixOde1CptModel_bdf(const F& f,
-                     const int nOde,
-                     const std::vector<T0>& time,
-                     const std::vector<T1>& amt,
-                     const std::vector<T2>& rate,
-                     const std::vector<T3>& ii,
-                     const std::vector<int>& evid,
-                     const std::vector<int>& cmt,
-                     const std::vector<int>& addl,
-                     const std::vector<int>& ss,
-                     const std::vector<std::vector<T4> >& theta,
-                     const std::vector<std::vector<T5> >& biovar,
-                     const std::vector<std::vector<T6> >& tlag,
-                     std::ostream* msgs = 0,
-                     double rel_tol = 1e-6,
-                     double abs_tol = 1e-6,
-                     long int max_num_steps = 1e6) {  // NOLINT(runtime/int)
+                    const int nOde,
+                    const std::vector<T0>& time,
+                    const std::vector<T1>& amt,
+                    const std::vector<T2>& rate,
+                    const std::vector<T3>& ii,
+                    const std::vector<int>& evid,
+                    const std::vector<int>& cmt,
+                    const std::vector<int>& addl,
+                    const std::vector<int>& ss,
+                    const std::vector<std::vector<T4> >& theta,
+                    const std::vector<std::vector<T5> >& biovar,
+                    const std::vector<std::vector<T6> >& tlag,
+                    double rel_tol = 1e-6,
+                    double abs_tol = 1e-6,
+                    long int max_num_steps = 1e6,
+                    std::ostream* msgs = 0) {
   auto x = pmx_solve_onecpt_bdf(f, nOde,
-                                 time, amt, rate, ii, evid, cmt, addl, ss,
-                                 theta, biovar, tlag,
-                                 msgs, rel_tol, abs_tol, max_num_steps);
+                                time, amt, rate, ii, evid, cmt, addl, ss,
+                                theta, biovar, tlag,
+                                rel_tol, abs_tol, max_num_steps,
+                                msgs);
   return x.transpose();
 }
 
@@ -236,14 +379,15 @@ mixOde1CptModel_bdf(const F& f,
                         const std::vector<T_par>& pMatrix,
                         const std::vector<T_biovar>& biovar,
                         const std::vector<T_tlag>& tlag,
-                        std::ostream* msgs = 0,
                         double rel_tol = 1e-6,
                         double abs_tol = 1e-6,
-                        long int max_num_steps = 1e6) {
+                      long int max_num_steps = 1e6,
+                      std::ostream* msgs = 0) {
     auto x = pmx_solve_onecpt_bdf(f, nOde,
-                                   time, amt, rate, ii, evid, cmt, addl, ss,
-                                   pMatrix, biovar, tlag,
-                                   msgs, rel_tol, abs_tol, max_num_steps);
+                                  time, amt, rate, ii, evid, cmt, addl, ss,
+                                  pMatrix, biovar, tlag,
+                                  rel_tol, abs_tol, max_num_steps,
+                                  msgs);
     return x.transpose();
   }
 

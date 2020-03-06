@@ -1,9 +1,9 @@
 //  // FIX ME - more specific
 #include <stan/math/torsten/PKModel/Pred/fOneCpt.hpp>
 #include <gtest/gtest.h>
-#include <test/unit/math/torsten/expect_near_matrix_eq.hpp>
-#include <test/unit/math/torsten/expect_matrix_eq.hpp>
-#include <test/unit/math/torsten/util_generalOdeModel.hpp>
+#include <stan/math/torsten/test/unit/expect_near_matrix_eq.hpp>
+#include <stan/math/torsten/test/unit/expect_matrix_eq.hpp>
+#include <stan/math/torsten/test/unit/util_generalOdeModel.hpp>
 
 TEST(Torsten, fOneCpt_dbl) {
   double dt = 0.25;

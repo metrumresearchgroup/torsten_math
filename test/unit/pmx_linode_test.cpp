@@ -1,8 +1,7 @@
-//
-#include <test/unit/math/torsten/test_util.hpp>
-#include <test/unit/math/torsten/expect_matrix_eq.hpp>
+#include <stan/math/torsten/test/unit/test_util.hpp>
+#include <stan/math/torsten/test/unit/expect_matrix_eq.hpp>
 #include <stan/math/torsten/pmx_solve_linode.hpp>
-#include <test/unit/math/torsten/util_pmx_solve_linode.hpp>
+#include <stan/math/torsten/test/unit/util_pmx_solve_linode.hpp>
 #include <gtest/gtest.h>
 #include <vector>
 

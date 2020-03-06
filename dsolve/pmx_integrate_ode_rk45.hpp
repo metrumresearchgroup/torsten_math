@@ -37,10 +37,10 @@ namespace torsten {
                          const std::vector<T_param>& theta,
                          const std::vector<double>& x_r,
                          const std::vector<int>& x_i,
-                         std::ostream* msgs = nullptr,
-                         double rtol = 1e-6,
-                         double atol = 1e-6,
-                         long int max_num_steps = 1e6) {
+                         double rtol,
+                         double atol,
+                         long int max_num_steps,
+                         std::ostream* msgs = nullptr) {
     static const char* caller = "pmx_integrate_ode_rk45";
     dsolve::ode_check(y0, t0, ts, theta, x_r, x_i, caller);
 
@@ -56,5 +56,23 @@ namespace torsten {
 
     return solver.integrate(ode);
 }
+
+  /*
+   * overload with default ode controls
+   */
+  template <typename F, typename Tt, typename T_initial, typename T_param>
+  inline std::vector<std::vector<typename stan::return_type<Tt, T_initial, T_param>::type> >
+  pmx_integrate_ode_rk45(const F& f,
+                         const std::vector<T_initial>& y0,
+                         double t0,
+                         const std::vector<Tt>& ts,
+                         const std::vector<T_param>& theta,
+                         const std::vector<double>& x_r,
+                         const std::vector<int>& x_i,
+                         std::ostream* msgs = nullptr) {
+    return pmx_integrate_ode_rk45(f, y0, t0, ts, theta, x_r, x_i,
+                                  1.e-6, 1.e-6, 1e6,
+                                  msgs);
+  }
 }
 #endif

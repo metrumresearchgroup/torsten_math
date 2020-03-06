@@ -1,6 +1,6 @@
-#include <test/unit/math/torsten/test_util.hpp>
+#include <stan/math/torsten/test/unit/test_util.hpp>
 #include <gtest/gtest.h>
-#include <test/unit/math/torsten/pmx_onecpt_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/pmx_onecpt_test_fixture.hpp>
 #include <stan/math/torsten/pmx_solve_onecpt.hpp>
 #include <stan/math/torsten/pmx_solve_bdf.hpp>
 #include <stan/math/torsten/pmx_solve_rk45.hpp>

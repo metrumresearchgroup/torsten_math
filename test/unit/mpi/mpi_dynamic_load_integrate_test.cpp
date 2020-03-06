@@ -6,8 +6,8 @@
 #include <test/unit/math/rev/fun/util.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_adams.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_bdf.hpp>
-#include <test/unit/math/torsten/pmx_ode_test_fixture.hpp>
-#include <test/unit/math/torsten/test_util.hpp>
+#include <stan/math/torsten/test/unit/pmx_ode_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/test_util.hpp>
 #include <stan/math/rev/functor/integrate_ode_bdf.hpp>
 #include <nvector/nvector_serial.h>
 #include <stan/math/torsten/mpi/envionment.hpp>
@@ -283,13 +283,13 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_fwd_sensitivity_uniform_thet
 
     std::stringstream expected_message;
     EXPECT_THROW(pmx_integrate_ode_group_adams(f, y0_m, t0, len, ts_m, theta_var_m , x_r_m, x_i_m,
-                                               0, 1e-10, 1e-10, 1),
+                                               1e-10, 1e-10, 1),
                  std::exception);
     EXPECT_THROW(pmx_integrate_ode_group_bdf(f, y0_m, t0, len, ts_m, theta_var_m , x_r_m, x_i_m,
-                                             0, 1e-10, 1e-10, 1),
+                                             1e-10, 1e-10, 1),
                  std::exception);
     EXPECT_THROW(pmx_integrate_ode_group_rk45(f, y0_m, t0, len, ts_m, theta_var_m , x_r_m, x_i_m,
-                                              0, 1e-10, 1e-10, 1),
+                                              1e-10, 1e-10, 1),
                  std::exception);
 
     load.kill_slaves();

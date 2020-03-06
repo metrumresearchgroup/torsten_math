@@ -89,24 +89,20 @@ finite_diff_params(const F& f,
     pk_res_ub = torsten::pmx_solve_rk45(f, nCmt, time, amt, rate, ii,
                                      evid, cmt, addl, ss,
                                      pMatrix_ub, biovar_ub, tlag_ub,
-                                     0,
                                      rel_tol, abs_tol, max_num_steps);
     pk_res_lb = torsten::pmx_solve_rk45(f, nCmt, time, amt, rate, ii,
                                      evid, cmt, addl, ss,
                                      pMatrix_lb, biovar_lb, tlag_lb,
-                                     0,
                                      rel_tol, abs_tol, max_num_steps);
   }
   if (odeInt == "bdf") {
     pk_res_ub = torsten::pmx_solve_bdf(f, nCmt, time, amt, rate, ii,
                                     evid, cmt, addl, ss,
                                     pMatrix_ub, biovar_ub, tlag_ub,
-                                    0,
                                     rel_tol, abs_tol, max_num_steps);
     pk_res_lb = torsten::pmx_solve_bdf(f, nCmt, time, amt, rate, ii,
                                     evid, cmt, addl, ss,
                                     pMatrix_lb, biovar_lb, tlag_lb,
-                                    0,
                                     rel_tol, abs_tol, max_num_steps); 
   }
   return (pk_res_ub - pk_res_lb) / (2 * diff);
@@ -176,14 +172,12 @@ void test_generalOdeModel2_finite_diff_vdd(
     ode_res = torsten::pmx_solve_rk45(f, nCmt,
                                    time, amt, rate, ii, evid, cmt, addl, ss,
                                    pMatrix_v, biovar, tlag,
-                                   0,
                                    rel_tol, abs_tol, max_num_steps);
 
   if (odeInt == "bdf")
     ode_res = torsten::pmx_solve_bdf(f, nCmt,
                                   time, amt, rate, ii, evid, cmt, addl, ss,
                                   pMatrix_v, biovar, tlag,
-                                  0,
                                   rel_tol, abs_tol, max_num_steps);
 
   size_t nEvent = time.size();
@@ -273,14 +267,12 @@ void test_generalOdeModel2_finite_diff_dvd(
     ode_res = torsten::pmx_solve_rk45(f, nCmt,
                                    time, amt, rate, ii, evid, cmt, addl, ss,
                                    pMatrix, biovar_v, tlag,
-                                   0,
                                    rel_tol, abs_tol, max_num_steps);
   
   if (odeInt == "bdf")
     ode_res = torsten::pmx_solve_bdf(f, nCmt,
                                   time, amt, rate, ii, evid, cmt, addl, ss,
                                   pMatrix, biovar_v, tlag,
-                                  0,
                                   rel_tol, abs_tol, max_num_steps);
   
   size_t nEvent = time.size();
@@ -375,14 +367,12 @@ void test_generalOdeModel2_finite_diff_ddv(
     ode_res = torsten::pmx_solve_rk45(f, nCmt,
                                    time, amt, rate, ii, evid, cmt, addl, ss,
                                    pMatrix, biovar, tlag_v,
-                                   0,
                                    rel_tol, abs_tol, max_num_steps);
 
   if (odeInt == "bdf")
     ode_res = torsten::pmx_solve_bdf(f, nCmt,
                                   time, amt, rate, ii, evid, cmt, addl, ss,
                                   pMatrix, biovar, tlag_v,
-                                  0,
                                   rel_tol, abs_tol, max_num_steps);
 
   size_t nEvent = time.size();

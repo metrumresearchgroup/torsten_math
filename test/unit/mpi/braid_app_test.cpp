@@ -2,7 +2,7 @@
 #include <stan/math/torsten/mpi/cvodes_braid.hpp>
 //
 #include <test/unit/math/rev/fun/util.hpp>
-#include <test/unit/math/torsten/pmx_ode_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/pmx_ode_test_fixture.hpp>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <vector>

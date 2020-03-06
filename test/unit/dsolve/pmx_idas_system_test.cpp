@@ -3,7 +3,7 @@
 #include <test/unit/math/rev/fun/util.hpp>
 #include <stan/math/torsten/dsolve/pmx_idas_fwd_system.hpp>
 #include <stan/math/torsten/dsolve/pmx_idas_integrator.hpp>
-#include <test/unit/math/torsten/dae_systems.hpp>
+#include <stan/math/torsten/test/unit/dae_systems.hpp>
 #include <nvector/nvector_serial.h>
 
 #include <test/unit/util.hpp>

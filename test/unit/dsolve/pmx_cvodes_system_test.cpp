@@ -2,7 +2,7 @@
 #include <stan/math/rev/core.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 #include <test/unit/math/rev/fun/util.hpp>
-#include <test/unit/math/torsten/pmx_ode_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/pmx_ode_test_fixture.hpp>
 #include <test/unit/math/prim/functor/harmonic_oscillator.hpp>
 #include <nvector/nvector_serial.h>
 

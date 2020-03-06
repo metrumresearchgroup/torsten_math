@@ -1,11 +1,10 @@
 #ifndef STAN_MATH_TORSTEN_PK_NEUT_MPI_TEST_FIXTURE_HPP
 #define STAN_MATH_TORSTEN_PK_NEUT_MPI_TEST_FIXTURE_HPP
 
-//
 #include <gtest/gtest.h>
 #include <boost/numeric/odeint.hpp>
-#include <test/unit/math/torsten/test_util.hpp>
-#include <test/unit/math/torsten/pmx_ode_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/test_util.hpp>
+#include <stan/math/torsten/test/unit/pmx_ode_test_fixture.hpp>
 #include <stan/math/torsten/dsolve/pmx_cvodes_fwd_system.hpp>
 #include <stan/math/torsten/dsolve/pmx_cvodes_integrator.hpp>
 #include <test/unit/math/prim/functor/harmonic_oscillator.hpp>

@@ -6,7 +6,7 @@
 #include <stan/math/torsten/dsolve/cvodes_rhs.hpp>
 #include <stan/math/rev/fun/fmax.hpp>
 #include <boost/numeric/odeint.hpp>
-#include <test/unit/math/torsten/test_util.hpp>
+#include <stan/math/torsten/test/unit/test_util.hpp>
 #include <test/unit/math/prim/functor/harmonic_oscillator.hpp>
 #include <test/unit/math/prim/functor/lorenz.hpp>
 #include <nvector/nvector_serial.h>

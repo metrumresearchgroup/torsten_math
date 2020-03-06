@@ -42,10 +42,10 @@ namespace torsten {
                               const std::vector<std::vector<T_param> >& theta,
                               const std::vector<std::vector<double> >& x_r,
                               const std::vector<std::vector<int> >& x_i,
-                              std::ostream* msgs = nullptr,
-                              double rtol = 1e-10,
-                              double atol = 1e-10,
-                              long int max_num_step = 1e6) {  // NOLINT(runtime/int)
+                              double rtol,
+                              double atol,
+                              long int max_num_step,
+                              std::ostream* msgs = nullptr) {
     static const char* caller("pmx_integrate_ode_bdf");
     dsolve::ode_group_check(y0, t0, len, ts, theta, x_r, x_i, caller);
 
@@ -54,6 +54,26 @@ namespace torsten {
                                           dsolve::PMXCvodesFwdSystem_bdf_ad> solver(integrator);
 
     return solver(f, y0, t0, len, ts, theta, x_r, x_i, msgs);
+  }
+
+  /*
+   * overload with default ode integrator controls
+   */
+  template <typename F, typename Tt, typename T_initial, typename T_param>
+  Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param>,
+                Eigen::Dynamic, Eigen::Dynamic>
+  pmx_integrate_ode_group_bdf(const F& f,
+                              const std::vector<std::vector<T_initial> >& y0,
+                              double t0,
+                              const std::vector<int>& len,
+                              const std::vector<Tt>& ts,
+                              const std::vector<std::vector<T_param> >& theta,
+                              const std::vector<std::vector<double> >& x_r,
+                              const std::vector<std::vector<int> >& x_i,
+                              std::ostream* msgs = nullptr) {
+    return pmx_integrate_ode_group_bdf(f, y0, t0, len, ts, theta, x_r, x_i,
+                                       1.e-10, 1.e-10, 1e6,
+                                       msgs);
   }
 
   /**

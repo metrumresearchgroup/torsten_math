@@ -3,8 +3,8 @@
 #include <stan/math/torsten/torsten_def.hpp>
 #include <stan/math/torsten/pmx_twocpt_model.hpp>
 #include <stan/math/torsten/pmx_ode_model.hpp>
-#include <test/unit/math/torsten/pmx_twocpt_test_fixture.hpp>
-#include <test/unit/math/torsten/test_util.hpp>
+#include <stan/math/torsten/test/unit/pmx_twocpt_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/test_util.hpp>
 #include <gtest/gtest.h>
 #include <vector>
 

@@ -64,7 +64,7 @@ namespace torsten {
              const std::vector<T_param>& theta,                                       \
              const std::vector<double>& x_r,                                          \
              const std::vector<int>& x_i) const {                                     \
-    return INT_NAME(f, y0, t0, ts, theta, x_r, x_i, msgs, rtol, atol, max_num_step);  \
+    return INT_NAME(f, y0, t0, ts, theta, x_r, x_i, rtol, atol, max_num_step, msgs);  \
   }
 
 #define DEF_TORSTEN_SINGLE_STEP_INTEGRATOR                                            \
