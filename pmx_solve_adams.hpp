@@ -376,13 +376,13 @@ pmx_solve_group_adams(const F& f,
                       const std::vector<std::vector<T4> >& pMatrix,
                       const std::vector<std::vector<T5> >& biovar,
                       const std::vector<std::vector<T6> >& tlag,
-                      std::ostream* msgs = 0,
-                      double rel_tol = 1e-10,
-                      double abs_tol = 1e-10,
-                      long int max_num_steps = 1e8,
-                      double as_rel_tol = 1e-6,
-                      double as_abs_tol = 1e-6,
-                      long int as_max_num_steps = 1e2) {
+                      double rel_tol,
+                      double abs_tol,
+                      long int max_num_steps,
+                      double as_rel_tol,
+                      double as_abs_tol,
+                      long int as_max_num_steps,
+                      std::ostream* msgs = 0) {
   static const char* caller("pmx_solve_group_adams");
   torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
                                 pMatrix, biovar, tlag, caller);
@@ -407,6 +407,70 @@ pmx_solve_group_adams(const F& f,
 
   return pred;
 }
+
+  /*
+   * overload with default ode & algebra solver controls
+   */
+template <typename T0, typename T1, typename T2, typename T3, typename T4,
+          typename T5, typename T6, typename F>
+Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, std::vector<T4>, T5, T6> >::T_scalar, // NOLINT
+              Eigen::Dynamic, Eigen::Dynamic>
+pmx_solve_group_adams(const F& f,
+                      const int nCmt,
+                      const std::vector<int>& len,
+                      const std::vector<T0>& time,
+                      const std::vector<T1>& amt,
+                      const std::vector<T2>& rate,
+                      const std::vector<T3>& ii,
+                      const std::vector<int>& evid,
+                      const std::vector<int>& cmt,
+                      const std::vector<int>& addl,
+                      const std::vector<int>& ss,
+                      const std::vector<std::vector<T4> >& pMatrix,
+                      const std::vector<std::vector<T5> >& biovar,
+                      const std::vector<std::vector<T6> >& tlag,
+                      std::ostream* msgs = 0) {
+  return pmx_solve_group_adams(f, nCmt, len, time, amt, rate,
+                               ii, evid, cmt, addl, ss,
+                               pMatrix, biovar, tlag,
+                               1.e-10, 1.e-10, 1e8,
+                               1.e-6, 1.e-6, 1e2,
+                               msgs);
+}
+
+  /*
+   * overload with default algebra solver controls
+   */
+template <typename T0, typename T1, typename T2, typename T3, typename T4,
+          typename T5, typename T6, typename F>
+Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, std::vector<T4>, T5, T6> >::T_scalar, // NOLINT
+              Eigen::Dynamic, Eigen::Dynamic>
+pmx_solve_group_adams(const F& f,
+                      const int nCmt,
+                      const std::vector<int>& len,
+                      const std::vector<T0>& time,
+                      const std::vector<T1>& amt,
+                      const std::vector<T2>& rate,
+                      const std::vector<T3>& ii,
+                      const std::vector<int>& evid,
+                      const std::vector<int>& cmt,
+                      const std::vector<int>& addl,
+                      const std::vector<int>& ss,
+                      const std::vector<std::vector<T4> >& pMatrix,
+                      const std::vector<std::vector<T5> >& biovar,
+                      const std::vector<std::vector<T6> >& tlag,
+                      double rel_tol,
+                      double abs_tol,
+                      long int max_num_steps,
+                      std::ostream* msgs = 0) {
+  return pmx_solve_group_adams(f, nCmt, len, time, amt, rate,
+                               ii, evid, cmt, addl, ss,
+                               pMatrix, biovar, tlag,
+                               rel_tol, abs_tol, max_num_steps,
+                               1.e-6, 1.e-6, 1e2,
+                               msgs);
+}
+
 
 }
 

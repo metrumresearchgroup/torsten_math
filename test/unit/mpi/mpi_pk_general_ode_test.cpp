@@ -386,7 +386,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, exception_sync) {
                                                   pMatrix_m,
                                                   biovar_m,
                                                   tlag_m,
-                                                  0, 1e-6, 1e-6, 1e4),
+                                                  1e-6, 1e-6, 1e4),
                      std::runtime_error, "CVode(mem, ts[i], y, &t1, CV_NORMAL) failed with error flag -1");
   } else {
     EXPECT_THROW_MSG(pmx_solve_group_adams(model_t::f_, model_t::Ncmt,
@@ -394,7 +394,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, exception_sync) {
                                                   pMatrix_m,
                                                   biovar_m,
                                                   tlag_m,
-                                                  0, 1e-6, 1e-6, 1e4),
+                                                  1e-6, 1e-6, 1e4),
                      std::runtime_error, "received invalid data for id 4");
   }
   MPI_Barrier(comm);
@@ -407,7 +407,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, exception_sync) {
                                                   pMatrix_m,
                                                   biovar_m,
                                                   tlag_m,
-                                                  0, 1e-6, 1e-6, 1e4),
+                                                  1e-6, 1e-6, 1e4),
                      std::runtime_error, "CVode(mem, ts[i], y, &t1, CV_NORMAL) failed with error flag -1");
   } else {
     EXPECT_THROW_MSG(pmx_solve_group_adams(model_t::f_, model_t::Ncmt,
@@ -415,7 +415,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, exception_sync) {
                                                   pMatrix_m,
                                                   biovar_m,
                                                   tlag_m,
-                                                  0, 1e-6, 1e-6, 1e4),
+                                                  1e-6, 1e-6, 1e4),
                      std::runtime_error, "received invalid data for id");
   }
   MPI_Barrier(comm);
@@ -614,7 +614,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, exception_max_num_steps_fails) {
   EXPECT_THROW(torsten::pmx_solve_group_bdf(f, nCmt,
                                                    len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m, // NOLINT
                                                    theta_m, biovar_m, tlag_m,
-                                                   0, rtol, atol, max_num_steps),
+                                                   rtol, atol, max_num_steps),
                std::runtime_error);
 }
 
@@ -631,7 +631,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, exception_var_max_num_steps_fails) {
   EXPECT_THROW(torsten::pmx_solve_group_bdf(f, nCmt,
                                             len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m, // NOLINT
                                             theta_m_v, biovar_m, tlag_m,
-                                            0, rtol, atol, max_num_steps),
+                                            rtol, atol, max_num_steps),
                std::runtime_error);
 }
 
@@ -659,7 +659,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, domain_error) {
   EXPECT_THROW_MSG(pmx_solve_group_bdf(f, nCmt,
                                               len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m, // NOLINT
                                               theta_m, biovar_m, tlag_m,
-                                              0, rtol, atol, max_num_steps),
+                                              rtol, atol, max_num_steps),
                    std::domain_error,
                    "rate[109] is inf, but must be finite");
 #ifdef TORSTEN_MPI
@@ -673,7 +673,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, domain_error) {
   EXPECT_THROW_MSG(pmx_solve_group_bdf(f, nCmt,
                                               len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m, // NOLINT
                                               theta_m, biovar_m, tlag_m,
-                                              0, rtol, atol, max_num_steps),
+                                              rtol, atol, max_num_steps),
                    std::domain_error,
                    "parameters[4] is inf, but must be finite!");
 #ifdef TORSTEN_MPI
@@ -684,7 +684,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, domain_error) {
   EXPECT_THROW_MSG(pmx_solve_group_bdf(f, nCmt,
                                               len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m, // NOLINT
                                               theta_m, biovar_m, tlag_m,
-                                              0, rtol, atol, max_num_steps),
+                                              rtol, atol, max_num_steps),
                    std::domain_error,
                    "parameters[4] is nan, but must be finite!");
 #ifdef TORSTEN_MPI
@@ -696,7 +696,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, domain_error) {
   EXPECT_THROW_MSG(pmx_solve_group_bdf(f, nCmt,
                                               len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m, // NOLINT
                                               theta_m, biovar_m, tlag_m,
-                                              0, rtol, atol, max_num_steps),
+                                              rtol, atol, max_num_steps),
                    std::domain_error,
                    "bioavailability[4] is -1, but must be >= 0");
 #ifdef TORSTEN_MPI
