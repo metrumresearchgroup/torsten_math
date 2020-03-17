@@ -1,13 +1,9 @@
-#ifndef STAN_MATH_TORSTEN_REFACTOR_MIXODE2CPTMODEL_BDF_HPP
-#define STAN_MATH_TORSTEN_REFACTOR_MIXODE2CPTMODEL_BDF_HPP
+#ifndef STAN_MATH_TORSTEN_TWOCPT_BDF_HPP
+#define STAN_MATH_TORSTEN_TWOCPT_BDF_HPP
 
 #include <Eigen/Dense>
-#include <stan/math/torsten/events_manager.hpp>
-#include <stan/math/torsten/PKModel/PKModel.hpp>
-#include <stan/math/torsten/PKModel/functors/mix2_functor.hpp>
-#include <stan/math/torsten/PKModel/Pred/Pred1_mix2.hpp>
-#include <stan/math/torsten/PKModel/Pred/PredSS_mix2.hpp>
-#include <stan/math/torsten/event_solver.hpp>
+#include <stan/math/torsten/ev_manager.hpp>
+#include <stan/math/torsten/ev_solver.hpp>
 #include <stan/math/torsten/pmx_coupled_model.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <vector>
@@ -100,25 +96,12 @@ pmx_solve_twocpt_bdf(const F& f,
   vector<Matrix<T4, Dynamic, Dynamic> >
     dummy_systems(1, dummy_system);
 
-  typedef mix2_functor<F> F0;
-
   const int &nPK = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
   
   PMXOdeIntegrator<StanBdf> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
-
-  Pred1_mix2<F0> pred1(F0(f), rel_tol, abs_tol, max_num_steps, msgs,
-                       "bdf");
-  PredSS_mix2<F0> predss(F0(f), rel_tol, abs_tol, max_num_steps, msgs,
-                         "bdf", nOde);
-
-#ifdef OLD_TORSTEN
-  return Pred(time, amt, rate, ii, evid, cmt, addl, ss,
-              theta, biovar, tlag, nPK + nOde, dummy_systems,
-              pred1, predss);
-#else
   const int nCmt = nPK + nOde;
 
-  using ER = NONMENEventsRecord<T0, T1, T2, T3, std::vector<T4>, T5, T6>;
+  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
   using EM = EventsManager<ER>;
   const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
 
@@ -126,10 +109,9 @@ pmx_solve_twocpt_bdf(const F& f,
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
   using model_type = torsten::PkTwoCptOdeModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
-  EventSolver<model_type, PMXOdeIntegrator<StanBdf>&> pr;
+  EventSolver<model_type> pr;
   pr.pred(0, events_rec, pred, integrator, f, nOde);
   return pred;
-#endif
 }
 
   /*

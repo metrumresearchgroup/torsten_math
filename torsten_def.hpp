@@ -5,17 +5,14 @@
 #include <stan/math/prim/meta/return_type.hpp>
 #include <stan/math/prim/meta/is_var.hpp>
 #include <stan/math/rev/meta/is_var.hpp>
-#include <stan/math/torsten/is_detected.hpp>
 
 namespace torsten {
-    template<typename T>
-    using PKRec = Eigen::Matrix<T, 1, Eigen::Dynamic>;
 
-    template<typename T>
-    using PMXLin = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
-}
+  template<typename T>
+  using PKRec = Eigen::Matrix<T, 1, Eigen::Dynamic>;
 
-namespace torsten {
+  template<typename T>
+  using PMXLin = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
 
   template <class T>
   using rate_t = typename std::decay<decltype(std::declval<T>().rate())>::type::value_type; // NOLINT

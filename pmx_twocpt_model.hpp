@@ -341,12 +341,35 @@ namespace torsten {
       return pred;
     }
 
+    /** 
+     * 
+     * @param t_next next time point for desired solution
+     * @param integrator dummy numerical integrator
+     * 
+     * @return matrix with each column in a solution at one
+     * time point.
+     */
+    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> 
+    solve(const T_time& t_next,
+          const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
+      return solve(t_next);
+    }
+
     /*
      * Solve the transient problem and return the result in
      * form of data, arranged as (solution value, grad1, grad2...)
      */
     Eigen::VectorXd solve_d(const T_time& t_next) const {
       return torsten::model_solve_d(*this, t_next);
+    }
+
+    /*
+     * Solve the transient problem and return the result in
+     * form of data, arranged as (solution value, grad1, grad2...)
+     */
+    Eigen::VectorXd solve_d(const T_time& t_next,
+          const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
+      return solve_d(t_next);
     }
 
   /**
@@ -491,12 +514,24 @@ namespace torsten {
     }
 
     /*
+     * Solve the steady-state problem and return the result in
+     * form of data, arranged as (solution value, grad1, grad2...),
+     * with additional <code>integrator</code> dummy arg,
+     * needed in <code>ev_solver</code> call.
+     */
+    template<typename T_amt, typename T_r, typename T_ii>
+    Eigen::VectorXd solve_d(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
+                            const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
+      return solve_d(amt, rate, ii, cmt);
+    }
+
+    /*
      * wrapper to fit @c PrepWrapper's call signature
      */
-    template<torsten::PMXOdeIntegratorId It, typename T_amt, typename T_r, typename T_ii>
+    template<typename T_amt, typename T_r, typename T_ii>
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     solve(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
-          const PMXOdeIntegrator<It>& integrator) const {
+          const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
       return solve(amt, rate, ii, cmt);
     }
 

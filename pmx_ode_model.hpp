@@ -1,7 +1,8 @@
-#ifndef STAN_MATH_TORSTEN_REFACTOR_ODE_MODEL_HPP
-#define STAN_MATH_TORSTEN_REFACTOR_ODE_MODEL_HPP
+#ifndef STAN_MATH_TORSTEN_ODE_MODEL_HPP
+#define STAN_MATH_TORSTEN_ODE_MODEL_HPP
 
 #include <stan/math/prim/fun/to_vector.hpp>
+#include <stan/math/prim/fun/to_array_1d.hpp>
 #include <stan/math/rev/fun/to_var.hpp>
 #include <stan/math/rev/functor/algebra_solver_powell.hpp>
 #include <stan/math/prim/err/check_less_or_equal.hpp>
@@ -114,7 +115,7 @@ namespace torsten {
     }
   };
 
-  namespace internal {
+  namespace {
     /*
      * depends on the type to be retrieved, we retrieve from
      * one of the two vectors. This happens when unpacking
@@ -214,7 +215,7 @@ namespace torsten {
       int ncmt_ = x_i[1];
       int npar_ = x_i[2];
       int i = is_var_amt ? npar_ + ncmt_ : 0;
-      return internal::VectorUnpacker<T_amt>::get(y, x_r, i);
+      return VectorUnpacker<T_amt>::get(y, x_r, i);
     }
 
     template<typename T1>
@@ -229,7 +230,7 @@ namespace torsten {
       } else {
         i = is_var_ii ? npar_ + ncmt_ : 1;
       }
-      return internal::VectorUnpacker<T_ii>::get(y, x_r, i);
+      return VectorUnpacker<T_ii>::get(y, x_r, i);
     }
 
     template<typename T1>
@@ -328,7 +329,7 @@ namespace torsten {
       int npar_ = x_i[2];
       int ncmt_ = x_i[1];
       int i = is_var_amt ? npar_ : ncmt_;
-      return internal::VectorUnpacker<T_amt>::get(y, x_r, i);
+      return VectorUnpacker<T_amt>::get(y, x_r, i);
     }
 
     template<typename T1>
@@ -343,7 +344,7 @@ namespace torsten {
       } else {
         i = is_var_ii ? npar_ : ncmt_ + 1;
       }
-      return internal::VectorUnpacker<T_ii>::get(y, x_r, i);
+      return VectorUnpacker<T_ii>::get(y, x_r, i);
     }
     
     template<typename T1>

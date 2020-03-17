@@ -1,7 +1,7 @@
 #include <stan/math/rev/core.hpp>
 #include <stan/math/torsten/pmx_onecpt_model.hpp>
 #include <stan/math/torsten/pmx_twocpt_model.hpp>
-#include <stan/math/torsten/events_manager.hpp>
+#include <stan/math/torsten/ev_manager.hpp>
 #include <stan/math/torsten/test/unit/pmx_onecpt_test_fixture.hpp>
 #include <stan/math/torsten/test/unit/pmx_twocpt_test_fixture.hpp>
 #include <stan/math/torsten/test/unit/pmx_twocpt_mpi_test_fixture.hpp>
@@ -40,9 +40,9 @@ TEST_F(TorstenOneCptTest, lag_time) {
 
   time[1] = 2.5;
 
-  const NONMENEventsRecord<double, double, double, double, std::vector<double>, double, double>
+  const NONMENEventsRecord<double, double, double, double, double, double, double>
     events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
-  EventsManager<NONMENEventsRecord<double, double, double, double, std::vector<double>, double, double> >
+  EventsManager<NONMENEventsRecord<double, double, double, double, double, double, double> >
     em(events_rec);
   auto ev = em.events();
 
@@ -56,9 +56,9 @@ TEST_F(TorstenOneCptTest, lag_time) {
   EXPECT_EQ(ev.evid(2), 0);
 
   std::vector<std::vector<var> > tlag_v(1, stan::math::to_var(tlag[0]));
-  const NONMENEventsRecord<double, double, double, double, std::vector<double>, double, var>
+  const NONMENEventsRecord<double, double, double, double, double, double, var>
     events_rec_v(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag_v);
-  EventsManager<NONMENEventsRecord<double, double, double, double, std::vector<double>, double, var> >
+  EventsManager<NONMENEventsRecord<double, double, double, double, double, double, var> >
     em1(events_rec_v);
   auto ev1 = em1.events();
   stan::math::set_zero_all_adjoints();
@@ -69,7 +69,7 @@ TEST_F(TorstenOneCptTest, lag_time) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl) {
-  using ER = NONMENEventsRecord<double, double, double, double, std::vector<double>, double, double>;
+  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
   int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
@@ -122,7 +122,7 @@ TEST_F(TorstenTwoCptTest, events_addl) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_singled_ragged_array) {
-  using ER = NONMENEventsRecord<double, double, double, double, std::vector<double>, double, double>;
+  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
   int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
@@ -175,7 +175,7 @@ TEST_F(TorstenTwoCptTest, events_addl_singled_ragged_array) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_multiple_identical_ragged_array) {
-  using ER = NONMENEventsRecord<double, double, double, double, std::vector<double>, double, double>;
+  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
   int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
@@ -254,7 +254,7 @@ TEST_F(TorstenTwoCptTest, events_addl_multiple_identical_ragged_array) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_rate) {
-  using ER = NONMENEventsRecord<double, double, double, double, std::vector<double>, double, double>;
+  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
   int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
@@ -318,7 +318,7 @@ TEST_F(TorstenTwoCptTest, events_addl_rate) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_rate_multiple_identical_ragged_array) {
-  using ER = NONMENEventsRecord<double, double, double, double, std::vector<double>, double, double>;
+  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
   int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
@@ -445,7 +445,7 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_multiple_identical_ragged_array) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_const_tlag) {
-  using ER = NONMENEventsRecord<double, double, double, double, std::vector<double>, double, double>;
+  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
   int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
@@ -545,7 +545,7 @@ TEST_F(TorstenTwoCptTest, events_addl_const_tlag) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_rate_const_tlag) {
-  using ER = NONMENEventsRecord<double, double, double, double, std::vector<double>, double, double>;
+  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
   int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
@@ -606,7 +606,7 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_const_tlag) {
 }
 
 TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_const_tlag) {
-  using ER = NONMENEventsRecord<double, double, double, double, std::vector<double>, double, double>;
+  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
   int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
@@ -671,7 +671,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_const_tlag) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_rate_tlag) {
-  using ER = NONMENEventsRecord<double, double, double, double, std::vector<double>, double, double>;
+  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
   int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
@@ -715,7 +715,7 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_tlag) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_rate_tlag_LOCF) {
-  using ER = NONMENEventsRecord<double, double, double, double, std::vector<double>, double, double>;
+  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
   int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
@@ -782,7 +782,7 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_tlag_LOCF) {
 }
 
 TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_tlag_LOCF) {
-  using ER = NONMENEventsRecord<double, double, double, double, std::vector<double>, double, double>;
+  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
   int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;

@@ -1,5 +1,5 @@
 #include <stan/math/rev/fun/typedefs.hpp>
-#include <stan/math/torsten/events_manager.hpp>
+#include <stan/math/torsten/ev_manager.hpp>
 #include <stan/math/torsten/torsten_def.hpp>
 #include <stan/math/torsten/pmx_twocpt_model.hpp>
 #include <stan/math/torsten/pmx_ode_model.hpp>

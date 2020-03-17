@@ -1,10 +1,9 @@
 #ifndef STAN_MATH_TORSTEN_EVENTS_MANAGER_HPP
 #define STAN_MATH_TORSTEN_EVENTS_MANAGER_HPP
 
-// #include <stan/math/torsten/PKModel/PKModel.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
-#include <stan/math/torsten/event_history.hpp>
-#include <stan/math/torsten/events_record.hpp>
+#include <stan/math/torsten/ev_history.hpp>
+#include <stan/math/torsten/ev_record.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <Eigen/Dense>
 #include <string>
@@ -14,9 +13,11 @@ namespace torsten {
   template <typename T_event_record>
   struct EventsManager;
 
-  template <typename T0, typename T1, typename T2, typename T3, typename T4_container, typename T5, typename T6>
-    struct EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4_container, T5, T6> > {
-    using ER = NONMENEventsRecord<T0, T1, T2, T3, T4_container, T5, T6>;
+  template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
+            template<class...> class theta_container>
+  struct EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6,
+                                          theta_container> > {
+    using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6, theta_container>;
     using T_scalar = typename ER::T_scalar;
     using T_time   = typename ER::T_time;
     using T_rate   = typename ER::T_rate;
@@ -24,9 +25,8 @@ namespace torsten {
     using T_par    = typename ER::T_par;
     using T_par_rate = typename ER::T_par_rate;
     using T_par_ii   = typename ER::T_par_ii;
-    using T4 = typename stan::value_type<T4_container>::type;
 
-    EventHistory<T0, T1, T2, T3, T4_container, T5, T6> event_his;
+    EventHistory<T0, T1, T2, T3, T4, T5, T6, theta_container> event_his;
 
     const int nKeep;
     const int ncmt;
@@ -34,6 +34,8 @@ namespace torsten {
     static int nCmt(const ER& rec) {
       return rec.ncmt;
     }
+
+
 
     /*
      * the index in the result/input where subject @c id begins.
@@ -67,7 +69,7 @@ namespace torsten {
       ncmt(rec.ncmt)
     {}
 
-    const EventHistory<T0, T1, T2, T3, T4_container, T5, T6>& events() const {
+    const EventHistory<T0, T1, T2, T3, T4, T5, T6, theta_container>& events() const {
       return event_his;
     }
 

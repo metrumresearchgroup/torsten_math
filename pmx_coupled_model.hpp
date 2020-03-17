@@ -6,8 +6,7 @@
 #include <stan/math/torsten/pmx_twocpt_model.hpp>
 #include <stan/math/torsten/pmx_ode_model.hpp>
 #include <stan/math/prim/meta/return_type.hpp>
-#include <stan/math/torsten/PKModel/Pred/Pred1_oneCpt.hpp>
-#include <stan/math/torsten/PKModel/Pred/Pred1_twoCpt.hpp>
+#include <stan/math/torsten/pmx_check.hpp>
 #include <stan/math/torsten/PKModel/functors/check_mti.hpp>
 
 namespace torsten {
@@ -836,7 +835,7 @@ namespace torsten {
     if (rate == 0) {  // bolus dose
       predPD_guess = stan::math::to_vector(integrator(F_c(), init_pd,
                                         0.0, init_dt,
-                                        torsten::unpromote(theta2),
+                                                      stan::math::value_of(theta2),
                                         x_r, x_i)[0]);
 
       predPD = algebra_solver_powell(system, predPD_guess,
@@ -855,7 +854,7 @@ namespace torsten {
 
       predPD_guess = stan::math::to_vector(integrator(F_c(), init_pd,
                                                       0.0, init_dt,
-                                                      torsten::unpromote(theta2),
+                                                      stan::math::value_of(theta2),
                                                       x_r, x_i)[0]);
 
       predPD = algebra_solver_powell(system, predPD_guess,

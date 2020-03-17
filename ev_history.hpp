@@ -20,9 +20,9 @@ namespace torsten {
    * The EventHistory class defines objects that contain a vector of Events,
    * along with a series of functions that operate on them.
    */
-  template<typename T0, typename T1, typename T2, typename T3, typename T4_container, typename T5, typename T6>
+  template<typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
+            template<class...> class theta_container>
   struct EventHistory {
-    using T4 = typename stan::value_type<T4_container>::type;
     using T_scalar = typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>;
     using T_time = typename stan::return_type_t<T0, T1, T3, T6, T2>;
     using T_rate = typename stan::return_type_t<T2, T5>;
@@ -40,7 +40,7 @@ namespace torsten {
     const std::vector<int>& ss_;
 
     std::vector<Param> param_index;
-    const std::vector<T4_container>& theta_;
+    const std::vector<theta_container<T4>>& theta_;
     const std::vector<std::vector<T5> >& biovar_;
     const std::vector<std::vector<T6> >& tlag_;
 
@@ -89,7 +89,7 @@ namespace torsten {
                  const std::vector<int>& p_evid, const std::vector<int>& p_cmt,
                  const std::vector<int>& p_addl, const std::vector<int>& p_ss,
                  int ibegin_theta, int isize_theta,
-                 const std::vector<T4_container>& theta,
+                 const std::vector<theta_container<T4>>& theta,
                  int ibegin_biovar, int isize_biovar,
                  const std::vector<std::vector<T5> >& biovar,
                  int ibegin_tlag, int isize_tlag,
@@ -150,7 +150,7 @@ namespace torsten {
                  const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
                  const std::vector<int>& p_evid, const std::vector<int>& p_cmt,
                  const std::vector<int>& p_addl, const std::vector<int>& p_ss,
-                 const std::vector<T4_container>& theta,
+                 const std::vector<theta_container<T4>>& theta,
                  const std::vector<std::vector<T5> >& biovar,
                  const std::vector<std::vector<T6> >& tlag)
     : EventHistory(ncmt,
@@ -237,7 +237,7 @@ namespace torsten {
     }
 
     /*
-     * use current event #i as template to @c push_back to
+     * use current event #i as template to @c push_back
      * another event.
      */
     void insert_event(int i) {
@@ -431,7 +431,7 @@ namespace torsten {
       sort_state_time();
     }
 
-    inline const T4_container& model_param(int i) const {
+    inline const theta_container<T4>& model_param(int i) const {
       return theta_[param_index[i].second[0]];
     }
 

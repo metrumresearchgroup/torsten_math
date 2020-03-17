@@ -1,3 +1,4 @@
+#include <stan/math/torsten/pmx_check.hpp>
 #include <stan/math/torsten/test/unit/test_util.hpp>
 #include <stan/math/torsten/test/unit/expect_near_matrix_eq.hpp>
 #include <stan/math/torsten/test/unit/pmx_twocpt_test_fixture.hpp>
