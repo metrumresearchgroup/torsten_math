@@ -274,17 +274,17 @@ namespace torsten {
   /**
    * Solve two-cpt model: analytical solution
    */
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> 
-    solve(const T_time& t_next) const {
-      using Eigen::Matrix;
-      using Eigen::Dynamic;
-      using std::vector;
+    template<typename T0, typename T, typename T1>
+    void solve(Eigen::Matrix<T, -1, 1>& y,
+               const T0& t0, const T0& t1,
+               const std::vector<T1>& rate,
+               const PMXOdeIntegrator<Analytical>& integ) const {
       using stan::math::exp;
 
-      T_time dt = t_next - t0_;
+      T0 dt = t1 - t0;
 
       std::vector<scalar_type> a(Ncmt, 0);
-      Matrix<scalar_type, -1, 1> pred = torsten::PKRec<scalar_type>::Zero(Ncmt);
+      Eigen::Matrix<T, -1, 1> pred = torsten::PKRec<T>::Zero(Ncmt);
 
       // contribution from cpt 0
       {
@@ -297,16 +297,16 @@ namespace torsten {
           const T_par a6 = -(a4 + a5);
 
           // bolus
-          pred(0) += y0_[0] * exp(-ka_ * dt);
-          pred(1) += y0_[0] * (a1 * exp(-alpha_[0] * dt) + a2 * exp(-alpha_[1] * dt) + a3 * exp(-alpha_[2] * dt));
-          pred(2) += y0_[0] * (a4 * exp(-alpha_[0] * dt) + a5 * exp(-alpha_[1] * dt) + a6 * exp(-alpha_[2] * dt));
+          pred(0) += y(0) * exp(-ka_ * dt);
+          pred(1) += y(0) * (a1 * exp(-alpha_[0] * dt) + a2 * exp(-alpha_[1] * dt) + a3 * exp(-alpha_[2] * dt));
+          pred(2) += y(0) * (a4 * exp(-alpha_[0] * dt) + a5 * exp(-alpha_[1] * dt) + a6 * exp(-alpha_[2] * dt));
 
           // infusion
-          pred(0) += rate_[0] * (1 - exp(-ka_ * dt)) / ka_;
-          pred(1) += rate_[0] * (a1 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a2 * (1 - exp(-alpha_[1] * dt)) / alpha_[1] + a3 * (1 - exp(-alpha_[2] * dt)) / alpha_[2]);
-          pred(2) += rate_[0] * (a4 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a5 * (1 - exp(-alpha_[1] * dt)) / alpha_[1] + a6 * (1 - exp(-alpha_[2] * dt)) / alpha_[2]);
+          pred(0) += rate[0] * (1 - exp(-ka_ * dt)) / ka_;
+          pred(1) += rate[0] * (a1 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a2 * (1 - exp(-alpha_[1] * dt)) / alpha_[1] + a3 * (1 - exp(-alpha_[2] * dt)) / alpha_[2]);
+          pred(2) += rate[0] * (a4 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a5 * (1 - exp(-alpha_[1] * dt)) / alpha_[1] + a6 * (1 - exp(-alpha_[2] * dt)) / alpha_[2]);
         } else {
-          pred(0) += y0_[0] + rate_[0] * dt;
+          pred(0) += y(0) + rate[0] * dt;
         }
       }
 
@@ -316,12 +316,12 @@ namespace torsten {
         const T_par a2 = (k21_ - alpha_[1]) / (alpha_[0] - alpha_[1]);
 
         // bolus
-        pred(1) += y0_[1] * (a1 * exp(-alpha_[0] * dt) + a2 * exp(-alpha_[1] * dt));
-        pred(2) += y0_[1] * k12_ / (alpha_[1] - alpha_[0]) * (exp(-alpha_[0] * dt) - exp(-alpha_[1] * dt));
+        pred(1) += y(1) * (a1 * exp(-alpha_[0] * dt) + a2 * exp(-alpha_[1] * dt));
+        pred(2) += y(1) * k12_ / (alpha_[1] - alpha_[0]) * (exp(-alpha_[0] * dt) - exp(-alpha_[1] * dt));
 
         // infusion
-        pred(1) += rate_[1] * (a1 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a2 * (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
-        pred(2) += rate_[1] * k12_ / (alpha_[1] - alpha_[0]) * ((1 - exp(-alpha_[0] * dt)) / alpha_[0] - (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
+        pred(1) += rate[1] * (a1 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a2 * (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
+        pred(2) += rate[1] * k12_ / (alpha_[1] - alpha_[0]) * ((1 - exp(-alpha_[0] * dt)) / alpha_[0] - (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
       }
 
       // contribution from cpt 2
@@ -330,13 +330,80 @@ namespace torsten {
         const T_par a2 = (k10_ + k12_ - alpha_[1]) / (alpha_[0] - alpha_[1]);
 
         // bolus
-        pred(1) += y0_[2] * k21_ / (alpha_[1] - alpha_[0]) * (exp(-alpha_[0] * dt) - exp(-alpha_[1] * dt));
-        pred(2) += y0_[2] * (a1 * exp(-alpha_[0] * dt) + a2 * exp(-alpha_[1] * dt));
+        pred(1) += y(2) * k21_ / (alpha_[1] - alpha_[0]) * (exp(-alpha_[0] * dt) - exp(-alpha_[1] * dt));
+        pred(2) += y(2) * (a1 * exp(-alpha_[0] * dt) + a2 * exp(-alpha_[1] * dt));
 
         // infusion
-        pred(1) += rate_[2] * k21_ / (alpha_[1] - alpha_[0]) * ((1 - exp(-alpha_[0] * dt)) / alpha_[0] - (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
-        pred(2) += rate_[2] * (a1 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a2 * (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
+        pred(1) += rate[2] * k21_ / (alpha_[1] - alpha_[0]) * ((1 - exp(-alpha_[0] * dt)) / alpha_[0] - (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
+        pred(2) += rate[2] * (a1 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a2 * (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
       }
+
+      y = pred;
+    }
+
+  /**
+   * Solve two-cpt model: analytical solution
+   */
+    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> 
+    solve(const T_time& t_next) const {
+      Eigen::Matrix<scalar_type, -1, 1> pred = torsten::PKRec<scalar_type>::Zero(Ncmt);
+      for (int i = 0; i < Ncmt; ++i) {
+        pred(i) = y0_[i];
+      }
+      PMXOdeIntegrator<Analytical> integ;
+      solve(pred, t0_, t_next, rate_, integ);
+
+      // // contribution from cpt 0
+      // {
+      //   if (ka_ > 0.0) {
+      //     const T_par a1 = ka_ * (k21_ - alpha_[0]) / ((ka_ - alpha_[0]) * (alpha_[1] - alpha_[0]));
+      //     const T_par a2 = ka_ * (k21_ - alpha_[1]) / ((ka_ - alpha_[1]) * (alpha_[0] - alpha_[1]));
+      //     const T_par a3 = -(a1 + a2);
+      //     const T_par a4 = ka_ * k12_ / ((ka_ - alpha_[0]) * (alpha_[1] - alpha_[0]));
+      //     const T_par a5 = ka_ * k12_ / ((ka_ - alpha_[1]) * (alpha_[0] - alpha_[1]));
+      //     const T_par a6 = -(a4 + a5);
+
+      //     // bolus
+      //     pred(0) += y0_[0] * exp(-ka_ * dt);
+      //     pred(1) += y0_[0] * (a1 * exp(-alpha_[0] * dt) + a2 * exp(-alpha_[1] * dt) + a3 * exp(-alpha_[2] * dt));
+      //     pred(2) += y0_[0] * (a4 * exp(-alpha_[0] * dt) + a5 * exp(-alpha_[1] * dt) + a6 * exp(-alpha_[2] * dt));
+
+      //     // infusion
+      //     pred(0) += rate_[0] * (1 - exp(-ka_ * dt)) / ka_;
+      //     pred(1) += rate_[0] * (a1 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a2 * (1 - exp(-alpha_[1] * dt)) / alpha_[1] + a3 * (1 - exp(-alpha_[2] * dt)) / alpha_[2]);
+      //     pred(2) += rate_[0] * (a4 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a5 * (1 - exp(-alpha_[1] * dt)) / alpha_[1] + a6 * (1 - exp(-alpha_[2] * dt)) / alpha_[2]);
+      //   } else {
+      //     pred(0) += y0_[0] + rate_[0] * dt;
+      //   }
+      // }
+
+      // // contribution from cpt 1
+      // {
+      //   const T_par a1 = (k21_ - alpha_[0]) / (alpha_[1] - alpha_[0]);
+      //   const T_par a2 = (k21_ - alpha_[1]) / (alpha_[0] - alpha_[1]);
+
+      //   // bolus
+      //   pred(1) += y0_[1] * (a1 * exp(-alpha_[0] * dt) + a2 * exp(-alpha_[1] * dt));
+      //   pred(2) += y0_[1] * k12_ / (alpha_[1] - alpha_[0]) * (exp(-alpha_[0] * dt) - exp(-alpha_[1] * dt));
+
+      //   // infusion
+      //   pred(1) += rate_[1] * (a1 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a2 * (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
+      //   pred(2) += rate_[1] * k12_ / (alpha_[1] - alpha_[0]) * ((1 - exp(-alpha_[0] * dt)) / alpha_[0] - (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
+      // }
+
+      // // contribution from cpt 2
+      // {
+      //   const T_par a1 = (k10_ + k12_ - alpha_[0]) / (alpha_[1] - alpha_[0]);
+      //   const T_par a2 = (k10_ + k12_ - alpha_[1]) / (alpha_[0] - alpha_[1]);
+
+      //   // bolus
+      //   pred(1) += y0_[2] * k21_ / (alpha_[1] - alpha_[0]) * (exp(-alpha_[0] * dt) - exp(-alpha_[1] * dt));
+      //   pred(2) += y0_[2] * (a1 * exp(-alpha_[0] * dt) + a2 * exp(-alpha_[1] * dt));
+
+      //   // infusion
+      //   pred(1) += rate_[2] * k21_ / (alpha_[1] - alpha_[0]) * ((1 - exp(-alpha_[0] * dt)) / alpha_[0] - (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
+      //   pred(2) += rate_[2] * (a1 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a2 * (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
+      // }
 
       return pred;
     }

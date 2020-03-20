@@ -6,6 +6,8 @@
 #include <stan/math/torsten/pmx_ode_integrator.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
+#include <stan/math/rev/fun/exp.hpp>
+#include <stan/math/prim/fun/exp.hpp>
 #include <stan/math/prim/err/check_positive_finite.hpp>
 #include <stan/math/prim/err/check_finite.hpp>
 #include <stan/math/prim/err/check_nonnegative.hpp>
@@ -228,6 +230,44 @@ namespace torsten {
     const PMXOneCptODE         & f()       const { return f_;     }
     const int                 & ncmt ()   const { return Ncmt;   }
 
+  /**
+   * Solve two-cpt model: analytical solution
+   */
+    template<typename T0, typename T, typename T1>
+    void solve(Eigen::Matrix<T, -1, 1>& y,
+               const T0& t0, const T0& t1,
+               const std::vector<T1>& rate,
+               const PMXOdeIntegrator<Analytical>& integ) const {
+      using stan::math::exp;
+
+      T0 dt = t1 - t0;
+      Eigen::Matrix<T, -1, 1> pred = torsten::PKRec<T>::Zero(Ncmt);
+
+      typename stan::return_type_t<T_par, T0> exp1 = exp(-k10_ * dt);
+      typename stan::return_type_t<T_par, T0> exp2 = exp(-ka_ * dt);
+
+      // contribution from cpt 1 bolus dose
+      pred(1) += y(1) * exp1;
+
+      // contribution from cpt 1 infusion dose
+      pred(1) += rate[1] * (1 - exp1) / k10_;
+
+      if (ka_ > 0.0) {
+        // contribution from cpt 0 bolus dose
+        pred(0) += y(0) * exp2;
+        pred(1) += y(0) * ka_ / (ka_ - k10_) * (exp1 - exp2);
+
+        // contribution from cpt 0 infusion dose
+        pred(0) += rate[0] * (1 - exp2) / ka_;
+        pred(1) += rate[0] * ka_ / (ka_ - k10_) * ((1 - exp1) / k10_ - (1 - exp2) / ka_);
+      } else {
+        // no absorption, GUT is accumulating dosages.
+        pred(0) += y(0) + rate[0] * dt;
+      }
+
+      y = pred;
+    }
+
     /**
      * Solve one-cpt model using analytical solution.
      *
@@ -236,34 +276,12 @@ namespace torsten {
      */
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     solve(const T_time& t_next) const {
-      using Eigen::Matrix;
-      using Eigen::Dynamic;
-
-      T_time dt = t_next - t0_;
-      Matrix<scalar_type, -1, 1> pred = torsten::PKRec<scalar_type>::Zero(Ncmt);
-
-      typename stan::return_type_t<T_par, T_time> exp1 = exp(-k10_ * dt);
-      typename stan::return_type_t<T_par, T_time> exp2 = exp(-ka_ * dt);
-
-      // contribution from cpt 1 bolus dose
-      pred(1) += y0_[1] * exp1;
-
-      // contribution from cpt 1 infusion dose
-      pred(1) += rate_[1] * (1 - exp1) / k10_;
-
-      if (ka_ > 0.0) {
-        // contribution from cpt 0 bolus dose
-        pred(0) += y0_[0] * exp2;
-        pred(1) += y0_[0] * ka_ / (ka_ - k10_) * (exp1 - exp2);
-
-        // contribution from cpt 0 infusion dose
-        pred(0) += rate_[0] * (1 - exp2) / ka_;
-        pred(1) += rate_[0] * ka_ / (ka_ - k10_) * ((1 - exp1) / k10_ - (1 - exp2) / ka_);
-      } else {
-        // no absorption, GUT is accumulating dosages.
-        pred(0) += y0_[0] + rate_[0] * dt;
+      Eigen::Matrix<scalar_type, -1, 1> pred = torsten::PKRec<scalar_type>::Zero(Ncmt);
+      for (int i = 0; i < Ncmt; ++i) {
+        pred(i) = y0_[i];
       }
-
+      PMXOdeIntegrator<Analytical> integ;
+      solve(pred, t0_, t_next, rate_, integ);
       return pred;
     }
 

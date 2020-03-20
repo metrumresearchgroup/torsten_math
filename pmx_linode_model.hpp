@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_PMX_LINODE_MODEL_HPP
 #define STAN_MATH_PMX_LINODE_MODEL_HPP
 
+#include <stan/math/prim/fun/multiply.hpp>
 #include <stan/math/rev/fun/multiply.hpp>
 #include <stan/math/prim/fun/matrix_exp.hpp>
 #include <stan/math/prim/fun/mdivide_left.hpp>
@@ -141,6 +142,39 @@ namespace torsten {
       return y0_.size();
     }
 
+    template<typename T0, typename T, typename T1>
+    void solve(Eigen::Matrix<T, -1, 1>& y,
+               const T0& t0, const T0& t1,
+               const std::vector<T1>& rate,
+               const PMXOdeIntegrator<Analytical>& integ) const {
+      using stan::math::matrix_exp;
+      using stan::math::mdivide_left;
+      using stan::math::multiply;
+
+      T0 dt = t1 - t0;
+
+      const int nCmt = par_.cols();
+      Eigen::Matrix<scalar_type, -1, 1> y0t(nCmt);
+      for (int i = 0; i < nCmt; ++i) y0t(i) = y(i);
+
+      Eigen::Matrix<T, -1, 1> pred(nCmt);
+
+      if (std::any_of(rate.begin(), rate.end(),
+                      [](T_rate r){return r != 0;})) {
+        Eigen::Matrix<T, -1, 1> rate_vec(rate.size()), x(nCmt), x2(nCmt);
+        for (size_t i = 0; i < rate.size(); ++i) rate_vec(i) = rate[i];
+        x = mdivide_left(par_, rate_vec);
+        x2 = x + y;
+        Eigen::Matrix<T, -1, -1> dt_system = multiply(dt, par_);
+        pred = matrix_exp(dt_system) * x2;
+        pred -= x;
+      } else {
+        Eigen::Matrix<T, -1, -1> dt_system = multiply(dt, par_);
+        pred = matrix_exp(dt_system) * y0t;
+      }
+      y = pred;
+    }
+
     /*
      * solve linear ODE model using matrix exponential function
      *
@@ -148,36 +182,14 @@ namespace torsten {
      */
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     solve(const T_time& t_next) const {
-      using Eigen::Matrix;
-      using Eigen::Dynamic;
-      using stan::math::value_of;
-      using stan::math::matrix_exp;
-      using stan::math::mdivide_left;
-      using stan::math::multiply;
-      // using stan::math::scale_matrix_exp_multiply;
-
-      T_time dt = t_next - t0_;
-
       const int nCmt = par_.cols();
-      Matrix<scalar_type, Dynamic, 1> y0t(nCmt);
-      for (int i = 0; i < nCmt; ++i) y0t(i) = y0_(i);
-
-      if (std::any_of(rate_.begin(), rate_.end(),
-                      [](T_rate r){return r != 0;})) {
-        Matrix<scalar_type, Dynamic, 1> rate_vec(rate_.size()), x(nCmt), x2(nCmt);
-        for (size_t i = 0; i < rate_.size(); i++) rate_vec(i) = rate_[i];
-        x = mdivide_left(par_, rate_vec);
-        x2 = x + y0_.transpose();
-        Matrix<scalar_type, Dynamic, Dynamic> dt_system = multiply(dt, par_);
-        Matrix<scalar_type, Dynamic, 1> pred = matrix_exp(dt_system) * x2;
-        pred -= x;
-        return pred.transpose();
-      } else {
-        // return scale_matrix_exp_multiply(value_of(dt), system, y0t);
-        Matrix<scalar_type, Dynamic, Dynamic> dt_system = multiply(dt, par_);
-        Matrix<scalar_type, Dynamic, 1> pred = matrix_exp(dt_system) * y0t;
-        return pred.transpose();
+      Eigen::Matrix<scalar_type, -1, 1> pred(nCmt);
+      for (int i = 0; i < nCmt; ++i) {
+        pred(i) = y0_[i];
       }
+      PMXOdeIntegrator<Analytical> integ;
+      solve(pred, t0_, t_next, rate_, integ);
+      return pred;
     }
 
     /** 
