@@ -66,7 +66,7 @@ namespace torsten {
   template<typename T_time, typename T_init, typename T_rate, typename T_par>
   class PMXLinODEModel {
     const T_time &t0_;
-    const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0_;
+    const PKRec<T_init>& y0_;
     const std::vector<T_rate> &rate_;
     const Eigen::Matrix<T_par, -1, -1> & par_;
 
@@ -102,7 +102,7 @@ namespace torsten {
     // {}
 
     PMXLinODEModel(const T_time& t0,
-                   const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0,
+                   const PKRec<T_init>& y0,
                    const std::vector<T_rate> &rate,
                    const Eigen::Matrix<T_par, -1, -1>& par) :
       t0_(t0),

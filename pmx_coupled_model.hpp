@@ -616,7 +616,7 @@ namespace torsten {
      * @param n_ode the size of ode_model's ODE system
      */
     PKCoupledModel(const T_time& t0,
-                   const torsten::PKRec<T_init>& init,
+                   const PKRec<T_init>& init,
                    const std::vector<T_rate>& rate,
                    const std::vector<T_par> & par,
                    const F& f0,

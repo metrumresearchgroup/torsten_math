@@ -66,7 +66,7 @@ namespace torsten {
   template<typename T_time, typename T_init, typename T_rate, typename T_par>
   class PMXOneCptModel {
     const T_time &t0_;
-    const torsten::PKRec<T_init>& y0_;
+    const PKRec<T_init>& y0_;
     const std::vector<T_rate> &rate_;
     const T_par &CL_;
     const T_par &V2_;
@@ -98,7 +98,7 @@ namespace torsten {
    * @param ka absorption
    */
     PMXOneCptModel(const T_time& t0,
-                   const torsten::PKRec<T_init>& y0,
+                   const PKRec<T_init>& y0,
                    const std::vector<T_rate> &rate,
                    const T_par& CL,
                    const T_par& V2,
@@ -134,7 +134,7 @@ namespace torsten {
    */
     template<template<typename...> class T_mp, typename... Ts>
     PMXOneCptModel(const T_time& t0,
-                  const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0,
+                   const PKRec<T_init>& y0,
                   const std::vector<T_rate> &rate,
                   const std::vector<T_par> & par,
                   const T_mp<Ts...> &parameter) :
@@ -150,7 +150,7 @@ namespace torsten {
    * @param par model parameters
    */
     PMXOneCptModel(const T_time& t0,
-                  const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0,
+                  const PKRec<T_init>& y0,
                   const std::vector<T_rate> &rate,
                   const std::vector<T_par> & par) :
       PMXOneCptModel(t0, y0, rate, par.at(0), par.at(1), par.at(2))

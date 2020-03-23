@@ -4,6 +4,7 @@
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/ev_history.hpp>
 #include <stan/math/torsten/ev_record.hpp>
+#include <stan/math/torsten/event.hpp>
 #include <boost/math/tools/promotion.hpp>
 #include <Eigen/Dense>
 #include <string>
@@ -78,6 +79,36 @@ namespace torsten {
      */
     static int num_events(const ER& rec) {
       return num_events(0, rec);
+    }
+
+    Event<T_time, T_amt, T_rate> event(int i) const {
+      int id;
+      switch (event_his.evid(i)) {
+      case 3:
+        id = 1;
+        break;
+      case 4:
+        if (event_his.is_ss_dosing(i)) {
+          id = 4;
+        } else {
+          id = 2;
+        }
+        break;
+      default:
+        id = 0;
+        if (event_his.is_ss_dosing(i)) {
+          id = 3;
+        }
+      }
+
+      // std::cout << "taki test: " << id << "\n";
+
+      Eigen::Matrix<T_amt, -1, 1> amt(Eigen::Matrix<T_amt, -1, 1>::Zero(ncmt));
+      amt(event_his.cmt(i) - 1) = event_his.fractioned_amt(i);
+      std::vector<T_rate> rate(event_his.fractioned_rates(i));
+      return {i == 0 ? event_his.time(0) : event_his.time(i-1),
+          event_his.time(i),
+          id, amt, rate};
     }
 
     /*

@@ -17,7 +17,7 @@
 struct TorstenTwoCptModelTest : public TorstenOdeTest {
 
   std::vector<double> ts;
-  Eigen::Matrix<double, 1, Eigen::Dynamic> y0;
+  torsten::PKRec<double> y0;
   std::vector<double> rate;
   double CL;
   double Q;

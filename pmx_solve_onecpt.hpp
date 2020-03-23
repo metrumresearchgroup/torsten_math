@@ -63,7 +63,6 @@ pmx_solve_onecpt(const std::vector<T0>& time,
   using Eigen::Matrix;
   using boost::math::tools::promote_args;
   using stan::math::check_positive_finite;
-  using torsten::PKRec;
 
   int nCmt = 2;
   int nParm = 3;

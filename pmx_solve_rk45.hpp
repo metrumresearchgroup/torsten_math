@@ -87,7 +87,6 @@ pmx_solve_rk45(const F& f,
   using std::vector;
   using Eigen::Dynamic;
   using Eigen::Matrix;
-  using torsten::PKRec;
 
   // check arguments
   static const char* function("pmx_solve_rk45");

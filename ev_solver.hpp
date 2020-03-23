@@ -6,6 +6,7 @@
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/pmx_ode_integrator.hpp>
 #include <stan/math/torsten/ev_manager.hpp>
+#include <stan/math/torsten/event.hpp>
 #include <stan/math/torsten/mpi/session.hpp>
 #include <stan/math/torsten/mpi/my_worker.hpp>
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
@@ -161,7 +162,7 @@ namespace torsten{
       }
 
       if (events.is_bolus_dosing(i)) {
-        init(0, events.cmt(i) - 1) += events.fractioned_amt(i);
+        init(events.cmt(i) - 1) += events.fractioned_amt(i);
       }
       tprev = events.time(i);
     }

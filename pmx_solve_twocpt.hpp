@@ -62,7 +62,6 @@ pmx_solve_twocpt(const std::vector<T0>& time,
   using Eigen::Matrix;
   using boost::math::tools::promote_args;
   using stan::math::check_positive_finite;
-  using torsten::PKRec;
 
   int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
   int nParms = torsten::PMXTwoCptModel<double, double, double, double>::Npar;

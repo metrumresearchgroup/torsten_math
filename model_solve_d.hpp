@@ -60,7 +60,7 @@ namespace torsten {
     using T_rate = typename T_model::rate_type;
     using T_par = typename T_model::par_type;
 
-    const Matrix<T_init, 1, -1>& y0 = pkmodel.y0();
+    const PKRec<T_init>& y0 = pkmodel.y0();
     const vector<T_rate>& rate = pkmodel.rate();
     const vector<T_par>& par = pkmodel.par();      
 
@@ -69,7 +69,7 @@ namespace torsten {
     stan::math::start_nested();
 
     try {
-      Matrix<T_init, 1, -1> y0_new(y0.size());
+      PKRec<T_init> y0_new(y0.size());
       vector<T_rate> rate_new(rate.size());
       vector<T_par> par_new(par.size());
 
@@ -119,7 +119,7 @@ namespace torsten {
     using T_rate = typename T_model::rate_type;
     using T_par = typename T_model::par_type;
 
-    const Matrix<T_init, 1, -1>& y0 = pkmodel.y0();
+    const PKRec<T_init>& y0 = pkmodel.y0();
     const vector<T_rate>& rate = pkmodel.rate();
     const vector<T_par>& par = pkmodel.par();      
 
@@ -128,7 +128,7 @@ namespace torsten {
     stan::math::start_nested();
 
     try {
-      Matrix<T_init, 1, -1> y0_new(y0.size());
+      PKRec<T_init> y0_new(y0.size());
       vector<T_rate> rate_new(rate.size());
       vector<T_par> par_new(par.size());
 

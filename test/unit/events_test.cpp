@@ -15,7 +15,6 @@ using std::vector;
 using Eigen::Matrix;
 using Eigen::Dynamic;
 using stan::math::var;
-using torsten::PKRec;
 using torsten::EventsManager;
 using torsten::NONMENEventsRecord;
 

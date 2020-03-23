@@ -9,7 +9,7 @@
 namespace torsten {
 
   template<typename T>
-  using PKRec = Eigen::Matrix<T, 1, Eigen::Dynamic>;
+  using PKRec = Eigen::Matrix<T, -1, 1>;
 
   template<typename T>
   using PMXLin = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;

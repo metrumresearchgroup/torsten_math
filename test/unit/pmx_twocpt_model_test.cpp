@@ -275,18 +275,13 @@ TEST_F(TorstenTwoCptModelTest, ss_infusion_grad_vs_long_run_sd) {
     var t_infus = amt/rate_vec[cmt - 1];
     const std::vector<var> rate_zero{0.0, 0.0, 0.0};
     for (int i = 0; i < 100; ++i) {
-      Eigen::Matrix<var, 1, -1> yt;
-      Eigen::Matrix<var, -1, 1> ys;
-      yt = y.transpose();
-      model_t model_i(t, yt, rate_vec, CL, Q, V2, V3, ka);
+      model_t model_i(t, y, rate_vec, CL, Q, V2, V3, ka);
       var t_next = t + t_infus;
-      ys = model_i.solve(t_next);
-      yt = ys.transpose();
+      PKRec<var> yt = model_i.solve(t_next);
       t = t_next;
       model_t model_j(t, yt, rate_zero, CL, Q, V2, V3, ka);
       t_next = t + ii - t_infus;
-      ys = model_j.solve(t_next);
-      y = ys;
+      y = model_j.solve(t_next);
     }
     return y;
   };
@@ -596,10 +591,16 @@ TEST_F(TorstenTwoCptModelTest, ss_bolus_grad_vs_long_run_sd) {
     double t = t0;
     Eigen::Matrix<var, -1, 1> y = y0;
     for (int i = 0; i < 100; ++i) {
-      Eigen::Matrix<var, 1, -1> yt = y.transpose();
-      model_t model_i(t, yt, rate, CL, Q, V2, V3, ka);
+      // Eigen::Matrix<var, 1, -1> yt = y.transpose();
+      // model_t model_i(t, yt, rate, CL, Q, V2, V3, ka);
+      // double t_next = t + ii;
+      // Eigen::Matrix<var, -1, 1> ys = model_i.solve(t_next);
+      // ys(cmt - 1) += amt_vec[0];
+      // y = ys;
+      // t = t_next;
+      model_t model_i(t, y, rate, CL, Q, V2, V3, ka);
       double t_next = t + ii;
-      Eigen::Matrix<var, -1, 1> ys = model_i.solve(t_next);
+      PKRec<var> ys = model_i.solve(t_next);
       ys(cmt - 1) += amt_vec[0];
       y = ys;
       t = t_next;

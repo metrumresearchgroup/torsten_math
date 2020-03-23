@@ -71,7 +71,6 @@ pmx_solve_linode(const std::vector<T0>& time,
   using Eigen::Dynamic;
   using Eigen::Matrix;
   using boost::math::tools::promote_args;
-  using torsten::PKRec;
 
   static const char* function("pmx_solve_linode");
   for (size_t i = 0; i < system.size(); i++)

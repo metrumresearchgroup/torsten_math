@@ -84,7 +84,6 @@ pmx_solve_adams(const F& f,
   using Eigen::Dynamic;
   using Eigen::Matrix;
   using boost::math::tools::promote_args;
-  using torsten::PKRec;
 
   // check arguments
   static const char* function("pmx_solve_adams");

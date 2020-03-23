@@ -79,7 +79,7 @@ namespace torsten {
   template<typename T_time, typename T_init, typename T_rate, typename T_par>
   class PMXTwoCptModel {
     const T_time &t0_;
-    const torsten::PKRec<T_init>& y0_;
+    const PKRec<T_init>& y0_;
     const std::vector<T_rate> &rate_;
     const T_par &CL_;
     const T_par &Q_;
@@ -165,7 +165,7 @@ namespace torsten {
    */
     template<template<typename...> class T_mp, typename... Ts>
     PMXTwoCptModel(const T_time& t0,
-                  const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0,
+                   const PKRec<T_init>& y0,
                   const std::vector<T_rate> &rate,
                   const std::vector<T_par> & par,
                   const T_mp<Ts...> &parameter) :
@@ -181,7 +181,7 @@ namespace torsten {
    * @param par model parameters
    */
     PMXTwoCptModel(const T_time& t0,
-                  const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0,
+                  const PKRec<T_init>& y0,
                   const std::vector<T_rate> &rate,
                   const std::vector<T_par> & par) :
       PMXTwoCptModel(t0, y0, rate, par[0], par[1], par[2], par[3], par[4])
@@ -275,8 +275,7 @@ namespace torsten {
    * Solve two-cpt model: analytical solution
    */
     template<typename T0, typename T, typename T1>
-    void solve(Eigen::Matrix<T, -1, 1>& y,
-               const T0& t0, const T0& t1,
+    void solve(PKRec<T>& y, const T0& t0, const T0& t1,
                const std::vector<T1>& rate,
                const PMXOdeIntegrator<Analytical>& integ) const {
       using stan::math::exp;
@@ -344,11 +343,10 @@ namespace torsten {
   /**
    * Solve two-cpt model: analytical solution
    */
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> 
-    solve(const T_time& t_next) const {
+    PKRec<scalar_type> solve(const T_time& t_next) const {
       Eigen::Matrix<scalar_type, -1, 1> pred = torsten::PKRec<scalar_type>::Zero(Ncmt);
       for (int i = 0; i < Ncmt; ++i) {
-        pred(i) = y0_[i];
+        pred(i) = y0_(i);
       }
       PMXOdeIntegrator<Analytical> integ;
       solve(pred, t0_, t_next, rate_, integ);

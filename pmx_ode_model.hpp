@@ -467,7 +467,7 @@ namespace torsten {
   template<typename T_time, typename T_init, typename T_rate, typename T_par, typename F> // NOLINT
   class PKODEModel {
     const T_time &t0_;
-    const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0_;
+    const PKRec<T_init>& y0_;
     const std::vector<T_rate> &rate_;
     const std::vector<T_par> &par_;
     const F &f_;
@@ -493,7 +493,7 @@ namespace torsten {
      * @param ncmt the ODE size.
      */
     PKODEModel(const T_time& t0,
-               const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0,
+               const PKRec<T_init>& y0,
                const std::vector<T_rate> &rate,
                const std::vector<T_par> &par,
                const F& f) :
@@ -562,7 +562,7 @@ namespace torsten {
 
     template<typename T0, typename T1, typename T2, typename T3>
     static int nvars(const T0& t0,
-                     const Eigen::Matrix<T1, 1, Eigen::Dynamic>& y0,
+                     const PKRec<T1>& y0,
                      const std::vector<T2> &rate,
                      const std::vector<T3> &par) {
       using stan::is_var;
@@ -584,7 +584,7 @@ namespace torsten {
      */
     template<typename T0, typename T1, typename T2, typename T3>
     static std::vector<stan::math::var> vars(const T0& t1,
-                                             const Eigen::Matrix<T1, 1, Eigen::Dynamic>& y0,
+                                             const PKRec<T1>& y0,
                                              const std::vector<T2> &rate,
                                              const std::vector<T3> &par) {
       using stan::math::to_var;      
@@ -623,7 +623,7 @@ namespace torsten {
      */
     template<typename T0, typename T1, typename T2, typename T3>
     static int n_sys(const T0& t0,
-                     const Eigen::Matrix<T1, 1, Eigen::Dynamic>& y0,
+                     const PKRec<T1>& y0,
                      const std::vector<T2> &rate,
                      const std::vector<T3> &par) {
       using stan::is_var;
@@ -758,26 +758,36 @@ namespace torsten {
      *         solution at certain time step. Hence the returned
      *         matrix is of dim (numer of time steps) x (siez of ODE system).
      */
+    template<typename T0, typename T, typename T1, PMXOdeIntegratorId It>
+    void solve(Eigen::Matrix<T, -1, 1>& y,
+               const T0& t0, const T0& t1,
+               const std::vector<T1>& rate,
+               const PMXOdeIntegrator<It>& integrator) const {
+      const double t0_d = stan::math::value_of(t0);
+      std::vector<T0> ts(time_step(t1));
+      if (t1 > t0) {
+        auto y_vec = stan::math::to_array_1d(y);
+        std::vector<int> x_i;
+        std::vector<std::vector<T> > res_v =
+          integrator(f1, y_vec, t0_d, ts,
+                     f1.adapted_param(par_, rate),
+                     f1.adapted_x_r(rate),
+                     x_i);
+        y = stan::math::to_vector(res_v[0]);
+      }
+    }
+
+
     template<PMXOdeIntegratorId It>
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
     solve(const T_time& t_next,
           const PMXOdeIntegrator<It>& integrator) const {
-      const double t0 = stan::math::value_of(t0_);
-      std::vector<T_time> ts(time_step(t_next));
-      Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> res;
-      if (ts[0] == t0_) {
-        res = y0_;
-      } else {
-        auto y = stan::math::to_array_1d(y0_);
-        std::vector<int> x_i;
-        std::vector<std::vector<scalar_type> > res_v =
-          integrator(f1, y, t0, ts,
-                     f1.adapted_param(par_, rate_),
-                     f1.adapted_x_r(rate_),
-                     x_i);
-        res = stan::math::to_vector(res_v[0]);
+      Eigen::Matrix<scalar_type, -1, 1> pred = Eigen::Matrix<scalar_type, -1, 1>::Zero(ncmt_);
+      for (int i = 0; i < ncmt_; ++i) {
+        pred(i) = y0_[i];
       }
-      return res;
+      solve(pred, t0_, t_next, rate_, integrator);
+      return pred;
     }
 
     /*
