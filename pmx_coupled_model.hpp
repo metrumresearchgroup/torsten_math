@@ -590,6 +590,7 @@ namespace torsten {
     const torsten::PKRec<T_init> y0_pk;
     const torsten::PKRec<T_init> y0_ode;
     PMXOdeFunctorCouplingAdaptor<T_m, F, T_rate> f;
+    int n_ode;
 
   public:
     using Fa = PMXOdeFunctorCouplingAdaptor<T_m, F, T_rate>;
@@ -620,60 +621,17 @@ namespace torsten {
                    const std::vector<T_rate>& rate,
                    const std::vector<T_par> & par,
                    const F& f0,
-                   const int n_ode) :
+                   const int n_ode_) :
       y0_(init),
-      y0_pk{ y0_.head(y0_.size() - n_ode) },
-      y0_ode{ y0_.segment(y0_pk.size(), n_ode) },
+      y0_pk{ y0_.head(y0_.size() - n_ode_) },
+      y0_ode{ y0_.segment(y0_pk.size(), n_ode_) },
       f(),
       pk_model(t0, y0_pk, rate, par),
-      ode_model(t0, y0_ode, rate, par, f)
+      ode_model(t0, y0_ode, rate, par, f),
+      n_ode(n_ode_)
     {}
     
   private:
-
-    /**
-     * integrate coupled ODE.
-     */
-  template<typename T_r, typename T_integrator>
-  torsten::PKRec<typename stan::return_type_t<T_time, T_r, T_par, T_init>> // NOLINT
-  integrate(const T_time& t_next,
-            const std::vector<T_r>& rate,
-            const T_integrator& integrator) const {
-    using std::vector;
-    using stan::math::to_array_1d;
-
-    typedef typename promote_args<T_time, T_r, T_par, T_init>::type scalar;
-
-    // pass fixed times to the integrator. FIX ME - see issue #30
-    T_time t0 = ode_model.t0();
-    T_time t = t_next;
-    vector<double> t_dbl{stan::math::value_of(t)};
-    double t0_dbl = stan::math::value_of(t0);
-
-    torsten::PKRec<scalar> pred;
-    if (t_dbl[0] == t0_dbl) {
-      pred = y0_;
-    } else {
-      size_t nPK = pk_model.ncmt();
-      torsten::PKRec<scalar> xPK = pk_model.solve(t);
-
-      // create vector with PD initial states
-      vector<T_init> y0_PD(to_array_1d(y0_ode));
-      PMXOdeFunctorCouplingAdaptor<T_m, F, T_r> f_coupled;
-      using packer_t = PMXOdeFunctorCouplingAdaptorPacker<T_r, double, double>;
-      vector<vector<scalar> >
-        pred_V = integrator(f_coupled, y0_PD, t0_dbl, t_dbl,
-                            packer_t::adapted_param(ode_model.par(), rate, y0_pk),
-                            packer_t::adapted_x_r(rate, y0_pk, t0_dbl),
-                            vector<int>());
-
-      size_t nOde = pred_V[0].size();
-      pred.resize(nPK + nOde);
-      for (size_t i = 0; i < nPK; i++) pred(i) = xPK(i);
-      for (size_t i = 0; i < nOde; i++) pred(nPK + i) = pred_V[0][i];
-    }
-    return pred;
-  }
 
   /**
    * Steady state solver to
@@ -871,14 +829,60 @@ namespace torsten {
   }
 
   public:
+    /*
+     * solve the coupled model.
+     */
+    // template<torsten::PMXOdeIntegratorId It>
+    // torsten::PKRec<scalar_type>
+    // solve(const T_time& t_next,
+    //       const torsten::PMXOdeIntegrator<It>& integrator) const {
+    template<typename T0, typename T, typename T1, PMXOdeIntegratorId It>
+    void solve(PKRec<T>& y, const T0& t0, const T0& t1,
+               const std::vector<T1>& rate,
+               const PMXOdeIntegrator<It>& integrator) const {
+      using std::vector;
+
+      // pass fixed times to the integrator. FIX ME - see issue #30
+      T0 t = t1;
+      vector<double> t_dbl{stan::math::value_of(t)};
+      double t0_dbl = stan::math::value_of(t0);
+
+      PKRec<T> pred;
+      if (t_dbl[0] > t0_dbl) {
+        size_t nPK = pk_model.ncmt();
+        PKRec<T> xPK = pk_model.solve(t);
+        PKRec<T> y_pk(y.head(y.size() - n_ode));
+        PKRec<T> y_ode(y.segment(y_pk.size(), n_ode));
+
+        // create vector with PD initial states
+        vector<T> y0_PD(stan::math::to_array_1d(y_ode));
+        PMXOdeFunctorCouplingAdaptor<T_m, F, T1> f_coupled;
+        using packer_t = PMXOdeFunctorCouplingAdaptorPacker<T1, double, double>;
+        vector<vector<T> >
+          pred_V = integrator(f_coupled, y0_PD, t0_dbl, t_dbl,
+                              packer_t::adapted_param(ode_model.par(), rate, y_pk),
+                              packer_t::adapted_x_r(rate, y_pk, t0_dbl),
+                              vector<int>());
+
+        size_t nOde = pred_V[0].size();
+        pred.resize(nPK + nOde);
+        for (size_t i = 0; i < nPK; i++) pred(i) = xPK(i);
+        for (size_t i = 0; i < nOde; i++) pred(nPK + i) = pred_V[0][i];
+        y = pred;
+      }
+    }
+
     /* 
      * solve the coupled model.
      */
     template<torsten::PMXOdeIntegratorId It>
-    torsten::PKRec<scalar_type>
+    PKRec<scalar_type>
     solve(const T_time& t_next,
           const torsten::PMXOdeIntegrator<It>& integrator) const {
-      return integrate(t_next, ode_model.rate(), integrator);
+      T_time t0 = ode_model.t0();
+      PKRec<scalar_type> pred(y0_);
+      solve(pred, t0, t_next, ode_model.rate(), integrator);
+      return pred;
     }
 
     /* 

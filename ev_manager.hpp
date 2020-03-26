@@ -103,12 +103,13 @@ namespace torsten {
 
       // std::cout << "taki test: " << id << "\n";
 
-      Eigen::Matrix<T_amt, -1, 1> amt(Eigen::Matrix<T_amt, -1, 1>::Zero(ncmt));
+      PKRec<T_amt> amt(PKRec<T_amt>::Zero(ncmt));
       amt(event_his.cmt(i) - 1) = event_his.fractioned_amt(i);
       std::vector<T_rate> rate(event_his.fractioned_rates(i));
-      return {i == 0 ? event_his.time(0) : event_his.time(i-1),
-          event_his.time(i),
-          id, amt, rate};
+      return {id,
+              i == 0 ? event_his.time(0) : event_his.time(i-1),
+              event_his.time(i),
+              amt, rate};
     }
 
     /*

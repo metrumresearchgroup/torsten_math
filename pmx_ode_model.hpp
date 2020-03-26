@@ -652,7 +652,7 @@ namespace torsten {
      * return @c vars that will be in integrator calls
      */
     template<typename T0>
-    std::vector<stan::math::var> vars(const T0 t1) {
+    std::vector<stan::math::var> vars(const T0 t1) const {
       return vars(t1, y0_, rate_, par_);
     }
 
@@ -809,36 +809,49 @@ namespace torsten {
     }
 
     /*
-     * @c PkBdf can return results in form of data directly,
+     * <code>PKBdf, PKAdams, PKRk45</code> integrators can return 
+     * results in form of data directly,
+     * thanks to @c pk_cvodes_integrator implementation.
+     */
+    template<typename T0, typename T, typename T1, PMXOdeIntegratorId It,
+             typename std::enable_if_t<It == torsten::PkBdf || It == torsten::PkAdams || It == torsten::PkRk45>* = nullptr>
+    void solve_d(Eigen::VectorXd& yd,
+                 const PKRec<T>& y,
+                 const T0& t0, const T0& t1,
+                 const std::vector<T1>& rate,
+                 const PMXOdeIntegrator<It>& integrator) const {
+      static const char* caller = "PMXOdeModel::solve_d";
+      stan::math::check_greater(caller, "next time", t1, t0);
+
+      using stan::math::var;
+      using stan::math::value_of;
+      using stan::math::to_var;
+
+      const double t0_d = value_of(t0);
+      std::vector<T_time> ts(time_step(t1));
+      // Eigen::VectorXd res(n_sys());
+      if (t1 > t0) {
+        auto y1d = stan::math::to_array_1d(y);
+        std::vector<int> x_i;
+        yd = integrator.solve_d(f1, y1d, t0_d, ts,
+                                 f1.adapted_param(par_, rate),
+                                 f1.adapted_x_r(rate),
+                                 x_i).col(0);
+      }
+    }
+
+    /*
+     * <code>PKBdf, PKAdams, PKRk45</code> integrators can return
+     * results in form of data directly,
      * thanks to @c pk_cvodes_integrator implementation.
      */
     template<PMXOdeIntegratorId It,
              typename std::enable_if_t<It == torsten::PkBdf || It == torsten::PkAdams || It == torsten::PkRk45>* = nullptr>
     Eigen::VectorXd solve_d(const T_time& t_next,
                             const PMXOdeIntegrator<It>& integrator) const {
-      static const char* caller = "PMXOdeModel::solve_d";
-      stan::math::check_greater(caller, "next time", t_next, t0_);
-
-      // return integrate_d(rate_, t_next, integrator);
-      using stan::math::var;
-      using stan::math::value_of;
-      using stan::math::to_var;
-
-      const double t0 = value_of(t0_);
-      std::vector<T_time> ts(time_step(t_next));
-      Eigen::VectorXd res(n_sys());
-      if (ts[0] == t0_) {
-        res = stan::math::value_of(y0_);
-        res.resize(n_sys());
-      } else {
-        auto y = stan::math::to_array_1d(y0_);
-        std::vector<int> x_i;
-        res = integrator.solve_d(f1, y, t0, ts,
-                                 f1.adapted_param(par_, rate_),
-                                 f1.adapted_x_r(rate_),
-                                 x_i).col(0);
-      }
-      return res;
+      Eigen::VectorXd pred;
+      solve_d(pred, y0_, t0_, t_next, rate_, integrator);
+      return pred;
     }
 
     /**

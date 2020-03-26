@@ -126,8 +126,8 @@ namespace torsten{
      * Step through a range of events.
      */
     template<typename T_em, PMXOdeIntegratorId It, typename... Ts>
-    void stepper(int i, torsten::PKRec<typename T_em::T_scalar>& init,
-                        const T_em& em, const PMXOdeIntegrator<It> integrator, const Ts... model_pars) {
+    void stepper(int i, PKRec<typename T_em::T_scalar>& init,
+                 const T_em& em, const PMXOdeIntegrator<It> integrator, const Ts... model_pars) {
       auto events = em.events();
 
       using scalar = typename T_em::T_scalar;
@@ -157,8 +157,8 @@ namespace torsten{
         typename T_em::T_time model_time = tprev;
         auto curr_rates = events.fractioned_rates(i);
         T_model pkmodel {model_time, init, curr_rates, events.model_param(i), model_pars...};
-        pred1 = pkmodel.solve(events.time(i), integrator);
-        init = pred1;
+        auto ev = em.event(i);
+        ev(init, pkmodel, integrator);
       }
 
       if (events.is_bolus_dosing(i)) {
@@ -195,9 +195,8 @@ namespace torsten{
           typename T_em::T_time model_time = tprev;
           auto curr_rates = events.fractioned_rates(i);
           T_model pkmodel {model_time, init, curr_rates, events.model_param(i), model_pars...};
-          vector<var> v_i = pkmodel.vars(events.time(i));
-          sol_d = pkmodel.solve_d(events.time(i), integrator);
-          init = torsten::mpi::precomputed_gradients(sol_d, v_i);
+          auto ev = em.event(i);
+          ev(sol_d, init, pkmodel, integrator);
       }
 
       if (events.is_bolus_dosing(i)) {
