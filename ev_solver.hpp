@@ -133,7 +133,7 @@ namespace torsten{
       using scalar = typename T_em::T_scalar;
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
-      Eigen::Matrix<scalar, -1, 1> pred1;
+      PKRec<scalar> pred1;
 
       if (events.is_reset(i)) {
         init.setZero();
@@ -142,13 +142,8 @@ namespace torsten{
         std::vector<typename T_em::T_rate> dummy_rate;
         T_model pkmodel {model_time, init, dummy_rate, events.model_param(i), model_pars...};
         auto curr_amt = events.fractioned_amt(i);
-        pred1 = stan::math::multiply(pkmodel.solve(curr_amt,
-                                                   events.rate(i),
-                                                   events.ii(i),
-                                                   events.cmt(i),
-                                                   integrator),
-                                     scalar(1.0));
-
+        auto ev = em.event(i);
+        ev(pred1, pkmodel, integrator);
         if (events.ss(i) == 2)
           init += pred1;  // steady state without reset
         else
@@ -192,7 +187,7 @@ namespace torsten{
         else
           init = torsten::mpi::precomputed_gradients(sol_d, v_i);  // steady state with reset (ss = 1)
       } else if (events.time(i) > tprev) {
-          typename T_em::T_time model_time = tprev;
+           typename T_em::T_time model_time = tprev;
           auto curr_rates = events.fractioned_rates(i);
           T_model pkmodel {model_time, init, curr_rates, events.model_param(i), model_pars...};
           auto ev = em.event(i);
