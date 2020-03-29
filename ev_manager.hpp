@@ -82,20 +82,26 @@ namespace torsten {
     Event<T_time, T3, T_amt, T_rate, T2> event(int i) const {
       int id;
       switch (event_his.evid(i)) {
-      case 3:
+      case 3:                   // reset
         id = 1;
         break;
-      case 4:
+      case 4:                   // reset + dosing
         if (event_his.is_ss_dosing(i)) {
+          // since it's reset, SS reset is irrelevant 
           id = 4;
         } else {
           id = 2;
         }
         break;
       default:
-        id = 0;
         if (event_his.is_ss_dosing(i)) {
-          id = 3;
+          if (event_his.ss(i) == 2) {
+            id = 3;
+          } else {
+            id = 4;
+          }
+        } else {
+          id = 0;
         }
       }
 
@@ -108,7 +114,9 @@ namespace torsten {
         t1 = event_his.time(i);
       }
       PKRec<T_amt> amt = PKRec<T_amt>::Zero(ncmt);
-      amt(event_his.cmt(i) - 1) = event_his.fractioned_amt(i);
+      if (event_his.is_bolus_dosing(i) || event_his.is_ss_dosing(i)) {
+        amt(event_his.cmt(i) - 1) = event_his.fractioned_amt(i);
+      }
       std::vector<T_rate> rate(event_his.fractioned_rates(i));
       return {id, t0, t1, event_his.ii(i),
               amt, rate, event_his.rate(i), event_his.cmt(i)};

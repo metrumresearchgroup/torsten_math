@@ -137,27 +137,12 @@ namespace torsten{
 
       if (events.is_reset(i)) {
         init.setZero();
-      } else if (events.is_ss_dosing(i)) {  // steady state event
-        typename T_em::T_time model_time = events.time(i); // FIXME: time is not t0 but for adjust within SS solver
-        std::vector<typename T_em::T_rate> dummy_rate;
-        T_model pkmodel {model_time, init, dummy_rate, events.model_param(i), model_pars...};
-        auto curr_amt = events.fractioned_amt(i);
-        auto ev = em.event(i);
-        ev(pred1, pkmodel, integrator);
-        if (events.ss(i) == 2)
-          init += pred1;  // steady state without reset
-        else
-          init = pred1;  // steady state with reset (ss = 1)
-      } else if (events.time(i) > tprev) {           // non-steady dosing event
+      } else {
         typename T_em::T_time model_time = tprev;
         auto curr_rates = events.fractioned_rates(i);
         T_model pkmodel {model_time, init, curr_rates, events.model_param(i), model_pars...};
         auto ev = em.event(i);
         ev(init, pkmodel, integrator);
-      }
-
-      if (events.is_bolus_dosing(i)) {
-        init(events.cmt(i) - 1) += events.fractioned_amt(i);
       }
       tprev = events.time(i);
     }

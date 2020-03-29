@@ -12,8 +12,8 @@ namespace torsten {
     /// 0. observation
     /// 1. reset
     /// 2. reset + evolve
-    /// 3. steady state
-    /// 4. reset + steady statea
+    /// 3. ovsteady state
+    /// 4. reset + steady state
     const int id;
     time_t t0;
     time_t t1;
@@ -36,14 +36,28 @@ namespace torsten {
     inline void operator()(PKRec<T>& y,
                            const model_t& model,
                            const PMXOdeIntegrator<It>& integ) {
+      const double eps = 1.0E-12;
+      const jump_t jp = force0 < eps ? jump(cmt - 1) : 0.0;
       switch(id) {
+      case 1:
+        y.setZero();
+        break;
+      case 2:
+        y.setZero();
+        model.solve(y, t0, t1, force, integ);
+        y(cmt - 1) += jp;
+        break;
       case 3:
-        // std::cout << "taki test: " << jump(cmt - 1) << " " <<
-        //   force0 << " " << ii << " " << cmt  << "\n";
+        y += T(1.0) * model.solve(jump(cmt - 1), force0, ii, cmt, integ);
+        y(cmt - 1) += jp;
+        break;
+      case 4:
         y = T(1.0) * model.solve(jump(cmt - 1), force0, ii, cmt, integ);
+        y(cmt - 1) += jp;
         break;
       default:
-        model.solve(y, t0, t1, force, integ);        
+        model.solve(y, t0, t1, force, integ);
+        y(cmt - 1) += jp;
       }
     }
 
