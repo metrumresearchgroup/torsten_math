@@ -39,9 +39,8 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_vs_long_run_sd) {
     for (int i = 0; i < 50; ++i) {
       PKODEModel<double, double, double, double, PMXTwoCptODE> model_i(t, y, rate, theta, f2cpt);
       double t_next = t + ii;
-      PKRec<double> yt = model_i.solve(t_next,integrator);
-      yt(cmt - 1) += amt;
-      y = yt;
+      model_i.solve(y, t, t_next, rate, integrator);
+      y(cmt - 1) += amt;
       t = t_next;
     }
     // steady state solution is the end of II dosing before
@@ -116,9 +115,8 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_grad_vs_long_run_sd) {
     for (int i = 0; i < 50; ++i) {
       PKODEModel<double, var, double, double, PMXTwoCptODE> model_i(t, y, rate, theta, f2cpt);
       double t_next = t + ii;
-      PKRec<var> yt = model_i.solve(t_next,integrator);
-      yt(cmt - 1) += amt;
-      y = yt;
+      model_i.solve(y, t, t_next, rate, integrator);
+      y(cmt - 1) += amt;
       t = t_next;
     }
     // steady state solution is the end of II dosing before
@@ -196,11 +194,11 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_infusion_vs_long_run_sd) {
     for (int i = 0; i < 50; ++i) {
       model_t model_i(t, y, rate_vec, theta, f2cpt);
       double t_next = t + t_infus;
-      PKRec<double> yt = model_i.solve(t_next, integrator);
+      model_i.solve(y, t, t_next, rate_vec, integrator);
       t = t_next;
-      model_t model_j(t, yt, rate_zero, theta, f2cpt);
+      model_t model_j(t, y, rate_zero, theta, f2cpt);
       t_next = t + ii - t_infus;
-      y = model_j.solve(t_next, integrator);
+      model_j.solve(y, t, t_next, rate_zero, integrator);
     }
     return y;
   };
@@ -270,18 +268,13 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_parm_ss_infusion_vs_long_run_sd) {
     var t_infus = amt[0]/rate_vec[cmt - 1];
     const std::vector<double> rate_zero(3, 0.0);
     for (int i = 0; i < 50; ++i) {
-      Eigen::Matrix<var, 1, -1> yt;
-      Eigen::Matrix<var, -1, 1> ys;
-      yt = y.transpose();
-      model_t model_i(t, yt, rate_vec, theta, f2cpt);
+      model_t model_i(t, y, rate_vec, theta, f2cpt);
       var t_next = t + t_infus;
-      ys = model_i.solve(t_next, integrator);
-      yt = ys.transpose();
+      model_i.solve(y, t, t_next, rate_vec, integrator);
       t = t_next;
-      model_t model_j(t, yt, rate_zero, theta, f2cpt);
+      model_t model_j(t, y, rate_zero, theta, f2cpt);
       t_next = t + ii - t_infus;
-      ys = model_j.solve(t_next, integrator);
-      y = ys;
+      model_j.solve(y, t, t_next, rate_zero, integrator);
     }
     return y;
   };
@@ -365,11 +358,11 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_infusion_grad_vs_long_run_s
     for (int i = 0; i < 50; ++i) {
       model_t model_i(t, y, rate_vec, theta, f2cpt);
       var t_next = t + t_infus;
-      PKRec<var> yt = model_i.solve(t_next, integrator);
+      model_i.solve(y, t, t_next, rate_vec, integrator);
       t = t_next;
-      model_t model_j(t, yt, rate_zero, theta, f2cpt);
+      model_t model_j(t, y, rate_zero, theta, f2cpt);
       t_next = t + ii - t_infus;
-      y = model_j.solve(t_next, integrator);
+      model_j.solve(y, t, t_next, rate_zero, integrator);
     }
     return y;
   };
@@ -428,8 +421,9 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_const_infusion_grad_vs_long
     std::vector<var> rate_vec(3, 0.0);
     rate_vec[cmt - 1] = r;
     model_t model(t0, y0, rate_vec, theta, f2cpt);
-    double t_next = 5.0e2;
-    return model.solve(t_next, integrator);
+    var t_next = 5.0e2;
+    model.solve(y, t, t_next, rate_vec, integrator);
+    return y;
   };
 
   auto f2 = [&](const var& r, const auto& integrator) {
@@ -481,9 +475,8 @@ TEST_F(TorstenTwoCptModelTest, ode_model_rate_param_ss_bolus_vs_long_run_sd) {
     for (int i = 0; i < 50; ++i) {
       PKODEModel<double, double, double, double, PMXTwoCptODE> model_i(t, y, rate, theta, f2cpt);
       double t_next = t + ii;
-      PKRec<double> yt = model_i.solve(t_next,integrator);
-      yt(cmt - 1) += amt;
-      y = yt;
+      model_i.solve(y, t, t_next, rate, integrator);
+      y(cmt - 1) += amt;
       t = t_next;
     }
     // steady state solution is the end of II dosing before
@@ -542,9 +535,8 @@ TEST_F(TorstenTwoCptModelTest, ode_model_rate_param_ss_bolus_grad_vs_long_run_sd
     for (int i = 0; i < 50; ++i) {
       PKODEModel<double, var, double, double, PMXTwoCptODE> model_i(t, y, rate, theta, f2cpt);
       double t_next = t + ii;
-      PKRec<var> yt = model_i.solve(t_next,integrator);
-      yt(cmt - 1) += amt;
-      y = yt;
+      model_i.solve(y, t, t_next, rate, integrator);
+      y(cmt - 1) += amt;
       t = t_next;
     }
     // steady state solution is the end of II dosing before
@@ -609,11 +601,11 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_param_ss_infusion_grad_vs_long_run_
     for (int i = 0; i < 50; ++i) {
       model_t model_i(t, y, rate_vec, theta, f2cpt);
       var t_next = t + t_infus;
-      PKRec<var> yt = model_i.solve(t_next, integrator);
+      model_i.solve(y, t, t_next, rate_vec, integrator);
       t = t_next;
-      model_t model_j(t, yt, rate_zero, theta, f2cpt);
+      model_t model_j(t, y, rate_zero, theta, f2cpt);
       t_next = t + ii - t_infus;
-      y = model_j.solve(t_next, integrator);
+      model_j.solve(y, t, t_next, rate_zero, integrator);
     }
     return y;
   };
@@ -670,8 +662,9 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_param_ss_const_infusion_grad_vs_lon
     std::vector<var> rate_vec(3, 0.0);
     rate_vec[cmt - 1] = r;
     model_t model(t0, y0, rate_vec, theta, f2cpt);
-    double t_next = 5.0e2;
-    return model.solve(t_next, integrator);
+    var t_next = 5.0e2;
+    model.solve(y, t, t_next, rate_vec, integrator);
+    return y;
   };
 
   auto f2 = [&](const var& r, const auto& integrator) {
@@ -725,9 +718,8 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_theta_grad_vs_long_run_sd) {
     for (int i = 0; i < 50; ++i) {
       PKODEModel<double, var, double, var, PMXTwoCptODE> model_i(t, y, rate, theta, f2cpt);
       double t_next = t + ii;
-      PKRec<var> yt = model_i.solve(t_next,integrator);
-      yt(cmt - 1) += amt;
-      y = yt;
+      model_i.solve(y, t, t_next, rate, integrator);
+      y(cmt - 1) += amt;
       t = t_next;
     }
     // steady state solution is the end of II dosing before
@@ -750,9 +742,8 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_theta_grad_vs_long_run_sd) {
     for (int i = 0; i < 50; ++i) {
       PKODEModel<double, var, double, var, PMXTwoCptODE> model_i(t, y, rate, theta, f2cpt);
       double t_next = t + ii;
-      PKRec<var> yt = model_i.solve(t_next,integrator);
-      yt(cmt - 1) += params.back();
-      y = yt;
+      model_i.solve(y, t, t_next, rate, integrator);
+      y(cmt - 1) += params.back();
       t = t_next;
     }
     // steady state solution is the end of II dosing before
@@ -826,11 +817,11 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_infusion_theta_grad_vs_long_run_sd) 
     for (int i = 0; i < 50; ++i) {
       model_t model_i(t, y, rate_vec, theta, f2cpt);
       var t_next = t + t_infus;
-      PKRec<var> yt = model_i.solve(t_next, integrator);
+      model_i.solve(y, t, t_next, rate_vec, integrator);
       t = t_next;
-      model_t model_j(t, yt, rate_zero, theta, f2cpt);
+      model_t model_j(t, y, rate_zero, theta, f2cpt);
       t_next = t + ii - t_infus;
-      y = model_j.solve(t_next, integrator);
+      model_j.solve(y, t, t_next, rate_zero, integrator);
     }
     return y;
   };
@@ -853,11 +844,11 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_infusion_theta_grad_vs_long_run_sd) 
     for (int i = 0; i < 50; ++i) {
       model_t model_i(t, y, rate_vec, theta, f2cpt);
       var t_next = t + t_infus;
-      PKRec<var> yt = model_i.solve(t_next, integrator);
+      model_i.solve(y, t, t_next, rate_vec, integrator);
       t = t_next;
-      model_t model_j(t, yt, rate_zero, theta, f2cpt);
+      model_t model_j(t, y, rate_zero, theta, f2cpt);
       t_next = t + ii - t_infus;
-      y = model_j.solve(t_next, integrator);
+      model_j.solve(y, t, t_next, rate_zero, integrator);
     }
     return y;
   };
@@ -919,8 +910,9 @@ TEST_F(TorstenTwoCptModelTest, ode_model_const_infusion_theta_grad_vs_long_run_s
     std::vector<var> rate_vec(3, 0.0);
     rate_vec[cmt - 1] = params.back();
     model_t model(t0, y0, rate_vec, theta, f2cpt);
-    double t_next = 5.0e2;
-    return model.solve(t_next, integrator);
+    var t_next = 5.0e2;
+    model.solve(y, t, t_next, rate_vec, integrator);
+    return y;
   };
 
   auto f2 = [&]() {

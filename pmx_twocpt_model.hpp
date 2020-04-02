@@ -6,7 +6,6 @@
 #include <stan/math/rev/fun/exp.hpp>
 #include <stan/math/prim/fun/exp.hpp>
 #include <stan/math/torsten/PKModel/functors/check_mti.hpp>
-#include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/torsten/pmx_ode_integrator.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
@@ -274,13 +273,14 @@ namespace torsten {
   /**
    * Solve two-cpt model: analytical solution
    */
-    template<typename T0, typename T, typename T1>
-    void solve(PKRec<T>& y, const T0& t0, const T0& t1,
+    template<typename Tt0, typename Tt1, typename T, typename T1>
+    void solve(PKRec<T>& y,
+               const Tt0& t0, const Tt1& t1,
                const std::vector<T1>& rate,
                const PMXOdeIntegrator<Analytical>& integ) const {
       using stan::math::exp;
 
-      T0 dt = t1 - t0;
+      typename stan::return_type_t<Tt0, Tt1> dt = t1 - t0;
 
       std::vector<scalar_type> a(Ncmt, 0);
       Eigen::Matrix<T, -1, 1> pred = torsten::PKRec<T>::Zero(Ncmt);
@@ -343,98 +343,12 @@ namespace torsten {
   /**
    * Solve two-cpt model: analytical solution
    */
-    PKRec<scalar_type> solve(const T_time& t_next) const {
-      Eigen::Matrix<scalar_type, -1, 1> pred = torsten::PKRec<scalar_type>::Zero(Ncmt);
-      for (int i = 0; i < Ncmt; ++i) {
-        pred(i) = y0_(i);
-      }
-      PMXOdeIntegrator<Analytical> integ;
-      solve(pred, t0_, t_next, rate_, integ);
-
-      // // contribution from cpt 0
-      // {
-      //   if (ka_ > 0.0) {
-      //     const T_par a1 = ka_ * (k21_ - alpha_[0]) / ((ka_ - alpha_[0]) * (alpha_[1] - alpha_[0]));
-      //     const T_par a2 = ka_ * (k21_ - alpha_[1]) / ((ka_ - alpha_[1]) * (alpha_[0] - alpha_[1]));
-      //     const T_par a3 = -(a1 + a2);
-      //     const T_par a4 = ka_ * k12_ / ((ka_ - alpha_[0]) * (alpha_[1] - alpha_[0]));
-      //     const T_par a5 = ka_ * k12_ / ((ka_ - alpha_[1]) * (alpha_[0] - alpha_[1]));
-      //     const T_par a6 = -(a4 + a5);
-
-      //     // bolus
-      //     pred(0) += y0_[0] * exp(-ka_ * dt);
-      //     pred(1) += y0_[0] * (a1 * exp(-alpha_[0] * dt) + a2 * exp(-alpha_[1] * dt) + a3 * exp(-alpha_[2] * dt));
-      //     pred(2) += y0_[0] * (a4 * exp(-alpha_[0] * dt) + a5 * exp(-alpha_[1] * dt) + a6 * exp(-alpha_[2] * dt));
-
-      //     // infusion
-      //     pred(0) += rate_[0] * (1 - exp(-ka_ * dt)) / ka_;
-      //     pred(1) += rate_[0] * (a1 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a2 * (1 - exp(-alpha_[1] * dt)) / alpha_[1] + a3 * (1 - exp(-alpha_[2] * dt)) / alpha_[2]);
-      //     pred(2) += rate_[0] * (a4 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a5 * (1 - exp(-alpha_[1] * dt)) / alpha_[1] + a6 * (1 - exp(-alpha_[2] * dt)) / alpha_[2]);
-      //   } else {
-      //     pred(0) += y0_[0] + rate_[0] * dt;
-      //   }
-      // }
-
-      // // contribution from cpt 1
-      // {
-      //   const T_par a1 = (k21_ - alpha_[0]) / (alpha_[1] - alpha_[0]);
-      //   const T_par a2 = (k21_ - alpha_[1]) / (alpha_[0] - alpha_[1]);
-
-      //   // bolus
-      //   pred(1) += y0_[1] * (a1 * exp(-alpha_[0] * dt) + a2 * exp(-alpha_[1] * dt));
-      //   pred(2) += y0_[1] * k12_ / (alpha_[1] - alpha_[0]) * (exp(-alpha_[0] * dt) - exp(-alpha_[1] * dt));
-
-      //   // infusion
-      //   pred(1) += rate_[1] * (a1 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a2 * (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
-      //   pred(2) += rate_[1] * k12_ / (alpha_[1] - alpha_[0]) * ((1 - exp(-alpha_[0] * dt)) / alpha_[0] - (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
-      // }
-
-      // // contribution from cpt 2
-      // {
-      //   const T_par a1 = (k10_ + k12_ - alpha_[0]) / (alpha_[1] - alpha_[0]);
-      //   const T_par a2 = (k10_ + k12_ - alpha_[1]) / (alpha_[0] - alpha_[1]);
-
-      //   // bolus
-      //   pred(1) += y0_[2] * k21_ / (alpha_[1] - alpha_[0]) * (exp(-alpha_[0] * dt) - exp(-alpha_[1] * dt));
-      //   pred(2) += y0_[2] * (a1 * exp(-alpha_[0] * dt) + a2 * exp(-alpha_[1] * dt));
-
-      //   // infusion
-      //   pred(1) += rate_[2] * k21_ / (alpha_[1] - alpha_[0]) * ((1 - exp(-alpha_[0] * dt)) / alpha_[0] - (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
-      //   pred(2) += rate_[2] * (a1 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a2 * (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
-      // }
-
-      return pred;
-    }
-
-    /** 
-     * 
-     * @param t_next next time point for desired solution
-     * @param integrator dummy numerical integrator
-     * 
-     * @return matrix with each column in a solution at one
-     * time point.
-     */
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> 
-    solve(const T_time& t_next,
-          const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
-      return solve(t_next);
-    }
-
-    /*
-     * Solve the transient problem and return the result in
-     * form of data, arranged as (solution value, grad1, grad2...)
-     */
-    Eigen::VectorXd solve_d(const T_time& t_next) const {
-      return torsten::model_solve_d(*this, t_next);
-    }
-
-    /*
-     * Solve the transient problem and return the result in
-     * form of data, arranged as (solution value, grad1, grad2...)
-     */
-    Eigen::VectorXd solve_d(const T_time& t_next,
-          const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
-      return solve_d(t_next);
+    template<typename Tt0, typename Tt1, typename T, typename T1>
+    void solve(PKRec<T>& y,
+               const Tt0& t0, const Tt1& t1,
+               const std::vector<T1>& rate) const {
+      const PMXOdeIntegrator<Analytical> integ;
+      solve(y, t0, t1, rate, integ);
     }
 
   /**
@@ -447,7 +361,7 @@ namespace torsten {
    * @param cmt dosing compartment
    */
     template<typename T_amt, typename T_r, typename T_ii>
-    Eigen::Matrix<typename stan::return_type<T_par, T_amt, T_r, T_ii>::type, Eigen::Dynamic, 1>
+    Eigen::Matrix<typename stan::return_type<T_par, T_amt, T_r, T_ii>::type, -1, 1>
     solve(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt) const {
       using Eigen::Matrix;
       using Eigen::Dynamic;
@@ -570,31 +484,10 @@ namespace torsten {
     }
 
     /*
-     * Solve the transient problem and return the result in
-     * form of data, arranged as (solution value, grad1, grad2...)
-     */
-    template<typename T_amt, typename T_r, typename T_ii>
-    Eigen::VectorXd solve_d(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt) const {
-      return torsten::model_solve_d(*this, amt, rate, ii, cmt);
-    }
-
-    /*
-     * Solve the steady-state problem and return the result in
-     * form of data, arranged as (solution value, grad1, grad2...),
-     * with additional <code>integrator</code> dummy arg,
-     * needed in <code>ev_solver</code> call.
-     */
-    template<typename T_amt, typename T_r, typename T_ii>
-    Eigen::VectorXd solve_d(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
-                            const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
-      return solve_d(amt, rate, ii, cmt);
-    }
-
-    /*
      * wrapper to fit @c PrepWrapper's call signature
      */
     template<typename T_amt, typename T_r, typename T_ii>
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
+    Eigen::Matrix<typename stan::return_type<T_par, T_amt, T_r, T_ii>::type, -1, 1>
     solve(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
           const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
       return solve(amt, rate, ii, cmt);

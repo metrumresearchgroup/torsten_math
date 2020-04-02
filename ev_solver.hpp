@@ -133,18 +133,11 @@ namespace torsten{
       using scalar = typename T_em::T_scalar;
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
-      PKRec<scalar> pred1;
-
-      if (events.is_reset(i)) {
-        init.setZero();
-      } else {
-        typename T_em::T_time model_time = tprev;
-        auto curr_rates = events.fractioned_rates(i);
-        T_model pkmodel {model_time, init, curr_rates, events.model_param(i), model_pars...};
-        auto ev = em.event(i);
-        ev(init, pkmodel, integrator);
-      }
-      tprev = events.time(i);
+      typename T_em::T_time model_time = tprev;
+      auto curr_rates = events.fractioned_rates(i);
+      T_model pkmodel {model_time, init, curr_rates, events.model_param(i), model_pars...};
+      auto ev = em.event(i);
+      ev(init, pkmodel, integrator);
     }
 
     template<typename T_em, PMXOdeIntegratorId It, typename... Ts>
@@ -158,31 +151,11 @@ namespace torsten{
 
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
-      if (events.is_reset(i)) {
-        init.setZero();
-      } else if (events.is_ss_dosing(i)) {  // steady state event
-        typename T_em::T_time model_time = events.time(i);
-        std::vector<typename T_em::T_rate> dummy_rate;
-        T_model pkmodel {model_time, init, dummy_rate, events.model_param(i), model_pars...};
-        auto curr_amt = events.fractioned_amt(i);
-        vector<var> v_i = pkmodel.vars(curr_amt, events.rate(i), events.ii(i));
-        sol_d = pkmodel.solve_d(curr_amt, events.rate(i), events.ii(i), events.cmt(i), integrator);
-        if (events.ss(i) == 2)
-          init += torsten::mpi::precomputed_gradients(sol_d, v_i);  // steady state without reset
-        else
-          init = torsten::mpi::precomputed_gradients(sol_d, v_i);  // steady state with reset (ss = 1)
-      } else if (events.time(i) > tprev) {
-           typename T_em::T_time model_time = tprev;
-          auto curr_rates = events.fractioned_rates(i);
-          T_model pkmodel {model_time, init, curr_rates, events.model_param(i), model_pars...};
-          auto ev = em.event(i);
-          ev(sol_d, init, pkmodel, integrator);
-      }
-
-      if (events.is_bolus_dosing(i)) {
-        init(0, events.cmt(i) - 1) += events.fractioned_amt(i);
-      }
-      tprev = events.time(i);
+      typename T_em::T_time model_time = tprev;
+      auto curr_rates = events.fractioned_rates(i);
+      T_model pkmodel {model_time, init, curr_rates, events.model_param(i), model_pars...};
+      auto ev = em.event(i);
+      ev(sol_d, init, pkmodel, integrator, model_pars...);
     }
 
     template<typename T_em, PMXOdeIntegratorId It, typename... Ts>

@@ -142,16 +142,16 @@ namespace torsten {
       return y0_.size();
     }
 
-    template<typename T0, typename T, typename T1>
-    void solve(Eigen::Matrix<T, -1, 1>& y,
-               const T0& t0, const T0& t1,
+    template<typename Tt0, typename Tt1, typename T, typename T1>
+    void solve(PKRec<T>& y,
+               const Tt0& t0, const Tt1& t1,
                const std::vector<T1>& rate,
                const PMXOdeIntegrator<Analytical>& integ) const {
       using stan::math::matrix_exp;
       using stan::math::mdivide_left;
       using stan::math::multiply;
 
-      T0 dt = t1 - t0;
+      typename stan::return_type_t<Tt0, Tt1> dt = t1 - t0;
 
       const int nCmt = par_.cols();
       Eigen::Matrix<scalar_type, -1, 1> y0t(nCmt);
@@ -175,22 +175,30 @@ namespace torsten {
       y = pred;
     }
 
-    /*
-     * solve linear ODE model using matrix exponential function
-     *
-     * @param t_next the time when the solution is to be solved.
-     */
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
-    solve(const T_time& t_next) const {
-      const int nCmt = par_.cols();
-      Eigen::Matrix<scalar_type, -1, 1> pred(nCmt);
-      for (int i = 0; i < nCmt; ++i) {
-        pred(i) = y0_[i];
-      }
-      PMXOdeIntegrator<Analytical> integ;
-      solve(pred, t0_, t_next, rate_, integ);
-      return pred;
+    template<typename Tt0, typename Tt1, typename T, typename T1>
+    void solve(PKRec<T>& y,
+               const Tt0& t0, const Tt1& t1,
+               const std::vector<T1>& rate) const {
+      const PMXOdeIntegrator<Analytical> integ;
+      solve(y, t0, t1, rate, integ);
     }
+
+    // /*
+    //  * solve linear ODE model using matrix exponential function
+    //  *
+    //  * @param t_next the time when the solution is to be solved.
+    //  */
+    // Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
+    // solve(const T_time& t_next) const {
+    //   const int nCmt = par_.cols();
+    //   Eigen::Matrix<scalar_type, -1, 1> pred(nCmt);
+    //   for (int i = 0; i < nCmt; ++i) {
+    //     pred(i) = y0_[i];
+    //   }
+    //   PMXOdeIntegrator<Analytical> integ;
+    //   solve(pred, t0_, t_next, rate_, integ);
+    //   return pred;
+    // }
 
     /** 
      * 
@@ -200,11 +208,11 @@ namespace torsten {
      * @return matrix with each column in a solution at one
      * time point.
      */
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> 
-    solve(const T_time& t_next,
-          const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
-      return solve(t_next);
-    }
+    // Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> 
+    // solve(const T_time& t_next,
+    //       const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
+    //   return solve(t_next);
+    // }
 
     /*
      * Solve the transient problem and return the result in

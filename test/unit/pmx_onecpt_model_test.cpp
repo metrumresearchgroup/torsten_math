@@ -25,8 +25,8 @@ TEST_F(TorstenOneCptModelTest, ka_zero) {
   ka = 0.0;
   using model_t = PMXOneCptModel<double, double, double, double>;
   model_t model(t0, y0, rate, CL, V2, ka);
-  std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  auto y = model.solve(ts[0]);
+  PKRec<double> y(y0);
+  model.solve(y, t0, ts[0], rate);
   EXPECT_FLOAT_EQ(y(0), 865.0);
   EXPECT_FLOAT_EQ(y(1), 113.32912);
 }
@@ -109,7 +109,8 @@ TEST_F(TorstenOneCptModelTest, sd_solver) {
   theta.insert(theta.end(), rate_var.begin(), rate_var.end());
 
   auto y1 = pmx_integrate_ode_bdf(f1, yvec, t0, ts, theta, x_r, x_i, msgs);
-  auto y2 = model.solve(ts[0]);
+  PKRec<var> y2(to_var(y0));
+  model.solve(y2, t0, ts[0], rate_var);
 
   stan::math::vector_v y1_v = stan::math::to_vector(y1[0]);
 
@@ -128,12 +129,16 @@ TEST_F(TorstenOneCptModelTest, infusion_theta_grad) {
   auto f1 = [&](const std::vector<double>& pars) {
     using model_t = PMXOneCptModel<double, double, double, double>;
     model_t model(t0, y0, rate, pars[0], pars[1], pars[2]);
-    return model.solve(dt);
+    PKRec<double> y(y0);
+    model.solve(y, t0, dt, rate);
+    return y;
   };
   auto f2 = [&](const std::vector<var>& pars) {
     using model_t = PMXOneCptModel<double, double, double, var>;
     model_t model(t0, y0, rate, pars[0], pars[1], pars[2]);
-    return model.solve(dt);
+    PKRec<var> y(to_var(y0));
+    model.solve(y, t0, dt, rate);
+    return y;
   };
 
   std::vector<double> pars{CL, V2, ka};
@@ -207,9 +212,8 @@ TEST_F(TorstenOneCptModelTest, ss_bolus_grad_vs_long_run_sd) {
     for (int i = 0; i < 100; ++i) {
       model_t model_i(t, y, rate, CL, V2, ka);
       double t_next = t + ii;
-      torsten::PKRec<double> yt = model_i.solve(t_next);
-      yt(cmt - 1) += amt_vec[0];
-      y = yt;
+      model_i.solve(y, t, t_next, rate);
+      y(cmt - 1) += amt_vec[0];
       t = t_next;
     }
     // steady state solution is the end of II dosing before
@@ -246,11 +250,11 @@ TEST_F(TorstenOneCptModelTest, ss_infusion_grad_vs_long_run_sd) {
     for (int i = 0; i < 200; ++i) {
       model_t model_i(t, y, rate_vec, CL, V2, ka);
       var t_next = t + t_infus;
-      PKRec<var> yt = model_i.solve(t_next);
+      model_i.solve(y, t, t_next, rate_vec);
       t = t_next;
-      model_t model_j(t, yt, rate_zero, CL, V2, ka);
+      model_t model_j(t, y, rate_zero, CL, V2, ka);
       t_next = t + ii - t_infus;
-      y = model_j.solve(t_next);
+      model_j.solve(y, t, t_next, rate_zero);
     }
     return y;
   };
@@ -302,18 +306,13 @@ TEST_F(TorstenOneCptModelTest, ss_infusion_by_long_run_sd_vs_bdf_result) {
     double t_infus = amt/rate_vec[cmt - 1];
     const std::vector<double> rate_zero{0.0, 0.0};
     for (int i = 0; i < 50; ++i) {
-      Eigen::Matrix<double, 1, -1> yt;
-      Eigen::Matrix<double, -1, 1> ys;
-      yt = y.transpose();
-      model_t model_i(t, yt, rate_vec, CL, V2, ka);
+      model_t model_i(t, y, rate_vec, CL, V2, ka);
       double t_next = t + t_infus;
-      ys = model_i.solve(t_next);
-      yt = ys.transpose();
+      model_i.solve(y, t, t_next, rate_vec);
       t = t_next;
-      model_t model_j(t, yt, rate_zero, CL, V2, ka);
+      model_t model_j(t, y, rate_zero, CL, V2, ka);
       t_next = t + ii - t_infus;
-      ys = model_j.solve(t_next);
-      y = ys;
+      model_j.solve(y, t, t_next, rate_zero);
     }
     return y;
   };
@@ -328,18 +327,13 @@ TEST_F(TorstenOneCptModelTest, ss_infusion_by_long_run_sd_vs_bdf_result) {
     double t_infus = amt/rate_vec[cmt - 1];
     const std::vector<double> rate_zero{0.0, 0.0};
     for (int i = 0; i < 50; ++i) {
-      Eigen::Matrix<double, 1, -1> yt;
-      Eigen::Matrix<double, -1, 1> ys;
-      yt = y.transpose();
-      ode_model_t model_i(t, yt, rate_vec, theta, f2cpt);
+      ode_model_t model_i(t, y, rate_vec, theta, f2cpt);
       double t_next = t + t_infus;
-      ys = model_i.solve(t_next, integrator);
-      yt = ys.transpose();
+      model_i.solve(y, t, t_next, rate_vec, integrator);
       t = t_next;
-      ode_model_t model_j(t, yt, rate_zero, theta, f2cpt);
+      ode_model_t model_j(t, y, rate_zero, theta, f2cpt);
       t_next = t + ii - t_infus;
-      ys = model_j.solve(t_next, integrator);
-      y = ys;
+      model_j.solve(y, t, t_next, rate_zero, integrator);
     }
     return y;
   };
@@ -379,18 +373,13 @@ TEST_F(TorstenOneCptModelTest, ss_infusion_grad_by_long_run_sd_vs_bdf_result) {
     var t_infus = amt/rate_vec[cmt - 1];
     const std::vector<var> rate_zero{0.0, 0.0};
     for (int i = 0; i < 50; ++i) {
-      Eigen::Matrix<var, 1, -1> yt;
-      Eigen::Matrix<var, -1, 1> ys;
-      yt = y.transpose();
-      model_t model_i(t, yt, rate_vec, CL, V2, ka);
+      model_t model_i(t, y, rate_vec, CL, V2, ka);
       var t_next = t + t_infus;
-      ys = model_i.solve(t_next);
-      yt = ys.transpose();
+      model_i.solve(y, t, t_next, rate_vec);
       t = t_next;
-      model_t model_j(t, yt, rate_zero, CL, V2, ka);
+      model_t model_j(t, y, rate_zero, CL, V2, ka);
       t_next = t + ii - t_infus;
-      ys = model_j.solve(t_next);
-      y = ys;
+      model_j.solve(y, t, t_next, rate_zero);
     }
     return y;
   };
@@ -405,18 +394,13 @@ TEST_F(TorstenOneCptModelTest, ss_infusion_grad_by_long_run_sd_vs_bdf_result) {
     var t_infus = amt/rate_vec[cmt - 1];
     const std::vector<var> rate_zero{0.0, 0.0};
     for (int i = 0; i < 50; ++i) {
-      Eigen::Matrix<var, 1, -1> yt;
-      Eigen::Matrix<var, -1, 1> ys;
-      yt = y.transpose();
-      ode_model_t model_i(t, yt, rate_vec, theta, f2cpt);
+      ode_model_t model_i(t, y, rate_vec, theta, f2cpt);
       var t_next = t + t_infus;
-      ys = model_i.solve(t_next, integrator);
-      yt = ys.transpose();
+      model_i.solve(y, t, t_next, rate_vec, integrator);
       t = t_next;
-      ode_model_t model_j(t, yt, rate_zero, theta, f2cpt);
+      ode_model_t model_j(t, y, rate_zero, theta, f2cpt);
       t_next = t + ii - t_infus;
-      ys = model_j.solve(t_next, integrator);
-      y = ys;
+      model_j.solve(y, t, t_next, rate_zero, integrator);
     }
     return y;
   };
@@ -455,12 +439,10 @@ TEST_F(TorstenOneCptModelTest, ss_bolus_grad_by_long_run_sd_vs_bdf_result) {
     double t = t0;
     Eigen::Matrix<var, -1, 1> y = y0;
     for (int i = 0; i < 100; ++i) {
-      Eigen::Matrix<var, 1, -1> yt = y.transpose();
-      model_t model_i(t, yt, rate, CL, V2, ka);
+      model_t model_i(t, y, rate, CL, V2, ka);
       double t_next = t + ii;
-      Eigen::Matrix<var, -1, 1> ys = model_i.solve(t_next);
-      ys(cmt - 1) += amt_vec[0];
-      y = ys;
+      model_i.solve(y, t, t_next, rate);
+      y(cmt - 1) += amt_vec[0];
       t = t_next;
     }
     // steady state solution is the end of II dosing before
@@ -478,12 +460,10 @@ TEST_F(TorstenOneCptModelTest, ss_bolus_grad_by_long_run_sd_vs_bdf_result) {
     double t = t0;
     Eigen::Matrix<var, -1, 1> y = y0;
     for (int i = 0; i < 100; ++i) {
-      Eigen::Matrix<var, 1, -1> yt = y.transpose();
-      ode_model_t model_i(t, yt, rate, theta, f1cpt);
+      ode_model_t model_i(t, y, rate, theta, f1cpt);
       double t_next = t + ii;
-      Eigen::Matrix<var, -1, 1> ys = model_i.solve(t_next, integrator);
-      ys(cmt - 1) += amt_vec[0];
-      y = ys;
+      model_i.solve(y, t, t_next, rate, integrator);
+      y(cmt - 1) += amt_vec[0];
       t = t_next;
     }
     // steady state solution is the end of II dosing before

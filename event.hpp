@@ -3,6 +3,7 @@
 
 #include<stan/math/torsten/torsten_def.hpp>
 #include<stan/math/torsten/pmx_ode_integrator.hpp>
+#include <stan/math/torsten/mpi/precomputed_gradients.hpp>
 #include<vector>
 
 namespace torsten {
@@ -61,14 +62,49 @@ namespace torsten {
       }
     }
 
-    template<typename T, typename model_t, PMXOdeIntegratorId It>
+    template<typename T, typename model_t, PMXOdeIntegratorId It,
+             typename... Ts>
     inline void operator()(Eigen::VectorXd& yd,
                            PKRec<T>& y,
                            const model_t& model,
-                           const PMXOdeIntegrator<It>& integ) {
-      std::vector<stan::math::var> vt(model.vars(t1));
-      model.solve_d(yd, y, t0, t1, force, integ);
-      y = torsten::mpi::precomputed_gradients(yd, vt);
+                           const PMXOdeIntegrator<It>& integ,
+                           const Ts... model_pars) {
+      const double eps = 1.0E-12;
+      const jump_t jp = force0 < eps ? jump(cmt - 1) : 0.0;
+      std::vector<stan::math::var> vt;
+      switch(id) {
+      case 1:
+        y.setZero();
+        break;
+      case 2:
+        y.setZero();
+        vt = model.vars(t1);
+        if (t1 > t0) {
+          yd = model_solve_d(model, y, t0, t1, force, integ, model_pars...);
+          y = torsten::mpi::precomputed_gradients(yd, vt);
+        }
+        y(cmt - 1) += jp;
+        break;
+      case 3:
+        yd = model_solve_d(model, jump(cmt - 1), force0, ii, cmt, integ, model_pars...);
+        vt = model.vars(jump(cmt - 1), force0, ii);
+        y += torsten::mpi::precomputed_gradients(yd, vt);
+        y(cmt - 1) += jp;
+        break;
+      case 4:
+        yd = model_solve_d(model, jump(cmt - 1), force0, ii, cmt, integ, model_pars...);
+        vt = model.vars(jump(cmt - 1), force0, ii);
+        y = torsten::mpi::precomputed_gradients(yd, vt);
+        y(cmt - 1) += jp;
+        break;
+      default:
+        vt = model.vars(t1);
+        if (t1 > t0) {
+          yd = model_solve_d(model, y, t0, t1, force, integ, model_pars...);
+          y = torsten::mpi::precomputed_gradients(yd, vt);
+        }
+        y(cmt - 1) += jp;
+      }
     }
 
   };

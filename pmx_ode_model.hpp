@@ -6,7 +6,6 @@
 #include <stan/math/rev/fun/to_var.hpp>
 #include <stan/math/rev/functor/algebra_solver_powell.hpp>
 #include <stan/math/prim/err/check_less_or_equal.hpp>
-#include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
 #include <stan/math/torsten/PKModel/functors/check_mti.hpp>
 
@@ -471,7 +470,6 @@ namespace torsten {
     const std::vector<T_rate> &rate_;
     const std::vector<T_par> &par_;
     const F &f_;
-    const PMXOdeFunctorRateAdaptor<F, T_rate> f1;
     const int ncmt_;
   public:
     using scalar_type = typename stan::return_type_t<T_time, T_rate, T_par, T_init>; // NOLINT
@@ -497,7 +495,7 @@ namespace torsten {
                const std::vector<T_rate> &rate,
                const std::vector<T_par> &par,
                const F& f) :
-      t0_(t0), y0_(y0), rate_(rate), par_(par), f_(f), f1(), ncmt_(y0.size()) // NOLINT
+      t0_(t0), y0_(y0), rate_(rate), par_(par), f_(f), ncmt_(y0.size()) // NOLINT
     {}
 
     /**
@@ -515,7 +513,6 @@ namespace torsten {
       rate_(m.rate()),
       par_(m.par()),
       f_(m.f()),
-      f1(),
       ncmt_(m.ncmt())
     {}
     
@@ -632,23 +629,6 @@ namespace torsten {
     }
 
     /*
-     * calculate number of vars with constructed data
-     */
-    template<typename T0>
-    int nvars(const T0& t1) {
-      return nvars(t1, y0_, rate_, par_);
-    }
-
-    /*
-     * return the number @c var that will be the parameters
-     * of the stead-state dosing event's solution
-     */
-    template<typename T_a, typename T_r, typename T_ii>
-    int nvars(const T_a& a, const T_r& r, const T_ii& ii) {
-      return torsten::pk_nvars(a, r, ii, par_);
-    }
-
-    /*
      * return @c vars that will be in integrator calls
      */
     template<typename T0>
@@ -662,7 +642,8 @@ namespace torsten {
      * be in the solution.
      */
     template<typename T_a, typename T_r, typename T_ii>
-    std::vector<stan::math::var> vars(const T_a& a, const T_r& r, const T_ii& ii) {
+    std::vector<stan::math::var> vars(const T_a& a, const T_r& r,
+                                      const T_ii& ii) const {
       return torsten::dsolve::pk_vars(a, r, ii, par_);
     }
 
@@ -758,54 +739,24 @@ namespace torsten {
      *         solution at certain time step. Hence the returned
      *         matrix is of dim (numer of time steps) x (siez of ODE system).
      */
-    template<typename T0, typename T, typename T1, PMXOdeIntegratorId It>
+    template<typename Tt0, typename Tt1, typename T, typename T1, PMXOdeIntegratorId It>
     void solve(Eigen::Matrix<T, -1, 1>& y,
-               const T0& t0, const T0& t1,
+               const Tt0& t0, const Tt1& t1,
                const std::vector<T1>& rate,
                const PMXOdeIntegrator<It>& integrator) const {
       const double t0_d = stan::math::value_of(t0);
-      std::vector<T0> ts(time_step(t1));
+      std::vector<Tt1> ts(time_step(t1));
+      PMXOdeFunctorRateAdaptor<F, T1> f_rate;
       if (t1 > t0) {
         auto y_vec = stan::math::to_array_1d(y);
         std::vector<int> x_i;
         std::vector<std::vector<T> > res_v =
-          integrator(f1, y_vec, t0_d, ts,
-                     f1.adapted_param(par_, rate),
-                     f1.adapted_x_r(rate),
+          integrator(f_rate, y_vec, t0_d, ts,
+                     f_rate.adapted_param(par_, rate),
+                     f_rate.adapted_x_r(rate),
                      x_i);
         y = stan::math::to_vector(res_v[0]);
       }
-    }
-
-
-    template<PMXOdeIntegratorId It>
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
-    solve(const T_time& t_next,
-          const PMXOdeIntegrator<It>& integrator) const {
-      Eigen::Matrix<scalar_type, -1, 1> pred = Eigen::Matrix<scalar_type, -1, 1>::Zero(ncmt_);
-      for (int i = 0; i < ncmt_; ++i) {
-        pred(i) = y0_[i];
-      }
-      solve(pred, t0_, t_next, rate_, integrator);
-      return pred;
-    }
-
-    /*
-     * Solve the ODE but return the results in form of data.
-     * The default behavior is defined in function template
-     * @c model_solve_d(), using autodiff to recalculate gradients.
-     * Some integrators, such as @c PkBdf, have their own implementation
-     * that can return data directly, so we skip them.
-     */
-    template<PMXOdeIntegratorId It,
-             typename std::enable_if_t<It == torsten::StanBdf || It == torsten::StanAdams || It == torsten::StanRk45>* = nullptr>
-    Eigen::VectorXd solve_d(const T_time& t_next,
-                            const PMXOdeIntegrator<It>& integrator) const
-    {
-      static const char* caller = "PKODEModel::solve";
-      stan::math::check_greater(caller, "time step", t_next, t0_);
-
-      return torsten::model_solve_d(*this, t_next, integrator);
     }
 
     /*
@@ -820,8 +771,8 @@ namespace torsten {
                  const T0& t0, const T0& t1,
                  const std::vector<T1>& rate,
                  const PMXOdeIntegrator<It>& integrator) const {
-      static const char* caller = "PMXOdeModel::solve_d";
-      stan::math::check_greater(caller, "next time", t1, t0);
+      // static const char* caller = "PMXOdeModel::solve_d";
+      // stan::math::check_greater(caller, "next time", t1, t0);
 
       using stan::math::var;
       using stan::math::value_of;
@@ -829,29 +780,15 @@ namespace torsten {
 
       const double t0_d = value_of(t0);
       std::vector<T_time> ts(time_step(t1));
-      // Eigen::VectorXd res(n_sys());
+      PMXOdeFunctorRateAdaptor<F, T1> f_rate;
       if (t1 > t0) {
         auto y1d = stan::math::to_array_1d(y);
         std::vector<int> x_i;
-        yd = integrator.solve_d(f1, y1d, t0_d, ts,
-                                 f1.adapted_param(par_, rate),
-                                 f1.adapted_x_r(rate),
-                                 x_i).col(0);
+        yd = integrator.solve_d(f_rate, y1d, t0_d, ts,
+                                f_rate.adapted_param(par_, rate),
+                                f_rate.adapted_x_r(rate),
+                                x_i).col(0);
       }
-    }
-
-    /*
-     * <code>PKBdf, PKAdams, PKRk45</code> integrators can return
-     * results in form of data directly,
-     * thanks to @c pk_cvodes_integrator implementation.
-     */
-    template<PMXOdeIntegratorId It,
-             typename std::enable_if_t<It == torsten::PkBdf || It == torsten::PkAdams || It == torsten::PkRk45>* = nullptr>
-    Eigen::VectorXd solve_d(const T_time& t_next,
-                            const PMXOdeIntegrator<It>& integrator) const {
-      Eigen::VectorXd pred;
-      solve_d(pred, y0_, t0_, t_next, rate_, integrator);
-      return pred;
     }
 
     /**
@@ -920,19 +857,6 @@ namespace torsten {
                             packer.adapted_x_r(amt, rate, ii, x_i, integrator),
                             x_i, 0,
                             integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step);
-    }
-
-    /*
-     * return steady state solution in form of data, use
-     * default behavior, namely take gradients using autodiff.
-     */
-    template<PMXOdeIntegratorId It, typename T_amt, typename T_r, typename T_ii>
-    Eigen::VectorXd solve_d(const T_amt& amt,
-                            const T_r& rate,
-                            const T_ii& ii,
-                            const int& cmt,
-                            const PMXOdeIntegrator<It>& integrator) const {
-      return torsten::model_solve_d(*this, amt, rate, ii, cmt, integrator);
     }
   };
 }

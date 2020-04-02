@@ -4,15 +4,18 @@
 #include <test/unit/util.hpp>
 #include <gtest/gtest.h>
 
-TEST_F(TorstenTwoCptModelTest, linode_rate_dbl) {
-  using stan::math::var;
-  using stan::math::to_var;
-  using torsten::PMXLinODEModel;
-  using torsten::PMXLinODE;
-  using torsten::PMXOdeFunctorRateAdaptor;
-  using stan::math::integrate_ode_bdf;
-  using torsten::pmx_integrate_ode_bdf;
+using stan::math::var;
+using stan::math::to_var;
+using torsten::PMXLinODEModel;
+using torsten::PMXLinODE;
+using torsten::PMXOdeFunctorRateAdaptor;
+using stan::math::integrate_ode_bdf;
+using torsten::pmx_integrate_ode_bdf;
+using Eigen::Matrix;
+using Eigen::Dynamic;
+using stan::math::matrix_exp;
 
+TEST_F(TorstenTwoCptModelTest, linode_rate_dbl) {
   rate[0] = 1200;
   rate[1] = 200;
   rate[2] = 400;
@@ -29,14 +32,6 @@ TEST_F(TorstenTwoCptModelTest, linode_rate_dbl) {
 }
 
 TEST_F(TorstenTwoCptModelTest, linode_rate_var) {
-  using stan::math::var;
-  using stan::math::to_var;
-  using torsten::PMXLinODEModel;
-  using torsten::PMXLinODE;
-  using torsten::PMXOdeFunctorRateAdaptor;
-  using stan::math::integrate_ode_bdf;
-  using torsten::pmx_integrate_ode_bdf;
-
   rate[0] = 1200;
   rate[1] = 200;
   rate[2] = 300;
@@ -56,17 +51,6 @@ TEST_F(TorstenTwoCptModelTest, linode_rate_var) {
 }
 
 TEST_F(TorstenTwoCptModelTest, linode_solver) {
-  using stan::math::var;
-  using stan::math::to_var;
-  using torsten::PMXLinODEModel;
-  using torsten::PMXLinODE;
-  using torsten::PMXOdeFunctorRateAdaptor;
-  using stan::math::integrate_ode_bdf;
-  using torsten::pmx_integrate_ode_bdf;
-  using Eigen::Matrix;
-  using Eigen::Dynamic;
-  using stan::math::matrix_exp;
-
   rate[0] = 1200;
   rate[1] = 200;
   rate[2] = 400;
@@ -85,7 +69,8 @@ TEST_F(TorstenTwoCptModelTest, linode_solver) {
   std::vector<var> theta_vec(theta.data(), theta.data() + theta.size());
   theta_vec.insert(theta_vec.end(), rate_var.begin(), rate_var.end());
   auto y1 = pmx_integrate_ode_bdf(f1, yvec, t0, ts, theta_vec, x_r, x_i, msgs);
-  auto y2 = model.solve(ts[0]);
+  PKRec<var> y2(to_var(y0));
+  model.solve(y2, t0, ts[0], rate_var);
   EXPECT_FLOAT_EQ(y1[0][0].val(), y2(0).val());
   EXPECT_FLOAT_EQ(y1[0][1].val(), y2(1).val());
 
@@ -112,18 +97,6 @@ TEST_F(TorstenTwoCptModelTest, linode_solver) {
 }
 
 TEST_F(TorstenTwoCptModelTest, linode_solver_zero_rate) {
-  using stan::math::var;
-  using stan::math::to_var;
-  using torsten::PMXLinODEModel;
-  using torsten::PMXLinODE;
-  using torsten::PMXOdeFunctorRateAdaptor;
-  using stan::math::integrate_ode_bdf;
-  using torsten::pmx_integrate_ode_adams;
-  using torsten::pmx_integrate_ode_bdf;
-  using Eigen::Matrix;
-  using Eigen::Dynamic;
-  using stan::math::matrix_exp;
-
   y0[0] = 150;
   y0[1] = 500;
   y0[2] = 800;
@@ -138,7 +111,8 @@ TEST_F(TorstenTwoCptModelTest, linode_solver_zero_rate) {
   std::vector<var> theta_vec(theta.data(), theta.data() + theta.size());
 
   auto y1 = pmx_integrate_ode_bdf(f1, yvec, t0, ts, theta_vec, rate, x_i, msgs);
-  auto y2 = model.solve(ts[0]);
+  PKRec<var> y2(to_var(y0));
+  model.solve(y2, t0, ts[0], rate);
   EXPECT_NEAR(y1[0][0].val(), y2(0).val(), 1.E-7);
   EXPECT_NEAR(y1[0][1].val(), y2(1).val(), 1.E-7);
   EXPECT_NEAR(y1[0][2].val(), y2(2).val(), 1.E-7);

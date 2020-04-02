@@ -288,7 +288,10 @@ namespace torsten {
 
       // Last element of x_r contains the initial time
       T_m<T0, T2, T2, T2> pkmodel(x_r.back(), init_pk, ratePK, thetaPK);
-      vector<scalar> dydt = F0()(t, y, to_array_1d(pkmodel.solve(t)), theta, x_r, x_i, pstream_);
+      pkmodel.solve(init_pk, x_r.back(), t, ratePK);
+      vector<scalar> dydt = F0()(t, y,
+                                 to_array_1d(init_pk),
+                                 theta, x_r, x_i, pstream_);
 
       for (size_t i = 0; i < dydt.size(); i++)
         dydt[i] += theta[nODEparms + nPK + i];
@@ -342,9 +345,9 @@ namespace torsten {
       // The last element of x_r contains the initial time,
       // and the beginning of theta are for PK params.
       T_m<T0, T2, T3, T2> pkmodel(x_r.back(), init_pk, x_r, theta);
-
+      pkmodel.solve(init_pk, x_r.back(), t, x_r);
       // move PK RHS to current time then feed the solution to PD ODE
-      std::vector<T_pk> y_pk = to_array_1d(pkmodel.solve(t));
+      std::vector<T_pk> y_pk = to_array_1d(init_pk);
       std::vector<scalar> dydt = F0()(t, y, y_pk, theta, x_r, x_i, pstream_);
 
       // x_r: {pk rate, pd rate, t0}
@@ -446,12 +449,11 @@ namespace torsten {
         // PD solution of infusion, note that @c f_ is coupled adaptor functor
         x0 = integrator_(f_, x_vec, t0, delta, y_vec, x_r, x_i)[0];
 
-        Eigen::Matrix<T1, 1, -1> x0_pk(nPK_);
+        PKRec<T1> x_pk(nPK_);
         int nParms = y.size() - nPK_;
-        for (int i = 0; i < nPK_; i++) x0_pk(i) = y(nParms + i);
+        for (int i = 0; i < nPK_; i++) x_pk(i) = y(nParms + i);
 
-        Eigen::Matrix<T1, 1, -1> x_pk = T_m<double, T1, double, T1>(t0, x0_pk, x_r, y_vec)
-          .solve(delta);
+        T_m<double, T1, double, T1>(t0, x_pk, x_r, y_vec).solve(x_pk, t0, delta, x_r);
 
         // no more infusion after amt/rate
         x_r[cmt_ - 1] = 0;
@@ -836,21 +838,29 @@ namespace torsten {
     // torsten::PKRec<scalar_type>
     // solve(const T_time& t_next,
     //       const torsten::PMXOdeIntegrator<It>& integrator) const {
-    template<typename T0, typename T, typename T1, PMXOdeIntegratorId It>
-    void solve(PKRec<T>& y, const T0& t0, const T0& t1,
+    template<typename Tt0, typename Tt1, typename T, typename T1, PMXOdeIntegratorId It>
+    void solve(PKRec<T>& y,
+               const Tt0& t0, const Tt1& t1,
                const std::vector<T1>& rate,
                const PMXOdeIntegrator<It>& integrator) const {
       using std::vector;
 
       // pass fixed times to the integrator. FIX ME - see issue #30
-      T0 t = t1;
+      Tt1 t = t1;
       vector<double> t_dbl{stan::math::value_of(t)};
       double t0_dbl = stan::math::value_of(t0);
 
       PKRec<T> pred;
       if (t_dbl[0] > t0_dbl) {
         size_t nPK = pk_model.ncmt();
-        PKRec<T> xPK = pk_model.solve(t);
+        // 
+      // y0_pk{ y0_.head(y0_.size() - n_ode_) },
+      // y0_ode{ y0_.segment(y0_pk.size(), n_ode_) },
+      // f(),
+      // pk_model(t0, y0_pk, rate, par),
+        // 
+        PKRec<T> xPK(y.head(y.size() - n_ode));
+        pk_model.solve(xPK, t0, t, rate);
         PKRec<T> y_pk(y.head(y.size() - n_ode));
         PKRec<T> y_ode(y.segment(y_pk.size(), n_ode));
 
