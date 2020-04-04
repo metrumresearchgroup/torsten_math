@@ -10,6 +10,60 @@
 
 namespace torsten {
 
+  template<typename model_t, typename T_time, typename T_init, typename T_rate>
+  struct pmx_model_nvars {
+    static int nvars(int ncmt, int npar) {
+      using stan::is_var;
+      using T_par = typename model_t::par_type;
+      int n = 0;
+      if (is_var<T_time>::value) n++; // t0
+      if (is_var<T_init>::value) n += ncmt; // y0 is fixed for onecpt model
+      if (is_var<T_rate>::value) n += ncmt; // rate is fixed for onecpt model
+      if (is_var<T_par>::value) n += npar; // par is fixed for onecpt model
+      return n;
+    }
+  };
+
+  /*
+   * The number of @c var that will be in the ODE
+   * integrator. Note that not all @c var will be
+   * explicitly in an integrator's call signature.
+   * Since we only step one time-step, if @c t0_ is @c var
+   * it only adds one(because @c ts will be of size one). Also note that regardless if @c
+   * par_ is @c var or not, when @c rate_ is @c var we
+   * generate a new @c theta of @c var vector to pass to ODE integrator that
+   * contains both @c par_ and @c rate_.
+   */
+  template<typename T_time, typename T_init, typename T_rate, typename... Ts>
+  struct pmx_model_nvars<PKODEModel<Ts...>, T_time, T_init, T_rate> {
+    static int nvars(int ncmt, int npar) {
+      using stan::is_var;
+      using T_par = typename PKODEModel<Ts...>::par_type;
+      int n = 0;
+      if (is_var<T_time>::value) n++; // t0
+      if (is_var<T_init>::value) n += ncmt;
+      if (is_var<T_rate>::value) {
+        n += ncmt + npar;
+      } else if (is_var<T_par>::value) {
+        n += npar;
+      }
+      return n;
+    }
+  };
+
+  template<typename model_t, typename T_amt, typename T_rate, typename T_ii>
+  struct pmx_model_nvars_ss {
+    static int nvars(int npar) {
+      using stan::is_var;
+      int n = 0;
+      if (is_var<T_amt>::value) n++; // amt
+      if (is_var<T_rate>::value) n++; // rate
+      if (is_var<T_ii>::value) n++; // ii
+      if (is_var<typename model_t::par_type>::value) n += npar;
+      return n;
+    }
+  };
+
   template<typename model_t>
   struct pmx_model_vars {
     template<typename T0, typename T1, typename T2, typename T3>
@@ -135,10 +189,11 @@ namespace torsten {
   template<typename T_model, PMXOdeIntegratorId It, typename... Ts,
            typename std::enable_if_t<!stan::is_var<typename T_model::par_type>::value >* = nullptr> //NOLINT
     Eigen::VectorXd model_solve_d(const T_model& pkmodel,
+                                  double t0,
                                   const double& amt, const double& rate, const double& ii, const int& cmt, // NOLINT
                                   const PMXOdeIntegrator<It>& integ,
                                   const Ts... model_pars) {
-    return pkmodel.solve(amt, rate, ii, cmt, integ);
+    return pkmodel.solve(t0, amt, rate, ii, cmt, integ);
   }
 
   /*
@@ -153,6 +208,7 @@ namespace torsten {
   template<typename T_model, typename T_amt, typename T_rate, typename T_ii,
            PMXOdeIntegratorId It, typename... Ts>
   Eigen::VectorXd model_solve_d(const T_model& pkmodel,
+                                double t0,
                                 const T_amt& amt, const T_rate& r, const T_ii& ii, const int& cmt, // NOLINT
                                 const PMXOdeIntegrator<It>& integ,
                                 const Ts... model_pars) {
@@ -169,13 +225,17 @@ namespace torsten {
       std::vector<typename T_model::par_type> par_new(pkmodel.par().size());
       for (size_t i = 0; i < par_new.size(); ++i) par_new[i] = value_of(pkmodel.par()[i]);
 
-      T_model pkmodel_new(pkmodel.t0(), pkmodel.y0(), pkmodel.rate(), par_new, model_pars...);
+      // FIXME: rm dummies
+      typename T_model::time_type t0_ = 0;
+      PKRec<typename T_model::init_type> y0_(pkmodel.ncmt());
+      std::vector<typename T_model::rate_type> rate_;
+      T_model pkmodel_new(t0_, y0_, rate_, par_new, model_pars...);
 
       T_amt amt_new = value_of(amt);
       T_rate r_new = value_of(r);
       T_ii ii_new = value_of(ii);
-      auto res = pkmodel_new.solve(amt_new, r_new, ii_new, cmt, integ);
-      vector<var> var_new(pkmodel_new.vars(amt_new, r_new, ii_new));
+      auto res = pkmodel_new.solve(t0, amt_new, r_new, ii_new, cmt, integ);
+      vector<var> var_new(dsolve::pk_vars(amt_new, r_new, ii_new, pkmodel_new.par()));
       res_d = val_and_grad_nested(res, var_new);
     } catch (const std::exception& e) {
       stan::math::recover_memory_nested();

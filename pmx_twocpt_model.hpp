@@ -77,9 +77,6 @@ namespace torsten {
    */
   template<typename T_time, typename T_init, typename T_rate, typename T_par>
   class PMXTwoCptModel {
-    const T_time &t0_;
-    const PKRec<T_init>& y0_;
-    const std::vector<T_rate> &rate_;
     const T_par &CL_;
     const T_par &Q_;
     const T_par &V2_;
@@ -124,9 +121,6 @@ namespace torsten {
                   const T_par& V2,
                   const T_par& V3,
                   const T_par& ka) :
-      t0_(t0),
-      y0_(y0),
-      rate_(rate),
       CL_(CL),
       Q_(Q),
       V2_(V2),
@@ -186,86 +180,10 @@ namespace torsten {
       PMXTwoCptModel(t0, y0, rate, par[0], par[1], par[2], par[3], par[4])
     {}
 
-
-    /*
-     * calculate number of @c vars for transient dosing.
+    /**
+     * two-compartment PK model get methods
      */
-    static int nvars(int ncmt, int npar) {
-      using stan::is_var;
-      int n = 0;
-      if (is_var<T_time>::value) n++; // t0
-      if (is_var<T_init>::value) n += Ncmt; // y0 is fixed for twocpt model
-      if (is_var<T_rate>::value) n += Ncmt; // rate is fixed for twocpt model
-      if (is_var<T_par>::value) n += Npar; // par is fixed for twocpt model
-      return n;
-    }
-
-    /*
-     * calculate number of @c vars for steady-state dosing.
-     */
-    template<typename T_a, typename T_r, typename T_ii>
-    static int nvars(int npar) {
-      using stan::is_var;
-      int n = 0;
-      if (is_var<T_a>::value) n++; // amt
-      if (is_var<T_r>::value) n++; // rate
-      if (is_var<T_ii>::value) n++; // ii
-      if (is_var<T_par>::value) n += Npar; // par is fixed for twocpt model
-      return n;
-    }
-
-    /*
-     * return the number @c var that will be the parameters
-     * of the trasient dosing event's solution
-     */
-    template<typename T0>
-    int nvars(const T0& t0) {
-      return torsten::pk_nvars(t0, y0_, rate_, par_);
-    }
-
-    /*
-     * return the number @c var that will be the parameters
-     * of the stead-state dosing event's solution
-     */
-    template<typename T_a, typename T_r, typename T_ii>
-    int nvars(const T_a& a, const T_r& r, const T_ii& ii) {
-      return torsten::pk_nvars(a, r, ii, par_);
-    }
-
-    /*
-     * return @c vars that will be solution
-     */
-    template<typename T0>
-    std::vector<stan::math::var> vars(const T0 t1) {
-      return torsten::dsolve::pk_vars(t1, y0_, rate_, par_);
-    }
-
-    /*
-     * return @c vars that will be steady-state
-     * solution. For SS solution @c rate_ or @ y0_ will not
-     * be in the solution.
-     */
-    template<typename T_a, typename T_r, typename T_ii>
-    std::vector<stan::math::var> vars(const T_a& a, const T_r& r, const T_ii& ii) {
-      return torsten::dsolve::pk_vars(a, r, ii, par_);
-    }
-
-  /**
-   * two-compartment PK model get methods
-   */
-    const T_time              & t0()      const { return t0_;    }
-    const torsten::PKRec<T_init>    & y0()         const { return y0_;    }
-    const std::vector<T_rate> & rate()    const { return rate_;  }
-    const T_par               & CL()      const { return CL_;    }
-    const T_par               & Q()       const { return Q_;     }
-    const T_par               & V2()      const { return V2_;    }
-    const T_par               & V3()      const { return V3_;    }
-    const T_par               & ka()      const { return ka_;    }
-    const T_par               & k10()     const { return k10_;   }
-    const T_par               & k12()     const { return k12_;   }
-    const T_par               & k21()     const { return k21_;   }
     const std::vector<T_par>  & par()     const { return par_;   }
-    const std::vector<T_par>  & alpha()   const { return alpha_; }
     const PMXTwoCptODE         & f()       const { return f_;     }
     const int                 & ncmt ()   const { return Ncmt;   }
     const int                 & npar ()   const { return Npar;   }
@@ -362,7 +280,7 @@ namespace torsten {
    */
     template<typename T_amt, typename T_r, typename T_ii>
     Eigen::Matrix<typename stan::return_type<T_par, T_amt, T_r, T_ii>::type, -1, 1>
-    solve(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt) const {
+    solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt) const {
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using std::vector;
@@ -488,9 +406,9 @@ namespace torsten {
      */
     template<typename T_amt, typename T_r, typename T_ii>
     Eigen::Matrix<typename stan::return_type<T_par, T_amt, T_r, T_ii>::type, -1, 1>
-    solve(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
+    solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
           const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
-      return solve(amt, rate, ii, cmt);
+      return solve(t0, amt, rate, ii, cmt);
     }
 
     template<typename T1, typename T2>

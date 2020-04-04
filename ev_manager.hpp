@@ -107,8 +107,10 @@ namespace torsten {
 
       T_time t0, t1;
       if (event_his.is_ss_dosing(i)) {
-        t0 = event_his.time(i);
-        t1 = event_his.ii(i);
+        // t0 = event_his.time(i);
+        // t1 = event_his.ii(i);
+        t0 = i == 0 ? event_his.time(0) : event_his.time(i-1);
+        t1 = event_his.time(i);
       } else {
         t0 = i == 0 ? event_his.time(0) : event_his.time(i-1);
         t1 = event_his.time(i);

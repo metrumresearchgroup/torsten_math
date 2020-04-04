@@ -148,10 +148,10 @@ TEST_F(TorstenTwoCptModelTest, ss_bolus_amt_grad) {
   
   int cmt = 0;
   auto f1 = [&](const std::vector<double>& amt_vec) {
-    return model.solve(amt_vec[0], rate[cmt-1], ii, cmt);
+    return model.solve(t0, amt_vec[0], rate[cmt-1], ii, cmt);
   };
   auto f2 = [&](const std::vector<var>& amt_vec) {
-    return model.solve(amt_vec[0], rate[cmt-1], ii, cmt);
+    return model.solve(t0, amt_vec[0], rate[cmt-1], ii, cmt);
   };
   std::vector<double> amt_vec{1000.0};
   cmt = 1; torsten::test::test_grad(f1, f2, amt_vec, 1.e-3, 1.e-16, 2.e-10, 1.e-12);
@@ -173,10 +173,10 @@ TEST_F(TorstenTwoCptModelTest, ss_infusion_rate_grad) {
   
   int cmt = 0;
   auto f1 = [&](const std::vector<double>& rate_vec) {
-    return model.solve(amt, rate_vec[0], ii, cmt);
+    return model.solve(t0, amt, rate_vec[0], ii, cmt);
   };
   auto f2 = [&](const std::vector<var>& rate_vec) {
-    return model.solve(amt, rate_vec[0], ii, cmt);
+    return model.solve(t0, amt, rate_vec[0], ii, cmt);
   };
   std::vector<double> rate_vec{130.0};
   cmt = 1; torsten::test::test_grad(f1, f2, rate_vec, 1.e-3, 1.e-16, 1.e-8, 1.e-12);
@@ -290,7 +290,7 @@ TEST_F(TorstenTwoCptModelTest, ss_infusion_grad_vs_long_run_sd) {
 
   auto f2 = [&](const std::vector<var>& rate_vec) {
     PMXTwoCptModel<double, double, double, double> model(t0, y0, rate, CL, Q, V2, V3, ka);
-    return model.solve(amt, rate_vec[cmt - 1], ii, cmt);
+    return model.solve(t0, amt, rate_vec[cmt - 1], ii, cmt);
   };
 
   std::vector<var> rate_vec(3, 0.0);
@@ -591,7 +591,7 @@ TEST_F(TorstenTwoCptModelTest, ss_bolus_grad_vs_long_run_sd) {
 
   auto f2 = [&](const std::vector<var>& amt_vec) {
     PMXTwoCptModel<double, double, double, double> model(t0, y0, rate, CL, Q, V2, V3, ka);
-    return model.solve(amt_vec[0], rate[cmt - 1], ii, cmt);
+    return model.solve(t0, amt_vec[0], rate[cmt - 1], ii, cmt);
   };
 
   std::vector<var> amt_vec{300.00};
@@ -694,7 +694,7 @@ TEST_F(TorstenTwoCptModelTest, ss_const_infusion_grad_vs_long_run_sd) {
     double amt = 0.0;
     double t_next = 1.0e2;
     double ii = 0.0;
-    return model.solve(amt, rate_vec[cmt - 1], ii, cmt);
+    return model.solve(t0, amt, rate_vec[cmt - 1], ii, cmt);
   };
 
   std::vector<var> rate_vec(3, 0.0);
@@ -755,7 +755,7 @@ TEST_F(TorstenTwoCptModelTest, ss_bolus) {
   int cmt = 1;
   double ii = 12.5;
   
-  auto y1 = model.solve(amt, rate_var[cmt - 1], ii, cmt);
+  auto y1 = model.solve(t0, amt, rate_var[cmt - 1], ii, cmt);
   EXPECT_FLOAT_EQ(y1(0).val(), 0.00055062433);
   EXPECT_FLOAT_EQ(y1(1).val(), 738.870108248);
   EXPECT_FLOAT_EQ(y1(2).val(), 763.661542764);
@@ -784,7 +784,7 @@ TEST_F(TorstenTwoCptModelTest, ss_bolus) {
   EXPECT_FLOAT_EQ(g1[4],  -34.1903160204);
 
   cmt = 2;
-  y1 = model.solve(amt, rate_var[cmt - 1], ii, cmt);
+  y1 = model.solve(t0, amt, rate_var[cmt - 1], ii, cmt);
   
   EXPECT_FLOAT_EQ(y1(0).val(), 0.0);
   EXPECT_FLOAT_EQ(y1(1).val(), 700.955088612);
@@ -813,7 +813,7 @@ TEST_F(TorstenTwoCptModelTest, ss_bolus) {
   EXPECT_FLOAT_EQ(g1[4], 0);
 
   cmt = 3;
-  y1 = model.solve(amt, rate_var[cmt - 1], ii, cmt);
+  y1 = model.solve(t0, amt, rate_var[cmt - 1], ii, cmt);
   
   EXPECT_FLOAT_EQ(y1(0).val(), 0.0);
   EXPECT_FLOAT_EQ(y1(1).val(), 828.127401998);
@@ -868,7 +868,7 @@ TEST_F(TorstenTwoCptModelTest, ss_multi_trunc_infusion) {
   double ii = 12.5;
   std::vector<double> g1, g2;
 
-  auto y1 = model.solve(amt, rate_var[cmt - 1], ii, cmt);
+  auto y1 = model.solve(t0, amt, rate_var[cmt - 1], ii, cmt);
   EXPECT_FLOAT_EQ(y1(0).val(), 0.00154469934961);
   EXPECT_FLOAT_EQ(y1(1).val(), 774.104413167);
   EXPECT_FLOAT_EQ(y1(2).val(), 799.879747792);
@@ -896,7 +896,7 @@ TEST_F(TorstenTwoCptModelTest, ss_multi_trunc_infusion) {
   EXPECT_FLOAT_EQ(g1[4], -35.6693548262);
 
   cmt = 2;
-  y1 = model.solve(amt, rate_var[cmt - 1], ii, cmt);
+  y1 = model.solve(t0, amt, rate_var[cmt - 1], ii, cmt);
   
   EXPECT_FLOAT_EQ(y1(0).val(), 0.0);
   EXPECT_FLOAT_EQ(y1(1).val(), 737.454228957);
@@ -925,7 +925,7 @@ TEST_F(TorstenTwoCptModelTest, ss_multi_trunc_infusion) {
   EXPECT_FLOAT_EQ(g1[4], 0.0);
 
   cmt = 3;
-  y1 = model.solve(amt, rate_var[cmt - 1], ii, cmt);
+  y1 = model.solve(t0, amt, rate_var[cmt - 1], ii, cmt);
   
   EXPECT_FLOAT_EQ(y1(0).val(), 0.0);
   EXPECT_FLOAT_EQ(y1(1).val(), 888.053512871);
@@ -987,7 +987,7 @@ TEST_F(TorstenTwoCptModelTest, ss_solver_const_infusion) {
   double ii = 0.0;
   std::vector<double> g1, g2;
 
-  auto y1 = model.solve(amt, rate_var[cmt - 1], ii, cmt);
+  auto y1 = model.solve(t0, amt, rate_var[cmt - 1], ii, cmt);
   EXPECT_FLOAT_EQ(y1(0).val(), 1000);
   EXPECT_FLOAT_EQ(y1(1).val(), 9600);
   EXPECT_FLOAT_EQ(y1(2).val(), 8400);
@@ -1017,7 +1017,7 @@ TEST_F(TorstenTwoCptModelTest, ss_solver_const_infusion) {
 
   // FIXME: check the results
   // cmt = 2;
-  // y1 = model.solve(amt, rate_var[cmt - 1], ii, cmt);
+  // y1 = model.solve(t0, amt, rate_var[cmt - 1], ii, cmt);
 
   // EXPECT_FLOAT_EQ(y1(0).val(), 1000.0);
   // EXPECT_FLOAT_EQ(y1(1).val(), 9600);
@@ -1046,7 +1046,7 @@ TEST_F(TorstenTwoCptModelTest, ss_solver_const_infusion) {
   // EXPECT_FLOAT_EQ(g1[4], 1.02318153949e-12);
 
   cmt = 3;
-  y1 = model.solve(amt, rate_var[cmt - 1], ii, cmt);
+  y1 = model.solve(t0, amt, rate_var[cmt - 1], ii, cmt);
   
   EXPECT_FLOAT_EQ(y1(0).val(), 0.0);
   EXPECT_FLOAT_EQ(y1(1).val(), 6400);

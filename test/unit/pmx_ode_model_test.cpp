@@ -53,7 +53,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_vs_long_run_sd) {
   auto f2 = [&](const double amt, const auto& integrator) {
     PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
     double r = 0;
-    return model.solve(amt, r, ii, cmt, integrator);
+    return model.solve(t0, amt, r, ii, cmt, integrator);
   };
 
   const double amt = 1000.0;
@@ -129,7 +129,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_grad_vs_long_run_sd) {
   auto f2 = [&](const var& amt, const auto& integrator) {
     PKODEModel<double, var, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
     double r = 0;
-    return model.solve(amt, r, ii, cmt, integrator);
+    return model.solve(t0, amt, r, ii, cmt, integrator);
   };
 
   std::vector<var> amt_vec{1000.0};
@@ -205,7 +205,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_infusion_vs_long_run_sd) {
 
   auto f2 = [&](std::vector<double>& rate_vec, const auto& integrator) {
     PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
-    return model.solve(amt, rate_vec[cmt - 1], ii, cmt, integrator);
+    return model.solve(t0, amt, rate_vec[cmt - 1], ii, cmt, integrator);
   };
 
   std::vector<double> rate_vec(3, 0.0);
@@ -281,7 +281,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_parm_ss_infusion_vs_long_run_sd) {
 
   auto f2 = [&](std::vector<double>& rate_vec, const auto& integrator) {
     PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
-    return model.solve(amt[0], rate_vec[cmt - 1], ii, cmt, integrator);
+    return model.solve(t0, amt[0], rate_vec[cmt - 1], ii, cmt, integrator);
   };
 
   std::vector<double> rate_vec(3, 0.0);
@@ -369,7 +369,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_infusion_grad_vs_long_run_s
 
   auto f2 = [&](const var& r, const auto& integrator) {
     PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
-    return model.solve(amt, r, ii, cmt, integrator);
+    return model.solve(t0, amt, r, ii, cmt, integrator);
   };
 
   for (int i = 0; i < 3; ++i) {
@@ -428,7 +428,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_const_infusion_grad_vs_long
 
   auto f2 = [&](const var& r, const auto& integrator) {
     PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
-    return model.solve(amt, r, ii, cmt, integrator);
+    return model.solve(t0, amt, r, ii, cmt, integrator);
   };
 
   const var r = 330.0;
@@ -489,7 +489,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_rate_param_ss_bolus_vs_long_run_sd) {
   auto f2 = [&](const double amt, const auto& integrator) {
     PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
     var r = 0.0;
-    return model.solve(amt, r, ii, cmt, integrator);
+    return model.solve(t0, amt, r, ii, cmt, integrator);
   };
 
   const double amt = 1000.0;
@@ -549,7 +549,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_rate_param_ss_bolus_grad_vs_long_run_sd
   auto f2 = [&](const var& amt, const auto& integrator) {
     PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
     var r = 0.0;
-    return model.solve(amt, r, ii, cmt, integrator);
+    return model.solve(t0, amt, r, ii, cmt, integrator);
   };
 
   std::vector<var> amt_vec{1000.0};
@@ -612,7 +612,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_param_ss_infusion_grad_vs_long_run_
 
   auto f2 = [&](const var& r, const auto& integrator) {
     PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
-    return model.solve(amt, r, ii, cmt, integrator);
+    return model.solve(t0, amt, r, ii, cmt, integrator);
   };
 
   const var r = 330.0;
@@ -669,7 +669,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_param_ss_const_infusion_grad_vs_lon
 
   auto f2 = [&](const var& r, const auto& integrator) {
     PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
-    return model.solve(amt, r, ii, cmt, integrator);
+    return model.solve(t0, amt, r, ii, cmt, integrator);
   };
 
   const var r = 330.0;
@@ -732,7 +732,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_theta_grad_vs_long_run_sd) {
   auto f2 = [&](const auto& integrator) {
     PKODEModel<double, double, double, var, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
     double r = 0;
-    return model.solve(amt, r, ii, cmt, integrator);
+    return model.solve(t0, amt, r, ii, cmt, integrator);
   };
 
 
@@ -756,7 +756,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_theta_grad_vs_long_run_sd) {
   auto f4 = [&](const auto& integrator) {
     PKODEModel<double, double, double, var, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
     double r = 0;
-    return model.solve(params.back(), r, ii, cmt, integrator);
+    return model.solve(t0, params.back(), r, ii, cmt, integrator);
   };
 
   for (int i = 0; i < 3; ++i) {
@@ -829,7 +829,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_infusion_theta_grad_vs_long_run_sd) 
   auto f2 = [&](const auto& integrator) {
     PKODEModel<double, double, double, var, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
     var& r = params.back();
-    return model.solve(amt, r, ii, cmt, integrator);
+    return model.solve(t0, amt, r, ii, cmt, integrator);
   };
 
   auto f3 = [&](const auto& integrator) {
@@ -856,7 +856,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_infusion_theta_grad_vs_long_run_sd) 
   auto f4 = [&](const auto& integrator) {
     PKODEModel<double, double, double, var, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
     var& r = params.back();
-    return model.solve(params[5], r, ii, cmt, integrator);
+    return model.solve(t0, params[5], r, ii, cmt, integrator);
   };
 
   for (int i = 0; i < 3; ++i) {
@@ -917,7 +917,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_const_infusion_theta_grad_vs_long_run_s
 
   auto f2 = [&]() {
     PKODEModel<double, double, double, var, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
-    return model.solve(amt, params.back(), ii, cmt, integrator);
+    return model.solve(t0, amt, params.back(), ii, cmt, integrator);
   };
 
   {

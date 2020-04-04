@@ -4,6 +4,7 @@
 #include<stan/math/torsten/torsten_def.hpp>
 #include<stan/math/torsten/pmx_ode_integrator.hpp>
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
+#include <stan/math/torsten/model_solve_d.hpp>
 #include<vector>
 
 namespace torsten {
@@ -37,6 +38,7 @@ namespace torsten {
     inline void operator()(PKRec<T>& y,
                            const model_t& model,
                            const PMXOdeIntegrator<It>& integ) {
+      using stan::math::value_of;
       const double eps = 1.0E-12;
       const jump_t jp = force0 < eps ? jump(cmt - 1) : 0.0;
       switch(id) {
@@ -49,11 +51,11 @@ namespace torsten {
         y(cmt - 1) += jp;
         break;
       case 3:
-        y += T(1.0) * model.solve(jump(cmt - 1), force0, ii, cmt, integ);
+        y += T(1.0) * model.solve(value_of(t1), jump(cmt - 1), force0, ii, cmt, integ);
         y(cmt - 1) += jp;
         break;
       case 4:
-        y = T(1.0) * model.solve(jump(cmt - 1), force0, ii, cmt, integ);
+        y = T(1.0) * model.solve(value_of(t1), jump(cmt - 1), force0, ii, cmt, integ);
         y(cmt - 1) += jp;
         break;
       default:
@@ -69,6 +71,7 @@ namespace torsten {
                            const model_t& model,
                            const PMXOdeIntegrator<It>& integ,
                            const Ts... model_pars) {
+      using stan::math::value_of;
       const double eps = 1.0E-12;
       const jump_t jp = force0 < eps ? jump(cmt - 1) : 0.0;
       std::vector<stan::math::var> vt;
@@ -78,7 +81,7 @@ namespace torsten {
         break;
       case 2:
         y.setZero();
-        vt = model.vars(t1);
+        vt = pmx_model_vars<model_t>::vars(t1, y, force, model.par());
         if (t1 > t0) {
           yd = model_solve_d(model, y, t0, t1, force, integ, model_pars...);
           y = torsten::mpi::precomputed_gradients(yd, vt);
@@ -86,19 +89,19 @@ namespace torsten {
         y(cmt - 1) += jp;
         break;
       case 3:
-        yd = model_solve_d(model, jump(cmt - 1), force0, ii, cmt, integ, model_pars...);
-        vt = model.vars(jump(cmt - 1), force0, ii);
+        yd = model_solve_d(model, value_of(t1), jump(cmt - 1), force0, ii, cmt, integ, model_pars...);
+        vt = dsolve::pk_vars(jump(cmt - 1), force0, ii, model.par());
         y += torsten::mpi::precomputed_gradients(yd, vt);
         y(cmt - 1) += jp;
         break;
       case 4:
-        yd = model_solve_d(model, jump(cmt - 1), force0, ii, cmt, integ, model_pars...);
-        vt = model.vars(jump(cmt - 1), force0, ii);
+        yd = model_solve_d(model, value_of(t1), jump(cmt - 1), force0, ii, cmt, integ, model_pars...);
+        vt = dsolve::pk_vars(jump(cmt - 1), force0, ii, model.par());
         y = torsten::mpi::precomputed_gradients(yd, vt);
         y(cmt - 1) += jp;
         break;
       default:
-        vt = model.vars(t1);
+        vt = pmx_model_vars<model_t>::vars(t1, y, force, model.par());
         if (t1 > t0) {
           yd = model_solve_d(model, y, t0, t1, force, integ, model_pars...);
           y = torsten::mpi::precomputed_gradients(yd, vt);

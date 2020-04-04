@@ -599,9 +599,9 @@ namespace torsten {
     const T_m<T_time, T_init, T_rate, T_par> pk_model;
     const torsten::PKODEModel<T_time, T_init, T_rate, T_par, Fa> ode_model;
 
-    using pk_scalar_type = torsten::scalar_t<T_m<T_time, T_init, T_rate, T_par>>; // NOLINT 
-    using ode_scalar_type = torsten::scalar_t<torsten::PKODEModel<T_time, T_init, T_rate, T_par, Fa> >; // NOLINT
-    using scalar_type = typename stan::return_type<pk_scalar_type, ode_scalar_type>::type; // NOLINT 
+    using pk_scalar_type = typename stan::return_type_t<T_time, T_init, T_rate, T_par>; // NOLINT 
+    using ode_scalar_type = typename stan::return_type_t<T_time, T_init, T_rate, T_par>; // NOLINT
+    using scalar_type = typename stan::return_type_t<pk_scalar_type, ode_scalar_type>; // NOLINT 
     using init_type   = T_init;
     using time_type   = T_time;
     using par_type    = T_par;
@@ -671,12 +671,13 @@ namespace torsten {
     const double ii_dbl = stan::math::value_of(ii);
     const int nPK = pk_model.ncmt();
     const int nPD = ode_model.ncmt();
-    const double t0 = stan::math::value_of(ode_model.t0());
+    // const double t0 = stan::math::value_of(ode_model.t0());
+    const double t0 = 0.0;      // FIXME: rm dummy
 
     Eigen::Matrix<T_par, -1, 1> predPK;
     if (cmt <= nPK) {  // check dosing occurs in a base state
       T_m<double, double, double, T_par> pkmodel(t0, torsten::PKRec<double>(), std::vector<double>(), pk_model.par());
-      predPK = pkmodel.solve(amt, rate, ii_dbl, cmt);
+      predPK = pkmodel.solve(t0, amt, rate, ii_dbl, cmt);
     } else {
       predPK = Eigen::Matrix<scalar, -1, 1>::Zero(nPK);
     }
@@ -760,7 +761,7 @@ namespace torsten {
     if (cmt <= nPK) {  // check dosing occurs in a base state
       const double t0 = 0.0;
       T_m<double, double, T_amt, T_par> pkmodel(t0, torsten::PKRec<double>(), std::vector<T_amt>(), pk_model.par());
-      predPK = pkmodel.solve(amt, rate, ii_dbl, cmt);
+      predPK = pkmodel.solve(t0, amt, rate, ii_dbl, cmt);
       predPK(cmt - 1) += amt;
     } else {
       predPK = Eigen::Matrix<scalar, -1, 1>::Zero(nPK);
@@ -883,26 +884,13 @@ namespace torsten {
     }
 
     /* 
-     * solve the coupled model.
-     */
-    template<torsten::PMXOdeIntegratorId It>
-    PKRec<scalar_type>
-    solve(const T_time& t_next,
-          const torsten::PMXOdeIntegrator<It>& integrator) const {
-      T_time t0 = ode_model.t0();
-      PKRec<scalar_type> pred(y0_);
-      solve(pred, t0, t_next, ode_model.rate(), integrator);
-      return pred;
-    }
-
-    /* 
      * solve the coupled model, steady state. We delegate
      * the solution to @c integrate, in which the type of @c
      * amt will be used for template partial specification.
      */
     template<torsten::PMXOdeIntegratorId It, typename T_ii, typename T_amt>
     torsten::PKRec<scalar_type>
-    solve(const T_amt& amt, const double& rate, const T_ii& ii, const int& cmt,
+    solve(double t0, const T_amt& amt, const double& rate, const T_ii& ii, const int& cmt,
           const torsten::PMXOdeIntegrator<It>& integrator) const {
       return integrate(amt, rate, ii, cmt, integrator);
     }

@@ -24,26 +24,10 @@ namespace torsten {
   using par_t = typename std::decay<decltype(std::declval<T>().par())>::type::value_type; // NOLINT
 
   template <class T>
-  using detime_t = typename std::decay<decltype(std::declval<T>().t0())>::type; // NOLINT
-
-  template <class T>
-  using scalar_t = typename stan::return_type<detime_t<T>, rate_t<T>, par_t<T>, init_t<T>>::type; // NOLINT
-
-  template <class T>
   using aug_par_t = typename stan::return_type<rate_t<T>, par_t<T>, init_t<T>>::type; // NOLINT
 
   template <class T>
   using f_t = typename std::decay<decltype(std::declval<T>().f())>::type; // NOLINT
-
-  template <class T>
-  using has_var_rate = stan::is_var<rate_t<T> >;
-
-  template <class T>
-  using has_var_init = stan::is_var<init_t<T> >;
-
-  template <class T>
-  using has_var_par = stan::is_var<par_t<T> >;
-
 }
 
 #endif

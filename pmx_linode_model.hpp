@@ -65,10 +65,8 @@ namespace torsten {
    */
   template<typename T_time, typename T_init, typename T_rate, typename T_par>
   class PMXLinODEModel {
-    const T_time &t0_;
-    const PKRec<T_init>& y0_;
-    const std::vector<T_rate> &rate_;
     const Eigen::Matrix<T_par, -1, -1> & par_;
+    const int ncmt_;
 
   public:
     static constexpr PMXLinODE f_ = PMXLinODE();
@@ -78,46 +76,12 @@ namespace torsten {
     using par_type    = T_par;
     using rate_type   = T_rate;
 
-  /**
-   * Constructor
-   * FIXME need to remove parameter as this is for linode only.
-   *
-   * @tparam T_mp parameters class
-   * @tparam Ts parameter types
-   * @param t0 initial time
-   * @param y0 initial condition
-   * @param rate dosing rate
-   * @param par model parameters
-   * @param parameter ModelParameter type
-   */
-    // template<template<typename...> class T_mp, typename... Ts>
-    // PMXLinODEModel(const T_time& t0,
-    //               const Eigen::Matrix<T_init, 1, Eigen::Dynamic>& y0,
-    //               const std::vector<T_rate> &rate,
-    //               const std::vector<T_par> & par,
-    //               const T_mp<Ts...> &parameter) :
-    //   t0_(t0),
-    //   y0_(y0),
-    //   rate_(rate),
-    // {}
-
     PMXLinODEModel(const T_time& t0,
                    const PKRec<T_init>& y0,
                    const std::vector<T_rate> &rate,
                    const Eigen::Matrix<T_par, -1, -1>& par) :
-      t0_(t0),
-      y0_(y0),
-      rate_(rate),
-      par_(par)
+      par_(par), ncmt_(y0.size())
     {}
-
-    /*
-     * return @c vars that will be solution
-     */
-    template<typename T0>
-    std::vector<stan::math::var> vars(const T0 t1) {
-      return torsten::dsolve::pk_vars(t1, y0_, rate_, par_);
-    }
 
     /*
      * return @c vars that will be steady-state
@@ -129,17 +93,11 @@ namespace torsten {
       return torsten::dsolve::pk_vars(a, r, ii, par_);
     }
 
-    /*
-     *
-     */
-    const T_time              & t0()    const { return t0_; }
-    const torsten::PKRec<T_init>       & y0()    const { return y0_; }
-    const std::vector<T_rate> & rate()  const { return rate_; }
     const Eigen::Matrix<T_par,-1,-1>  & par ()  const { return par_; }
     const PMXLinODE            & f()     const { return f_; }
 
     const int ncmt () const {
-      return y0_.size();
+      return ncmt_;
     }
 
     template<typename Tt0, typename Tt1, typename T, typename T1>
@@ -183,60 +141,12 @@ namespace torsten {
       solve(y, t0, t1, rate, integ);
     }
 
-    // /*
-    //  * solve linear ODE model using matrix exponential function
-    //  *
-    //  * @param t_next the time when the solution is to be solved.
-    //  */
-    // Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
-    // solve(const T_time& t_next) const {
-    //   const int nCmt = par_.cols();
-    //   Eigen::Matrix<scalar_type, -1, 1> pred(nCmt);
-    //   for (int i = 0; i < nCmt; ++i) {
-    //     pred(i) = y0_[i];
-    //   }
-    //   PMXOdeIntegrator<Analytical> integ;
-    //   solve(pred, t0_, t_next, rate_, integ);
-    //   return pred;
-    // }
-
-    /** 
-     * 
-     * @param t_next next time point for desired solution
-     * @param integrator dummy numerical integrator
-     * 
-     * @return matrix with each column in a solution at one
-     * time point.
-     */
-    // Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> 
-    // solve(const T_time& t_next,
-    //       const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
-    //   return solve(t_next);
-    // }
-
-    /*
-     * Solve the transient problem and return the result in
-     * form of data, arranged as (solution value, grad1, grad2...)
-     */
-    Eigen::VectorXd solve_d(const T_time& t_next) const {
-      return torsten::model_solve_d(*this, t_next);
-    }
-
-    /*
-     * Solve the transient problem and return the result in
-     * form of data, arranged as (solution value, grad1, grad2...)
-     */
-    Eigen::VectorXd solve_d(const T_time& t_next,
-                            const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
-      return solve_d(t_next);
-    }
-
     /*
      * solve the linear ODE: steady state version
      */
     template<typename T_amt, typename T_r, typename T_ii>
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> 
-    solve(const T_amt& amt, const T_r& rate, const T_ii& ii,
+    solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii,
           const int& cmt) const {
       using Eigen::Matrix;
       using Eigen::Dynamic;
@@ -297,30 +207,9 @@ namespace torsten {
      */
     template<typename T_amt, typename T_r, typename T_ii>
     Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
-    solve(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
+    solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
           const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
-      return solve(amt, rate, ii, cmt);
-    }
-
-    /*
-     * Solve the steady-state problem and return the result in
-     * form of data, arranged as (solution value, grad1, grad2...)
-     */
-    template<typename T_amt, typename T_r, typename T_ii>
-    Eigen::VectorXd solve_d(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt) const {
-      return torsten::model_solve_d(*this, amt, rate, ii, cmt);
-    }
-
-    /*
-     * Solve the steady-state problem and return the result in
-     * form of data, arranged as (solution value, grad1, grad2...),
-     * with additional <code>integrator</code> dummy arg,
-     * needed in <code>ev_solver</code> call.
-     */
-    template<typename T_amt, typename T_r, typename T_ii>
-    Eigen::VectorXd solve_d(const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
-                            const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
-      return solve_d(amt, rate, ii, cmt);
+      return solve(t0, amt, rate, ii, cmt);
     }
 
   };

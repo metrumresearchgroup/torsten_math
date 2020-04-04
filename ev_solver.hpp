@@ -38,8 +38,14 @@ namespace torsten{
     static int system_size(int id, const T_er& rec) {
       const int ncmt = rec.ncmt;
       const int npar = rec.parameter_size();
-      const int nvar = T_model::nvars(ncmt, npar);
-      const int nvar_ss = T_model::template nvars<typename T_er::T_amt, typename T_er::T_par_rate, typename T_er::T_par_ii>(npar); //NOLINT
+      const int nvar = pmx_model_nvars<T_model,
+                                       typename T_er::T_time,
+                                       typename T_er::T_scalar,
+                                       typename T_er::T_rate>::nvars(ncmt, npar);
+      const int nvar_ss = pmx_model_nvars_ss<T_model,
+                                             typename T_er::T_amt,
+                                             typename T_er::T_par_rate,
+                                             typename T_er::T_par_ii>::nvars(npar);
       return rec.has_ss_dosing(id) ? pk_nsys(ncmt, nvar, nvar_ss) : pk_nsys(ncmt, nvar);
     }
 
@@ -176,7 +182,7 @@ namespace torsten{
         std::vector<typename T_em::T_rate> dummy_rate;
         T_model pkmodel {model_time, init, dummy_rate, events.model_param(i), model_pars...};
         auto curr_amt = events.fractioned_amt(i);
-        vector<var> v_i = pkmodel.vars(curr_amt, events.rate(i), events.ii(i));
+        vector<var> v_i(dsolve::pk_vars(curr_amt, events.rate(i), events.ii(i), pkmodel.par()));
         int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
         if (events.ss(i) == 2)
           init += torsten::mpi::precomputed_gradients(sol_d.segment(0, nsys), v_i);  // steady state without reset
@@ -186,7 +192,8 @@ namespace torsten{
           typename T_em::T_time model_time = tprev;
           auto curr_rates = events.fractioned_rates(i);
           T_model pkmodel {model_time, init, curr_rates, events.model_param(i), model_pars...};
-          vector<var> v_i = pkmodel.vars(events.time(i));
+          vector<var> v_i =
+            pmx_model_vars<T_model>::vars(events.time(i), init, curr_rates, pkmodel.par());
           int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
           init = torsten::mpi::precomputed_gradients(sol_d.segment(0, nsys), v_i);
       }

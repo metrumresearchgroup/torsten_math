@@ -154,8 +154,8 @@ TEST_F(TorstenTwoCptTest, model_solve_d_data_only_ss) {
   
   double a = 1500, r = 100, ii = 18.0;
   int cmt = 1;
-  Eigen::VectorXd sol1 = model.solve(a, r, ii, cmt);
-  Eigen::VectorXd sol2 = model_solve_d(model, a, r, ii, cmt, integ_t());
+  Eigen::VectorXd sol1 = model.solve(t, a, r, ii, cmt);
+  Eigen::VectorXd sol2 = model_solve_d(model, t, a, r, ii, cmt, integ_t());
   torsten::test::test_val(sol1, sol2);
 }
 
@@ -178,8 +178,8 @@ TEST_F(TorstenTwoCptTest, model_solve_d_init_var_ss) {
   std::vector<var> vars(pk_vars(a, r, ii, model.par()));
   EXPECT_EQ(vars.size(), 0);
 
-  Eigen::VectorXd sol1 = model.solve(a, r, ii, cmt);
-  Eigen::VectorXd sol2 = model_solve_d(model, a, r, ii, cmt, integ_t());
+  Eigen::VectorXd sol1 = model.solve(t, a, r, ii, cmt);
+  Eigen::VectorXd sol2 = model_solve_d(model, t, a, r, ii, cmt, integ_t());
   EXPECT_EQ(sol2.size(), sol1.size());
   torsten::test::test_val(sol1, sol2);
 }
@@ -203,8 +203,8 @@ TEST_F(TorstenTwoCptTest, model_solve_d_rate_var_ss) {
   std::vector<var> vars(pk_vars(a, r, ii, model.par()));
   EXPECT_EQ(vars.size(), 0);
 
-  Eigen::VectorXd sol1 = model.solve(a, r, ii, cmt);
-  Eigen::VectorXd sol2 = model_solve_d(model, a, r, ii, cmt, integ_t());
+  Eigen::VectorXd sol1 = model.solve(t, a, r, ii, cmt);
+  Eigen::VectorXd sol2 = model_solve_d(model, t, a, r, ii, cmt, integ_t());
   EXPECT_EQ(sol2.size(), sol1.size());
   torsten::test::test_val(sol1, sol2);
 }
@@ -233,8 +233,8 @@ TEST_F(TorstenTwoCptTest, model_solve_d_par_var_ss) {
   std::vector<var> vars(pk_vars(a, r, ii, model.par()));
   EXPECT_EQ(vars.size(), pars.size());
 
-  vector_v sol1 = model.solve(a, r, ii, cmt);
-  Eigen::VectorXd sol2_d = model_solve_d(model, a, r, ii, cmt, integ_t());
+  vector_v sol1 = model.solve(t, a, r, ii, cmt);
+  Eigen::VectorXd sol2_d = model_solve_d(model, t, a, r, ii, cmt, integ_t());
   vector_v sol2 = torsten::mpi::precomputed_gradients(sol2_d, vars);
   
   torsten::test::test_grad(vars, pars, sol1, sol2, 1.E-8, 1.E-5);
@@ -262,8 +262,8 @@ TEST_F(TorstenTwoCptTest, model_solve_d_amt_par_var_ss) {
   std::vector<var> vars(pk_vars(a, r, ii, model.par()));
   EXPECT_EQ(vars.size(), pars.size() + 1);
 
-  vector_v sol1 = model.solve(a, r, ii, cmt);
-  Eigen::VectorXd sol2_d = model_solve_d(model, a, r, ii, cmt, integ_t());
+  vector_v sol1 = model.solve(t, a, r, ii, cmt);
+  Eigen::VectorXd sol2_d = model_solve_d(model, t, a, r, ii, cmt, integ_t());
   vector_v sol2 = torsten::mpi::precomputed_gradients(sol2_d, vars);
   
   torsten::test::test_grad(vars, sol1, sol2, 1.E-8, 1.E-5);
@@ -292,8 +292,8 @@ TEST_F(TorstenTwoCptTest, model_solve_d_amt_ii_var_ss) {
   std::vector<var> vars(pk_vars(a, r, ii, model.par()));
   EXPECT_EQ(vars.size(), 2);
 
-  vector_v sol1 = model.solve(a, r, ii, cmt);
-  Eigen::VectorXd sol2_d = model_solve_d(model, a, r, ii, cmt, integ_t());
+  vector_v sol1 = model.solve(t, a, r, ii, cmt);
+  Eigen::VectorXd sol2_d = model_solve_d(model, t, a, r, ii, cmt, integ_t());
   vector_v sol2 = torsten::mpi::precomputed_gradients(sol2_d, vars);
   
   torsten::test::test_grad(vars, sol1, sol2, 1.E-8, 1.E-5);
@@ -423,8 +423,8 @@ TEST_F(TorstenTwoCptTest, rk45_model_solve_d_data_only_ss) {
 
   model_t model(t, init, rate, pMatrix[0], f);
   
-  Eigen::VectorXd sol1 = model.solve(a, r, ii, cmt, integrator);
-  Eigen::VectorXd sol2 = model_solve_d(model, a, r, ii, cmt, integrator, f);
+  Eigen::VectorXd sol1 = model.solve(t, a, r, ii, cmt, integrator);
+  Eigen::VectorXd sol2 = model_solve_d(model, t, a, r, ii, cmt, integrator, f);
   
   torsten::test::test_val(sol1, sol2);
 }
@@ -451,8 +451,8 @@ TEST_F(TorstenTwoCptTest, rk45_model_solve_d_init_var_ss) {
   // type of @c init should not affect steady state solution type.
   EXPECT_EQ(vars.size(), 0);
   
-  Eigen::VectorXd sol1 = model.solve(a, r, ii, cmt, integrator);
-  Eigen::VectorXd sol2 = model_solve_d(model, a, r, ii, cmt, integrator, f);
+  Eigen::VectorXd sol1 = model.solve(t, a, r, ii, cmt, integrator);
+  Eigen::VectorXd sol2 = model_solve_d(model, t, a, r, ii, cmt, integrator, f);
   
   torsten::test::test_val(sol1, sol2);
 }
@@ -485,8 +485,8 @@ TEST_F(TorstenTwoCptTest, rk45_model_solve_d_par_var_ss) {
 
   EXPECT_EQ(vars.size(), par.size());
   
-  vector_v sol1 = model.solve(a, r, ii, cmt, integrator);
-  Eigen::VectorXd sol2_d = model_solve_d(model, a, r, ii, cmt, integrator, f);
+  vector_v sol1 = model.solve(t, a, r, ii, cmt, integrator);
+  Eigen::VectorXd sol2_d = model_solve_d(model, t, a, r, ii, cmt, integrator, f);
   vector_v sol2 = torsten::mpi::precomputed_gradients(sol2_d, vars);
   
   // vars and init should be pointing to the same @c vari
@@ -628,8 +628,8 @@ TEST_F(TorstenTwoCptTest, PkBdf_model_solve_d_data_only_ss) {
 
   model_t model(t, init, rate, pMatrix[0], f);
   
-  Eigen::VectorXd sol1 = model.solve(a, r, ii, cmt, integrator);
-  Eigen::VectorXd sol2 = model_solve_d(model, a, r, ii, cmt, integrator, f);
+  Eigen::VectorXd sol1 = model.solve(t, a, r, ii, cmt, integrator);
+  Eigen::VectorXd sol2 = model_solve_d(model, t, a, r, ii, cmt, integrator, f);
   
   torsten::test::test_val(sol1, sol2);
 }
@@ -662,8 +662,8 @@ TEST_F(TorstenTwoCptTest, PkBdf_model_solve_d_init_var_ss) {
   // type of @c init should not affect steady state solution type.
   EXPECT_EQ(vars.size(), 0);
   
-  Eigen::VectorXd sol1 = model.solve(a, r, ii, cmt, integrator);
-  Eigen::VectorXd sol2 = model_solve_d(model, a, r, ii, cmt, integrator, f);
+  Eigen::VectorXd sol1 = model.solve(t, a, r, ii, cmt, integrator);
+  Eigen::VectorXd sol2 = model_solve_d(model, t, a, r, ii, cmt, integrator, f);
   
   torsten::test::test_val(sol1, sol2);
 }
@@ -690,8 +690,8 @@ TEST_F(TorstenTwoCptTest, PkBdf_model_solve_d_par_var_ss) {
 
   EXPECT_EQ(vars.size(), par.size());
   
-  vector_v sol1 = model.solve(a, r, ii, cmt, integrator);
-  Eigen::VectorXd sol2_d = model_solve_d(model, a, r, ii, cmt, integrator, f);
+  vector_v sol1 = model.solve(t, a, r, ii, cmt, integrator);
+  Eigen::VectorXd sol2_d = model_solve_d(model, t, a, r, ii, cmt, integrator, f);
   vector_v sol2 = torsten::mpi::precomputed_gradients(sol2_d, vars);
   
   // vars and init should be pointing to the same @c vari
