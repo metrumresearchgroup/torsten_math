@@ -19,8 +19,8 @@ TEST_F(TorstenTwoCptModelTest, linode_rate_dbl) {
   rate[0] = 1200;
   rate[1] = 200;
   rate[2] = 400;
-  using model_t = PMXLinODEModel<double, double, double, double>;
-  model_t model(t0, y0, rate, linode_par);
+  using model_t = PMXLinODEModel<double>;
+  model_t model(linode_par, y0.size());
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
   PMXOdeFunctorRateAdaptor<PMXLinODE, double> f1;
 
@@ -37,8 +37,8 @@ TEST_F(TorstenTwoCptModelTest, linode_rate_var) {
   rate[2] = 300;
   std::vector<stan::math::var> rate_var{to_var(rate)};
   Eigen::Matrix<var,-1,-1> par_var(to_var(linode_par));
-  using model_t = PMXLinODEModel<double, double, var, var>;
-  model_t model(t0, y0, rate_var, par_var);
+  using model_t = PMXLinODEModel<var>;
+  model_t model(par_var, y0.size());
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
   PMXOdeFunctorRateAdaptor<PMXLinODE, var> f1;
 
@@ -61,8 +61,8 @@ TEST_F(TorstenTwoCptModelTest, linode_solver) {
   ts.resize(1);
   Eigen::Matrix<var,-1,-1> theta{to_var(linode_par)};  
   std::vector<stan::math::var> rate_var{to_var(rate)};
-  using model_t = PMXLinODEModel<double, double, var, var>;
-  model_t model(t0, y0, rate_var, theta);
+  using model_t = PMXLinODEModel<var>;
+  model_t model(theta, y0.size());
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
   PMXOdeFunctorRateAdaptor<PMXLinODE, var> f1;
 
@@ -103,8 +103,8 @@ TEST_F(TorstenTwoCptModelTest, linode_solver_zero_rate) {
   ts[0] = 20.0;
   ts.resize(1);
  Eigen:Matrix<var,-1,-1> theta{to_var(linode_par)};  
-  using model_t = PMXLinODEModel<double, double, double, var>;
-  model_t model(t0, y0, rate, theta);
+  using model_t = PMXLinODEModel<var>;
+  model_t model(theta, y0.size());
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
   PMXOdeFunctorRateAdaptor<PMXLinODE, double> f1;
 

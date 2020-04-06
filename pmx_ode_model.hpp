@@ -457,45 +457,33 @@ namespace torsten {
    * ODE-based PKPD models.
    *
    * @tparam T_time t type
-   * @tparam T_init initial condition type
    * @tparam T_rate dosing rate type
    * @tparam T_par PK parameters type
    * @tparam F ODE functor
    * @tparam Ti ODE additional parameter type, usually the ODE size
    */
-  template<typename T_time, typename T_init, typename T_rate, typename T_par, typename F> // NOLINT
+  template<typename T_par, typename F> // NOLINT
   class PKODEModel {
-    // const T_time &t0_;
-    const PKRec<T_init>& y0_;
-    const std::vector<T_rate> &rate_;
     const std::vector<T_par> &par_;
     const F &f_;
     const int ncmt_;
   public:
-    using scalar_type = typename stan::return_type_t<T_time, T_rate, T_par, T_init>; // NOLINT
-    using aug_par_type = typename stan::return_type_t<T_rate, T_par, T_init>;
-    using init_type   = T_init;
-    using time_type   = T_time;
     using par_type    = T_par;
-    using rate_type   = T_rate;
     using f_type      = F;
 
     /**
      * Constructor
      *
      * @param t0 initial time
-     * @param y0 initial condition
      * @param rate dosing rate
      * @param par model parameters
      * @param f ODE functor
      * @param ncmt the ODE size.
      */
-    PKODEModel(const T_time& t0,
-               const PKRec<T_init>& y0,
-               const std::vector<T_rate> &rate,
-               const std::vector<T_par> &par,
+    PKODEModel(const std::vector<T_par> &par,
+               int ncmt,
                const F& f) :
-      y0_(y0), rate_(rate), par_(par), f_(f), ncmt_(y0.size()) // NOLINT
+      par_(par), f_(f), ncmt_(ncmt)
     {}
 
     /**
@@ -508,9 +496,6 @@ namespace torsten {
      */
     template<template<typename...> class T_model, typename... Ts>    
     PKODEModel(const T_model<Ts...>& m) :
-      // t0_(m.t0()),
-      y0_(m.y0()),
-      rate_(m.rate()),
       par_(m.par()),
       f_(m.f()),
       ncmt_(m.ncmt())
@@ -573,39 +558,6 @@ namespace torsten {
       return res;
     }
 
-    // /*
-    //  * Calculate the size of the entire system, with ODe
-    //  * solutions and their gradients w.r.t. the parameters.
-    //  */
-    // template<typename T0, typename T1, typename T2, typename T3>
-    // static int n_sys(const T0& t0,
-    //                  const PKRec<T1>& y0,
-    //                  const std::vector<T2> &rate,
-    //                  const std::vector<T3> &par) {
-    //   using stan::is_var;
-    //   int n = nvars(t0, y0, rate, par);
-    //   return y0.size() * (n + 1);
-    // }
-
-    // /*
-    //  * calculate size of the entire system
-    //  */
-    // int n_sys() const {
-    //   return n_sys(t0_, y0_, rate_, par_);
-    // }
-
-    /**
-     * @return initial time
-     */
-    // const T_time              & t0()       const { return t0_; }
-    /**
-     * @return initial condition
-     */
-    const PKRec<T_init>    & y0()       const { return y0_; }
-    /**
-     * @return dosing rate
-     */
-    const std::vector<T_rate> & rate()     const { return rate_; }
     /**
      * @return model parameters
      */
@@ -724,7 +676,7 @@ namespace torsten {
       using stan::math::to_var;
 
       const double t0_d = value_of(t0);
-      std::vector<T_time> ts(time_step(t0, t1));
+      std::vector<T0> ts(time_step(t0, t1));
       PMXOdeFunctorRateAdaptor<F, T1> f_rate;
       if (t1 > t0) {
         auto y1d = stan::math::to_array_1d(y);

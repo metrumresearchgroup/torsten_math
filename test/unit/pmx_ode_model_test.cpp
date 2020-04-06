@@ -37,7 +37,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_vs_long_run_sd) {
     double t = t0;
     Eigen::Matrix<double, -1, 1> y = y0;
     for (int i = 0; i < 50; ++i) {
-      PKODEModel<double, double, double, double, PMXTwoCptODE> model_i(t, y, rate, theta, f2cpt);
+      PKODEModel<double, PMXTwoCptODE> model_i(theta, y0.size(), f2cpt);
       double t_next = t + ii;
       model_i.solve(y, t, t_next, rate, integrator);
       y(cmt - 1) += amt;
@@ -51,7 +51,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_vs_long_run_sd) {
   };
 
   auto f2 = [&](const double amt, const auto& integrator) {
-    PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
+    PKODEModel<double, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
     double r = 0;
     return model.solve(t0, amt, r, ii, cmt, integrator);
   };
@@ -113,7 +113,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_grad_vs_long_run_sd) {
     double t = t0;
     Eigen::Matrix<var, -1, 1> y = y0;
     for (int i = 0; i < 50; ++i) {
-      PKODEModel<double, var, double, double, PMXTwoCptODE> model_i(t, y, rate, theta, f2cpt);
+      PKODEModel<double, PMXTwoCptODE> model_i(theta, y0.size(), f2cpt);
       double t_next = t + ii;
       model_i.solve(y, t, t_next, rate, integrator);
       y(cmt - 1) += amt;
@@ -127,7 +127,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_grad_vs_long_run_sd) {
   };
 
   auto f2 = [&](const var& amt, const auto& integrator) {
-    PKODEModel<double, var, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
+    PKODEModel<double, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
     double r = 0;
     return model.solve(t0, amt, r, ii, cmt, integrator);
   };
@@ -186,17 +186,17 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_infusion_vs_long_run_sd) {
   const torsten::PMXOdeIntegrator<torsten::PkRk45> integrator_rk45;
 
   auto f1 = [&](std::vector<double>& rate_vec, const auto& integrator) {
-    using model_t = PKODEModel<double, double, double, double, PMXTwoCptODE>;
+    using model_t = PKODEModel<double, PMXTwoCptODE>;
     double t = t0;
     Eigen::Matrix<double, -1, 1> y = y0;
     double t_infus = amt/rate_vec[cmt - 1];
     const std::vector<double> rate_zero(3, 0.0);
     for (int i = 0; i < 50; ++i) {
-      model_t model_i(t, y, rate_vec, theta, f2cpt);
+      model_t model_i(theta, y0.size(), f2cpt);
       double t_next = t + t_infus;
       model_i.solve(y, t, t_next, rate_vec, integrator);
       t = t_next;
-      model_t model_j(t, y, rate_zero, theta, f2cpt);
+      model_t model_j(theta, y0.size(), f2cpt);
       t_next = t + ii - t_infus;
       model_j.solve(y, t, t_next, rate_zero, integrator);
     }
@@ -204,7 +204,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_infusion_vs_long_run_sd) {
   };
 
   auto f2 = [&](std::vector<double>& rate_vec, const auto& integrator) {
-    PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
+    PKODEModel<double, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
     return model.solve(t0, amt, rate_vec[cmt - 1], ii, cmt, integrator);
   };
 
@@ -262,17 +262,17 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_parm_ss_infusion_vs_long_run_sd) {
   const torsten::PMXOdeIntegrator<torsten::PkRk45> integrator_rk45;
 
   auto f1 = [&](std::vector<double>& rate_vec, const auto& integrator) {
-    using model_t = PKODEModel<var, var, double, double, PMXTwoCptODE>;
+    using model_t = PKODEModel<double, PMXTwoCptODE>;
     var t = t0;
     Eigen::Matrix<var, -1, 1> y = y0;
     var t_infus = amt[0]/rate_vec[cmt - 1];
     const std::vector<double> rate_zero(3, 0.0);
     for (int i = 0; i < 50; ++i) {
-      model_t model_i(t, y, rate_vec, theta, f2cpt);
+      model_t model_i(theta, y0.size(), f2cpt);
       var t_next = t + t_infus;
       model_i.solve(y, t, t_next, rate_vec, integrator);
       t = t_next;
-      model_t model_j(t, y, rate_zero, theta, f2cpt);
+      model_t model_j(theta, y0.size(), f2cpt);
       t_next = t + ii - t_infus;
       model_j.solve(y, t, t_next, rate_zero, integrator);
     }
@@ -280,7 +280,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_parm_ss_infusion_vs_long_run_sd) {
   };
 
   auto f2 = [&](std::vector<double>& rate_vec, const auto& integrator) {
-    PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
+    PKODEModel<double, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
     return model.solve(t0, amt[0], rate_vec[cmt - 1], ii, cmt, integrator);
   };
 
@@ -348,7 +348,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_infusion_grad_vs_long_run_s
   const torsten::PMXOdeIntegrator<torsten::PkRk45> integrator_rk45;
 
   auto f1 = [&](const var& r, const auto& integrator) {
-    using model_t = PKODEModel<var, var, var, double, PMXTwoCptODE>;
+    using model_t = PKODEModel<double, PMXTwoCptODE>;
     var t = t0;
     Eigen::Matrix<var, -1, 1> y = y0;
     var t_infus = amt/r;
@@ -356,11 +356,11 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_infusion_grad_vs_long_run_s
     std::vector<var> rate_vec(3, 0.0);
     rate_vec[cmt - 1] = r;
     for (int i = 0; i < 50; ++i) {
-      model_t model_i(t, y, rate_vec, theta, f2cpt);
+      model_t model_i(theta, y0.size(), f2cpt);
       var t_next = t + t_infus;
       model_i.solve(y, t, t_next, rate_vec, integrator);
       t = t_next;
-      model_t model_j(t, y, rate_zero, theta, f2cpt);
+      model_t model_j(theta, y0.size(), f2cpt);
       t_next = t + ii - t_infus;
       model_j.solve(y, t, t_next, rate_zero, integrator);
     }
@@ -368,7 +368,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_infusion_grad_vs_long_run_s
   };
 
   auto f2 = [&](const var& r, const auto& integrator) {
-    PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
+    PKODEModel<double, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
     return model.solve(t0, amt, r, ii, cmt, integrator);
   };
 
@@ -415,19 +415,19 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_const_infusion_grad_vs_long
   const torsten::PMXOdeIntegrator<torsten::PkRk45> integrator_rk45;
 
   auto f1 = [&](const var& r, const auto& integrator) {
-    using model_t = PKODEModel<double, double, var, double, PMXTwoCptODE>;
+    using model_t = PKODEModel<double, PMXTwoCptODE>;
     var t = t0;
     Eigen::Matrix<var, -1, 1> y = y0;
     std::vector<var> rate_vec(3, 0.0);
     rate_vec[cmt - 1] = r;
-    model_t model(t0, y0, rate_vec, theta, f2cpt);
+    model_t model(theta, y0.size(), f2cpt);
     var t_next = 5.0e2;
     model.solve(y, t, t_next, rate_vec, integrator);
     return y;
   };
 
   auto f2 = [&](const var& r, const auto& integrator) {
-    PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
+    PKODEModel<double, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
     return model.solve(t0, amt, r, ii, cmt, integrator);
   };
 
@@ -473,7 +473,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_rate_param_ss_bolus_vs_long_run_sd) {
     double t = t0;
     Eigen::Matrix<double, -1, 1> y = y0;
     for (int i = 0; i < 50; ++i) {
-      PKODEModel<double, double, double, double, PMXTwoCptODE> model_i(t, y, rate, theta, f2cpt);
+      PKODEModel<double, PMXTwoCptODE> model_i(theta, y0.size(), f2cpt);
       double t_next = t + ii;
       model_i.solve(y, t, t_next, rate, integrator);
       y(cmt - 1) += amt;
@@ -487,7 +487,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_rate_param_ss_bolus_vs_long_run_sd) {
   };
 
   auto f2 = [&](const double amt, const auto& integrator) {
-    PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
+    PKODEModel<double, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
     var r = 0.0;
     return model.solve(t0, amt, r, ii, cmt, integrator);
   };
@@ -533,7 +533,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_rate_param_ss_bolus_grad_vs_long_run_sd
     double t = t0;
     Eigen::Matrix<var, -1, 1> y = y0;
     for (int i = 0; i < 50; ++i) {
-      PKODEModel<double, var, double, double, PMXTwoCptODE> model_i(t, y, rate, theta, f2cpt);
+      PKODEModel<double, PMXTwoCptODE> model_i(theta, y0.size(), f2cpt);
       double t_next = t + ii;
       model_i.solve(y, t, t_next, rate, integrator);
       y(cmt - 1) += amt;
@@ -547,7 +547,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_rate_param_ss_bolus_grad_vs_long_run_sd
   };
 
   auto f2 = [&](const var& amt, const auto& integrator) {
-    PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
+    PKODEModel<double, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
     var r = 0.0;
     return model.solve(t0, amt, r, ii, cmt, integrator);
   };
@@ -591,7 +591,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_param_ss_infusion_grad_vs_long_run_
   const torsten::PMXOdeIntegrator<torsten::PkRk45> integrator_rk45;
 
   auto f1 = [&](const var& r, const auto& integrator) {
-    using model_t = PKODEModel<var, var, var, double, PMXTwoCptODE>;
+    using model_t = PKODEModel<double, PMXTwoCptODE>;
     var t = t0;
     Eigen::Matrix<var, -1, 1> y = y0;
     var t_infus = amt/r;
@@ -599,11 +599,11 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_param_ss_infusion_grad_vs_long_run_
     std::vector<var> rate_vec(3, 0.0);
     rate_vec[cmt - 1] = r;
     for (int i = 0; i < 50; ++i) {
-      model_t model_i(t, y, rate_vec, theta, f2cpt);
+      model_t model_i(theta, y0.size(), f2cpt);
       var t_next = t + t_infus;
       model_i.solve(y, t, t_next, rate_vec, integrator);
       t = t_next;
-      model_t model_j(t, y, rate_zero, theta, f2cpt);
+      model_t model_j(theta, y0.size(), f2cpt);
       t_next = t + ii - t_infus;
       model_j.solve(y, t, t_next, rate_zero, integrator);
     }
@@ -611,7 +611,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_param_ss_infusion_grad_vs_long_run_
   };
 
   auto f2 = [&](const var& r, const auto& integrator) {
-    PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
+    PKODEModel<double, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
     return model.solve(t0, amt, r, ii, cmt, integrator);
   };
 
@@ -655,20 +655,20 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_param_ss_const_infusion_grad_vs_lon
   const torsten::PMXOdeIntegrator<torsten::PkRk45> integrator_rk45;
 
   auto f1 = [&](const var& r, const auto& integrator) {
-    using model_t = PKODEModel<double, double, var, double, PMXTwoCptODE>;
+    using model_t = PKODEModel<double, PMXTwoCptODE>;
     var t = t0;
     Eigen::Matrix<var, -1, 1> y = y0;
     var t_infus = amt/r;
     std::vector<var> rate_vec(3, 0.0);
     rate_vec[cmt - 1] = r;
-    model_t model(t0, y0, rate_vec, theta, f2cpt);
+    model_t model(theta, y0.size(), f2cpt);
     var t_next = 5.0e2;
     model.solve(y, t, t_next, rate_vec, integrator);
     return y;
   };
 
   auto f2 = [&](const var& r, const auto& integrator) {
-    PKODEModel<double, double, double, double, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
+    PKODEModel<double, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
     return model.solve(t0, amt, r, ii, cmt, integrator);
   };
 
@@ -716,7 +716,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_theta_grad_vs_long_run_sd) {
     double t = t0;
     Eigen::Matrix<var, -1, 1> y = y0;
     for (int i = 0; i < 50; ++i) {
-      PKODEModel<double, var, double, var, PMXTwoCptODE> model_i(t, y, rate, theta, f2cpt);
+      PKODEModel<var, PMXTwoCptODE> model_i(theta, y0.size(), f2cpt);
       double t_next = t + ii;
       model_i.solve(y, t, t_next, rate, integrator);
       y(cmt - 1) += amt;
@@ -730,7 +730,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_theta_grad_vs_long_run_sd) {
   };
 
   auto f2 = [&](const auto& integrator) {
-    PKODEModel<double, double, double, var, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
+    PKODEModel<var, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
     double r = 0;
     return model.solve(t0, amt, r, ii, cmt, integrator);
   };
@@ -740,7 +740,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_theta_grad_vs_long_run_sd) {
     double t = t0;
     Eigen::Matrix<var, -1, 1> y = y0;
     for (int i = 0; i < 50; ++i) {
-      PKODEModel<double, var, double, var, PMXTwoCptODE> model_i(t, y, rate, theta, f2cpt);
+      PKODEModel<var, PMXTwoCptODE> model_i(theta, y0.size(), f2cpt);
       double t_next = t + ii;
       model_i.solve(y, t, t_next, rate, integrator);
       y(cmt - 1) += params.back();
@@ -754,7 +754,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_theta_grad_vs_long_run_sd) {
   };
 
   auto f4 = [&](const auto& integrator) {
-    PKODEModel<double, double, double, var, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
+    PKODEModel<var, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
     double r = 0;
     return model.solve(t0, params.back(), r, ii, cmt, integrator);
   };
@@ -806,7 +806,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_infusion_theta_grad_vs_long_run_sd) 
   const torsten::PMXOdeIntegrator<torsten::PkRk45> integrator_rk45;
 
   auto f1 = [&](const auto& integrator) {
-    using model_t = PKODEModel<var, var, var, var, PMXTwoCptODE>;
+    using model_t = PKODEModel<var, PMXTwoCptODE>;
     var& r = params.back();
     var t = t0;
     Eigen::Matrix<var, -1, 1> y = y0;
@@ -815,11 +815,11 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_infusion_theta_grad_vs_long_run_sd) 
     std::vector<var> rate_vec(3, 0.0);
     rate_vec[cmt - 1] = r;
     for (int i = 0; i < 50; ++i) {
-      model_t model_i(t, y, rate_vec, theta, f2cpt);
+      model_t model_i(theta, y0.size(), f2cpt);
       var t_next = t + t_infus;
       model_i.solve(y, t, t_next, rate_vec, integrator);
       t = t_next;
-      model_t model_j(t, y, rate_zero, theta, f2cpt);
+      model_t model_j(theta, y0.size(), f2cpt);
       t_next = t + ii - t_infus;
       model_j.solve(y, t, t_next, rate_zero, integrator);
     }
@@ -827,13 +827,13 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_infusion_theta_grad_vs_long_run_sd) 
   };
 
   auto f2 = [&](const auto& integrator) {
-    PKODEModel<double, double, double, var, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
+    PKODEModel<var, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
     var& r = params.back();
     return model.solve(t0, amt, r, ii, cmt, integrator);
   };
 
   auto f3 = [&](const auto& integrator) {
-    using model_t = PKODEModel<var, var, var, var, PMXTwoCptODE>;
+    using model_t = PKODEModel<var, PMXTwoCptODE>;
     var& r = params.back();
     var t = t0;
     Eigen::Matrix<var, -1, 1> y = y0;
@@ -842,11 +842,11 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_infusion_theta_grad_vs_long_run_sd) 
     std::vector<var> rate_vec(3, 0.0);
     rate_vec[cmt - 1] = r;
     for (int i = 0; i < 50; ++i) {
-      model_t model_i(t, y, rate_vec, theta, f2cpt);
+      model_t model_i(theta, y0.size(), f2cpt);
       var t_next = t + t_infus;
       model_i.solve(y, t, t_next, rate_vec, integrator);
       t = t_next;
-      model_t model_j(t, y, rate_zero, theta, f2cpt);
+      model_t model_j(theta, y0.size(), f2cpt);
       t_next = t + ii - t_infus;
       model_j.solve(y, t, t_next, rate_zero, integrator);
     }
@@ -854,7 +854,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_infusion_theta_grad_vs_long_run_sd) 
   };
 
   auto f4 = [&](const auto& integrator) {
-    PKODEModel<double, double, double, var, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
+    PKODEModel<var, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
     var& r = params.back();
     return model.solve(t0, params[5], r, ii, cmt, integrator);
   };
@@ -904,19 +904,19 @@ TEST_F(TorstenTwoCptModelTest, ode_model_const_infusion_theta_grad_vs_long_run_s
   const torsten::PMXOdeIntegrator<torsten::PkBdf> integrator;
 
   auto f1 = [&]() {
-    using model_t = PKODEModel<double, double, var, var, PMXTwoCptODE>;
+    using model_t = PKODEModel<var, PMXTwoCptODE>;
     var t = t0;
     Eigen::Matrix<var, -1, 1> y = y0;
     std::vector<var> rate_vec(3, 0.0);
     rate_vec[cmt - 1] = params.back();
-    model_t model(t0, y0, rate_vec, theta, f2cpt);
+    model_t model(theta, y0.size(), f2cpt);
     var t_next = 5.0e2;
     model.solve(y, t, t_next, rate_vec, integrator);
     return y;
   };
 
   auto f2 = [&]() {
-    PKODEModel<double, double, double, var, PMXTwoCptODE> model(t0, y0, rate, theta, f2cpt);
+    PKODEModel<var, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
     return model.solve(t0, amt, params.back(), ii, cmt, integrator);
   };
 

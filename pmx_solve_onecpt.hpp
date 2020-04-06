@@ -106,7 +106,7 @@ pmx_solve_onecpt(const std::vector<T0>& time,
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
-  using model_type = torsten::PMXOneCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
+  using model_type = torsten::PMXOneCptModel<typename EM::T_par>;
   EventSolver<model_type> pr;
   pr.pred(0, events_rec, pred, PMXOdeIntegrator<Analytical>());
   return pred;

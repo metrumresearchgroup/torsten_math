@@ -71,7 +71,7 @@ TEST_F(TorstenTwoCptTest, events_addl) {
   using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
-  int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 5;
   addl[3] = 3;
 
@@ -124,7 +124,7 @@ TEST_F(TorstenTwoCptTest, events_addl_singled_ragged_array) {
   using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
-  int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 5;
   addl[3] = 3;
 
@@ -177,7 +177,7 @@ TEST_F(TorstenTwoCptTest, events_addl_multiple_identical_ragged_array) {
   using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
-  int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 5;
   addl[3] = 3;
   ii[3] = 4.0;
@@ -256,7 +256,7 @@ TEST_F(TorstenTwoCptTest, events_addl_rate) {
   using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
-  int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 5;
   addl[3] = 2;
   amt[3] = 1200.0;
@@ -320,7 +320,7 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_multiple_identical_ragged_array) {
   using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
-  int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 5;
   addl[3] = 2;
   amt[3] = 1200.0;
@@ -447,7 +447,7 @@ TEST_F(TorstenTwoCptTest, events_addl_const_tlag) {
   using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
-  int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 1;
   addl[3] = 2;
   amt[3] = 1200.0;
@@ -547,7 +547,7 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_const_tlag) {
   using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
-  int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 1;
   addl[3] = 2;
   amt[3] = 1200.0;
@@ -608,7 +608,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_const_tlag) {
   using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
-  int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   int id = 1;
   addl_m[id * nt + 0] = 1;
   addl_m[id * nt + 3] = 2;
@@ -673,7 +673,7 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_tlag) {
   using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
-  int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 0;
   addl[3] = 2;
   amt[3] = 1200.0;
@@ -717,7 +717,7 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_tlag_LOCF) {
   using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
-  int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 0;
   addl[3] = 2;
   amt[3] = 1200.0;
@@ -784,7 +784,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_tlag_LOCF) {
   using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
   using EM = EventsManager<ER>;
 
-  int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   int id = 1;
   addl_m[id * nt + 0] = 0;
   addl_m[id * nt + 3] = 2;

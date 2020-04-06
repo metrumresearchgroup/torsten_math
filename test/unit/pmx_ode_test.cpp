@@ -14,8 +14,8 @@
 #include <stan/math/torsten/test/unit/util_generalOdeModel.hpp>
 #include <gtest/gtest.h>
 
-auto f_onecpt = torsten::PMXOneCptModel<double,double,double,double>::f_;
-auto f_twocpt = torsten::PMXTwoCptModel<double,double,double,double>::f_;
+auto f_onecpt = torsten::PMXOneCptModel<double>::f_;
+auto f_twocpt = torsten::PMXTwoCptModel<double>::f_;
 
 using stan::math::var;
 using std::vector;
@@ -1022,7 +1022,7 @@ TEST_F(TorstenOdeTest, exception) {
   pMatrix[0][3] = 1.0E+80;
   pMatrix[0][4] = 1.0E+70;
 
-  int ncmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int ncmt = torsten::PMXTwoCptModel<double>::Ncmt;
 
   EXPECT_NO_THROW(torsten::pmx_solve_bdf(f_twocpt, ncmt, time, amt, rate, ii,
                                                evid, cmt, addl, ss, pMatrix,
@@ -1214,7 +1214,7 @@ TEST_F(TorstenTwoCptTest, multiple_bolus_amt) {
 
   double rel_tol = 1e-8, abs_tol = 1e-8;
   long int max_num_steps = 1e8;
-  auto& f_twocpt = torsten::PMXTwoCptModel<double,double,double,double>::f_;
+  auto& f_twocpt = torsten::PMXTwoCptModel<double>::f_;
 
   TORSTEN_ODE_GRAD_AMT_TEST(pmx_solve_bdf, f_twocpt,
                             nCmt,

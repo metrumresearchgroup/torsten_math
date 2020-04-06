@@ -271,7 +271,7 @@ namespace torsten {
         scalar;
       typedef typename stan::return_type_t<T0, T2, T3>
         T_pk;  // return object of fTwoCpt  doesn't depend on T1
-      using T_pkmodel = T_m<double, double, double, double>;
+      using T_pkmodel = T_m<double>;
 
       size_t nPK = T_pkmodel::Ncmt;              // number of base PK states (for rates and inits)
       size_t nPD = y.size();                     // number of other states
@@ -287,7 +287,7 @@ namespace torsten {
       }
 
       // Last element of x_r contains the initial time
-      T_m<T0, T2, T2, T2> pkmodel(x_r.back(), init_pk, ratePK, thetaPK);
+      T_m<T2> pkmodel(thetaPK);
       pkmodel.solve(init_pk, x_r.back(), t, ratePK);
       vector<scalar> dydt = F0()(t, y,
                                  to_array_1d(init_pk),
@@ -333,7 +333,7 @@ namespace torsten {
       using stan::math::to_vector;
       using scalar = typename stan::return_type_t<T0, T1, T2, T3>;
       using T_pk = typename stan::return_type_t<T0, T2, T3>;
-      using T_pkmodel = T_m<double, double, double, double>;
+      using T_pkmodel = T_m<double>;
 
       // Get initial PK states stored at the end of @c theta
       int nPK = T_pkmodel::Ncmt;
@@ -344,7 +344,7 @@ namespace torsten {
 
       // The last element of x_r contains the initial time,
       // and the beginning of theta are for PK params.
-      T_m<T0, T2, T3, T2> pkmodel(x_r.back(), init_pk, x_r, theta);
+      T_m<T2> pkmodel(theta);
       pkmodel.solve(init_pk, x_r.back(), t, x_r);
       // move PK RHS to current time then feed the solution to PD ODE
       std::vector<T_pk> y_pk = to_array_1d(init_pk);
@@ -453,7 +453,7 @@ namespace torsten {
         int nParms = y.size() - nPK_;
         for (int i = 0; i < nPK_; i++) x_pk(i) = y(nParms + i);
 
-        T_m<double, T1, double, T1>(t0, x_pk, x_r, y_vec).solve(x_pk, t0, delta, x_r);
+        T_m<T1>(y_vec).solve(x_pk, t0, delta, x_r);
 
         // no more infusion after amt/rate
         x_r[cmt_ - 1] = 0;
@@ -578,32 +578,23 @@ namespace torsten {
    * @tparam T_m type of 1st model, choose among
    *             @c PMXOneCptmodel, @c PMXTwoCptmodel, @c PMXLinODEModel.
    * @tparam T_time type of time
-   * @tparam T_init type of initial condition
    * @tparam T_rate type of dosing rate.
    * @tparam T_par type of parameter.
    * @tparam F type of ODE functor for @c PKODEModel.
    */
   template <template<typename...> class T_m,
-            typename T_time, typename T_init, typename T_rate, typename T_par, typename F> // NOLINT
-  class PKCoupledModel<T_m<T_time, T_init, T_rate, T_par>,
-                       torsten::PKODEModel<T_time, T_init, T_rate, T_par,
-                                  PMXOdeFunctorCouplingAdaptor<T_m, F, T_rate>> > { // NOLINT
-    const torsten::PKRec<T_init>& y0_;
-    const torsten::PKRec<T_init> y0_pk;
-    const torsten::PKRec<T_init> y0_ode;
+            typename T_rate, typename T_par, typename F> // NOLINT
+  class PKCoupledModel<T_m<T_par>,
+                       torsten::PKODEModel<T_par,
+                                           PMXOdeFunctorCouplingAdaptor<T_m, F, T_rate>> > { // NOLINT
     PMXOdeFunctorCouplingAdaptor<T_m, F, T_rate> f;
     int n_ode;
 
   public:
     using Fa = PMXOdeFunctorCouplingAdaptor<T_m, F, T_rate>;
-    const T_m<T_time, T_init, T_rate, T_par> pk_model;
-    const torsten::PKODEModel<T_time, T_init, T_rate, T_par, Fa> ode_model;
+    const T_m<T_par> pk_model;
+    const torsten::PKODEModel<T_par, Fa> ode_model;
 
-    using pk_scalar_type = typename stan::return_type_t<T_time, T_init, T_rate, T_par>; // NOLINT 
-    using ode_scalar_type = typename stan::return_type_t<T_time, T_init, T_rate, T_par>; // NOLINT
-    using scalar_type = typename stan::return_type_t<pk_scalar_type, ode_scalar_type>; // NOLINT 
-    using init_type   = T_init;
-    using time_type   = T_time;
     using par_type    = T_par;
     using rate_type   = T_rate;
 
@@ -618,18 +609,12 @@ namespace torsten {
      * @param f ODE functor
      * @param n_ode the size of ode_model's ODE system
      */
-    PKCoupledModel(const T_time& t0,
-                   const PKRec<T_init>& init,
-                   const std::vector<T_rate>& rate,
-                   const std::vector<T_par> & par,
+    PKCoupledModel(const std::vector<T_par> & par,
                    const F& f0,
                    const int n_ode_) :
-      y0_(init),
-      y0_pk{ y0_.head(y0_.size() - n_ode_) },
-      y0_ode{ y0_.segment(y0_pk.size(), n_ode_) },
       f(),
-      pk_model(t0, y0_pk, rate, par),
-      ode_model(t0, y0_ode, rate, par, f),
+      pk_model(par),
+      ode_model(par, n_ode_, f),
       n_ode(n_ode_)
     {}
     
@@ -670,13 +655,13 @@ namespace torsten {
 
     const double ii_dbl = stan::math::value_of(ii);
     const int nPK = pk_model.ncmt();
-    const int nPD = ode_model.ncmt();
+    const int nPD = n_ode;
     // const double t0 = stan::math::value_of(ode_model.t0());
     const double t0 = 0.0;      // FIXME: rm dummy
 
     Eigen::Matrix<T_par, -1, 1> predPK;
     if (cmt <= nPK) {  // check dosing occurs in a base state
-      T_m<double, double, double, T_par> pkmodel(t0, torsten::PKRec<double>(), std::vector<double>(), pk_model.par());
+      T_m<T_par> pkmodel(pk_model.par());
       predPK = pkmodel.solve(t0, amt, rate, ii_dbl, cmt);
     } else {
       predPK = Eigen::Matrix<scalar, -1, 1>::Zero(nPK);
@@ -753,14 +738,14 @@ namespace torsten {
 
     const double ii_dbl = stan::math::value_of(ii);
     const int nPK = pk_model.ncmt();
-    const int nPD = ode_model.ncmt();
+    const int nPD = n_ode;
 
     // Compute solution for base 1cpt PK
     Eigen::Matrix<scalar, -1, 1> predPK;
     std::vector<T_par> pkpar = ode_model.par();
     if (cmt <= nPK) {  // check dosing occurs in a base state
       const double t0 = 0.0;
-      T_m<double, double, T_amt, T_par> pkmodel(t0, torsten::PKRec<double>(), std::vector<T_amt>(), pk_model.par());
+      T_m<T_par> pkmodel(pk_model.par());
       predPK = pkmodel.solve(t0, amt, rate, ii_dbl, cmt);
       predPK(cmt - 1) += amt;
     } else {
@@ -855,10 +840,6 @@ namespace torsten {
       if (t_dbl[0] > t0_dbl) {
         size_t nPK = pk_model.ncmt();
         // 
-      // y0_pk{ y0_.head(y0_.size() - n_ode_) },
-      // y0_ode{ y0_.segment(y0_pk.size(), n_ode_) },
-      // f(),
-      // pk_model(t0, y0_pk, rate, par),
         // 
         PKRec<T> xPK(y.head(y.size() - n_ode));
         pk_model.solve(xPK, t0, t, rate);
@@ -889,23 +870,23 @@ namespace torsten {
      * amt will be used for template partial specification.
      */
     template<torsten::PMXOdeIntegratorId It, typename T_ii, typename T_amt>
-    torsten::PKRec<scalar_type>
+    torsten::PKRec<typename stan::return_type_t<T_amt, T_ii, T_par>>
     solve(double t0, const T_amt& amt, const double& rate, const T_ii& ii, const int& cmt,
           const torsten::PMXOdeIntegrator<It>& integrator) const {
       return integrate(amt, rate, ii, cmt, integrator);
     }
   };
 
-  template<typename T_time, typename T_init, typename T_rate, typename T_par, typename F> // NOLINT
+  template<typename T_rate, typename T_par, typename F> // NOLINT
   using PkOneCptOdeModel =
-    PKCoupledModel< PMXOneCptModel<T_time, T_init, T_rate, T_par>,
-                    torsten::PKODEModel<T_time, T_init, T_rate, T_par,
+    PKCoupledModel< PMXOneCptModel<T_par>,
+                    torsten::PKODEModel<T_par,
                                PMXOdeFunctorCouplingAdaptor<PMXOneCptModel, F, T_rate>> >; // NOLINT
 
-  template<typename T_time, typename T_init, typename T_rate, typename T_par, typename F> // NOLINT
+  template<typename T_rate, typename T_par, typename F> // NOLINT
   using PkTwoCptOdeModel =
-    PKCoupledModel< PMXTwoCptModel<T_time, T_init, T_rate, T_par>,
-                    torsten::PKODEModel<T_time, T_init, T_rate, T_par,
+    PKCoupledModel< PMXTwoCptModel<T_par>,
+                    torsten::PKODEModel<T_par,
                                PMXOdeFunctorCouplingAdaptor<PMXTwoCptModel, F, T_rate>> >; // NOLINT
 }
 

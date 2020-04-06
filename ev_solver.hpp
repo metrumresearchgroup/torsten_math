@@ -141,7 +141,7 @@ namespace torsten{
 
       typename T_em::T_time model_time = tprev;
       auto curr_rates = events.fractioned_rates(i);
-      T_model pkmodel {model_time, init, curr_rates, events.model_param(i), model_pars...};
+      T_model pkmodel {events.model_param(i), model_pars...};
       auto ev = em.event(i);
       ev(init, pkmodel, integrator);
     }
@@ -159,7 +159,7 @@ namespace torsten{
 
       typename T_em::T_time model_time = tprev;
       auto curr_rates = events.fractioned_rates(i);
-      T_model pkmodel {model_time, init, curr_rates, events.model_param(i), model_pars...};
+      T_model pkmodel {events.model_param(i), model_pars...};
       auto ev = em.event(i);
       ev(sol_d, init, pkmodel, integrator, model_pars...);
     }
@@ -179,8 +179,7 @@ namespace torsten{
         init.setZero();
       } else if (events.is_ss_dosing(i)) {  // steady state event
         typename T_em::T_time model_time = events.time(i);
-        std::vector<typename T_em::T_rate> dummy_rate;
-        T_model pkmodel {model_time, init, dummy_rate, events.model_param(i), model_pars...};
+        T_model pkmodel {events.model_param(i), model_pars...};
         auto curr_amt = events.fractioned_amt(i);
         vector<var> v_i(dsolve::pk_vars(curr_amt, events.rate(i), events.ii(i), pkmodel.par()));
         int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
@@ -191,7 +190,7 @@ namespace torsten{
       } else if (events.time(i) > tprev) {
           typename T_em::T_time model_time = tprev;
           auto curr_rates = events.fractioned_rates(i);
-          T_model pkmodel {model_time, init, curr_rates, events.model_param(i), model_pars...};
+          T_model pkmodel {events.model_param(i), model_pars...};
           vector<var> v_i =
             pmx_model_vars<T_model>::vars(events.time(i), init, curr_rates, pkmodel.par());
           int nsys = torsten::pk_nsys(em.ncmt, v_i.size());

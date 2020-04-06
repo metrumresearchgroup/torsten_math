@@ -59,28 +59,21 @@ namespace torsten {
    * Linear ODE model.
    *
    * @tparam T_time type of time
-   * @tparam T_init type of init condition
    * @tparam T_rate type of dosing rate
    * @tparam T_par  type of parameters.
    */
-  template<typename T_time, typename T_init, typename T_rate, typename T_par>
+  template<typename T_par>
   class PMXLinODEModel {
     const Eigen::Matrix<T_par, -1, -1> & par_;
     const int ncmt_;
 
   public:
     static constexpr PMXLinODE f_ = PMXLinODE();
-    using scalar_type = typename stan::return_type<T_time, T_init, T_rate, T_par>::type;
-    using init_type   = T_init;
-    using time_type   = T_time;
     using par_type    = T_par;
-    using rate_type   = T_rate;
 
-    PMXLinODEModel(const T_time& t0,
-                   const PKRec<T_init>& y0,
-                   const std::vector<T_rate> &rate,
-                   const Eigen::Matrix<T_par, -1, -1>& par) :
-      par_(par), ncmt_(y0.size())
+    PMXLinODEModel(const Eigen::Matrix<T_par, -1, -1>& par,
+                   int ncmt) :
+      par_(par), ncmt_(ncmt)
     {}
 
     /*
@@ -112,13 +105,13 @@ namespace torsten {
       typename stan::return_type_t<Tt0, Tt1> dt = t1 - t0;
 
       const int nCmt = par_.cols();
-      Eigen::Matrix<scalar_type, -1, 1> y0t(nCmt);
+      Eigen::Matrix<T, -1, 1> y0t(nCmt);
       for (int i = 0; i < nCmt; ++i) y0t(i) = y(i);
 
       Eigen::Matrix<T, -1, 1> pred(nCmt);
 
       if (std::any_of(rate.begin(), rate.end(),
-                      [](T_rate r){return r != 0;})) {
+                      [](T1 r){return r != 0;})) {
         Eigen::Matrix<T, -1, 1> rate_vec(rate.size()), x(nCmt), x2(nCmt);
         for (size_t i = 0; i < rate.size(); ++i) rate_vec(i) = rate[i];
         x = mdivide_left(par_, rate_vec);
@@ -145,7 +138,7 @@ namespace torsten {
      * solve the linear ODE: steady state version
      */
     template<typename T_amt, typename T_r, typename T_ii>
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> 
+    Eigen::Matrix<typename stan::return_type_t<T_amt, T_r, T_ii, T_par>, -1, 1> 
     solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii,
           const int& cmt) const {
       using Eigen::Matrix;
@@ -155,8 +148,8 @@ namespace torsten {
       using stan::math::multiply;
       using std::vector;
 
-      typedef typename promote_args<T_ii, T_par>::type T0;
-      typedef typename promote_args<T_amt, T_r, T_ii, T_par>::type scalar; //NOLINT
+      using T0 = typename stan::return_type_t<T_ii, T_par>;
+      using scalar = typename stan::return_type_t<T_amt, T_r, T_ii, T_par>; //NOLINT
 
       int nCmt = ncmt();
       Matrix<T0, Dynamic, Dynamic> workMatrix;
@@ -206,7 +199,7 @@ namespace torsten {
      * wrapper to fit @c PrepWrapper's call signature
      */
     template<typename T_amt, typename T_r, typename T_ii>
-    Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
+    Eigen::Matrix<typename stan::return_type_t<T_amt, T_r, T_ii, T_par>, -1, 1>
     solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
           const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
       return solve(t0, amt, rate, ii, cmt);
@@ -214,8 +207,8 @@ namespace torsten {
 
   };
 
-  template<typename T_time, typename T_init, typename T_rate, typename T_par>
-  constexpr PMXLinODE PMXLinODEModel<T_time, T_init, T_rate, T_par>::f_;
+  template<typename T_par>
+  constexpr PMXLinODE PMXLinODEModel<T_par>::f_;
 
 }
 

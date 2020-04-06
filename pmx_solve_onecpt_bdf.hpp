@@ -96,7 +96,7 @@ pmx_solve_onecpt_bdf(const F& f,
   vector<Matrix<T4, Dynamic, Dynamic> >
     dummy_systems(1, dummy_system);
 
-  const int &nPK = torsten::PMXOneCptModel<double, double, double, double>::Ncmt;
+  const int &nPK = torsten::PMXOneCptModel<double>::Ncmt;
   
   PMXOdeIntegrator<StanBdf> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
   const int nCmt = nPK + nOde;
@@ -108,7 +108,7 @@ pmx_solve_onecpt_bdf(const F& f,
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
-  using model_type = torsten::PkOneCptOdeModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
+  using model_type = torsten::PkOneCptOdeModel<typename EM::T_rate, typename EM::T_par, F>;
   EventSolver<model_type> pr;
   pr.pred(0, events_rec, pred, integrator, f, nOde);
   return pred;

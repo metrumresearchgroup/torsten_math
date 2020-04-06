@@ -63,8 +63,8 @@ pmx_solve_twocpt(const std::vector<T0>& time,
   using boost::math::tools::promote_args;
   using stan::math::check_positive_finite;
 
-  int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
-  int nParms = torsten::PMXTwoCptModel<double, double, double, double>::Npar;
+  int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
+  int nParms = torsten::PMXTwoCptModel<double>::Npar;
   static const char* function("pmx_solve_twocpt");
 
   // Check arguments
@@ -114,7 +114,7 @@ pmx_solve_twocpt(const std::vector<T0>& time,
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
-  using model_type = torsten::PMXTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
+  using model_type = torsten::PMXTwoCptModel<typename EM::T_par>;
   EventSolver<model_type> pr;
   pr.pred(0, events_rec, pred, PMXOdeIntegrator<Analytical>());
   return pred;
@@ -225,14 +225,14 @@ pmx_solve_group_twocpt(const std::vector<int>& len,
   using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
   using EM = EventsManager<ER>;
 
-  int nCmt = torsten::PMXTwoCptModel<double, double, double, double>::Ncmt;
+  int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
   static const char* caller("pmx_solve_group_twocpt");
   torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
                                 pMatrix, biovar, tlag, caller);
 
-  using model_type = torsten::PMXTwoCptModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par>;
+  using model_type = torsten::PMXTwoCptModel<typename EM::T_par>;
   EventSolver<model_type> pr;
 
   Eigen::Matrix<typename EM::T_scalar, -1, -1> pred(events_rec.total_num_event_times, nCmt);

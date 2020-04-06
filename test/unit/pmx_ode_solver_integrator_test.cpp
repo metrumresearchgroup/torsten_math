@@ -20,10 +20,10 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_t0_var) {
   y0(1) = 1000.0;
   y0(2) = 150.0;
 
-  PMXTwoCptModel<double, double, double, double> model0(t0, y0, rate, CL, Q, V2, V3, ka); // NOLINT
+  PMXTwoCptModel<double> model0(CL, Q, V2, V3, ka); // NOLINT
 
-  using model1_t = PKODEModel<double, double, double, double, PMXTwoCptODE>;
-  using model2_t = PKODEModel<var, double, double, double, PMXTwoCptODE>;
+  using model1_t = PKODEModel<double, PMXTwoCptODE>;
+  using model2_t = PKODEModel<double, PMXTwoCptODE>;
 
   double t1 = 1.5;
   var t1_v = t1;
@@ -31,12 +31,12 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_t0_var) {
   {
     torsten::PMXOdeIntegrator<torsten::PkBdf> integ(rtol, atol, max_num_steps, msgs);
     auto f1 = [&] (const std::vector<double>& x) {
-      model1_t model(x[0], y0, rate, model0.par(), model0.f());
+      model1_t model(model0.par(), y0.size(), model0.f());
       PKRec<double> y(y0);
       model.solve(y, x[0], t1, rate, integ); return y;
     };
     auto f2 = [&] (const std::vector<stan::math::var>& x) {
-      model2_t model(x[0], y0, rate, model0.par(), model0.f());
+      model2_t model(model0.par(), y0.size(), model0.f());
       PKRec<var> y(to_var(y0));
       model.solve(y, x[0], t1_v, rate, integ); return y;
     };
@@ -47,12 +47,12 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_t0_var) {
   {
     torsten::PMXOdeIntegrator<torsten::PkAdams> integ(rtol, atol, max_num_steps, msgs);
     auto f1 = [&] (const std::vector<double>& x) {
-      model1_t model(x[0], y0, rate, model0.par(), model0.f());
+      model1_t model(model0.par(), y0.size(), model0.f());
       PKRec<double> y(y0);
       model.solve(y, x[0], t1, rate, integ); return y;
     };
     auto f2 = [&] (const std::vector<stan::math::var>& x) {
-      model2_t model(x[0], y0, rate, model0.par(), model0.f());
+      model2_t model(model0.par(), y0.size(), model0.f());
       PKRec<var> y(to_var(y0));
       model.solve(y, x[0], t1_v, rate, integ); return y;
     };
@@ -66,10 +66,10 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_rate_t0_var) {
   y0(1) = 1000.0;
   y0(2) = 150.0;
 
-  PMXTwoCptModel<double, double, double, double> model0(t0, y0, rate, CL, Q, V2, V3, ka); // NOLINT
+  PMXTwoCptModel<double> model0(CL, Q, V2, V3, ka); // NOLINT
 
-  using model1_t = PKODEModel<double, double, double, double, PMXTwoCptODE>;
-  using model2_t = PKODEModel<var, double, var, double, PMXTwoCptODE>;
+  using model1_t = PKODEModel<double, PMXTwoCptODE>;
+  using model2_t = PKODEModel<double, PMXTwoCptODE>;
 
   double t1 = 1.5;
   var t1_v = t1;
@@ -79,14 +79,14 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_rate_t0_var) {
     auto f1 = [&] (const std::vector<double>& x) {
       double t0 = x[0];
       std::vector<double> rate1(x.begin() + 1, x.end());
-      model1_t model(t0, y0, rate1, model0.par(), model0.f());
+      model1_t model(model0.par(), y0.size(), model0.f());
       PKRec<double> y(y0);
       model.solve(y, t0, t1, rate1, integ); return y;
     };
     auto f2 = [&] (const std::vector<stan::math::var>& x) {
       var t0 = x[0];
       std::vector<var> rate1(x.begin() + 1, x.end());
-      model2_t model(t0, y0, rate1, model0.par(), model0.f());
+      model2_t model(model0.par(), y0.size(), model0.f());
       PKRec<var> y(to_var(y0));
       model.solve(y, t0, t1_v, rate1, integ); return y;
     };
@@ -99,14 +99,14 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_rate_t0_var) {
     auto f1 = [&] (const std::vector<double>& x) {
       double t0 = x[0];
       std::vector<double> rate1(x.begin() + 1, x.end());
-      model1_t model(t0, y0, rate1, model0.par(), model0.f());
+      model1_t model(model0.par(), y0.size(), model0.f());
       PKRec<double> y(y0);
       model.solve(y, t0, t1, rate1, integ); return y;
     };
     auto f2 = [&] (const std::vector<stan::math::var>& x) {
       var t0 = x[0];
       std::vector<var> rate1(x.begin() + 1, x.end());
-      model2_t model(t0, y0, rate1, model0.par(), model0.f());
+      model2_t model(model0.par(), y0.size(), model0.f());
       PKRec<var> y(to_var(y0));
       model.solve(y, t0, t1_v, rate1, integ); return y;
     };
@@ -122,11 +122,11 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_ts_var) {
 
   torsten::PKRec<var> y0_v(stan::math::to_var(y0));
 
-  PMXTwoCptModel<double, double, double, double> model0(t0, y0, rate, CL, Q, V2, V3, ka); // NOLINT
+  PMXTwoCptModel<double> model0(CL, Q, V2, V3, ka); // NOLINT
 
-  using model1_t = PKODEModel<double, double, double, double, PMXTwoCptODE>;
-  using model2_t = PKODEModel<var, var, double, double, PMXTwoCptODE>;
-  using model3_t = PKODEModel<var, double, double, double, PMXTwoCptODE>;
+  using model1_t = PKODEModel<double, PMXTwoCptODE>;
+  using model2_t = PKODEModel<double, PMXTwoCptODE>;
+  using model3_t = PKODEModel<double, PMXTwoCptODE>;
 
   double t0 = 0.0;
   stan::math::var t0_v = 0.0;
@@ -135,12 +135,12 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_ts_var) {
   {
     torsten::PMXOdeIntegrator<torsten::PkBdf> integ(rtol, atol, max_num_steps, msgs);
     auto f1 = [&] (const std::vector<double>& x) {
-      model1_t model(t0, y0, rate, model0.par(), model0.f());
+      model1_t model(model0.par(), y0.size(), model0.f());
       PKRec<double> y(y0);
       model.solve(y, t0, x[0], rate, integ); return y;
     };
     auto f2 = [&] (const std::vector<stan::math::var>& x) {
-      model2_t model(t0_v, y0_v, rate, model0.par(), model0.f());
+      model2_t model(model0.par(), y0.size(), model0.f());
       PKRec<var> y(y0_v);
       model.solve(y, t0, x[0], rate, integ); return y;
     };
@@ -150,12 +150,12 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_ts_var) {
   {
     torsten::PMXOdeIntegrator<torsten::PkBdf> integ(rtol, atol, max_num_steps, msgs);
     auto f1 = [&] (const std::vector<double>& x) {
-      model1_t model(t0, y0, rate, model0.par(), model0.f());
+      model1_t model(model0.par(), y0.size(), model0.f());
       PKRec<double> y(y0);
       model.solve(y, t0, x[0], rate, integ); return y;
     };
     auto f2 = [&] (const std::vector<stan::math::var>& x) {
-      model3_t model(t0_v, y0, rate, model0.par(), model0.f());
+      model3_t model(model0.par(), y0.size(), model0.f());
       PKRec<var> y(to_var(y0));
       model.solve(y, t0, x[0], rate, integ); return y;
     };
@@ -165,12 +165,12 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_ts_var) {
   {
     torsten::PMXOdeIntegrator<torsten::PkAdams> integ(rtol, atol, max_num_steps, msgs);
     auto f1 = [&] (const std::vector<double>& x) {
-      model1_t model(t0, y0, rate, model0.par(), model0.f());
+      model1_t model(model0.par(), y0.size(), model0.f());
       PKRec<double> y(y0);
       model.solve(y, t0, x[0], rate, integ); return y;
     };
     auto f2 = [&] (const std::vector<stan::math::var>& x) {
-      model2_t model(t0_v, y0_v, rate, model0.par(), model0.f());
+      model2_t model(model0.par(), y0.size(), model0.f());
       PKRec<var> y(y0_v);
       model.solve(y, t0, x[0], rate, integ); return y;
     };
@@ -180,12 +180,12 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_ts_var) {
   {
     torsten::PMXOdeIntegrator<torsten::PkAdams> integ(rtol, atol, max_num_steps, msgs);
     auto f1 = [&] (const std::vector<double>& x) {
-      model1_t model(t0, y0, rate, model0.par(), model0.f());
+      model1_t model(model0.par(), y0.size(), model0.f());
       PKRec<double> y(y0);
       model.solve(y, t0, x[0], rate, integ); return y;
     };
     auto f2 = [&] (const std::vector<stan::math::var>& x) {
-      model3_t model(t0_v, y0, rate, model0.par(), model0.f());
+      model3_t model(model0.par(), y0.size(), model0.f());
       PKRec<var> y(to_var(y0));
       model.solve(y, t0, x[0], rate, integ); return y;
     };
@@ -200,11 +200,11 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_y0_var) {
 
   std::vector<double> y0_vec(stan::math::to_array_1d(y0));
 
-  PMXTwoCptModel<double, double, double, double> model0(t0, y0, rate, CL, Q, V2, V3, ka); // NOLINT
+  PMXTwoCptModel<double> model0(CL, Q, V2, V3, ka); // NOLINT
 
-  using model1_t = PKODEModel<double, double, double, double, PMXTwoCptODE>;
-  using model2_t = PKODEModel<double, var, double, double, PMXTwoCptODE>;
-  using model3_t = PKODEModel<var, var, double, double, PMXTwoCptODE>;
+  using model1_t = PKODEModel<double, PMXTwoCptODE>;
+  using model2_t = PKODEModel<double, PMXTwoCptODE>;
+  using model3_t = PKODEModel<double, PMXTwoCptODE>;
 
   double t0 = 0.2;
   stan::math::var t0_v = t0;
@@ -214,12 +214,12 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_y0_var) {
     torsten::PMXOdeIntegrator<torsten::PkBdf> integ(rtol, atol, max_num_steps, msgs);
     auto f1 = [&] (const std::vector<double>& x) {
       torsten::PKRec<double> y = stan::math::to_vector(x);
-      model1_t model(t0, y, rate, model0.par(), model0.f());
+      model1_t model(model0.par(), y0.size(), model0.f());
       model.solve(y, t0, t1, rate, integ); return y;
     };
     auto f2 = [&] (const std::vector<var>& x) {
       torsten::PKRec<var> y = stan::math::to_vector(x);
-      model2_t model(t0, y, rate, model0.par(), model0.f());
+      model2_t model(model0.par(), y0.size(), model0.f());
       model.solve(y, t0, t1, rate, integ); return y;
     };
     torsten::test::test_grad(f1, f2, y0_vec, 2e-5, 1e-6, 1e-3, 1e-3);
@@ -229,12 +229,12 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_y0_var) {
     torsten::PMXOdeIntegrator<torsten::PkBdf> integ(rtol, atol, max_num_steps, msgs);
     auto f1 = [&] (const std::vector<double>& x) {
       torsten::PKRec<double> y = stan::math::to_vector(x);
-      model1_t model(t0, y, rate, model0.par(), model0.f());
+      model1_t model(model0.par(), y0.size(), model0.f());
       model.solve(y, t0, t1, rate, integ); return y;
     };
     auto f2 = [&] (const std::vector<var>& x) {
       torsten::PKRec<var> y = stan::math::to_vector(x);
-      model3_t model(t0_v, y, rate, model0.par(), model0.f());
+      model3_t model(model0.par(), y0.size(), model0.f());
       model.solve(y, t0, t1, rate, integ); return y;
     };
     torsten::test::test_grad(f1, f2, y0_vec, 2e-5, 1e-6, 1e-3, 1e-3);
@@ -244,12 +244,12 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_y0_var) {
     torsten::PMXOdeIntegrator<torsten::PkAdams> integ(rtol, atol, max_num_steps, msgs);
     auto f1 = [&] (const std::vector<double>& x) {
       torsten::PKRec<double> y = stan::math::to_vector(x);
-      model1_t model(t0, y, rate, model0.par(), model0.f());
+      model1_t model(model0.par(), y0.size(), model0.f());
       model.solve(y, t0, t1, rate, integ); return y;
     };
     auto f2 = [&] (const std::vector<var>& x) {
       torsten::PKRec<var> y = stan::math::to_vector(x);
-      model2_t model(t0, y, rate, model0.par(), model0.f());
+      model2_t model(model0.par(), y0.size(), model0.f());
       model.solve(y, t0, t1, rate, integ); return y;
     };
     torsten::test::test_grad(f1, f2, y0_vec, 2e-5, 1e-6, 1e-3, 1e-3);
@@ -259,12 +259,12 @@ TEST_F(TorstenTwoCptModelTest, pk_integrator_y0_var) {
     torsten::PMXOdeIntegrator<torsten::PkAdams> integ(rtol, atol, max_num_steps, msgs);
     auto f1 = [&] (const std::vector<double>& x) {
       torsten::PKRec<double> y = stan::math::to_vector(x);
-      model1_t model(t0, y, rate, model0.par(), model0.f());
+      model1_t model(model0.par(), y0.size(), model0.f());
       model.solve(y, t0, t1, rate, integ); return y;
     };
     auto f2 = [&] (const std::vector<var>& x) {
       torsten::PKRec<var> y = stan::math::to_vector(x);
-      model3_t model(t0_v, y, rate, model0.par(), model0.f());
+      model3_t model(model0.par(), y0.size(), model0.f());
       model.solve(y, t0, t1, rate, integ); return y;
     };
     torsten::test::test_grad(f1, f2, y0_vec, 2e-5, 1e-6, 1e-3, 1e-3);
@@ -276,12 +276,12 @@ TEST_F(TorstenTwoCptModelTest, pk_bdf_integrator_dt_var) {
   y0(1) = 1000.0;
   y0(2) = 0.0;
 
-  PMXTwoCptModel<double, double, double, double> model0(t0, y0, rate, CL, Q, V2, V3, ka); // NOLINT
+  PMXTwoCptModel<double> model0(CL, Q, V2, V3, ka); // NOLINT
 
-  PKODEModel<double, double, double, double, PMXTwoCptODE> model1(t0, y0, rate, model0.par(), model0.f());
-  using model_t = PKODEModel<var, double, double, double, PMXTwoCptODE>;
+  PKODEModel<double, PMXTwoCptODE> model1(model0.par(), y0.size(), model0.f());
+  using model_t = PKODEModel<double, PMXTwoCptODE>;
   var t0_v = t0;
-  model_t model2(t0_v, y0, rate, model0.par(), model0.f());
+  model_t model2(model0.par(), y0.size(), model0.f());
 
   std::vector<double> dtv{ts[0]};
 
@@ -304,11 +304,11 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver) {
   rate[0] = 1200;
   rate[1] = 2000;
   rate[2] = 3000;
-  PMXTwoCptModel<double, double, double, double> model0(t0, y0, rate, CL, Q, V2, V3, ka); // NOLINT
+  PMXTwoCptModel<double> model0(CL, Q, V2, V3, ka); // NOLINT
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
   PMXOdeFunctorRateAdaptor<PMXTwoCptODE, double> f1;
-  using model_t = PKODEModel<double, double, double, double, PMXTwoCptODE>;
-  model_t model(t0, y0, rate, model0.par(), model0.f());
+  using model_t = PKODEModel<double, PMXTwoCptODE>;
+  model_t model(model0.par(), y0.size(), model0.f());
 
   Eigen::Matrix<double, -1, 1> y;
   std::vector<std::vector<double> > y1;
@@ -317,35 +317,35 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver) {
 
   torsten::PMXOdeIntegrator<torsten::StanRk45> integ1(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ1);
-  y1 = stan::math::integrate_ode_rk45(f1, yvec, t0, ts, model.par(), model.rate(), x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_rk45(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::StanAdams> integ2(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ2);
-  y1 = stan::math::integrate_ode_adams(f1, yvec, t0, ts, model.par(), model.rate(), x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_adams(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::StanBdf> integ3(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ3);
-  y1 = stan::math::integrate_ode_bdf(f1, yvec, t0, ts, model.par(), model.rate(), x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_bdf(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::PkAdams> integ4(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ4);
-  y1 = torsten::pmx_integrate_ode_adams(f1, yvec, t0, ts, model.par(), model.rate(), x_i, msgs); // NOLINT
+  y1 = torsten::pmx_integrate_ode_adams(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::PkBdf> integ5(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ5);
-  y1 = torsten::pmx_integrate_ode_bdf(f1, yvec, t0, ts, model.par(), model.rate(), x_i, msgs); // NOLINT
+  y1 = torsten::pmx_integrate_ode_bdf(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
@@ -358,11 +358,11 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver_y0) {
   y0[0] = 800;
   y0[1] = 0;
   y0[2] = 8000;
-  PMXTwoCptModel<double, double, double, double> model0(t0, y0, rate, CL, Q, V2, V3, ka); // NOLINT
+  PMXTwoCptModel<double> model0(CL, Q, V2, V3, ka); // NOLINT
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
   PMXOdeFunctorRateAdaptor<PMXTwoCptODE, double> f1;
-  using model_t = PKODEModel<double, double, double, double, PMXTwoCptODE>;
-  model_t model(t0, y0, rate, model0.par(), model0.f());
+  using model_t = PKODEModel<double, PMXTwoCptODE>;
+  model_t model(model0.par(), y0.size(), model0.f());
 
   Eigen::Matrix<double, -1, 1> y;
   std::vector<std::vector<double> > y1;
@@ -371,35 +371,35 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver_y0) {
 
   torsten::PMXOdeIntegrator<torsten::StanRk45> integ1(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ1);
-  y1 = stan::math::integrate_ode_rk45(f1, yvec, t0, ts, model.par(), model.rate(), x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_rk45(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::StanAdams> integ2(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ2);
-  y1 = stan::math::integrate_ode_adams(f1, yvec, t0, ts, model.par(), model.rate(), x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_adams(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::StanBdf> integ3(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ3);
-  y1 = stan::math::integrate_ode_bdf(f1, yvec, t0, ts, model.par(), model.rate(), x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_bdf(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::PkAdams> integ4(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ4);
-  y1 = torsten::pmx_integrate_ode_adams(f1, yvec, t0, ts, model.par(), model.rate(), x_i, msgs); // NOLINT
+  y1 = torsten::pmx_integrate_ode_adams(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::PkBdf> integ5(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ5);
-  y1 = torsten::pmx_integrate_ode_bdf(f1, yvec, t0, ts, model.par(), model.rate(), x_i, msgs); // NOLINT
+  y1 = torsten::pmx_integrate_ode_bdf(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
@@ -414,11 +414,11 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver_par_sens) {
   y0[2] = 8000;
   std::vector<stan::math::var> theta = to_var(par);
 
-  PMXTwoCptModel<double, double, double, var> model0(t0, y0, rate, theta);
+  PMXTwoCptModel<var> model0(theta);
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
   PMXOdeFunctorRateAdaptor<PMXTwoCptODE, double> f1;
-  using model_t = PKODEModel<double, double, double, var, PMXTwoCptODE>;
-  model_t model(t0, y0, rate, model0.par(), model0.f());
+  using model_t = PKODEModel<var, PMXTwoCptODE>;
+  model_t model(model0.par(), y0.size(), model0.f());
 
   Eigen::Matrix<var, Eigen::Dynamic, 1> y;
   std::vector<std::vector<var> > y1;
@@ -449,23 +449,23 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver_par_sens) {
   torsten::PMXOdeIntegrator<torsten::PkBdf> integ5(rtol, atol, max_num_steps, msgs);
 
   y = to_var(y0); model.solve(y, t0, ts[0], rate, integ1);
-  y1 = stan::math::integrate_ode_rk45(f1, yvec, t0, ts, model.par(), model.rate(), x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_rk45(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
   test_it();
 
   y = to_var(y0); model.solve(y, t0, ts[0], rate, integ2);
-  y1 = stan::math::integrate_ode_adams(f1, yvec, t0, ts, model.par(), model.rate(), x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_adams(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
   test_it();
 
   y = to_var(y0); model.solve(y, t0, ts[0], rate, integ3);
-  y1 = stan::math::integrate_ode_bdf(f1, yvec, t0, ts, model.par(), model.rate(), x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_bdf(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
   test_it();
 
   y = to_var(y0); model.solve(y, t0, ts[0], rate, integ4);
-  y1 = torsten::pmx_integrate_ode_adams(f1, yvec, t0, ts, model.par(), model.rate(), x_i, msgs); // NOLINT
+  y1 = torsten::pmx_integrate_ode_adams(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
   test_it();
 
   y = to_var(y0); model.solve(y, t0, ts[0], rate, integ5);
-  y1 = torsten::pmx_integrate_ode_bdf(f1, yvec, t0, ts, model.par(), model.rate(), x_i, msgs); // NOLINT
+  y1 = torsten::pmx_integrate_ode_bdf(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
   test_it();
 }
 
@@ -478,16 +478,16 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver_par_rate_sens) {
   y0[2] = 8000;
   std::vector<stan::math::var> theta = to_var(par);
   std::vector<stan::math::var> rate_var = to_var(rate);
-  // using model_t = PMXTwoCptModel<double, double, var, var>;
-  // model_t model(t0, y0, rate_var, theta);
+  // using model_t = PMXTwoCptModel<var>;
+  // model_t model(theta);
   // std::vector<double> yvec(y0.data(), y0.data() + y0.size());
   // PKODERateAdaptor<model_t> adaptor(model);
 
-  PMXTwoCptModel<double, double, var, var> model0(t0, y0, rate_var, theta);
+  PMXTwoCptModel<var> model0(theta);
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
   PMXOdeFunctorRateAdaptor<PMXTwoCptODE, var> f1;
-  using model_t = PKODEModel<double, double, var, var, PMXTwoCptODE>;
-  model_t model(t0, y0, rate_var, theta, model0.f()); // NOLINT
+  using model_t = PKODEModel<var, PMXTwoCptODE>;
+  model_t model(theta, y0.size(), model0.f()); // NOLINT
   theta.insert(theta.end(), rate_var.begin(), rate_var.end());
 
   Eigen::Matrix<var, Eigen::Dynamic, 1> y;

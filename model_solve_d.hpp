@@ -145,7 +145,7 @@ namespace torsten {
 
       Tt0 t0_ = value_of(t0);
       Tt1 t1_ = value_of(t1);
-      T_model pkmodel_new(t0_, y, rate_new, par_new, model_pars...);
+      T_model pkmodel_new(par_new, model_pars...);
 
       std::vector<var> var_new = stan::is_var<T>::value ?
         pmx_model_vars<T_model>::vars(t1, y_new, rate_new, pkmodel_new.par()) :
@@ -225,11 +225,7 @@ namespace torsten {
       std::vector<typename T_model::par_type> par_new(pkmodel.par().size());
       for (size_t i = 0; i < par_new.size(); ++i) par_new[i] = value_of(pkmodel.par()[i]);
 
-      // FIXME: rm dummies
-      typename T_model::time_type t0_ = 0;
-      PKRec<typename T_model::init_type> y0_(pkmodel.ncmt());
-      std::vector<typename T_model::rate_type> rate_;
-      T_model pkmodel_new(t0_, y0_, rate_, par_new, model_pars...);
+      T_model pkmodel_new(par_new, model_pars...);
 
       T_amt amt_new = value_of(amt);
       T_rate r_new = value_of(r);

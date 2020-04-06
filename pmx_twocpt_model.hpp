@@ -71,11 +71,10 @@ namespace torsten {
    * using general ODE solvers, which makes testing easier.
    *
    * @tparam T_time t type
-   * @tparam T_init initial condition type
    * @tparam T_rate dosing rate type
    * @tparam T_par PK parameters type
    */
-  template<typename T_time, typename T_init, typename T_rate, typename T_par>
+  template<typename T_par>
   class PMXTwoCptModel {
     const T_par &CL_;
     const T_par &Q_;
@@ -94,17 +93,11 @@ namespace torsten {
     static constexpr int Npar = 5;
     static constexpr PMXTwoCptODE f_ = PMXTwoCptODE();
 
-    using scalar_type = typename stan::return_type<T_time, T_init, T_rate, T_par>::type;
-    using init_type   = T_init;
-    using time_type   = T_time;
     using par_type    = T_par;
-    using rate_type   = T_rate;
 
   /**
    * Two-compartment PK model constructor
    *
-   * @param t0 initial time
-   * @param y0 initial condition
    * @param rate dosing rate
    * @param par model parameters
    * @param CL clearance
@@ -113,14 +106,11 @@ namespace torsten {
    * @param V3 peri cpt vol
    * @param ka absorption
    */
-    PMXTwoCptModel(const T_time& t0,
-                  const torsten::PKRec<T_init>& y0,
-                  const std::vector<T_rate> &rate,
-                  const T_par& CL,
-                  const T_par& Q,
-                  const T_par& V2,
-                  const T_par& V3,
-                  const T_par& ka) :
+    PMXTwoCptModel(const T_par& CL,
+                   const T_par& Q,
+                   const T_par& V2,
+                   const T_par& V3,
+                   const T_par& ka) :
       CL_(CL),
       Q_(Q),
       V2_(V2),
@@ -151,33 +141,25 @@ namespace torsten {
    * @tparam T_mp parameters class
    * @tparam Ts parameter types
    * @param t0 initial time
-   * @param y0 initial condition
    * @param rate dosing rate
    * @param par model parameters
    * @param parameter ModelParameter type
    */
     template<template<typename...> class T_mp, typename... Ts>
-    PMXTwoCptModel(const T_time& t0,
-                   const PKRec<T_init>& y0,
-                  const std::vector<T_rate> &rate,
-                  const std::vector<T_par> & par,
-                  const T_mp<Ts...> &parameter) :
-      PMXTwoCptModel(t0, y0, rate, par[0], par[1], par[2], par[3], par[4])
+    PMXTwoCptModel(const std::vector<T_par> & par,
+                   const T_mp<Ts...> &parameter) :
+      PMXTwoCptModel(par[0], par[1], par[2], par[3], par[4])
     {}
 
   /**
    * two-compartment PK model constructor
    *
    * @param t0 initial time
-   * @param y0 initial condition
    * @param rate dosing rate
    * @param par model parameters
    */
-    PMXTwoCptModel(const T_time& t0,
-                  const PKRec<T_init>& y0,
-                  const std::vector<T_rate> &rate,
-                  const std::vector<T_par> & par) :
-      PMXTwoCptModel(t0, y0, rate, par[0], par[1], par[2], par[3], par[4])
+    PMXTwoCptModel(const std::vector<T_par> & par) :
+      PMXTwoCptModel(par[0], par[1], par[2], par[3], par[4])
     {}
 
     /**
@@ -200,7 +182,7 @@ namespace torsten {
 
       typename stan::return_type_t<Tt0, Tt1> dt = t1 - t0;
 
-      std::vector<scalar_type> a(Ncmt, 0);
+      std::vector<T> a(Ncmt, 0);
       Eigen::Matrix<T, -1, 1> pred = torsten::PKRec<T>::Zero(Ncmt);
 
       // contribution from cpt 0
@@ -418,14 +400,14 @@ namespace torsten {
     }
   };
 
-  template<typename T_time, typename T_init, typename T_rate, typename T_par>
-  constexpr int PMXTwoCptModel<T_time, T_init, T_rate, T_par>::Ncmt;
+  template<typename T_par>
+  constexpr int PMXTwoCptModel<T_par>::Ncmt;
 
-  template<typename T_time, typename T_init, typename T_rate, typename T_par>
-  constexpr int PMXTwoCptModel<T_time, T_init, T_rate, T_par>::Npar;
+  template<typename T_par>
+  constexpr int PMXTwoCptModel<T_par>::Npar;
 
-  template<typename T_time, typename T_init, typename T_rate, typename T_par>
-  constexpr PMXTwoCptODE PMXTwoCptModel<T_time, T_init, T_rate, T_par>::f_;
+  template<typename T_par>
+  constexpr PMXTwoCptODE PMXTwoCptModel<T_par>::f_;
 
 }
 

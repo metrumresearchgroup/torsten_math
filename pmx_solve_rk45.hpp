@@ -100,7 +100,7 @@ pmx_solve_rk45(const F& f,
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
-  using model_type = torsten::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
+  using model_type = torsten::PKODEModel<typename EM::T_par, F>;
 
 #ifdef TORSTEN_USE_STAN_ODE
   PMXOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
@@ -110,7 +110,7 @@ pmx_solve_rk45(const F& f,
   EventSolver<model_type> pr;
 #endif
 
-  pr.pred(0, events_rec, pred, integrator, f);
+  pr.pred(0, events_rec, pred, integrator, nCmt, f);
   return pred;
 }
 
@@ -372,13 +372,13 @@ pmx_solve_group_rk45(const F& f,
   using EM = EventsManager<ER>;
   ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
 
-  using model_type = torsten::PKODEModel<typename EM::T_time, typename EM::T_scalar, typename EM::T_rate, typename EM::T_par, F>;
+  using model_type = torsten::PKODEModel<typename EM::T_par, F>;
   PMXOdeIntegrator<PkRk45> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
   EventSolver<model_type> pr;
 
   Eigen::Matrix<typename EM::T_scalar, -1, -1> pred(nCmt, events_rec.total_num_event_times);
 
-  pr.pred(events_rec, pred, integrator, f);
+  pr.pred(events_rec, pred, integrator, nCmt, f);
 
   return pred;
 }
