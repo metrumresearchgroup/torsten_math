@@ -12,6 +12,7 @@
 #include <stan/math/prim/err/check_positive_finite.hpp>
 #include <stan/math/prim/err/check_finite.hpp>
 #include <stan/math/prim/err/check_nonnegative.hpp>
+#include <stan/math/torsten/pmx_linode_model.hpp>
 
 namespace torsten {
 
@@ -170,6 +171,13 @@ namespace torsten {
     const int                 & ncmt ()   const { return Ncmt;   }
     const int                 & npar ()   const { return Npar;   }
 
+
+    Eigen::Matrix<T_par, -1, -1> to_linode_par() {
+      Eigen::Matrix<T_par, -1, -1> linode_par(Ncmt, Ncmt);
+      linode_par << -ka_, 0.0, 0.0, ka_, -(k10_ + k12_), k21_, 0.0, k12_, -k21_;
+      return linode_par;
+    }
+
   /**
    * Solve two-cpt model: analytical solution
    */
@@ -236,7 +244,6 @@ namespace torsten {
         pred(1) += rate[2] * k21_ / (alpha_[1] - alpha_[0]) * ((1 - exp(-alpha_[0] * dt)) / alpha_[0] - (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
         pred(2) += rate[2] * (a1 * (1 - exp(-alpha_[0] * dt)) / alpha_[0] + a2 * (1 - exp(-alpha_[1] * dt)) / alpha_[1]);
       }
-
       y = pred;
     }
 

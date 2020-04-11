@@ -48,7 +48,7 @@ namespace torsten {
       Matrix<scalar, Dynamic, 1> v(n);
       for (size_t i = 0; i < n * n; ++i) m(i) = parms[i];
       for (size_t i = 0; i < n; ++i) v(i) = x[i];
-      torsten::PMXLin<scalar> rv = m * v;
+      torsten::PMXLin<scalar> rv = stan::math::multiply(m, v);
       for (size_t i = 0; i < n; ++i) res[i] = rv(i);
 
       return res;
@@ -146,6 +146,7 @@ namespace torsten {
       using stan::math::matrix_exp;
       using stan::math::mdivide_left;
       using stan::math::multiply;
+      using stan::math::value_of;
       using std::vector;
 
       using T0 = typename stan::return_type_t<T_ii, T_par>;
@@ -167,27 +168,47 @@ namespace torsten {
         pred = multiply(matrix_exp(ii_system), amounts);
 
       } else if (ii > 0) {  // multiple truncated infusions
-        scalar delta = amt / rate;
-        static const char* function("Steady State Event");
-        torsten::check_mti(amt, delta, ii, function);
+        /**
+         * Each II has two sections due to overlapping infusion time,
+         * e.g. when II < infusion time < 2 x II the first part of II
+         * infusion has dosing rate <code>2 * rate</code>  while the rest of II has
+         * dosing rate <code>rate</code>.
+         *
+         * Let A be linODE matrix, B the dosing rate at 1st section of
+         * II, C the dosing rate at 2nd section of II, and y the
+         * initial condition(steady state solution), then the ODE
+         * solution at the end of 1st section is
+         *
+         * Exp(A * t1) * (y + A^{-1} * B) - A^{-1} * B
+         *
+         * where t1 is the length of 1st section(so that the length of
+         * 2nd section t2 = II - t1). The final solution at the end of
+         * 2nd section is obtained by using the above expression as new
+         * y and apply t2 & C to it.
+         *
+         */
 
+        scalar dt = amt / rate;
         amounts(cmt - 1) = rate;
-        scalar t = delta;
-        amounts = mdivide_left(par_, amounts);
-        Matrix<scalar, Dynamic, Dynamic> t_system = multiply(delta, par_);
-        pred = matrix_exp(t_system) * amounts;
-        pred -= amounts;
+        // static const char* function("Steady State Event");
+        // torsten::check_mti(amt, dt, ii, function);
 
-        workMatrix = - matrix_exp(ii_system);
-        for (int i = 0; i < nCmt; i++) workMatrix(i, i) += 1;
-
-        Matrix<scalar, Dynamic, 1> pred_t = pred.transpose();
-        pred_t = mdivide_left(workMatrix, pred_t);
-        t = ii - t;
-        t_system = multiply(t, par_);
-        pred_t = matrix_exp(t_system) * pred_t;
-        pred = pred_t.transpose();
-
+        int n = int(std::floor(value_of(dt) / value_of(ii)) + 0.1);
+        scalar t1 = dt - n * ii;
+        scalar t2 = (n + 1) * ii - dt;
+        PKRec<scalar> rate1 = PKRec<scalar>::Zero(nCmt);
+        PKRec<scalar> rate2 = PKRec<scalar>::Zero(nCmt);
+        rate1(cmt - 1) = (n + 1) * rate;
+        rate2(cmt - 1) = n * rate;
+        rate1 = mdivide_left(par_, rate1);
+        rate2 = mdivide_left(par_, rate2);
+        Eigen::Matrix<scalar, -1, -1> exp_par_t1(matrix_exp(multiply(t1, par_)));
+        Eigen::Matrix<scalar, -1, -1> exp_par_t2(matrix_exp(multiply(t2, par_)));
+        Eigen::Matrix<scalar, -1, -1> lhs =
+          multiply(exp_par_t1, exp_par_t2) - Eigen::Matrix<scalar, -1, -1>::Identity(nCmt, nCmt);
+        PKRec<scalar> rhs = rate2 + multiply(exp_par_t2, rate1 - rate2) -
+          multiply(exp_par_t2, multiply(exp_par_t1, rate1));
+        pred = mdivide_left(lhs, rhs);
       } else {  // constant infusion
         amounts(cmt - 1) -= rate;
         pred = mdivide_left(par_, amounts);
@@ -204,7 +225,6 @@ namespace torsten {
           const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
       return solve(t0, amt, rate, ii, cmt);
     }
-
   };
 
   template<typename T_par>

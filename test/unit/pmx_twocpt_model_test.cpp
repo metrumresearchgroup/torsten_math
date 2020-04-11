@@ -293,42 +293,16 @@ TEST_F(TorstenTwoCptModelTest, ss_infusion_grad_vs_long_run_sd) {
     return model.solve(t0, amt, rate_vec[cmt - 1], ii, cmt);
   };
 
-  std::vector<var> rate_vec(3, 0.0);
-
-  {
-    cmt = 1;
-    rate_vec[cmt-1] = 300.0;
+  for (int i = 0; i < 3; ++i) {
+    cmt = i + 1;
+    std::vector<var> rate_vec(3, 0.0);
+    rate_vec[i] = 300.0;
     // For SS we only compare gradient wrt the dosing compartment as the
     // non-dosing compartment doesn't enter the SS system
     Eigen::Matrix<var, -1, 1> y1 = f1(rate_vec);
     Eigen::Matrix<var, -1, 1> y2 = f2(rate_vec);
-    std::vector<var> par{rate_vec[cmt - 1]};
-    torsten::test::test_grad(par, y1, y2, 1.e-11, 1.e-10);
-    rate_vec[cmt-1] = 0.0;
-  }
-
-  {
-    cmt = 2;
-    rate_vec[cmt-1] = 300.0;
-    // For SS we only compare gradient wrt the dosing compartment as the
-    // non-dosing compartment doesn't enter the SS system
-    Eigen::Matrix<var, -1, 1> y1 = f1(rate_vec);
-    Eigen::Matrix<var, -1, 1> y2 = f2(rate_vec);
-    std::vector<var> par{rate_vec[cmt - 1]};
-    torsten::test::test_grad(par, y1, y2, 1.e-11, 1.e-10);
-    rate_vec[cmt-1] = 0.0;
-  }
-
-  {
-    cmt = 3;
-    rate_vec[cmt-1] = 300.0;
-    // For SS we only compare gradient wrt the dosing compartment as the
-    // non-dosing compartment doesn't enter the SS system
-    Eigen::Matrix<var, -1, 1> y1 = f1(rate_vec);
-    Eigen::Matrix<var, -1, 1> y2 = f2(rate_vec);
-    std::vector<var> par{rate_vec[cmt - 1]};
+    std::vector<var> par{rate_vec[i]};
     torsten::test::test_grad(par, y1, y2, 5.e-11, 1.e-10);
-    rate_vec[cmt-1] = 0.0;
   }
 }
 

@@ -14,40 +14,55 @@ using torsten::pmx_integrate_ode_bdf;
 using Eigen::Matrix;
 using Eigen::Dynamic;
 using stan::math::matrix_exp;
+using stan::math::to_vector;
 
-TEST_F(TorstenTwoCptModelTest, linode_rate_dbl) {
+TEST_F(TorstenTwoCptModelTest, linode_dbl) {
+  y0(0) = 745;
+  y0(1) = 100;
+  y0(2) = 130;
   rate[0] = 1200;
   rate[1] = 200;
   rate[2] = 400;
-  using model_t = PMXLinODEModel<double>;
-  model_t model(linode_par, y0.size());
-  std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  PMXOdeFunctorRateAdaptor<PMXLinODE, double> f1;
+  PMXTwoCptModel<double> model1(CL, Q, V2, V3, ka);
+  PMXLinODEModel<double> model2(linode_par, 3);
 
-  std::vector<double> par_vec(model.par().data(), model.par().data() + model.par().size());
-  std::vector<double> y = f1(t0, yvec, par_vec, rate, x_i, msgs);
-  EXPECT_FLOAT_EQ(y[0], rate[0]);
-  EXPECT_FLOAT_EQ(y[1], rate[1]);
-  EXPECT_FLOAT_EQ(y[2], rate[2]);
+  PKRec<double> y1(y0), y2(y0);
+  model1.solve(y1, t0, ts[0], rate);
+  model2.solve(y2, t0, ts[0], rate);  
 }
 
 TEST_F(TorstenTwoCptModelTest, linode_rate_var) {
   rate[0] = 1200;
   rate[1] = 200;
   rate[2] = 300;
-  std::vector<stan::math::var> rate_var{to_var(rate)};
-  Eigen::Matrix<var,-1,-1> par_var(to_var(linode_par));
-  using model_t = PMXLinODEModel<var>;
-  model_t model(par_var, y0.size());
-  std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  PMXOdeFunctorRateAdaptor<PMXLinODE, var> f1;
+  std::vector<var> par_var(to_var(par));
+  PMXTwoCptModel<var> model1(par_var);
+  Eigen::Matrix<var,-1,-1> linode_par_var(to_var(linode_par));
+  PMXLinODEModel<var> model2(linode_par_var, y0.size());
 
+  std::vector<stan::math::var> rate_var{to_var(rate)};
   std::vector<var> par_var_vec(par_var.data(), par_var.data() + par_var.size());
   par_var_vec.insert(par_var_vec.end(), rate_var.begin(), rate_var.end());
-  std::vector<var> y = f1(t0, yvec, par_var_vec, x_r, x_i, msgs);
-  EXPECT_FLOAT_EQ(y[0].val(), rate[0]);
-  EXPECT_FLOAT_EQ(y[1].val(), rate[1]);
-  EXPECT_FLOAT_EQ(y[2].val(), rate[2]);
+
+  PKRec<var> y1(to_var(y0)), y2(to_var(y0));
+  model1.solve(y1, t0, ts[0], rate_var);
+  model2.solve(y2, t0, ts[0], rate_var);
+  torsten::test::test_grad(rate_var, y1, y2, 1e-12, 1e-10);
+}
+
+TEST_F(TorstenTwoCptModelTest, linode_par_var) {
+  rate[0] = 1200;
+  rate[1] = 200;
+  rate[2] = 300;
+  std::vector<var> par_var(to_var(par));
+  PMXTwoCptModel<var> model1(par_var);
+  Eigen::Matrix<var, -1, -1> linode_par_var(model1.to_linode_par());
+  PMXLinODEModel<var> model2(linode_par_var, 3);
+
+  PKRec<var> y1(to_var(y0)), y2(to_var(y0));
+  model1.solve(y1, t0, ts[0], rate);
+  model2.solve(y2, t0, ts[0], rate);
+  torsten::test::test_grad(par_var, y1, y2, 1e-12, 1e-10);
 }
 
 TEST_F(TorstenTwoCptModelTest, linode_solver) {
@@ -127,4 +142,89 @@ TEST_F(TorstenTwoCptModelTest, linode_solver_zero_rate) {
       EXPECT_NEAR(g1[j], g2[j], 1.E-6);
     }
   }
+}
+
+TEST_F(TorstenTwoCptModelTest, linode_ss_par_var) {
+  double amt = 1300;
+  double r = 200;
+  double ii = 7.0;
+  std::vector<var> par_var(to_var(par));
+  PMXTwoCptModel<var> model1(par_var);
+  Eigen::Matrix<var, -1, -1> linode_par_var(model1.to_linode_par());
+  PMXLinODEModel<var> model2(linode_par_var, model1.ncmt());
+
+  const PMXOdeIntegrator<torsten::Analytical> integ;
+  PKRec<var> y1 = model1.solve(ts[0], amt, r, ii, 1, integ);
+  PKRec<var> y2 = model2.solve(ts[0], amt, r, ii, 1, integ);
+  torsten::test::test_grad(par_var, y1, y2, 1e-11, 1e-10);
+}
+
+TEST_F(TorstenTwoCptModelTest, linode_ss_input_var) {
+  var amt = 1300;
+  var r = 200;
+  var ii = 7.0;
+  std::vector<var> par_var(to_var(par));
+  PMXTwoCptModel<var> model1(par_var);
+  Eigen::Matrix<var, -1, -1> linode_par_var(model1.to_linode_par());
+  PMXLinODEModel<var> model2(linode_par_var, model1.ncmt());
+
+  const PMXOdeIntegrator<torsten::Analytical> integ;
+  PKRec<var> y1 = model1.solve(ts[0], amt, r, ii, 1, integ);
+  PKRec<var> y2 = model2.solve(ts[0], amt, r, ii, 1, integ);
+  std::vector<var> params{amt, r, ii};
+  torsten::test::test_grad(params, y1, y2, 1e-11, 1e-10);
+}
+
+TEST_F(TorstenTwoCptModelTest, linode_ss_vs_ode) {
+  double amt = 1300;
+  double r = 500;
+  double ii = 5.0;
+  std::vector<var> par_var(to_var(par));
+  PMXTwoCptModel<var> model1(par_var);
+  Eigen::Matrix<var, -1, -1> linode_par_var(model1.to_linode_par());
+  PMXLinODEModel<var> model2(linode_par_var, model1.ncmt());
+  std::vector<var> ode_par_var(to_array_1d(linode_par_var));
+  PKODEModel<var, PMXLinODE> model3(ode_par_var, model2.ncmt(), model2.f());
+
+  const PMXOdeIntegrator<torsten::Analytical> integ2;
+  const PMXOdeIntegrator<torsten::PkBdf> integ3;
+  PKRec<var> y2 = model2.solve(ts[0], amt, r, ii, 1, integ2);
+  PKRec<var> y3 = model3.solve(ts[0], amt, r, ii, 1, integ3);
+  torsten::test::test_grad(par_var, y2, y3, 1e-7, 2e-7);
+}
+
+TEST_F(TorstenTwoCptModelTest, linode_long_ss_vs_ode) {
+  double amt = 1300;
+  double r = 500;
+  double ii = 2.1;
+  std::vector<var> par_var(to_var(par));
+  PMXTwoCptModel<var> model1(par_var);
+  Eigen::Matrix<var, -1, -1> linode_par_var(model1.to_linode_par());
+  PMXLinODEModel<var> model2(linode_par_var, model1.ncmt());
+  std::vector<var> ode_par_var(to_array_1d(linode_par_var));
+  PKODEModel<var, PMXLinODE> model3(ode_par_var, model2.ncmt(), model2.f());
+
+  const PMXOdeIntegrator<torsten::Analytical> integ2;
+  const PMXOdeIntegrator<torsten::PkBdf> integ3;
+  PKRec<var> y2 = model2.solve(ts[0], amt, r, ii, 1, integ2);
+  PKRec<var> y3 = model3.solve(ts[0], amt, r, ii, 1, integ3);
+  torsten::test::test_grad(par_var, y2, y3, 5e-6, 1e-5);
+}
+
+TEST_F(TorstenTwoCptModelTest, linode_long_long_ss_vs_ode) {
+  double amt = 1300;
+  double r = 500;
+  double ii = 1.2;
+  std::vector<var> par_var(to_var(par));
+  PMXTwoCptModel<var> model1(par_var);
+  Eigen::Matrix<var, -1, -1> linode_par_var(model1.to_linode_par());
+  PMXLinODEModel<var> model2(linode_par_var, model1.ncmt());
+  std::vector<var> ode_par_var(to_array_1d(linode_par_var));
+  PKODEModel<var, PMXLinODE> model3(ode_par_var, model2.ncmt(), model2.f());
+
+  const PMXOdeIntegrator<torsten::Analytical> integ2;
+  const PMXOdeIntegrator<torsten::PkBdf> integ3;
+  PKRec<var> y2 = model2.solve(ts[0], amt, r, ii, 1, integ2);
+  PKRec<var> y3 = model3.solve(ts[0], amt, r, ii, 1, integ3);
+  torsten::test::test_grad(par_var, y2, y3, 1e-6, 1e-5);
 }
