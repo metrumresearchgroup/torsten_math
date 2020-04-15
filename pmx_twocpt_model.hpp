@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_TWOCPT_MODEL_HPP
 #define STAN_MATH_TORSTEN_TWOCPT_MODEL_HPP
 
+#include <stan/math/torsten/pmx_linode_model.hpp>
 #include <stan/math/rev/fun/sqrt.hpp>
 #include <stan/math/prim/fun/sqrt.hpp>
 #include <stan/math/rev/fun/exp.hpp>
@@ -12,7 +13,6 @@
 #include <stan/math/prim/err/check_positive_finite.hpp>
 #include <stan/math/prim/err/check_finite.hpp>
 #include <stan/math/prim/err/check_nonnegative.hpp>
-#include <stan/math/torsten/pmx_linode_model.hpp>
 
 namespace torsten {
 
@@ -172,7 +172,7 @@ namespace torsten {
     const int                 & npar ()   const { return Npar;   }
 
 
-    Eigen::Matrix<T_par, -1, -1> to_linode_par() {
+    Eigen::Matrix<T_par, -1, -1> to_linode_par() const {
       Eigen::Matrix<T_par, -1, -1> linode_par(Ncmt, Ncmt);
       linode_par << -ka_, 0.0, 0.0, ka_, -(k10_ + k12_), k21_, 0.0, k12_, -k21_;
       return linode_par;
@@ -186,6 +186,54 @@ namespace torsten {
                const Tt0& t0, const Tt1& t1,
                const std::vector<T1>& rate,
                const PMXOdeIntegrator<Analytical>& integ) const {
+      using stan::math::exp;
+
+      typename stan::return_type_t<Tt0, Tt1> dt = t1 - t0;
+
+      std::vector<T> a(Ncmt, 0);
+      Eigen::Matrix<T, -1, 1> pred = torsten::PKRec<T>::Zero(Ncmt);
+
+      T_par s = stan::math::sqrt(-4.0 * k10_ * k21_ + (k10_ + k12_ + k21_) * (k10_ + k12_ + k21_));
+      T_par q = ka_ * ka_ - ka_ * k10_ - ka_ * k12_ - ka_ * k21_ + k10_ * k21_;
+      T_par w = k10_ + k12_ - k21_;
+      if (ka_ > 0.0) {
+        Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt),
+          diag = Eigen::Matrix<T_par, -1, -1>::Zero(Ncmt, Ncmt);
+        p << q / (ka_ * k12_), 0, 0,
+          -(ka_ - k21_)/k12_, -0.5 * (w + s) / k12_, -0.5 * (w - s) / k12_, 
+          1, 1, 1;
+        p_inv << ka_ * k12_/q, 0, 0,
+          -ka_ * k12_ * ( 2.0 * ka_ - k10_ - k12_ - k21_ + s) / (2.0 * q * s), -k12_ / s, 0.5 * (s - w) / s,
+          -ka_ * k12_ * (-2.0 * ka_ + k10_ + k12_ + k21_ + s) / (2.0 * q * s),  k12_ / s, 0.5 * (s + w) / s;
+        diag(0, 0) = -ka_;
+        diag(1, 1) = -0.5 * (k10_ + k12_ + k21_ + s);
+        diag(2, 2) = -0.5 * (k10_ + k12_ + k21_ - s);
+        PMXLinOdeEigenDecompModel<T_par> linode_model(p, diag, p_inv, Ncmt);
+        linode_model.solve(y, t0, t1, rate, integ);
+      } else {
+        y(0) += rate[0] * dt;
+        Eigen::Matrix<T_par, -1, -1> p(Ncmt-1, Ncmt-1), p_inv(Ncmt-1, Ncmt-1),
+          diag = Eigen::Matrix<T_par, -1, -1>::Zero(Ncmt-1, Ncmt-1);
+        p << -0.5 * (w + s) / k12_, -0.5 * (w - s) / k12_, 1, 1;
+        p_inv << -k12_/s,  0.5 * (s - w) / s, k12_/s, 0.5 * (s + w) / s;
+        diag(0, 0) = -0.5 * (k12_ + k10_ + k21_ + s);
+        diag(1, 1) = -0.5 * (k12_ + k10_ + k21_ - s);
+        PMXLinOdeEigenDecompModel<T_par> linode_model(p, diag, p_inv, Ncmt - 1);
+        PKRec<T> y2 = y.tail(Ncmt - 1);
+        std::vector<T1> rate2(rate.begin() + 1, rate.end());
+        linode_model.solve(y2, t0, t1, rate2, integ);
+        y.tail(Ncmt - 1) = y2;
+      }
+    }
+
+  /**
+   * Solve two-cpt model: analytical solution for benchmarking & testing
+   */
+    template<typename Tt0, typename Tt1, typename T, typename T1>
+    void solve_analytical(PKRec<T>& y,
+                          const Tt0& t0, const Tt1& t1,
+                          const std::vector<T1>& rate,
+                          const PMXOdeIntegrator<Analytical>& integ) const {
       using stan::math::exp;
 
       typename stan::return_type_t<Tt0, Tt1> dt = t1 - t0;
@@ -259,6 +307,17 @@ namespace torsten {
     }
 
   /**
+   * Solve two-cpt model: analytical solution used for benchmarking & testing
+   */
+    template<typename Tt0, typename Tt1, typename T, typename T1>
+    void solve_analytical(PKRec<T>& y,
+               const Tt0& t0, const Tt1& t1,
+               const std::vector<T1>& rate) const {
+      const PMXOdeIntegrator<Analytical> integ;
+      solve_analytical(y, t0, t1, rate, integ);
+    }
+
+  /**
    * Solve two-cpt steady state model. We have to consider
    * different scenarios: bolus/multiple truncated infusion/const infusion
    *
@@ -274,6 +333,10 @@ namespace torsten {
       using Eigen::Dynamic;
       using std::vector;
       using stan::math::exp;
+      using stan::math::matrix_exp;
+      using stan::math::value_of;
+      using stan::math::mdivide_left;
+      using stan::math::multiply;
 
       using ss_scalar_type = typename stan::return_type<T_par, T_amt, T_r, T_ii>::type;
 
@@ -357,6 +420,15 @@ namespace torsten {
                             a[1] * trunc_infus_ss(alpha_[1], dt_infus, ii) );
           break;
         }
+        /**
+         * instead of using analytical solution, we borrow the solution
+         * from linode model.
+         * 
+         */
+
+        Eigen::Matrix<T_par, -1, -1> linode_par(to_linode_par());
+        // PMXLinODEModel<T_par> linode_model(linode_par, Ncmt);
+        // pred = linode_model.solve(t0, amt, rate, ii, cmt);
       } else {  // constant infusion
         switch (cmt) {
         case 1:

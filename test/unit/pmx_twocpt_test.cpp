@@ -112,7 +112,7 @@ TEST_F(TorstenTwoCptTest, multiple_iv) {
 
   std::vector<std::vector<double> > biovar_test(1, {0.8, 0.9, 0.9});
   std::vector<std::vector<double> > tlag_test(1, {2.3, 2.8, 2.7});
-  TORSTEN_CPT_GRAD_THETA_TEST(pmx_solve_twocpt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag, 2e-5, 1e-6, 1e-4, 1e-5);
+  TORSTEN_CPT_GRAD_THETA_TEST(pmx_solve_twocpt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag, 2e-5, 1e-6, 1.1e-4, 1e-5);
   TORSTEN_CPT_GRAD_BIOVAR_TEST(pmx_solve_twocpt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar_test, tlag, 2e-5, 1e-6, 1e-4, 1e-5);
   TORSTEN_CPT_GRAD_TLAG_TEST(pmx_solve_twocpt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag_test, 2e-5, 1e-6, 1e-4, 1e-5);
 
@@ -337,7 +337,7 @@ TEST_F(TorstenTwoCptTest, multiple_iv_var) {
   torsten::test::test_val(xt, x);
 
   std::fill(rate.begin(), rate.end(), 340);
-  TORSTEN_CPT_GRAD_RATE_TEST(pmx_solve_twocpt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag, 2e-5, 1e-6, 1e-6, 1e-6);
+  TORSTEN_CPT_GRAD_RATE_TEST(pmx_solve_twocpt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag, 2e-5, 1e-6, 1e-5, 1e-6);
 }
 
 TEST_F(TorstenTwoCptTest, multiple_iv_var_overload) {
@@ -387,7 +387,7 @@ TEST_F(TorstenTwoCptTest, single_iv_central_cmt_var) {
   torsten::test::test_val(xt, x);
 
   std::fill(rate.begin(), rate.end(), 780);
-  TORSTEN_CPT_GRAD_RATE_TEST(pmx_solve_twocpt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag, 2e-5, 1e-6, 1e-6, 1e-6);
+  TORSTEN_CPT_GRAD_RATE_TEST(pmx_solve_twocpt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag, 2e-5, 1e-6, 1e-5, 1e-6);
 }
 
 TEST_F(TorstenTwoCptTest, single_iv_central_cmt_var_overload) {

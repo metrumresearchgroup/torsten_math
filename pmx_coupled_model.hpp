@@ -345,7 +345,8 @@ namespace torsten {
       // The last element of x_r contains the initial time,
       // and the beginning of theta are for PK params.
       T_m<T2> pkmodel(theta);
-      pkmodel.solve(init_pk, x_r.back(), t, x_r);
+      std::vector<double> pk_rate(x_r.begin(), x_r.begin() + nPK);
+      pkmodel.solve(init_pk, x_r.back(), t, pk_rate);
       // move PK RHS to current time then feed the solution to PD ODE
       std::vector<T_pk> y_pk = to_array_1d(init_pk);
       std::vector<scalar> dydt = F0()(t, y, y_pk, theta, x_r, x_i, pstream_);
@@ -453,7 +454,8 @@ namespace torsten {
         int nParms = y.size() - nPK_;
         for (int i = 0; i < nPK_; i++) x_pk(i) = y(nParms + i);
 
-        T_m<T1>(y_vec).solve(x_pk, t0, delta, x_r);
+        std::vector<double> pk_rate(x_r.begin(), x_r.begin() + nPK_);
+        T_m<T1>(y_vec).solve(x_pk, t0, delta, pk_rate);
 
         // no more infusion after amt/rate
         x_r[cmt_ - 1] = 0;
@@ -842,7 +844,8 @@ namespace torsten {
         // 
         // 
         PKRec<T> xPK(y.head(y.size() - n_ode));
-        pk_model.solve(xPK, t0, t, rate);
+        std::vector<T1> pk_rate(rate.begin(), rate.begin() + nPK);
+        pk_model.solve(xPK, t0, t, pk_rate);
         PKRec<T> y_pk(y.head(y.size() - n_ode));
         PKRec<T> y_ode(y.segment(y_pk.size(), n_ode));
 

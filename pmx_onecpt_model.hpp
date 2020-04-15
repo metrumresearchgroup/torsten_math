@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_ONECPT_MODEL_HPP
 #define STAN_MATH_TORSTEN_ONECPT_MODEL_HPP
 
+#include <stan/math/torsten/pmx_linode_model.hpp>
 #include <stan/math/torsten/PKModel/functors/check_mti.hpp>
 #include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/torsten/pmx_ode_integrator.hpp>
@@ -150,14 +151,48 @@ namespace torsten {
     const PMXOneCptODE         & f()       const { return f_;     }
     const int                 & ncmt ()   const { return Ncmt;   }
 
-  /**
-   * Solve two-cpt model: analytical solution
-   */
     template<typename Tt0, typename Tt1, typename T, typename T1>
     void solve(Eigen::Matrix<T, -1, 1>& y,
                const Tt0& t0, const Tt1& t1,
                const std::vector<T1>& rate,
                const PMXOdeIntegrator<Analytical>& integ) const {
+      using stan::math::exp;
+
+      typename stan::return_type_t<Tt0, Tt1> dt = t1 - t0;
+      Eigen::Matrix<T, -1, 1> pred = torsten::PKRec<T>::Zero(Ncmt);
+
+      if (ka_ > 0.0) {
+        Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt),
+          diag = Eigen::Matrix<T_par, -1, -1>::Zero(Ncmt, Ncmt);
+        p << -(ka_ - k10_)/ka_, 0, 1, 1;
+        p_inv << -ka_ / (ka_ - k10_), 0, ka_ / (ka_ - k10_), 1;
+        diag(0, 0) = -ka_;
+        diag(1, 1) = -k10_;
+        PMXLinOdeEigenDecompModel<T_par> linode_model(p, diag, p_inv, Ncmt);
+
+        linode_model.solve(y, t0, t1, rate, integ);
+      } else {
+        typename stan::return_type_t<T_par, Tt0, Tt1> exp1 = exp(-k10_ * dt);
+
+        // contribution from cpt 1 bolus dose
+        pred(1) += y(1) * exp1;
+
+        // contribution from cpt 1 infusion dose
+        pred(1) += rate[1] * (1 - exp1) / k10_;
+
+        pred(0) += y(0) + rate[0] * dt;
+        y = pred;
+      }
+    }
+
+    /**
+     * Solve two-cpt model: analytical solution for benchmarking & testing
+     */
+    template<typename Tt0, typename Tt1, typename T, typename T1>
+    void solve_analytical(Eigen::Matrix<T, -1, 1>& y,
+                          const Tt0& t0, const Tt1& t1,
+                          const std::vector<T1>& rate,
+                          const PMXOdeIntegrator<Analytical>& integ) const {
       using stan::math::exp;
 
       typename stan::return_type_t<Tt0, Tt1> dt = t1 - t0;
@@ -197,6 +232,17 @@ namespace torsten {
                const std::vector<T1>& rate) const {
       const PMXOdeIntegrator<Analytical> integ;
       solve(y, t0, t1, rate, integ);
+    }
+
+  /**
+   * Solve two-cpt model: analytical solution for bencharmking & testing
+   */
+    template<typename Tt0, typename Tt1, typename T, typename T1>
+    void solve_analytical(Eigen::Matrix<T, -1, 1>& y,
+                          const Tt0& t0, const Tt1& t1,
+                          const std::vector<T1>& rate) const {
+      const PMXOdeIntegrator<Analytical> integ;
+      solve_analytical(y, t0, t1, rate, integ);
     }
 
   /**

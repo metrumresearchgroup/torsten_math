@@ -127,7 +127,14 @@ TEST_F(TorstenOneCptModelTest, infusion_theta_grad) {
     model.solve(y, t0, dt, rate);
     return y;
   };
-  auto f2 = [&](const std::vector<var>& pars) {
+  auto f2 = [&](const std::vector<double>& pars) {
+    using model_t = PMXOneCptModel<double>;
+    model_t model(pars[0], pars[1], pars[2]);
+    PKRec<double> y(y0);
+    model.solve_analytical(y, t0, dt, rate);
+    return y;
+  };
+  auto f3 = [&](const std::vector<var>& pars) {
     using model_t = PMXOneCptModel<var>;
     model_t model(pars[0], pars[1], pars[2]);
     PKRec<var> y(to_var(y0));
@@ -136,7 +143,8 @@ TEST_F(TorstenOneCptModelTest, infusion_theta_grad) {
   };
 
   std::vector<double> pars{CL, V2, ka};
-  torsten::test::test_grad(f1, f2, pars, 1.e-3, 1.e-16, 1.e-6, 1.e-12);
+  torsten::test::test_grad(f1, f3, pars, 1.e-3, 1.e-16, 1.e-6, 2.e-10);
+  torsten::test::test_grad(f2, f3, pars, 1.e-3, 1.e-12, 1.e-6, 2.e-10);
 }
 
 TEST_F(TorstenOneCptModelTest, ss_bolus_amt_grad) {
