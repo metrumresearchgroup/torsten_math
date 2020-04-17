@@ -572,8 +572,8 @@ TEST_F(TorstenOneCptModelTest, ss_multi_truncated_infusion) {
   std::vector<double> g1, g2;
   stan::math::set_zero_all_adjoints();
   y1(0).grad(theta, g1);
-  EXPECT_FLOAT_EQ(g1[0], 0.0);
-  EXPECT_FLOAT_EQ(g1[1], 0.0);
+  EXPECT_NEAR(g1[0], 0.0, 1.e-16);
+  EXPECT_NEAR(g1[1], 0.0, 1.e-16);
   EXPECT_FLOAT_EQ(g1[2], -0.0342061212685);
   stan::math::set_zero_all_adjoints();
   y1(1).grad(theta, g1);
@@ -651,4 +651,20 @@ TEST_F(TorstenOneCptModelTest, ss_const_infusion) {
   EXPECT_FLOAT_EQ(g1[0], -24.64);
   EXPECT_FLOAT_EQ(g1[1], 15.4);
   EXPECT_FLOAT_EQ(g1[2], 0.0);
+}
+
+TEST_F(TorstenOneCptModelTest, long_long_ss_infusion_vs_ode) {
+  double amt = 1300;
+  double r = 500;
+  double ii = 1.2;
+  std::vector<double> par{CL, V2, ka};
+  std::vector<var> par_var(to_var(par));
+  PMXOneCptModel<var> model1(par_var);
+  PKODEModel<var, PMXOneCptODE> model2(par_var, model1.ncmt(), model1.f());
+
+  const PMXOdeIntegrator<torsten::Analytical> integ1;
+  const PMXOdeIntegrator<torsten::PkBdf> integ2;
+  PKRec<var> y1 = model1.solve(ts[0], amt, r, ii, 1, integ1);
+  PKRec<var> y2 = model2.solve(ts[0], amt, r, ii, 1, integ2);
+  torsten::test::test_grad(par_var, y1, y2, 2e-6, 6e-6);
 }

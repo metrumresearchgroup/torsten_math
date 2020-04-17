@@ -279,7 +279,6 @@ namespace torsten {
       }
 
       y = multiply(multiply(p_, work1), pred) - multiply(p_, p_inv_r);
-
     }
 
     template<typename Tt0, typename Tt1, typename T, typename T1>
@@ -290,97 +289,105 @@ namespace torsten {
       solve(y, t0, t1, rate, integ);
     }
 
-    // /*
-    //  * solve the linear ODE: steady state version
-    //  */
-    // template<typename T_amt, typename T_r, typename T_ii>
-    // Eigen::Matrix<typename stan::return_type_t<T_amt, T_r, T_ii, T_par>, -1, 1> 
-    // solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii,
-    //       const int& cmt) const {
-    //   using Eigen::Matrix;
-    //   using Eigen::Dynamic;
-    //   using stan::math::matrix_exp;
-    //   using stan::math::mdivide_left;
-    //   using stan::math::multiply;
-    //   using stan::math::value_of;
-    //   using std::vector;
+    /*
+     * solve the linear ODE: steady state version
+     */
+    template<typename T_amt, typename T_r, typename T_ii>
+    Eigen::Matrix<typename stan::return_type_t<T_amt, T_r, T_ii, T_par>, -1, 1> 
+    solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii,
+          const int& cmt) const {
+      using Eigen::Matrix;
+      using Eigen::Dynamic;
+      // using stan::math::matrix_exp;
+      using stan::math::mdivide_left;
+      using stan::math::multiply;
+      using stan::math::value_of;
+      using std::vector;
 
-    //   using T0 = typename stan::return_type_t<T_ii, T_par>;
-    //   using scalar = typename stan::return_type_t<T_amt, T_r, T_ii, T_par>; //NOLINT
+      using T0 = typename stan::return_type_t<T_ii, T_par>;
+      using scalar = typename stan::return_type_t<T_amt, T_r, T_ii, T_par>; //NOLINT
 
-    //   int nCmt = ncmt();
-    //   Matrix<T0, Dynamic, Dynamic> workMatrix;
-    //   Matrix<T0, Dynamic, Dynamic> ii_system = multiply(ii, par_);
-    //   Matrix<scalar, 1, Dynamic> pred(nCmt);
-    //   pred.setZero();
-    //   Matrix<scalar, Dynamic, 1> amounts(nCmt);
-    //   amounts.setZero();
+      const int ncmt = this -> ncmt_;
+      Matrix<T0, -1, -1> workMatrix = Matrix<T0, -1, -1>::Zero(ncmt, ncmt);
+      Matrix<T0, -1, -1> ii_system = multiply(ii, this -> par_);
+      Matrix<scalar, -1, 1> pred(ncmt);
+      pred.setZero();
+      Matrix<scalar, Dynamic, 1> amounts(ncmt);
+      amounts.setZero();
 
-    //   if (rate == 0) {  // bolus dose
-    //     amounts(cmt - 1) = amt;
-    //     workMatrix = - matrix_exp(ii_system);
-    //     for (int i = 0; i < nCmt; i++) workMatrix(i, i) += 1;
-    //     amounts = mdivide_left(workMatrix, amounts);
-    //     pred = multiply(matrix_exp(ii_system), amounts);
+      if (rate == 0) {  // bolus dose
+        /**
+         * exp(At)(u + bolus) = u
+         *
+         * thus (I - exp(At))*u = exp(At)*bolus
+         *
+         */
+        for (int i = 0; i < ncmt; ++i) {
+          workMatrix(i, i) = stan::math::exp(ii * this -> par_(i, i));
+        }
+        amounts(cmt - 1) = amt;
+        // workMatrix = - matrix_exp(ii_system);
+        workMatrix = - multiply(multiply(p_, workMatrix), p_inv_);
+        amounts = multiply(workMatrix, amounts);
+        Matrix<T0, -1, -1> work = workMatrix + Matrix<T0, -1, -1>::Identity(ncmt, ncmt);
+        pred = mdivide_left(work, amounts);
+        // pred = multiply(matrix_exp(ii_system), amounts);
+      } else if (ii > 0) {  // multiple truncated infusions
+        /**
+         * with eigen-decomp A= P * diag * P_inv, change of variable: 
+         * y = P_inv * u decouples original ODE based on u.
+         */
+        typename stan::return_type_t<T_amt, T_r> dt = amt / rate;
+        int n = int(std::floor(value_of(dt) / value_of(ii)) + 0.1);
+        typename stan::return_type_t<T_amt, T_r, T_ii> t1 = dt - n * ii;
+        typename stan::return_type_t<T_amt, T_r, T_ii> t2 = (n + 1) * ii - dt;
 
-    //   } else if (ii > 0) {  // multiple truncated infusions
-    //     /**
-    //      * Each II has two sections due to overlapping infusion time,
-    //      * e.g. when II < infusion time < 2 x II the first part of II
-    //      * infusion has dosing rate <code>2 * rate</code>  while the rest of II has
-    //      * dosing rate <code>rate</code>.
-    //      *
-    //      * Let A be linODE matrix, B the dosing rate at 1st section of
-    //       * II, C the dosing rate at 2nd section of II, and y the
-    //      * initial condition(steady state solution), then the ODE
-    //      * solution at the end of 1st section is
-    //      *
-    //      * Exp(A * t1) * (y + A^{-1} * B) - A^{-1} * B
-    //      *
-    //      * where t1 is the length of 1st section(so that the length of
-    //      * 2nd section t2 = II - t1). The final solution at the end of
-    //      * 2nd section is obtained by using the above expression as new
-    //      * y and apply t2 & C to it.
-    //      *
-    //      */
+        const Eigen::Matrix<T_par, -1, -1>& diag = this -> par_;
+        Eigen::Matrix<T_par, -1, -1> a(diag);
+        for (int i = 0; i < ncmt; ++i) {
+          a(i, i) = 1.0 / a(i, i);
+        }
+        // a = multiply(multiply(multiply(p_, a), p_inv_), p_inv_);
+        a= multiply(a, p_inv_);
+        PKRec<stan::return_type_t<T_par, T_r>> y1(ncmt), y2(ncmt);
+        y1.setZero();
+        y2.setZero();
+        y1(cmt - 1) = (n + 1) * rate;
+        y2(cmt - 1) = n * rate;
+        y1 = multiply(a, y1);
+        y2 = multiply(a, y2);
+        Eigen::Matrix<scalar, -1, -1> work = Eigen::Matrix<scalar, -1, -1>::Zero(ncmt, ncmt);
+        for (int i = 0; i < ncmt; ++i) {
+          work(i, i) = stan::math::exp(diag(i, i) * t2);
+        }
+        pred = y2;
+        y2 = y1 - y2;
+        pred += multiply(work, y2);
+        for (int i = 0; i < ncmt; ++i) {
+          work(i, i) = stan::math::exp(diag(i, i) * (t1 + t2));
+        }
+        pred -= multiply(work, y1);
+        work -= Eigen::Matrix<scalar, -1, -1>::Identity(ncmt, ncmt);
+        for (int i = 0; i < ncmt; ++i) {
+          work(i, i) = 1.0 / work(i, i);
+        }
+        pred = multiply(p_, multiply(work, pred));
+      } else {  // constant infusion
+        amounts(cmt - 1) -= rate;
+        pred = mdivide_left(this -> par_, amounts);
+      }
+      return pred;
+    }
 
-    //     typename stan::return_type_t<T_amt, T_r> dt = amt / rate;
-    //     amounts(cmt - 1) = rate;
-    //     // static const char* function("Steady State Event");
-    //     // torsten::check_mti(amt, dt, ii, function);
-
-    //     int n = int(std::floor(value_of(dt) / value_of(ii)) + 0.1);
-    //     typename stan::return_type_t<T_amt, T_r, T_ii> t1 = dt - n * ii;
-    //     typename stan::return_type_t<T_amt, T_r, T_ii> t2 = (n + 1) * ii - dt;
-    //     PKRec<T_r> rate1 = PKRec<T_r>::Zero(nCmt);
-    //     PKRec<T_r> rate2 = PKRec<T_r>::Zero(nCmt);
-    //     rate1(cmt - 1) = (n + 1) * rate;
-    //     rate2(cmt - 1) = n * rate;
-    //     PKRec<typename stan::return_type_t<T_r, T_par>> par_rate1 = mdivide_left(par_, rate1);
-    //     PKRec<typename stan::return_type_t<T_r, T_par>> par_rate2 = mdivide_left(par_, rate2);
-    //     Eigen::Matrix<scalar, -1, -1> exp_par_t1(matrix_exp(multiply(t1, par_)));
-    //     Eigen::Matrix<scalar, -1, -1> exp_par_t2(matrix_exp(multiply(t2, par_)));
-    //     Eigen::Matrix<scalar, -1, -1> lhs =
-    //       multiply(exp_par_t1, exp_par_t2) - Eigen::Matrix<scalar, -1, -1>::Identity(nCmt, nCmt);
-    //     PKRec<scalar> rhs = par_rate2 + multiply(exp_par_t2, par_rate1 - par_rate2) -
-    //       multiply(exp_par_t2, multiply(exp_par_t1, par_rate1));
-    //     pred = mdivide_left(lhs, rhs);
-    //   } else {  // constant infusion
-    //     amounts(cmt - 1) -= rate;
-    //     pred = mdivide_left(par_, amounts);
-    //   }
-    //   return pred;
-    // }
-
-    // /*
-    //  * wrapper to fit @c PrepWrapper's call signature
-    //  */
-    // template<typename T_amt, typename T_r, typename T_ii>
-    // Eigen::Matrix<typename stan::return_type_t<T_amt, T_r, T_ii, T_par>, -1, 1>
-    // solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
-    //       const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
-    //   return solve(t0, amt, rate, ii, cmt);
-    // }
+    /*
+     * wrapper to fit @c PrepWrapper's call signature
+     */
+    template<typename T_amt, typename T_r, typename T_ii>
+    Eigen::Matrix<typename stan::return_type_t<T_amt, T_r, T_ii, T_par>, -1, 1>
+    solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
+          const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
+      return solve(t0, amt, rate, ii, cmt);
+    }
   };
 
 

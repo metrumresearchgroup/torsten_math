@@ -280,22 +280,31 @@ namespace torsten {
           break;
         }
       } else if (ii > 0) {  // multiple truncated infusions
-        typename stan::return_type_t<T_amt, T_r> dt_infus = amt/rate;
-        static const char* function("Steady State Event");
-        torsten::check_mti(amt, stan::math::value_of(dt_infus), ii, function);
+        Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt),
+          diag = Eigen::Matrix<T_par, -1, -1>::Zero(Ncmt, Ncmt);
+        p << -(ka_ - k10_)/ka_, 0, 1, 1;
+        p_inv << -ka_ / (ka_ - k10_), 0, ka_ / (ka_ - k10_), 1;
+        diag(0, 0) = -ka_;
+        diag(1, 1) = -k10_;
+        PMXLinOdeEigenDecompModel<T_par> linode_model(p, diag, p_inv, Ncmt);
+        pred = linode_model.solve(t0, amt, rate, ii, cmt);
 
-        // since we've checked ii > dt_infus
-        // TODO: ii < dt_infus
-        switch (cmt) {
-        case 1:
-          pred(0) = rate / ka_ * (1 - exp(-ka_ * dt_infus)) * exp(-ka_ * (ii - dt_infus)) / (1 - exp(-ka_ * ii));
-          pred(1) = rate * ka_ / (k10_ * (ka_ - k10_)) * (1 - exp(-k10_ * dt_infus)) * exp(-k10_ * (ii - dt_infus)) / (1 - exp(-k10_ * ii))
-            - rate / (ka_ - k10_) * (1 - exp(-ka_ * dt_infus)) * exp(-ka_ * (ii - dt_infus)) / (1 - exp(-ka_ * ii));
-          break;
-        case 2:
-          pred(1) = rate / k10_ * (1 - exp(-k10_ * dt_infus)) * exp(-k10_ * (ii - dt_infus)) / (1 - exp(-k10_ * ii));
-          break;
-        }
+        // typename stan::return_type_t<T_amt, T_r> dt_infus = amt/rate;
+        // static const char* function("Steady State Event");
+        // torsten::check_mti(amt, stan::math::value_of(dt_infus), ii, function);
+
+        // // since we've checked ii > dt_infus
+        // // TODO: ii < dt_infus
+        // switch (cmt) {
+        // case 1:
+        //   pred(0) = rate / ka_ * (1 - exp(-ka_ * dt_infus)) * exp(-ka_ * (ii - dt_infus)) / (1 - exp(-ka_ * ii));
+        //   pred(1) = rate * ka_ / (k10_ * (ka_ - k10_)) * (1 - exp(-k10_ * dt_infus)) * exp(-k10_ * (ii - dt_infus)) / (1 - exp(-k10_ * ii))
+        //     - rate / (ka_ - k10_) * (1 - exp(-ka_ * dt_infus)) * exp(-ka_ * (ii - dt_infus)) / (1 - exp(-ka_ * ii));
+        //   break;
+        // case 2:
+        //   pred(1) = rate / k10_ * (1 - exp(-k10_ * dt_infus)) * exp(-k10_ * (ii - dt_infus)) / (1 - exp(-k10_ * ii));
+        //   break;
+        // }
       } else {  // constant infusion
         switch (cmt) {
         case 1:

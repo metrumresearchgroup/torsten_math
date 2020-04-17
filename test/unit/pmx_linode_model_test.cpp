@@ -211,7 +211,7 @@ TEST_F(TorstenTwoCptModelTest, linode_long_ss_vs_ode) {
   torsten::test::test_grad(par_var, y2, y3, 5e-6, 1e-5);
 }
 
-TEST_F(TorstenTwoCptModelTest, linode_long_long_ss_vs_ode) {
+TEST_F(TorstenTwoCptModelTest, linode_long_long_ss_infusion_vs_ode) {
   double amt = 1300;
   double r = 500;
   double ii = 1.2;
