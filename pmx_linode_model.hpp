@@ -242,13 +242,10 @@ namespace torsten {
     const Eigen::Matrix<T_par, -1, -1> & p_inv_;
 
   public:
-    static constexpr PMXLinODE f_ = PMXLinODE();
-    using par_type    = T_par;
-
     PMXLinOdeEigenDecompModel(const Eigen::Matrix<T_par, -1, -1>& p,
-                   const Eigen::Matrix<T_par, -1, -1>& diag,
-                   const Eigen::Matrix<T_par, -1, -1>& p_inv,
-                   int ncmt) :
+                              const Eigen::Matrix<T_par, -1, -1>& diag,
+                              const Eigen::Matrix<T_par, -1, -1>& p_inv,
+                              int ncmt) :
       PMXLinODEModel<T_par>(diag, ncmt), p_(p), p_inv_(p_inv)
     {}
 
@@ -279,14 +276,6 @@ namespace torsten {
       }
 
       y = multiply(multiply(p_, work1), pred) - multiply(p_, p_inv_r);
-    }
-
-    template<typename Tt0, typename Tt1, typename T, typename T1>
-    void solve(PKRec<T>& y,
-               const Tt0& t0, const Tt1& t1,
-               const std::vector<T1>& rate) const {
-      const PMXOdeIntegrator<Analytical> integ;
-      solve(y, t0, t1, rate, integ);
     }
 
     /*
@@ -322,16 +311,17 @@ namespace torsten {
          * thus (I - exp(At))*u = exp(At)*bolus
          *
          */
+        Matrix<T0, -1, -1> diag = Matrix<T0, -1, -1>::Zero(ncmt, ncmt);
         for (int i = 0; i < ncmt; ++i) {
-          workMatrix(i, i) = stan::math::exp(ii * this -> par_(i, i));
+          diag(i, i) = stan::math::exp(ii * this -> par_(i, i));
         }
-        amounts(cmt - 1) = amt;
-        // workMatrix = - matrix_exp(ii_system);
-        workMatrix = - multiply(multiply(p_, workMatrix), p_inv_);
-        amounts = multiply(workMatrix, amounts);
-        Matrix<T0, -1, -1> work = workMatrix + Matrix<T0, -1, -1>::Identity(ncmt, ncmt);
-        pred = mdivide_left(work, amounts);
-        // pred = multiply(matrix_exp(ii_system), amounts);
+        PKRec<T_amt> bolus = PKRec<T_amt>::Zero(ncmt);
+        bolus(cmt - 1) = amt;
+        pred = multiply(multiply(diag, p_inv_), bolus);
+        for (int i = 0; i < ncmt; ++i) {
+          pred(i) /= (1.0 - diag(i, i));
+        }
+        pred = multiply(p_, pred);
       } else if (ii > 0) {  // multiple truncated infusions
         /**
          * with eigen-decomp A= P * diag * P_inv, change of variable: 
@@ -374,19 +364,16 @@ namespace torsten {
         pred = multiply(p_, multiply(work, pred));
       } else {  // constant infusion
         amounts(cmt - 1) -= rate;
-        pred = mdivide_left(this -> par_, amounts);
+        PKRec<T_r> rvec = PKRec<T_r>::Zero(ncmt);
+        rvec(cmt - 1) -= rate;
+        pred = multiply(p_inv_, rvec);
+        Eigen::Matrix<T_par, -1, -1> work(this -> par_);
+        for (int i = 0; i < ncmt; ++i) {
+          work(i, i) = 1.0 / work(i, i);
+        }
+        pred = multiply(p_, multiply(work, pred));
       }
       return pred;
-    }
-
-    /*
-     * wrapper to fit @c PrepWrapper's call signature
-     */
-    template<typename T_amt, typename T_r, typename T_ii>
-    Eigen::Matrix<typename stan::return_type_t<T_amt, T_r, T_ii, T_par>, -1, 1>
-    solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
-          const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
-      return solve(t0, amt, rate, ii, cmt);
     }
   };
 

@@ -340,6 +340,58 @@ namespace torsten {
 
       using ss_scalar_type = typename stan::return_type<T_par, T_amt, T_r, T_ii>::type;
 
+      stan::math::check_positive_finite("steady state two-cpt solver", "cmt", cmt);
+      stan::math::check_less("steady state two-cpt solver", "cmt", cmt, 4);
+      stan::math::check_positive_finite("steady state two-cpt solver", "ka", ka_);
+
+      std::vector<ss_scalar_type> a(3, 0);
+      PKRec<ss_scalar_type> pred = PKRec<ss_scalar_type>::Zero(Ncmt);
+
+      T_par s = stan::math::sqrt(-4.0 * k10_ * k21_ + (k10_ + k12_ + k21_) * (k10_ + k12_ + k21_));
+      T_par q = ka_ * ka_ - ka_ * k10_ - ka_ * k12_ - ka_ * k21_ + k10_ * k21_;
+      T_par w = k10_ + k12_ - k21_;
+      
+      Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt),
+        diag = Eigen::Matrix<T_par, -1, -1>::Zero(Ncmt, Ncmt);
+      p << q / (ka_ * k12_), 0, 0,
+        -(ka_ - k21_)/k12_, -0.5 * (w + s) / k12_, -0.5 * (w - s) / k12_, 
+        1, 1, 1;
+      p_inv << ka_ * k12_/q, 0, 0,
+        -ka_ * k12_ * ( 2.0 * ka_ - k10_ - k12_ - k21_ + s) / (2.0 * q * s), -k12_ / s, 0.5 * (s - w) / s,
+        -ka_ * k12_ * (-2.0 * ka_ + k10_ + k12_ + k21_ + s) / (2.0 * q * s),  k12_ / s, 0.5 * (s + w) / s;
+      diag(0, 0) = -ka_;
+      diag(1, 1) = -0.5 * (k10_ + k12_ + k21_ + s);
+      diag(2, 2) = -0.5 * (k10_ + k12_ + k21_ - s);
+      PMXLinOdeEigenDecompModel<T_par> linode_model(p, diag, p_inv, Ncmt);
+      pred = linode_model.solve(t0, amt, rate, ii, cmt);
+
+      return pred;
+    }
+
+    /*
+     * wrapper to fit @c PrepWrapper's call signature
+     */
+    template<typename T_amt, typename T_r, typename T_ii>
+    Eigen::Matrix<typename stan::return_type<T_par, T_amt, T_r, T_ii>::type, -1, 1>
+    solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
+          const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
+      return solve(t0, amt, rate, ii, cmt);
+    }
+
+    /**
+     * analytical solution used for testing
+     * 
+     */
+    template<typename T_amt, typename T_r, typename T_ii>
+    Eigen::Matrix<typename stan::return_type<T_par, T_amt, T_r, T_ii>::type, -1, 1>
+    solve_analytical(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt) const {
+      using Eigen::Matrix;
+      using Eigen::Dynamic;
+      using std::vector;
+      using stan::math::exp;
+
+      using ss_scalar_type = typename stan::return_type<T_par, T_amt, T_r, T_ii>::type;
+
       const double inf = std::numeric_limits<double>::max();
 
       stan::math::check_positive_finite("steady state two-cpt solver", "cmt", cmt);
@@ -347,7 +399,7 @@ namespace torsten {
       stan::math::check_positive_finite("steady state two-cpt solver", "ka", ka_);
 
       std::vector<ss_scalar_type> a(3, 0);
-      Matrix<ss_scalar_type, -1, 1> pred = Matrix<ss_scalar_type, -1, 1>::Zero(3);
+      Matrix<ss_scalar_type, -1, 1> pred = Matrix<ss_scalar_type, 1, Dynamic>::Zero(3);
 
       if (rate == 0) {  // bolus dose
         switch (cmt) {
@@ -380,69 +432,46 @@ namespace torsten {
           break;
         }
       } else if (ii > 0) {  // multiple truncated infusions
-        // typename stan::return_type_t<T_amt, T_r> dt_infus = amt/rate;
-        // static const char* function("Steady State Event");
-        // torsten::check_mti(amt, stan::math::value_of(dt_infus), ii, function);
-        // switch (cmt) {
-        // case 1:
-        //   pred(0) = rate * trunc_infus_ss(alpha_[2], dt_infus, ii);
-        //   a[0] = ka_ * (k21_ - alpha_[0]) / ((ka_ - alpha_[0]) * (alpha_[1] - alpha_[0]));
-        //   a[1] = ka_ * (k21_ - alpha_[1]) / ((ka_ - alpha_[1]) * (alpha_[0] - alpha_[1]));
-        //   a[2] = - (a[0] + a[1]);
-        //   pred(1) = rate * (a[0] * trunc_infus_ss(alpha_[0], dt_infus, ii) +
-        //                     a[1] * trunc_infus_ss(alpha_[1], dt_infus, ii) +
-        //                     a[2] * trunc_infus_ss(alpha_[2], dt_infus, ii) );
-        //   a[0] = ka_ * k12_ / ((ka_ - alpha_[0]) * (alpha_[1] - alpha_[0]));
-        //   a[1] = ka_ * k12_ / ((ka_ - alpha_[1]) * (alpha_[0] - alpha_[1]));
-        //   a[2] = -(a[0] + a[1]);
-        //   pred(2) = rate * (a[0] * trunc_infus_ss(alpha_[0], dt_infus, ii) +
-        //                     a[1] * trunc_infus_ss(alpha_[1], dt_infus, ii) +
-        //                     a[2] * trunc_infus_ss(alpha_[2], dt_infus, ii) );
-        //   break;
-        // case 2:
-        //   a[0] = (k21_ - alpha_[0]) / (alpha_[1] - alpha_[0]);
-        //   a[1] = (k21_ - alpha_[1]) / (alpha_[0] - alpha_[1]);
-        //   pred(1) = rate * (a[0] * trunc_infus_ss(alpha_[0], dt_infus, ii) +
-        //                     a[1] * trunc_infus_ss(alpha_[1], dt_infus, ii) );
-        //   a[0] = k12_ / (alpha_[1] - alpha_[0]);
-        //   a[1] = -a[0];
-        //   pred(2) = rate * (a[0] * trunc_infus_ss(alpha_[0], dt_infus, ii) +
-        //                     a[1] * trunc_infus_ss(alpha_[1], dt_infus, ii) );
-        //   break;
-        // case 3:
-        //   a[0] = k21_ / (alpha_[1] - alpha_[0]);
-        //   a[1] = -a[0];
-        //   pred(1) = rate * (a[0] * trunc_infus_ss(alpha_[0], dt_infus, ii) +
-        //                     a[1] * trunc_infus_ss(alpha_[1], dt_infus, ii) );
-        //   a[0] = (k10_ + k12_ - alpha_[0]) / (alpha_[1] - alpha_[0]);
-        //   a[1] = (k10_ + k12_ - alpha_[1]) / (alpha_[0] - alpha_[1]);
-        //   pred(2) = rate * (a[0] * trunc_infus_ss(alpha_[0], dt_infus, ii) +
-        //                     a[1] * trunc_infus_ss(alpha_[1], dt_infus, ii) );
-        //   break;
-        // }
-        // 
-        /**
-         * instead of using analytical solution, we borrow the solution
-         * from linode model.
-         * 
-         */
-      T_par s = stan::math::sqrt(-4.0 * k10_ * k21_ + (k10_ + k12_ + k21_) * (k10_ + k12_ + k21_));
-      T_par q = ka_ * ka_ - ka_ * k10_ - ka_ * k12_ - ka_ * k21_ + k10_ * k21_;
-      T_par w = k10_ + k12_ - k21_;
-      
-        Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt),
-          diag = Eigen::Matrix<T_par, -1, -1>::Zero(Ncmt, Ncmt);
-        p << q / (ka_ * k12_), 0, 0,
-          -(ka_ - k21_)/k12_, -0.5 * (w + s) / k12_, -0.5 * (w - s) / k12_, 
-          1, 1, 1;
-        p_inv << ka_ * k12_/q, 0, 0,
-          -ka_ * k12_ * ( 2.0 * ka_ - k10_ - k12_ - k21_ + s) / (2.0 * q * s), -k12_ / s, 0.5 * (s - w) / s,
-          -ka_ * k12_ * (-2.0 * ka_ + k10_ + k12_ + k21_ + s) / (2.0 * q * s),  k12_ / s, 0.5 * (s + w) / s;
-        diag(0, 0) = -ka_;
-        diag(1, 1) = -0.5 * (k10_ + k12_ + k21_ + s);
-        diag(2, 2) = -0.5 * (k10_ + k12_ + k21_ - s);
-        PMXLinOdeEigenDecompModel<T_par> linode_model(p, diag, p_inv, Ncmt);
-        pred = linode_model.solve(t0, amt, rate, ii, cmt);
+        typename stan::return_type_t<T_amt, T_r> dt_infus = amt/rate;
+        static const char* function("Steady State Event");
+        torsten::check_mti(amt, stan::math::value_of(dt_infus), ii, function);
+        switch (cmt) {
+        case 1:
+          pred(0) = rate * trunc_infus_ss(alpha_[2], dt_infus, ii);
+          a[0] = ka_ * (k21_ - alpha_[0]) / ((ka_ - alpha_[0]) * (alpha_[1] - alpha_[0]));
+          a[1] = ka_ * (k21_ - alpha_[1]) / ((ka_ - alpha_[1]) * (alpha_[0] - alpha_[1]));
+          a[2] = - (a[0] + a[1]);
+          pred(1) = rate * (a[0] * trunc_infus_ss(alpha_[0], dt_infus, ii) +
+                            a[1] * trunc_infus_ss(alpha_[1], dt_infus, ii) +
+                            a[2] * trunc_infus_ss(alpha_[2], dt_infus, ii) );
+          a[0] = ka_ * k12_ / ((ka_ - alpha_[0]) * (alpha_[1] - alpha_[0]));
+          a[1] = ka_ * k12_ / ((ka_ - alpha_[1]) * (alpha_[0] - alpha_[1]));
+          a[2] = -(a[0] + a[1]);
+          pred(2) = rate * (a[0] * trunc_infus_ss(alpha_[0], dt_infus, ii) +
+                            a[1] * trunc_infus_ss(alpha_[1], dt_infus, ii) +
+                            a[2] * trunc_infus_ss(alpha_[2], dt_infus, ii) );
+          break;
+        case 2:
+          a[0] = (k21_ - alpha_[0]) / (alpha_[1] - alpha_[0]);
+          a[1] = (k21_ - alpha_[1]) / (alpha_[0] - alpha_[1]);
+          pred(1) = rate * (a[0] * trunc_infus_ss(alpha_[0], dt_infus, ii) +
+                            a[1] * trunc_infus_ss(alpha_[1], dt_infus, ii) );
+          a[0] = k12_ / (alpha_[1] - alpha_[0]);
+          a[1] = -a[0];
+          pred(2) = rate * (a[0] * trunc_infus_ss(alpha_[0], dt_infus, ii) +
+                            a[1] * trunc_infus_ss(alpha_[1], dt_infus, ii) );
+          break;
+        case 3:
+          a[0] = k21_ / (alpha_[1] - alpha_[0]);
+          a[1] = -a[0];
+          pred(1) = rate * (a[0] * trunc_infus_ss(alpha_[0], dt_infus, ii) +
+                            a[1] * trunc_infus_ss(alpha_[1], dt_infus, ii) );
+          a[0] = (k10_ + k12_ - alpha_[0]) / (alpha_[1] - alpha_[0]);
+          a[1] = (k10_ + k12_ - alpha_[1]) / (alpha_[0] - alpha_[1]);
+          pred(2) = rate * (a[0] * trunc_infus_ss(alpha_[0], dt_infus, ii) +
+                            a[1] * trunc_infus_ss(alpha_[1], dt_infus, ii) );
+          break;
+        }
       } else {  // constant infusion
         switch (cmt) {
         case 1:
@@ -474,16 +503,6 @@ namespace torsten {
         }
       }
       return pred;
-    }
-
-    /*
-     * wrapper to fit @c PrepWrapper's call signature
-     */
-    template<typename T_amt, typename T_r, typename T_ii>
-    Eigen::Matrix<typename stan::return_type<T_par, T_amt, T_r, T_ii>::type, -1, 1>
-    solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
-          const PMXOdeIntegrator<torsten::Analytical>& integrator) const {
-      return solve(t0, amt, rate, ii, cmt);
     }
 
     template<typename T1, typename T2>

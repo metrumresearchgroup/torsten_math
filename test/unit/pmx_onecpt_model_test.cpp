@@ -169,6 +169,19 @@ TEST_F(TorstenOneCptModelTest, ss_bolus_amt_grad) {
   std::vector<double> amt_vec{1000.0};
   cmt = 1; torsten::test::test_grad(f1, f2, amt_vec, 1.e-3, 1.e-16, 2.e-10, 1.e-12);
   cmt = 2; torsten::test::test_grad(f1, f2, amt_vec, 1.e-3, 1.e-16, 2.e-10, 1.e-12);
+
+  // compare against textbook analytical sol.
+  auto f3 = [&](const std::vector<var>& amt_vec) {
+    return model.solve_analytical(t0, amt_vec[0], rate[cmt-1], ii, cmt);
+  };
+  PKRec<var> y2, y3;
+  std::vector<var> amt_vec_var = stan::math::to_var(amt_vec);
+  for (int i = 0; i < 2; ++i) {
+    cmt = i + 1;
+    y2 = f2(amt_vec_var);
+    y3 = f3(amt_vec_var);
+    torsten::test::test_grad(amt_vec_var, y2, y3, 1.e-18, 1.e-18);
+  }
 }
 
 TEST_F(TorstenOneCptModelTest, ss_infusion_rate_grad) {
@@ -193,6 +206,19 @@ TEST_F(TorstenOneCptModelTest, ss_infusion_rate_grad) {
   std::vector<double> rate_vec{500.0};
   cmt = 1; torsten::test::test_grad(f1, f2, rate_vec, 1.e-3, 1.e-15, 2.e-10, 1.e-10);
   cmt = 2; torsten::test::test_grad(f1, f2, rate_vec, 1.e-3, 1.e-15, 2.e-10, 1.e-10);
+
+  // compare against textbook analytical sol.
+  auto f3 = [&](const std::vector<var>& rate_vec) {
+    return model.solve_analytical(t0, amt, rate_vec[0], ii, cmt);
+  };
+  PKRec<var> y2, y3;
+  std::vector<var> rate_var = stan::math::to_var(rate_vec);
+  for (int i = 0; i < 2; ++i) {
+    cmt = i + 1;
+    y2 = f2(rate_var);
+    y3 = f3(rate_var);
+    torsten::test::test_grad(rate_var, y2, y3, 1.e-15, 1.e-15);
+  }
 }
 
 TEST_F(TorstenOneCptModelTest, ss_bolus_grad_vs_long_run_sd) {
@@ -520,8 +546,8 @@ TEST_F(TorstenOneCptModelTest, ss_bolus) {
   std::vector<double> g1, g2;
   stan::math::set_zero_all_adjoints();
   y1(0).grad(theta, g1);
-  EXPECT_FLOAT_EQ(g1[0], 0.0);
-  EXPECT_FLOAT_EQ(g1[1], 0.0);
+  EXPECT_NEAR(g1[0], 0.0, 1.e-18);
+  EXPECT_NEAR(g1[1], 0.0, 1.e-18);
   EXPECT_FLOAT_EQ(g1[2], -0.0120396453978);
   stan::math::set_zero_all_adjoints();
   y1(1).grad(theta, g1);
@@ -634,7 +660,7 @@ TEST_F(TorstenOneCptModelTest, ss_const_infusion) {
   EXPECT_FLOAT_EQ(g1[0], -35.2);
   EXPECT_FLOAT_EQ(g1[1], 22);
   // EXPECT_FLOAT_EQ(g1[2], 0.0); // FIXME: fail for g++ but clang++
-  EXPECT_NEAR(g1[2], 0.0, 5e-13);
+  EXPECT_NEAR(g1[2], 0.0, 1e-12);
 
   cmt = 2;
   y1 = model.solve(t0, amt, rate_var[cmt - 1], ii, cmt);

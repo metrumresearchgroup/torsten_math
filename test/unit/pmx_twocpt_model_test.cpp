@@ -165,6 +165,19 @@ TEST_F(TorstenTwoCptModelTest, ss_bolus_amt_grad) {
   cmt = 1; torsten::test::test_grad(f1, f2, amt_vec, 1.e-3, 1.e-16, 2.e-10, 1.e-12);
   cmt = 2; torsten::test::test_grad(f1, f2, amt_vec, 1.e-3, 1.e-16, 2.e-10, 1.e-12);
   cmt = 3; torsten::test::test_grad(f1, f2, amt_vec, 1.e-3, 1.e-16, 2.e-10, 1.e-12);
+
+  // compare against textbook analytical sol.
+  auto f3 = [&](const std::vector<var>& amt_vec) {
+    return model.solve_analytical(t0, amt_vec[0], rate[cmt-1], ii, cmt);
+  };
+  PKRec<var> y2, y3;
+  std::vector<var> amt_vec_var = stan::math::to_var(amt_vec);
+  for (int i = 0; i < 3; ++i) {
+    cmt = i + 1;
+    y2 = f2(amt_vec_var);
+    y3 = f3(amt_vec_var);
+    torsten::test::test_grad(amt_vec_var, y2, y3, 1.e-12, 5.e-16);
+  }
 }
 
 TEST_F(TorstenTwoCptModelTest, ss_infusion_rate_grad) {
@@ -190,6 +203,19 @@ TEST_F(TorstenTwoCptModelTest, ss_infusion_rate_grad) {
   cmt = 1; torsten::test::test_grad(f1, f2, rate_vec, 1.e-3, 1.e-16, 1.e-8, 1.e-12);
   cmt = 2; torsten::test::test_grad(f1, f2, rate_vec, 1.e-3, 1.e-16, 1.e-9, 1.e-12);
   cmt = 3; torsten::test::test_grad(f1, f2, rate_vec, 1.e-3, 1.e-16, 1.e-9, 1.e-12);
+
+  // compare against textbook analytical sol.
+  auto f3 = [&](const std::vector<var>& rate_vec) {
+    return model.solve_analytical(t0, amt, rate_vec[0], ii, cmt);
+  };
+  PKRec<var> y2, y3;
+  std::vector<var> rate_var = stan::math::to_var(rate_vec);
+  for (int i = 0; i < 3; ++i) {
+    cmt = i + 1;
+    y2 = f2(rate_var);
+    y3 = f3(rate_var);
+    torsten::test::test_grad(rate_var, y2, y3, 1.e-12, 5.e-15);
+  }
 }
 
 TEST_F(TorstenTwoCptModelTest, ss_bolus_by_long_run_sd_vs_bdf_result) {
@@ -745,10 +771,10 @@ TEST_F(TorstenTwoCptModelTest, ss_bolus) {
   std::vector<double> g1, g2;
   stan::math::set_zero_all_adjoints();
   y1(0).grad(theta, g1);
-  EXPECT_FLOAT_EQ(g1[0], 0.0);
-  EXPECT_FLOAT_EQ(g1[1], 0.0);
-  EXPECT_FLOAT_EQ(g1[2], 0.0);
-  EXPECT_FLOAT_EQ(g1[3], 0.0);
+  EXPECT_NEAR(g1[0], 0.0, 1.e-18);
+  EXPECT_NEAR(g1[1], 0.0, 1.e-18);
+  EXPECT_NEAR(g1[2], 0.0, 1.e-18);
+  EXPECT_NEAR(g1[3], 0.0, 1.e-18);
   EXPECT_FLOAT_EQ(g1[4], -0.0068828063);
   stan::math::set_zero_all_adjoints();
   y1(1).grad(theta, g1);
@@ -984,18 +1010,18 @@ TEST_F(TorstenTwoCptModelTest, ss_solver_const_infusion) {
   stan::math::set_zero_all_adjoints();
   y1(1).grad(theta, g1);
   EXPECT_FLOAT_EQ(g1[0], -960);
-  EXPECT_FLOAT_EQ(g1[1], 2.27373675443e-14 );
+  EXPECT_NEAR(g1[1], 0.0, 1.e-12 );
   EXPECT_FLOAT_EQ(g1[2], 120 );
-  EXPECT_FLOAT_EQ(g1[3], -1.81898940355e-14 );
-  EXPECT_FLOAT_EQ(g1[4], 0.0);
+  EXPECT_NEAR(g1[3], 0.0, 1.e-12 );
+  EXPECT_NEAR(g1[4], 0.0, 5.e-11 );
   stan::math::set_zero_all_adjoints();
   y1(2).grad(theta, g1);
   EXPECT_FLOAT_EQ(g1[0], -840);
-  EXPECT_FLOAT_EQ(g1[1], 1.70530256582e-13);
-  EXPECT_FLOAT_EQ(g1[2], -7.1054273576e-14);
+  EXPECT_NEAR(g1[1], 0.0, 1.e-12);
+  EXPECT_NEAR(g1[2], 0.0, 1.e-12);
   EXPECT_FLOAT_EQ(g1[3], 120 );
   // EXPECT_FLOAT_EQ(g1[4], 1.02318153949e-12); //FIXME: fail on g++ but not clang
-  EXPECT_NEAR(g1[4], 1.02318153949e-12, 2.e-12);
+  EXPECT_NEAR(g1[4], 0.0, 1.e-11);
 
   // FIXME: check the results
   // cmt = 2;
@@ -1044,15 +1070,15 @@ TEST_F(TorstenTwoCptModelTest, ss_solver_const_infusion) {
   stan::math::set_zero_all_adjoints();
   y1(1).grad(theta, g1);
   EXPECT_FLOAT_EQ(g1[0], -640);
-  EXPECT_FLOAT_EQ(g1[1], -1.18559130767e-13);
+  EXPECT_NEAR(g1[1], 0.0, 1e-18);
   EXPECT_FLOAT_EQ(g1[2], 80);
-  EXPECT_FLOAT_EQ(g1[3], 1.55913377447e-14);
+  EXPECT_NEAR(g1[3], 0.0, 1e-18);
   EXPECT_FLOAT_EQ(g1[4], 0);
   stan::math::set_zero_all_adjoints();
   y1(2).grad(theta, g1);
   EXPECT_FLOAT_EQ(g1[0], -560);
   EXPECT_FLOAT_EQ(g1[1], -71.4285714286);
-  EXPECT_FLOAT_EQ(g1[2], 5.68434188608e-14);
+  EXPECT_NEAR(g1[2], 0.0, 1e-13);
   EXPECT_FLOAT_EQ(g1[3], 108.571428571);
   EXPECT_FLOAT_EQ(g1[4], 0.0);
 }
