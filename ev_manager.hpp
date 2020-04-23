@@ -82,6 +82,11 @@ namespace torsten {
     Event<T_time, T3, T_amt, T_rate, T2> event(int i) const {
       int id;
       switch (event_his.evid(i)) {
+      case 2:                   // "other" type given "cmt" indicates reset
+        if (event_his.cmt(i) > 0) {
+          id = 5;
+        }
+        break;
       case 3:                   // reset
         id = 1;
         break;

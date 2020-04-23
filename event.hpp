@@ -16,6 +16,7 @@ namespace torsten {
     /// 2. reset + evolve
     /// 3. ovsteady state
     /// 4. reset + steady state
+    /// 5. reset a single cmt
     const int id;
     time_t t0;
     time_t t1;
@@ -58,6 +59,10 @@ namespace torsten {
         y = T(1.0) * model.solve(value_of(t1), jump(cmt - 1), force0, ii, cmt, integ);
         y(cmt - 1) += jp;
         break;
+      case 5:
+        model.solve(y, t0, t1, force, integ);
+        y(cmt - 1) = 0;
+        break;
       default:
         model.solve(y, t0, t1, force, integ);
         y(cmt - 1) += jp;
@@ -99,6 +104,14 @@ namespace torsten {
         vt = dsolve::pk_vars(jump(cmt - 1), force0, ii, model.par());
         y = torsten::mpi::precomputed_gradients(yd, vt);
         y(cmt - 1) += jp;
+        break;
+      case 5:
+        vt = pmx_model_vars<model_t>::vars(t1, y, force, model.par());
+        if (t1 > t0) {
+          yd = model_solve_d(model, y, t0, t1, force, integ, model_pars...);
+          y = torsten::mpi::precomputed_gradients(yd, vt);
+        }
+        y(cmt - 1) = 0;
         break;
       default:
         vt = pmx_model_vars<model_t>::vars(t1, y, force, model.par());

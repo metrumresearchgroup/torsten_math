@@ -419,6 +419,27 @@ TEST_F(TorstenOneCptTest, single_iv_central_cmt_var_overload) {
                                   pMatrix, biovar, tlag, 1e-6, 1e-6);
 }
 
+TEST_F(TorstenOneCptTest, reset_an_cmt) {
+  nt = 3;
+  resize(nt);
+  evid[0] = 1;
+  evid[1] = 2;
+  evid[2] = 1;
+  cmt[0] = 1;
+  cmt[1] = 2;
+  amt[2]= 800;
+  ii[0] = 0;
+  addl[0] = 0;
+  time[0] = 0.0;
+  time[2] = time[1];
+  
+  auto y = pmx_solve_onecpt(time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+  EXPECT_FLOAT_EQ(y(0, 1), 740.8182206817178);
+  EXPECT_FLOAT_EQ(y(1, 1), 0.0);
+  EXPECT_FLOAT_EQ(y(0, 2), 740.8182206817178);
+  EXPECT_FLOAT_EQ(y(1, 2), 800.0);
+}
+
 /*
 TEST(Torsten, pmx_solve_onecptModel_SS_rate_2) {
   // Test the special case where the infusion rate is longer than

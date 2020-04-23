@@ -192,8 +192,6 @@ namespace torsten {
 
         typename stan::return_type_t<T_amt, T_r> dt = amt / rate;
         amounts(cmt - 1) = rate;
-        // static const char* function("Steady State Event");
-        // torsten::check_mti(amt, dt, ii, function);
 
         int n = int(std::floor(value_of(dt) / value_of(ii)) + 0.1);
         typename stan::return_type_t<T_amt, T_r, T_ii> t1 = dt - n * ii;

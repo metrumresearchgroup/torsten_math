@@ -27,6 +27,7 @@ namespace torsten {
     using T_time = typename stan::return_type_t<T0, T1, T3, T6, T2>;
     using T_rate = typename stan::return_type_t<T2, T5>;
     using T_amt = typename stan::return_type_t<T1, T5>;
+    /// <time, <theta index, F index, lag index> >
     using Param = std::pair<double, std::array<int, 3> >;
     using rate_t = std::pair<double, std::vector<T2> >;
 
@@ -305,6 +306,12 @@ namespace torsten {
       return ordered;
     }
 
+    /** 
+     * Generate end-of-infusion event to indicate the range of the infusion.
+     * The new event has a special EVID = 9 and it introduces no action.
+     * 
+     * @param nCmt nb of compartments for the model
+     */
     void generate_rates(int nCmt) {
       using std::vector;
       using stan::math::value_of;
@@ -313,7 +320,7 @@ namespace torsten {
       for (size_t i = 0; i < n; ++i) {
         if ((is_dosing(i)) && (rate(i) > 0 && amt(i) > 0)) {
           insert_event(i);
-          index.back()[2] = 2;    // reset evid
+          index.back()[2] = 9;    // set evid to a special type "9"
           gen_time. back() += amt(i)/rate(i);
           gen_amt.  back() = 0;
           gen_rate. back() = 0;
@@ -362,20 +369,20 @@ namespace torsten {
 
     // Access functions
     inline T_time time (const IDVec& id) const { return keep(id) ? time_[id[1]] : gen_time[id[1]] ; }
-    inline const T1& amt      (const IDVec& id) const { return keep(id) ? amt_[id[1]] : gen_amt[id[1]] ; }
-    inline const T2& rate     (const IDVec& id) const { return keep(id) ? rate_[id[1]] : gen_rate[id[1]] ; }
-    inline const T3& ii       (const IDVec& id) const { return keep(id) ? ii_[id[1]] : gen_ii[id[1]] ; }
-    inline int cmt     (const IDVec& id) const { return keep(id) ? cmt_[id[1]] : gen_cmt[id[1]] ; }
-    inline int addl    (const IDVec& id) const { return keep(id) ? addl_[id[1]] : gen_addl[id[1]] ; }
-    inline int ss      (const IDVec& id) const { return keep(id) ? ss_[id[1]] : gen_ss[id[1]] ; }
+    inline const T1& amt (const IDVec& id) const { return keep(id) ? amt_[id[1]] : gen_amt[id[1]] ; }
+    inline const T2& rate (const IDVec& id) const { return keep(id) ? rate_[id[1]] : gen_rate[id[1]] ; }
+    inline const T3& ii (const IDVec& id) const { return keep(id) ? ii_[id[1]] : gen_ii[id[1]] ; }
+    inline int cmt (const IDVec& id) const { return keep(id) ? cmt_[id[1]] : gen_cmt[id[1]] ; }
+    inline int addl (const IDVec& id) const { return keep(id) ? addl_[id[1]] : gen_addl[id[1]] ; }
+    inline int ss (const IDVec& id) const { return keep(id) ? ss_[id[1]] : gen_ss[id[1]] ; }
 
     inline T_time time (int i) const { return time(index[i]); }
-    inline const T1& amt      (int i) const { return amt (index[i]); }
-    inline const T2& rate     (int i) const { return rate(index[i]); }
-    inline const T3& ii       (int i) const { return ii  (index[i]); }
-    inline int cmt     (int i) const { return cmt (index[i]); }
-    inline int addl    (int i) const { return addl(index[i]); }
-    inline int ss      (int i) const { return ss  (index[i]); }
+    inline const T1& amt (int i) const { return amt (index[i]); }
+    inline const T2& rate (int i) const { return rate(index[i]); }
+    inline const T3& ii (int i) const { return ii  (index[i]); }
+    inline int cmt (int i) const { return cmt (index[i]); }
+    inline int addl (int i) const { return addl(index[i]); }
+    inline int ss (int i) const { return ss  (index[i]); }
 
     inline size_t num_state_times() const { return index.size(); }
 
@@ -406,6 +413,7 @@ namespace torsten {
      * Implement absorption lag times by modifying the times of the dosing events.
      * Two cases: parameters are either constant or vary with each event.
      * Function sorts events at the end of the procedure.
+     * The old event is set with a special EVID = 9 and it introduces no action.
      *
      * @tparam T_parameters type of scalar model parameters
      * @return - modified events that account for absorption lag times
@@ -421,9 +429,9 @@ namespace torsten {
             gen_time.back() += GetValueTlag(iEvent, cmt(iEvent) - 1);
 
             // Events[iEvent].evid = 2;  // Check
-            index[iEvent][2] = 2;
-            // The above statement changes events so that CleanEvents does
-            // not return an object identical to the original. - CHECK
+            // set old event to a speical type "9", on which no
+            // action is taken
+            index[iEvent][2] = 9;
           }
         }
         iEvent--;
@@ -446,6 +454,8 @@ namespace torsten {
     inline const T6& GetValueTlag(int iEvent, int iParameter) const {
       return tlag_[std::get<1>(param_index[iEvent])[2]][iParameter];
     }
+
+    inline size_t size() const { return index.size(); }
 
     /*
      * Overloading the << Operator
