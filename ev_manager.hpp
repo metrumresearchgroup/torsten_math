@@ -98,6 +98,11 @@ namespace torsten {
           id = 2;
         }
         break;
+      case 8:                   // mrgsolve: "evid=9" overwrite cmt
+        if (event_his.cmt(i) > 0) {
+          id = 6;
+        }
+        break;
       default:
         if (event_his.is_ss_dosing(i)) {
           if (event_his.ss(i) == 2) {

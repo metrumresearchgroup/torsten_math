@@ -63,6 +63,10 @@ namespace torsten {
         model.solve(y, t0, t1, force, integ);
         y(cmt - 1) = 0;
         break;
+      case 6:
+        model.solve(y, t0, t1, force, integ);
+        y(cmt - 1) = jp;
+        break;
       default:
         model.solve(y, t0, t1, force, integ);
         y(cmt - 1) += jp;
@@ -112,6 +116,14 @@ namespace torsten {
           y = torsten::mpi::precomputed_gradients(yd, vt);
         }
         y(cmt - 1) = 0;
+        break;
+      case 6:
+        vt = pmx_model_vars<model_t>::vars(t1, y, force, model.par());
+        if (t1 > t0) {
+          yd = model_solve_d(model, y, t0, t1, force, integ, model_pars...);
+          y = torsten::mpi::precomputed_gradients(yd, vt);
+        }
+        y(cmt - 1) = jp;
         break;
       default:
         vt = pmx_model_vars<model_t>::vars(t1, y, force, model.par());
