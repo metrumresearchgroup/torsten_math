@@ -41,7 +41,7 @@ namespace torsten {
                            const PMXOdeIntegrator<It>& integ) {
       using stan::math::value_of;
       const double eps = 1.0E-12;
-      const jump_t jp = force0 < eps ? jump(cmt - 1) : 0.0;
+      const jump_t jp = force0 < eps ? jump(std::abs(cmt) - 1) : 0.0;
       switch(id) {
       case 1:
         y.setZero();
@@ -61,7 +61,7 @@ namespace torsten {
         break;
       case 5:
         model.solve(y, t0, t1, force, integ);
-        y(cmt - 1) = 0;
+        y(-cmt - 1) = 0;        // NONMEN: negative "cmt" indicates turn-off/reset
         break;
       case 6:
         model.solve(y, t0, t1, force, integ);
@@ -82,7 +82,7 @@ namespace torsten {
                            const Ts... model_pars) {
       using stan::math::value_of;
       const double eps = 1.0E-12;
-      const jump_t jp = force0 < eps ? jump(cmt - 1) : 0.0;
+      const jump_t jp = force0 < eps ? jump(std::abs(cmt) - 1) : 0.0;
       std::vector<stan::math::var> vt;
       switch(id) {
       case 1:
@@ -115,7 +115,7 @@ namespace torsten {
           yd = model_solve_d(model, y, t0, t1, force, integ, model_pars...);
           y = torsten::mpi::precomputed_gradients(yd, vt);
         }
-        y(cmt - 1) = 0;
+        y(-cmt - 1) = 0;        // NONMEM: negative "cmt" indicates turnoff/reset
         break;
       case 6:
         vt = pmx_model_vars<model_t>::vars(t1, y, force, model.par());

@@ -426,7 +426,7 @@ TEST_F(TorstenOneCptTest, reset_an_cmt) {
   evid[1] = 2;
   evid[2] = 1;
   cmt[0] = 1;
-  cmt[1] = 2;
+  cmt[1] = -2;
   amt[2]= 800;
   ii[0] = 0;
   addl[0] = 0;
