@@ -276,7 +276,7 @@ TEST_F(TorstenTwoCptModelTest, ss_bolus_by_long_run_sd_vs_bdf_result) {
     cmt = 1;
     Eigen::Matrix<double, -1, 1> y1 = f1(amt_vec);
     Eigen::Matrix<double, -1, 1> y2 = f2(amt_vec);
-    torsten::test::test_val(y1, y2);    
+    torsten::test::test_val(y1, y2);
   }
 
   {
