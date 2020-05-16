@@ -63,21 +63,21 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_vs_long_run_sd) {
     cmt = i + 1;
     Eigen::VectorXd y1 = f1(amt, integrator_adams);
     Eigen::VectorXd y2 = f2(amt, integrator_adams);
-    torsten::test::test_val(y1, y2, 1e-10, 1e-15);    
+    torsten::test::test_val(y1, y2, 3e-9, 1e-15);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::VectorXd y1 = f1(amt, integrator_bdf);
     Eigen::VectorXd y2 = f2(amt, integrator_bdf);
-    torsten::test::test_val(y1, y2, 1e-10, 1e-15);    
+    torsten::test::test_val(y1, y2, 2e-8, 1e-15);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::VectorXd y1 = f1(amt, integrator_rk45);
     Eigen::VectorXd y2 = f2(amt, integrator_rk45);
-    torsten::test::test_val(y1, y2, 1e-10, 1e-15);    
+    torsten::test::test_val(y1, y2, 1e-10, 1e-15);
   }
 
   // cross check between integrators
@@ -85,14 +85,14 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_vs_long_run_sd) {
     cmt = i + 1;
     Eigen::VectorXd y1 = f1(amt, integrator_bdf);
     Eigen::VectorXd y2 = f2(amt, integrator_rk45);
-    torsten::test::test_val(y1, y2, 1e-7, 1e-15);    
+    torsten::test::test_val(y1, y2, 1e-7, 1e-15);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::VectorXd y1 = f1(amt, integrator_bdf);
     Eigen::VectorXd y2 = f2(amt, integrator_adams);
-    torsten::test::test_val(y1, y2, 1e-7, 1e-15);    
+    torsten::test::test_val(y1, y2, 1e-7, 1e-15);
   }
 }
 
@@ -138,14 +138,14 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_grad_vs_long_run_sd) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(amt_vec[0], integrator_adams);
     Eigen::Matrix<var, -1, 1> y2 = f2(amt_vec[0], integrator_adams);
-    torsten::test::test_grad(amt_vec, y1, y2, 1.e-8, 1.e-11);    
+    torsten::test::test_grad(amt_vec, y1, y2, 2.e-7, 1.e-11);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(amt_vec[0], integrator_bdf);
     Eigen::Matrix<var, -1, 1> y2 = f2(amt_vec[0], integrator_bdf);
-    torsten::test::test_grad(amt_vec, y1, y2, 1.e-8, 1.e-11);    
+    torsten::test::test_grad(amt_vec, y1, y2, 1.e-7, 1.e-11);
   }
 
   for (int i = 0; i < 3; ++i) {
@@ -215,7 +215,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_infusion_vs_long_run_sd) {
     rate_vec[cmt - 1] = 330.0;
     Eigen::VectorXd y1 = f1(rate_vec , integrator_adams);
     Eigen::VectorXd y2 = f2(rate_vec , integrator_adams);
-    torsten::test::test_val(y1, y2, 1.e-9, 1.e-12);
+    torsten::test::test_val(y1, y2, 2.e-7, 1.e-12);
     rate_vec[cmt - 1] = 0.0;
   }
 
@@ -378,7 +378,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_infusion_grad_vs_long_run_s
     std::vector<var> rvec{r};
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_adams);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_adams);
-    torsten::test::test_grad(rvec, y1, y2, 5.e-9, 3.e-12);    
+    torsten::test::test_grad(rvec, y1, y2, 5.e-7, 3.e-12);
   }
 
   for (int i = 0; i < 3; ++i) {
@@ -387,7 +387,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_infusion_grad_vs_long_run_s
     std::vector<var> rvec{r};
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_bdf);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_bdf);
-    torsten::test::test_grad(rvec, y1, y2, 5.e-9, 3.e-12);    
+    torsten::test::test_grad(rvec, y1, y2, 5.e-9, 3.e-12);
   }
 
   for (int i = 0; i < 3; ++i) {
@@ -396,7 +396,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_infusion_grad_vs_long_run_s
     std::vector<var> rvec{r};
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_rk45);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_rk45);
-    torsten::test::test_grad(rvec, y1, y2, 5.e-9, 3.e-12);    
+    torsten::test::test_grad(rvec, y1, y2, 5.e-8, 3.e-12);
   }
 }
 
@@ -438,21 +438,21 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_const_infusion_grad_vs_long
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_adams);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_adams);
-    torsten::test::test_grad(rvec, y1, y2, 1.e-7, 1.e-9);    
+    torsten::test::test_grad(rvec, y1, y2, 1.e-7, 1.e-9);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_bdf);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_bdf);
-    torsten::test::test_grad(rvec, y1, y2, 3e-7, 1.e-9);    
+    torsten::test::test_grad(rvec, y1, y2, 3e-7, 1.e-9);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_rk45);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_rk45);
-    torsten::test::test_grad(rvec, y1, y2, 1e-7, 1.e-9);    
+    torsten::test::test_grad(rvec, y1, y2, 1e-7, 1.e-9);
   }
 }
 
@@ -498,21 +498,21 @@ TEST_F(TorstenTwoCptModelTest, ode_model_rate_param_ss_bolus_vs_long_run_sd) {
     cmt = i + 1;
     Eigen::Matrix<double, -1, 1> y1 = f1(amt, integrator_adams);
     Eigen::Matrix<var, -1, 1>    y2 = f2(amt, integrator_adams);
-    torsten::test::test_val(y1, stan::math::value_of(y2), 1e-10, 1e-15);    
+    torsten::test::test_val(y1, stan::math::value_of(y2), 1e-8, 1e-15);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<double, -1, 1> y1 = f1(amt, integrator_bdf);
     Eigen::Matrix<var, -1, 1>    y2 = f2(amt, integrator_bdf);
-    torsten::test::test_val(y1, stan::math::value_of(y2), 1e-10, 1e-15);    
+    torsten::test::test_val(y1, stan::math::value_of(y2), 2e-8, 1e-15);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<double, -1, 1> y1 = f1(amt, integrator_rk45);
     Eigen::Matrix<var, -1, 1>    y2 = f2(amt, integrator_rk45);
-    torsten::test::test_val(y1, stan::math::value_of(y2), 1e-10, 1e-15);    
+    torsten::test::test_val(y1, stan::math::value_of(y2), 1e-10, 1e-15);
   }
 }
 
@@ -558,21 +558,21 @@ TEST_F(TorstenTwoCptModelTest, ode_model_rate_param_ss_bolus_grad_vs_long_run_sd
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(amt_vec[0], integrator_adams);
     Eigen::Matrix<var, -1, 1> y2 = f2(amt_vec[0], integrator_adams);
-    torsten::test::test_grad(amt_vec, y1, y2, 5.5e-9, 1e-11);    
+    torsten::test::test_grad(amt_vec, y1, y2, 2e-7, 1e-11);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(amt_vec[0], integrator_bdf);
     Eigen::Matrix<var, -1, 1> y2 = f2(amt_vec[0], integrator_bdf);
-    torsten::test::test_grad(amt_vec, y1, y2, 5.5e-9, 1e-11);    
+    torsten::test::test_grad(amt_vec, y1, y2, 8e-8, 1e-11);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(amt_vec[0], integrator_rk45);
     Eigen::Matrix<var, -1, 1> y2 = f2(amt_vec[0], integrator_rk45);
-    torsten::test::test_grad(amt_vec, y1, y2, 5.5e-9, 2e-11);    
+    torsten::test::test_grad(amt_vec, y1, y2, 8e-9, 2e-11);
   }
 }
 
@@ -622,21 +622,21 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_param_ss_infusion_grad_vs_long_run_
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_adams);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_adams);
-    torsten::test::test_grad(params, y1, y2, 5.e-9, 5.e-12);    
+    torsten::test::test_grad(params, y1, y2, 3.e-7, 5.e-12);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_bdf);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_bdf);
-    torsten::test::test_grad(params, y1, y2, 5.e-9, 5.e-12);    
+    torsten::test::test_grad(params, y1, y2, 5.e-9, 5.e-12);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_rk45);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_rk45);
-    torsten::test::test_grad(params, y1, y2, 5.e-9, 5.e-12);    
+    torsten::test::test_grad(params, y1, y2, 5.e-8, 5.e-12);
   }
 }
 
@@ -679,21 +679,21 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_param_ss_const_infusion_grad_vs_lon
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_adams);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_adams);
-    torsten::test::test_grad(rvec, y1, y2, 3.e-7, 1.e-9);    
+    torsten::test::test_grad(rvec, y1, y2, 3.e-7, 1.e-9);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_bdf);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_bdf);
-    torsten::test::test_grad(rvec, y1, y2, 3.e-7, 1.e-9);    
+    torsten::test::test_grad(rvec, y1, y2, 3.e-7, 1.e-9);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_rk45);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_rk45);
-    torsten::test::test_grad(rvec, y1, y2, 3.e-7, 1.e-9);    
+    torsten::test::test_grad(rvec, y1, y2, 3.e-7, 1.e-9);
   }
 }
 
@@ -765,8 +765,8 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_theta_grad_vs_long_run_sd) {
     Eigen::Matrix<var, -1, 1> y2 = f2(integrator_adams);
     Eigen::Matrix<var, -1, 1> y3 = f3(integrator_adams);
     Eigen::Matrix<var, -1, 1> y4 = f4(integrator_adams);
-    torsten::test::test_grad(params, y1, y2, 8e-9, 2e-8);    
-    torsten::test::test_grad(params, y3, y4, 8e-9, 2e-8);    
+    torsten::test::test_grad(params, y1, y2, 2e-7, 2e-8);
+    torsten::test::test_grad(params, y3, y4, 2e-7, 2e-8);
   }
 
   for (int i = 0; i < 3; ++i) {
@@ -775,8 +775,8 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_theta_grad_vs_long_run_sd) {
     Eigen::Matrix<var, -1, 1> y2 = f2(integrator_bdf);
     Eigen::Matrix<var, -1, 1> y3 = f3(integrator_bdf);
     Eigen::Matrix<var, -1, 1> y4 = f4(integrator_bdf);
-    torsten::test::test_grad(params, y1, y2, 8e-9, 2e-8);    
-    torsten::test::test_grad(params, y3, y4, 8e-9, 2e-8);    
+    torsten::test::test_grad(params, y1, y2, 1e-7, 2e-8);
+    torsten::test::test_grad(params, y3, y4, 1e-7, 2e-8);
   }
 
   for (int i = 0; i < 3; ++i) {
@@ -785,8 +785,8 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_theta_grad_vs_long_run_sd) {
     Eigen::Matrix<var, -1, 1> y2 = f2(integrator_rk45);
     Eigen::Matrix<var, -1, 1> y3 = f3(integrator_rk45);
     Eigen::Matrix<var, -1, 1> y4 = f4(integrator_rk45);
-    torsten::test::test_grad(params, y1, y2, 2e-8, 2e-8);    
-    torsten::test::test_grad(params, y3, y4, 2e-8, 2e-8);    
+    torsten::test::test_grad(params, y1, y2, 2e-8, 2e-8);
+    torsten::test::test_grad(params, y3, y4, 2e-8, 2e-8);
   }
 }
 
@@ -865,8 +865,8 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_infusion_theta_grad_vs_long_run_sd) 
     Eigen::Matrix<var, -1, 1> y2 = f2(integrator_adams);
     Eigen::Matrix<var, -1, 1> y3 = f3(integrator_adams);
     Eigen::Matrix<var, -1, 1> y4 = f4(integrator_adams);
-    torsten::test::test_grad(params, y1, y2, 5.e-9, 1.e-8);
-    torsten::test::test_grad(params, y3, y4, 5.e-9, 1.e-8);    
+    torsten::test::test_grad(params, y1, y2, 5.e-7, 1.e-8);
+    torsten::test::test_grad(params, y3, y4, 5.e-7, 1.e-8);
   }
 
   for (int i = 0; i < 3; ++i) {
@@ -876,7 +876,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_infusion_theta_grad_vs_long_run_sd) 
     Eigen::Matrix<var, -1, 1> y3 = f3(integrator_bdf);
     Eigen::Matrix<var, -1, 1> y4 = f4(integrator_bdf);
     torsten::test::test_grad(params, y1, y2, 5.e-9, 1.e-8);
-    torsten::test::test_grad(params, y3, y4, 5.e-9, 1.e-8);    
+    torsten::test::test_grad(params, y3, y4, 5.e-9, 1.e-8);
   }
 
   for (int i = 0; i < 3; ++i) {
@@ -885,8 +885,8 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_infusion_theta_grad_vs_long_run_sd) 
     Eigen::Matrix<var, -1, 1> y2 = f2(integrator_rk45);
     Eigen::Matrix<var, -1, 1> y3 = f3(integrator_rk45);
     Eigen::Matrix<var, -1, 1> y4 = f4(integrator_rk45);
-    torsten::test::test_grad(params, y1, y2, 5.e-9, 1.e-8);
-    torsten::test::test_grad(params, y3, y4, 5.e-9, 1.e-8);    
+    torsten::test::test_grad(params, y1, y2, 3.e-8, 1.e-8);
+    torsten::test::test_grad(params, y3, y4, 3.e-8, 1.e-8);
   }
 }
 
@@ -985,21 +985,21 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_param_ss_long_infusion_grad_vs_long
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, PMXOdeIntegrator<torsten::PkAdams>());
     Eigen::Matrix<var, -1, 1> y2 = f2(r, PMXOdeIntegrator<torsten::PkAdams>());
-    torsten::test::test_grad(params, y1, y2, 5.e-9, 5.e-11);
+    torsten::test::test_grad(params, y1, y2, 5.e-7, 5.e-11);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, PMXOdeIntegrator<torsten::PkBdf>());
     Eigen::Matrix<var, -1, 1> y2 = f2(r, PMXOdeIntegrator<torsten::PkBdf>());
-    torsten::test::test_grad(params, y1, y2, 5.e-9, 5.e-12);    
+    torsten::test::test_grad(params, y1, y2, 1.e-7, 5.e-12);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, PMXOdeIntegrator<torsten::PkRk45>());
     Eigen::Matrix<var, -1, 1> y2 = f2(r, PMXOdeIntegrator<torsten::PkRk45>());
-    torsten::test::test_grad(params, y1, y2, 5.e-9, 5.e-12);    
+    torsten::test::test_grad(params, y1, y2, 1.e-8, 5.e-12);
   }
 }
 
@@ -1047,20 +1047,20 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_long_infusion_theta_grad_vs_long_run
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(PMXOdeIntegrator<torsten::PkAdams>());
     Eigen::Matrix<var, -1, 1> y2 = f2(PMXOdeIntegrator<torsten::PkAdams>());
-    torsten::test::test_grad(params, y1, y2, 5.e-9, 1.e-8);
+    torsten::test::test_grad(params, y1, y2, 2.e-7, 1.e-8);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(PMXOdeIntegrator<torsten::PkBdf>());
     Eigen::Matrix<var, -1, 1> y2 = f2(PMXOdeIntegrator<torsten::PkBdf>());
-    torsten::test::test_grad(params, y1, y2, 5.e-9, 1.e-8);
+    torsten::test::test_grad(params, y1, y2, 6.e-8, 1.e-8);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(PMXOdeIntegrator<torsten::PkRk45>());
     Eigen::Matrix<var, -1, 1> y2 = f2(PMXOdeIntegrator<torsten::PkRk45>());
-    torsten::test::test_grad(params, y1, y2, 5.e-9, 1.e-8);
+    torsten::test::test_grad(params, y1, y2, 5.e-8, 1.e-8);
   }
 }

@@ -79,7 +79,7 @@ TEST_F(TorstenOneCptTest, ss_zero_rate) {
   TORSTEN_ODE_GRAD_THETA_TEST(pmx_solve_bdf, f_onecpt, nCmt,
                               time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag,
                               rel_tol, abs_tol, max_num_steps,
-                              2e-5, 1e-6, 5e-5, 1e-5);
+                              2e-5, 1e-6, 5.5e-5, 1e-5);
 
   TORSTEN_ODE_GRAD_THETA_TEST(pmx_solve_adams, f_onecpt, nCmt,
                               time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag,
@@ -475,7 +475,7 @@ TEST_F(TorstenOneCptTest, ss_multiple_infusion) {
   TORSTEN_ODE_GRAD_BIOVAR_TEST(pmx_solve_adams, f_onecpt, nCmt,
                                time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag,
                                rel_tol, abs_tol, max_num_steps,
-                               2e-5, 1e-10, 1e-6, 1e-8);
+                               2e-5, 1e-10, 8e-6, 1e-8);
 }
 
 TEST_F(TorstenOneCptTest, multiple_bolus) {

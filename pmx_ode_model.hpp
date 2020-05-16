@@ -5,6 +5,8 @@
 #include <stan/math/prim/fun/to_array_1d.hpp>
 #include <stan/math/rev/fun/to_var.hpp>
 #include <stan/math/rev/functor/algebra_solver_powell.hpp>
+#include <stan/math/rev/functor/algebra_solver_newton.hpp>
+#include <stan/math/rev/functor/algebra_solver_fp.hpp>
 #include <stan/math/prim/err/check_less_or_equal.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
 #include <stan/math/torsten/PKModel/functors/check_mti.hpp>
@@ -524,7 +526,7 @@ namespace torsten {
       std::vector<scalar_t> x0(x.data(), x.data() + x.size());
       Eigen::Matrix<scalar_t, Eigen::Dynamic, 1> result(x.size());
 
-      static const char* function("Steady State Event");
+      static const char* func("Steady State Event");
 
       if (rate == 0) {  // bolus dose
         std::vector<T1> ode_theta(packer_.unpack_ode_theta(y, x_i));
@@ -533,7 +535,11 @@ namespace torsten {
         x0[cmt_ - 1] += amt;
         std::vector<scalar_t> pred = integrator_(f_, x0, t0, ii_, ode_theta, ode_x_r, x_i)[0];
         for (int i = 0; i < result.size(); i++) {
+#ifdef TORSTEN_AS_FP
+          result(i) = pred[i];
+#else
           result(i) = x(i) - pred[i];
+#endif
         }
       } else if (ii_ > 0) {  // multiple truncated infusions
         T1 dt = amt / rate;
@@ -550,13 +556,23 @@ namespace torsten {
         std::vector<double> ode_x_r2(packer_.unpack_ode_x_r(x_r, x_i));
         packer_.scale_rate(n, ode_theta2, ode_x_r2, x_i);
         std::vector<scalar_t> pred = integrator_(f_, x0, t0, dt2, ode_theta2, ode_x_r2, x_i)[0];
-        for (int i = 0; i < result.size(); i++) result(i) = x(i) - pred[i];
+        for (int i = 0; i < result.size(); i++) {
+#ifdef TORSTEN_AS_FP
+          result(i) = pred[i];
+#else
+          result(i) = x(i) - pred[i];
+#endif
+        }
       } else {  // constant infusion
         std::vector<T1> ode_theta(packer_.unpack_ode_theta(y, x_i));
         std::vector<double> ode_x_r(packer_.unpack_ode_x_r(x_r, x_i));
-        stan::math::check_less_or_equal(function, "AMT", amt, 0);
+        stan::math::check_less_or_equal(func, "AMT", amt, 0);
         std::vector<scalar_t> derivative = f_(0, to_array_1d(x), ode_theta, ode_x_r, x_i, 0);
+#ifdef TORSTEN_AS_FP
+        stan::math::throw_domain_error(func, "algebra_solver_fp used for ", 1, "constant infusion");
+#else
         result = to_vector(derivative);
+#endif
       }
 
       return result;
@@ -842,6 +858,7 @@ namespace torsten {
           const PMXOdeIntegrator<It>& integrator) const {
       using stan::math::value_of;
       using stan::math::algebra_solver_powell;
+      using stan::math::algebra_solver_newton;
 
       typedef typename stan::return_type_t<T_amt, T_r, T_par, T_ii> scalar;
 
@@ -859,11 +876,27 @@ namespace torsten {
       const double init_dt = (rate == 0.0 || ii > 0) ? ii_dbl : 24.0;
       PMXOdeFunctorSSAdaptor<It, T_amt, T_r, T_ii, F> fss;
       PMXOdeFunctorSSAdaptorPacker<F, T_amt, T_r, T_ii> packer;
+#ifdef TORSTEN_AS_POWELL
       return algebra_solver_powell(fss, integrate(t0, rate_vec, init_dbl, init_dt, integrator),
                                    packer.adapted_param(par_, amt, rate, ii, x_i),
                                    packer.adapted_x_r(amt, rate, ii, x_i, integrator),
                                    x_i, 0,
                                    integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step);
+#elif defined(TORSTEN_AS_FP)
+      std::vector<double> u_scale(ncmt_, 1.0);
+      std::vector<double> f_scale(ncmt_, 1.0);
+      return algebra_solver_fp(fss, integrate(t0, rate_vec, init_dbl, init_dt, integrator),
+                               packer.adapted_param(par_, amt, rate, ii, x_i),
+                               packer.adapted_x_r(amt, rate, ii, x_i, integrator),
+                               x_i, u_scale, f_scale, 0,
+                               integrator.as_atol, integrator.as_max_num_step);
+#else
+      return algebra_solver_newton(fss, integrate(t0, rate_vec, init_dbl, init_dt, integrator),
+                                   packer.adapted_param(par_, amt, rate, ii, x_i),
+                                   packer.adapted_x_r(amt, rate, ii, x_i, integrator),
+                                   x_i, 0,
+                                   integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step);
+#endif
     }
   };
 }
