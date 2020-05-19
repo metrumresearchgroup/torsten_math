@@ -859,6 +859,7 @@ namespace torsten {
       using stan::math::value_of;
       using stan::math::algebra_solver_powell;
       using stan::math::algebra_solver_newton;
+      using stan::math::algebra_solver_fp;
 
       typedef typename stan::return_type_t<T_amt, T_r, T_par, T_ii> scalar;
 
