@@ -232,10 +232,9 @@ namespace torsten{
       bool is_invalid = false;
       std::ostringstream rank_fail_msg;
 
-      MPI_Comm comm;
-      comm = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_PARM];
-      int rank = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_PARM].rank;
-      int size = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_PARM].size;
+      const MPI_Comm& comm = torsten::mpi::Session::pmx_parm_comm.comm();
+      int rank = torsten::mpi::Session::pmx_parm_comm.rank();
+      int size = torsten::mpi::Session::pmx_parm_comm.size();
 
       std::vector<MPI_Request> req(np);
       vector<MatrixXd> res_d(np);
@@ -383,10 +382,9 @@ namespace torsten{
       bool is_invalid = false;
       std::ostringstream rank_fail_msg;
 
-      MPI_Comm comm;
-      comm = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_DATA];
-      int rank = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_DATA].rank;
-      int size = torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_PMX_DATA].size;
+      const MPI_Comm& comm = torsten::mpi::Session::pmx_data_comm.comm();
+      int rank = torsten::mpi::Session::pmx_data_comm.rank();
+      int size = torsten::mpi::Session::pmx_data_comm.size();
 
       std::vector<MPI_Request> req(np);
 
@@ -396,14 +394,12 @@ namespace torsten{
       for (int id = 0; id < np; ++id) {
 
         /* For every rank */
-
         int nKeep = events_rec.num_event_times(id);
         int my_worker_id = torsten::mpi::my_worker(id, np, size);
         int begin_id = EM::begin(id, events_rec) * nCmt;
         int size_id = nKeep * nCmt;
 
         /* only solver rank */
-
         if (rank == my_worker_id) {
           try {
             EM em(id, events_rec);

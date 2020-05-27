@@ -370,7 +370,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, exception_sync) {
   using model_t = torsten::PMXTwoCptModel<double>;
   using torsten::mpi::my_worker;
 
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
   MPI_Comm comm;
   comm = MPI_COMM_WORLD;
@@ -638,7 +638,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, exception_var_max_num_steps_fails) {
 TEST_F(TorstenPopulationNeutropeniaTest, domain_error) {
   using torsten::pmx_solve_group_bdf;
 
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
 #ifdef TORSTEN_MPI
   MPI_Comm comm;

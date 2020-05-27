@@ -60,14 +60,14 @@ namespace torsten {
 }
 
 TEST_F(TorstenOdeTest_chem, mpi_dynamic_load_cvodes_ivp_system_bdf_mpi) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
-  const torsten::mpi::Communicator& pmx_comm =
-    torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM];
+  const stan::math::mpi::Communicator& pmx_comm =
+    torsten::mpi::Session::ode_parm_comm;
 
   torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_CLEANER> master(pmx_comm);
 
-  if (pmx_comm.rank > 0) {
+  if (pmx_comm.rank() > 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_SLAVE> load(pmx_comm);
     load.slave();
   } else {
@@ -122,14 +122,14 @@ TEST_F(TorstenOdeTest_chem, mpi_dynamic_load_cvodes_ivp_system_bdf_mpi) {
 }
 
 TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_fwd_sensitivity_uniform_theta) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
-  const torsten::mpi::Communicator& pmx_comm =
-    torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM];
+  const stan::math::mpi::Communicator& pmx_comm =
+    torsten::mpi::Session::ode_parm_comm;
 
   torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_CLEANER> master(pmx_comm);
 
-  if (pmx_comm.rank > 0) {
+  if (pmx_comm.rank() > 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_SLAVE> load(pmx_comm);
     load.slave();
   } else {
@@ -186,14 +186,14 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_fwd_sensitivity_uniform_thet
 }
 
 TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_fwd_sensitivity_uniform_theta_exception) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
-  const torsten::mpi::Communicator& pmx_comm =
-    torsten::mpi::Session<NUM_TORSTEN_COMM>::comms[TORSTEN_COMM_ODE_PARM];
+  const stan::math::mpi::Communicator& pmx_comm =
+    torsten::mpi::Session::ode_parm_comm;
 
   torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_CLEANER> master(pmx_comm);
 
-  if (pmx_comm.rank > 0) {
+  if (pmx_comm.rank() > 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_SLAVE> load(pmx_comm);
     load.slave();
   } else {

@@ -32,7 +32,7 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_bdf_mpi) {
   using stan::math::var;
   using std::vector;
 
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
   // size of population
   const int np = 100;
@@ -59,7 +59,7 @@ TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_theta_bdf_mpi) {
   using stan::math::var;
   using std::vector;
 
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
   // size of population
   const int np = 100;
@@ -86,7 +86,7 @@ TEST_F(TorstenOdeTest_neutropenia, fwd_sensitivity_theta_bdf_mpi) {
   using stan::math::var;
   using std::vector;
 
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
   // size of population
   const int np = 100;
@@ -113,7 +113,7 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_adams_mpi) {
   using stan::math::var;
   using std::vector;
 
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
   // size of population
   const int np = 100;
@@ -140,7 +140,7 @@ TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_theta_adams_mpi) {
   using stan::math::var;
   using std::vector;
 
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
   // size of population
   const int np = 100;
@@ -167,7 +167,7 @@ TEST_F(TorstenOdeTest_neutropenia, fwd_sensitivity_theta_adams_mpi) {
   using stan::math::var;
   using std::vector;
 
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
   // size of population
   const int np = 100;

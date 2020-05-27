@@ -50,7 +50,7 @@ using stan::math::var;
 using std::vector;
 
 TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_set_use_uniform_work) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
   // size of population
   const int np = 8;
@@ -69,7 +69,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_set_use_uniform_work) {
   vector<vector<double> > x_r_m (np, x_r);
   vector<vector<int> > x_i_m (np, x_i);
 
-  torsten::mpi::Communicator pmx_comm(torsten::mpi::Session<NUM_TORSTEN_COMM>::env, MPI_COMM_WORLD);
+  stan::math::mpi::Communicator pmx_comm(stan::math::mpi::Session::intra_chain_comm(1));
   torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_MASTER> load(pmx_comm);
 
   load.init_buf = std::vector<int>{0, 1, static_cast<int>(y0.size()), static_cast<int>(theta.size()), static_cast<int>(x_r.size()), static_cast<int>(x_i.size()), 0, 0, 0};
@@ -95,7 +95,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_set_use_uniform_work) {
 }
 
 TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_set_use_non_uniform_work) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
   // size of population
   const int np = 3;
@@ -116,7 +116,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_set_use_non_uniform_work) {
   x_r.push_back(1.0); vector<vector<double> > x_r_m (np, x_r);
   x_i.push_back(1.0); vector<vector<int> > x_i_m (np, x_i);
 
-  torsten::mpi::Communicator pmx_comm(torsten::mpi::Session<NUM_TORSTEN_COMM>::env, MPI_COMM_WORLD);
+  stan::math::mpi::Communicator pmx_comm(stan::math::mpi::Session::intra_chain_comm(1));
   torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_MASTER> load(pmx_comm);
 
   load.init_buf = std::vector<int>{0, 1, static_cast<int>(y0.size()), static_cast<int>(theta.size()), static_cast<int>(x_r.size()), static_cast<int>(x_i.size()), 0, 0, 0};
@@ -146,7 +146,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_set_use_non_uniform_work) {
 }
 
 TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_single_work) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
   // size of population
   const int np = 1;
@@ -165,10 +165,10 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_single_work) {
   vector<vector<double> > x_r_m (np, x_r);
   vector<vector<int> > x_i_m (np, x_i);
 
-  torsten::mpi::Communicator pmx_comm(torsten::mpi::Session<NUM_TORSTEN_COMM>::env, MPI_COMM_WORLD);
+  stan::math::mpi::Communicator pmx_comm(stan::math::mpi::Session::intra_chain_comm(1));
 
   torsten::dsolve::pmx_ode_group_mpi_functor fdyn(0);
-  if (pmx_comm.rank == 0) {
+  if (pmx_comm.rank() == 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_MASTER> load(pmx_comm);
     MatrixXd res = load.master(f, 1, y0_m, t0, len, ts_m, theta_m, x_r_m, x_i_m, 1.e-8, 1.e-8, 10000);
     MatrixXd sol = torsten::to_matrix(pmx_integrate_ode_adams(f, y0, t0, ts, theta, x_r, x_i, 1.e-8, 1.e-8, 10000));
@@ -181,12 +181,12 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_single_work) {
 }
 
 TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_multiple_uniform_work) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
-  torsten::mpi::Communicator pmx_comm(torsten::mpi::Session<NUM_TORSTEN_COMM>::env, MPI_COMM_WORLD);
+  stan::math::mpi::Communicator pmx_comm(stan::math::mpi::Session::intra_chain_comm(1));
   std::vector<double> ts0 {ts};
 
-  if (pmx_comm.rank > 0) {
+  if (pmx_comm.rank() > 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_SLAVE> load(pmx_comm);
     load.slave();
   } else {
@@ -215,12 +215,12 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_multiple_unifor
 }
 
 TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_bdf_master_slave_multiple_non_uniform_work) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
-  torsten::mpi::Communicator pmx_comm(torsten::mpi::Session<NUM_TORSTEN_COMM>::env, MPI_COMM_WORLD);
+  stan::math::mpi::Communicator pmx_comm(stan::math::mpi::Session::intra_chain_comm(1));
   std::vector<double> ts0 {ts};
 
-  if (pmx_comm.rank > 0) {
+  if (pmx_comm.rank() > 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_SLAVE> load(pmx_comm);
     load.slave();
   } else {
@@ -254,12 +254,12 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_bdf_master_slave_multiple_no
 }
 
 TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_ts_par_multiple_non_uniform_work) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
-  torsten::mpi::Communicator pmx_comm(torsten::mpi::Session<NUM_TORSTEN_COMM>::env, MPI_COMM_WORLD);
+  stan::math::mpi::Communicator pmx_comm(stan::math::mpi::Session::intra_chain_comm(1));
   std::vector<double> ts0 {ts};
 
-  if (pmx_comm.rank > 0) {
+  if (pmx_comm.rank() > 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_SLAVE> load(pmx_comm);
     load.slave();
   } else {
@@ -333,12 +333,12 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_ts_par_multiple
 }
 
 TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_theta_par_multiple_non_uniform_work) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
-  torsten::mpi::Communicator pmx_comm(torsten::mpi::Session<NUM_TORSTEN_COMM>::env, MPI_COMM_WORLD);
+  stan::math::mpi::Communicator pmx_comm(stan::math::mpi::Session::intra_chain_comm(1));
   std::vector<double> ts0 {ts};
 
-  if (pmx_comm.rank > 0) {
+  if (pmx_comm.rank() > 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_SLAVE> load(pmx_comm);
     load.slave();
   } else {
@@ -418,12 +418,12 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_theta_par_multi
 }
 
 TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_y0_par_multiple_non_uniform_work) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
-  torsten::mpi::Communicator pmx_comm(torsten::mpi::Session<NUM_TORSTEN_COMM>::env, MPI_COMM_WORLD);
+  stan::math::mpi::Communicator pmx_comm(stan::math::mpi::Session::intra_chain_comm(1));
   std::vector<double> ts0 {ts};
 
-  if (pmx_comm.rank > 0) {
+  if (pmx_comm.rank() > 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_SLAVE> load(pmx_comm);
     load.slave();
   } else {
@@ -511,12 +511,12 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_y0_par_multiple
 }
 
 TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_y0_theta_par_multiple_non_uniform_work) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
-  torsten::mpi::Communicator pmx_comm(torsten::mpi::Session<NUM_TORSTEN_COMM>::env, MPI_COMM_WORLD);
+  stan::math::mpi::Communicator pmx_comm(stan::math::mpi::Session::intra_chain_comm(1));
   std::vector<double> ts0 {ts};
 
-  if (pmx_comm.rank > 0) {
+  if (pmx_comm.rank() > 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_SLAVE> load(pmx_comm);
     load.slave();
   } else {
@@ -613,12 +613,12 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_y0_theta_par_mu
 }
 
 TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_ts_y0_theta_par_multiple_non_uniform_work) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
-  torsten::mpi::Communicator pmx_comm(torsten::mpi::Session<NUM_TORSTEN_COMM>::env, MPI_COMM_WORLD);
+  stan::math::mpi::Communicator pmx_comm(stan::math::mpi::Session::intra_chain_comm(1));
   std::vector<double> ts0 {ts};
 
-  if (pmx_comm.rank > 0) {
+  if (pmx_comm.rank() > 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_SLAVE> load(pmx_comm);
     load.slave();
   } else {
@@ -718,12 +718,12 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_ts_y0_theta_par
 }
 
 TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_ts_y0_par_multiple_non_uniform_work) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
-  torsten::mpi::Communicator pmx_comm(torsten::mpi::Session<NUM_TORSTEN_COMM>::env, MPI_COMM_WORLD);
+  stan::math::mpi::Communicator pmx_comm(stan::math::mpi::Session::intra_chain_comm(1));
   std::vector<double> ts0 {ts};
 
-  if (pmx_comm.rank > 0) {
+  if (pmx_comm.rank() > 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_SLAVE> load(pmx_comm);
     load.slave();
   } else {

@@ -1,7 +1,6 @@
 #ifndef STAN_MATH_TORSTEN_MPI_DYNAMIC_LOAD_HPP
 #define STAN_MATH_TORSTEN_MPI_DYNAMIC_LOAD_HPP
 
-#include <stan/math/torsten/mpi/communicator.hpp>
 #include <stan/math/torsten/dsolve/group_functor.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
 #include <stan/math/torsten/is_var.hpp>
@@ -31,7 +30,7 @@ namespace torsten {
       static const int err_tag       = 5;
       static const int kill_tag      = 6;
 
-      const torsten::mpi::Communicator& pmx_comm;
+      const stan::math::mpi::Communicator& pmx_comm;
       const MPI_Comm comm;
       std::vector<int> init_buf;
       std::vector<double> work_r;
@@ -40,8 +39,8 @@ namespace torsten {
       /*
        * constructor only allocates @c init_buf
        */
-      PMXOdeMPILoad(const torsten::mpi::Communicator& comm_in) :
-        pmx_comm(comm_in), comm(pmx_comm.comm), init_buf(init_buf_size, 0)
+      PMXOdeMPILoad(const stan::math::mpi::Communicator& comm_in) :
+        pmx_comm(comm_in), comm(pmx_comm.comm()), init_buf(init_buf_size, 0)
       {
         init_buf[0] = -1;
       }
@@ -182,8 +181,8 @@ namespace torsten {
        * waiting-working cycle by sending a kill tag.
        */
       inline void kill_slaves() const {
-        if (pmx_comm.rank == 0) {
-          for (int i = 1; i < pmx_comm.size; ++i) {
+        if (pmx_comm.rank() == 0) {
+          for (int i = 1; i < pmx_comm.size(); ++i) {
             MPI_Send(work_r.data(), 0, MPI_DOUBLE, i, kill_tag, comm);
           }
         }
@@ -209,11 +208,11 @@ namespace torsten {
        * population/group solvers and we need make sure
        * there are at least one workers.
        */
-      PMXDynamicLoad(const torsten::mpi::Communicator& comm_in) :
+      PMXDynamicLoad(const stan::math::mpi::Communicator& comm_in) :
         PMXOdeMPILoad(comm_in)
       {
         static const char* caller = "PMXDynamicLoad(master)";
-        stan::math::check_greater(caller, "MPI comm size", pmx_comm.size, 1);
+        stan::math::check_greater(caller, "MPI comm size", pmx_comm.size(), 1);
       }
 
       /*
@@ -350,7 +349,7 @@ namespace torsten {
         using scalar_t = typename stan::return_type_t<Tt, Ty, Tp>;
 
         static const char* caller = "PMXDynamicLoad::master";
-        stan::math::check_less(caller, "MPI comm rank", pmx_comm.rank, 1);
+        stan::math::check_less(caller, "MPI comm rank", pmx_comm.rank(), 1);
 
         init_buf[0]           = torsten::dsolve::pmx_ode_group_mpi_functor_id<F>::value;
         init_buf[1]           = integ_id;
@@ -362,7 +361,7 @@ namespace torsten {
         init_buf[i_y_var]     = torsten::is_var<Ty>::value;
         init_buf[i_p_var]     = torsten::is_var<Tp>::value;
 
-        for (int i = 1; i < pmx_comm.size; ++i) {
+        for (int i = 1; i < pmx_comm.size(); ++i) {
           MPI_Send(init_buf.data(), init_buf.size(), MPI_INT, i, up_tag, comm);
         }
 
@@ -371,7 +370,7 @@ namespace torsten {
         const int np = theta.size(); // population size
 
         int begin_id = 0;
-        std::vector<int> inv_task_map(pmx_comm.size, -1);
+        std::vector<int> inv_task_map(pmx_comm.size(), -1);
         std::vector<int> task_map(np, -1);
         std::vector<std::vector<double> > work_r_tmp(np);
         std::vector<std::vector<int> > work_i_tmp(np);
@@ -380,7 +379,7 @@ namespace torsten {
 
         // initial task distribution
         int ip = 0;
-        for (int i = 1; i < pmx_comm.size && ip < np; ++i, ++ip) {
+        for (int i = 1; i < pmx_comm.size() && ip < np; ++i, ++ip) {
           set_work(work_r_tmp[ip], work_i_tmp[ip], ip, y0, t0, len, ts, theta, x_r, x_i, rtol, atol, max_num_step);
           MPI_Isend(work_r_tmp[ip].data(), work_r_tmp[ip].size(), MPI_DOUBLE, i, work_tag, comm,&work_r_req[ip]);
           MPI_Isend(work_i_tmp[ip].data(), work_i_tmp[ip].size(), MPI_INT, i, work_tag, comm,&work_i_req[ip]);
@@ -414,7 +413,7 @@ namespace torsten {
 
           // all results recved?
           if (n_recv == np || is_invalid) {
-            for (int i = 1; i < pmx_comm.size; ++i) {
+            for (int i = 1; i < pmx_comm.size(); ++i) {
               MPI_Send(work_r.data(), 0, MPI_DOUBLE, i, down_tag, comm);
             }
             break;
@@ -453,7 +452,7 @@ namespace torsten {
       /*
        * constructor only allocates @c init_buf
        */
-      PMXDynamicLoad(const torsten::mpi::Communicator& comm_in) :
+      PMXDynamicLoad(const stan::math::mpi::Communicator& comm_in) :
         PMXOdeMPILoad(comm_in)
       {}
 
@@ -515,7 +514,7 @@ namespace torsten {
         using stan::math::var;
 
         static const char* caller = "PMXDynamicLoad::slave";
-        stan::math::check_greater(caller, "MPI comm rank", pmx_comm.rank, 0);
+        stan::math::check_greater(caller, "MPI comm rank", pmx_comm.rank(), 0);
 
         MPI_Status stat;
 
@@ -603,7 +602,7 @@ namespace torsten {
     struct PMXDynamicLoad<TORSTEN_MPI_DYN_CLEANER> : PMXOdeMPILoad {
       bool slave_alive;
 
-      PMXDynamicLoad(const torsten::mpi::Communicator& comm_in) :
+      PMXDynamicLoad(const stan::math::mpi::Communicator& comm_in) :
         PMXOdeMPILoad(comm_in), slave_alive(true)
       {}
 

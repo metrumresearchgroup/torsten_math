@@ -32,7 +32,7 @@ using stan::math::var;
 using std::vector;
 
 TEST_F(TorstenOdeTest_chem, cvodes_ivp_system_bdf_mpi) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
   const int np = 10;
 
@@ -357,7 +357,7 @@ TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_theta_AD_adams_mpi_performance) {
 }
 
 TEST_F(TorstenOdeTest_neutropenia, fwd_sensitivity_theta_AD_bdf_mpi) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
   // size of population
   const int np = 10;
@@ -387,7 +387,7 @@ TEST_F(TorstenOdeTest_neutropenia, fwd_sensitivity_theta_AD_bdf_mpi) {
 }
 
 TEST_F(TorstenOdeTest_neutropenia, fwd_sensitivity_theta_AD_adams_mpi) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
   // size of population
   const int np = 10;
@@ -429,7 +429,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_rank_exception_data_only) {
   vector<vector<double> > x_r_m (np, x_r);
   vector<vector<int> > x_i_m (np, x_i);
 
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
 #ifdef TORSTEN_MPI
   MPI_Comm comm;
@@ -513,7 +513,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_rank_exception_par_var) {
   vector<vector<double> > x_r_m (np, x_r);
   vector<vector<int> > x_i_m (np, x_i);
 
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
 #ifdef TORSTEN_MPI
   MPI_Comm comm;

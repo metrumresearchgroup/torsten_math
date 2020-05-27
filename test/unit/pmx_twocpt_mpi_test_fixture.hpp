@@ -13,7 +13,7 @@ class TorstenPopulationPMXTwoCptTest : public testing::Test {
   void SetUp() {
     // make sure memory's clean before starting each test
     stan::math::recover_memory();
-    torsten::mpi::Envionment::init();
+    stan::math::mpi::Envionment::init();
   }
 public:
   TorstenPopulationPMXTwoCptTest() :

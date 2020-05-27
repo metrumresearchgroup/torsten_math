@@ -27,7 +27,7 @@ using stan::math::var;
 using std::vector;
 
 TEST_F(TorstenOdeTest_chem, group_rk45_ivp) {
-  torsten::mpi::Envionment::init();
+  stan::math::mpi::Envionment::init();
 
   const int np = 7;
 
