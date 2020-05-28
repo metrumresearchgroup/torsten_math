@@ -3,7 +3,7 @@
 
 #ifdef TORSTEN_MPI
 
-#include <stan/math/torsten/mpi/envionment.hpp>
+#include <stan/math/mpi/envionment.hpp>
 
 /*
  * Given a Torsten communicator comm that has m workers and solves a group of
