@@ -26,6 +26,8 @@
 #include <chrono>
 #include <ctime>
 
+#include <stan/math/torsten/mpi/session_def.cpp>
+
 TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_bdf_mpi) {
   using torsten::dsolve::PMXCvodesFwdSystem;
   using torsten::pmx_integrate_ode_group_bdf;

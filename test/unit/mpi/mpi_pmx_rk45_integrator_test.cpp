@@ -26,6 +26,8 @@ using stan::math::matrix_v;
 using stan::math::var;
 using std::vector;
 
+#include <stan/math/torsten/mpi/session_def.cpp>
+
 TEST_F(TorstenOdeTest_chem, group_rk45_ivp) {
   stan::math::mpi::Envionment::init();
 

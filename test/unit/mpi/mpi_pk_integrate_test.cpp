@@ -31,6 +31,8 @@ using stan::math::matrix_v;
 using stan::math::var;
 using std::vector;
 
+#include <stan/math/torsten/mpi/session_def.cpp>
+
 TEST_F(TorstenOdeTest_chem, cvodes_ivp_system_bdf_mpi) {
   stan::math::mpi::Envionment::init();
 

@@ -71,7 +71,7 @@ namespace torsten {
         using torsten::dsolve::pmx_ode_group_mpi_functor;
         using torsten::dsolve::pmx_ode_group_mpi_functor_id;
 
-        stan::math::mpi::Communicator& pmx_comm = torsten::mpi::Session::ode_parm_comm;
+        stan::math::mpi::Communicator& pmx_comm = torsten::mpi::Session::ode_parm_comm();
         int integ_id = torsten::dsolve::integrator_id<ode_t<F, Tt, T_initial, T_param, ode_pars_t...>>::value;
         int functor_id = pmx_ode_group_mpi_functor_id<F>::value;
 
@@ -121,9 +121,9 @@ namespace torsten {
         using Ode = ode_t<F, Tt, T_initial, T_param, ode_pars_t...>;
         torsten::dsolve::PMXOdeService<Ode> serv(n, m);
     
-        MPI_Comm comm = torsten::mpi::Session::ode_parm_comm.comm();
-        int rank = torsten::mpi::Session::ode_parm_comm.rank();
-        int size = torsten::mpi::Session::ode_parm_comm.size();
+        MPI_Comm comm = torsten::mpi::Session::ode_parm_comm().comm();
+        int rank = torsten::mpi::Session::ode_parm_comm().rank();
+        int size = torsten::mpi::Session::ode_parm_comm().size();
 
         using scalar_type = typename stan::return_type_t<Tt, T_initial, T_param>;
 
@@ -245,9 +245,9 @@ namespace torsten {
 
         torsten::dsolve::PMXOdeService<Ode> serv(n, m);
     
-        MPI_Comm comm = torsten::mpi::Session::ode_parm_comm.comm();
-        int rank = torsten::mpi::Session::ode_parm_comm.rank();
-        int size = torsten::mpi::Session::ode_parm_comm.size();
+        MPI_Comm comm = torsten::mpi::Session::ode_parm_comm().comm();
+        int rank = torsten::mpi::Session::ode_parm_comm().rank();
+        int size = torsten::mpi::Session::ode_parm_comm().size();
 
         using scalar_type = typename stan::return_type_t<Tt, T_initial, T_param>;
 
@@ -367,9 +367,9 @@ namespace torsten {
         torsten::dsolve::PMXOdeService<Ode> serv(n, m);
     
         MPI_Comm comm;
-        comm = torsten::mpi::Session::ode_data_comm;
-        int rank = torsten::mpi::Session::ode_data_comm.rank();
-        int size = torsten::mpi::Session::ode_data_comm.size();
+        comm = torsten::mpi::Session::ode_data_comm();
+        int rank = torsten::mpi::Session::ode_data_comm().rank();
+        int size = torsten::mpi::Session::ode_data_comm().size();
 
         Eigen::MatrixXd res = Eigen::MatrixXd::Zero(n, ts.size());
         std::vector<MPI_Request> req(np);

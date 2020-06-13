@@ -27,6 +27,8 @@ using torsten::pmx_integrate_ode_group_rk45;
 using stan::math::var;
 using std::vector;
 
+#include <stan/math/torsten/mpi/session_def.cpp>
+
 TEST_F(TorstenOdeTest_sho, odeint_rk45_ivp_system) {
   std::vector<std::vector<double> > y1(integrate_ode_rk45(f, y0, t0, ts, theta , x_r, x_i));
   std::vector<std::vector<double> > y2(pmx_integrate_ode_rk45(f, y0, t0, ts, theta , x_r, x_i));

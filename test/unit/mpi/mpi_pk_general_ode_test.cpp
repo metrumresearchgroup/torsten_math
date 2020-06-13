@@ -22,6 +22,8 @@ using stan::math::var;
 using torsten::NONMENEventsRecord;
 using torsten::EventsManager;
 
+#include <stan/math/torsten/mpi/session_def.cpp>
+
 TEST_F(TorstenPopulationPMXTwoCptTest, rk45_solver_multiple_bolus_doses_data_only) {
   using model_t = torsten::PMXTwoCptModel<double>;
 
@@ -373,7 +375,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, exception_sync) {
   stan::math::mpi::Envionment::init();
 
   MPI_Comm comm;
-  comm = MPI_COMM_WORLD;
+  comm = MPI_COMM_STAN;
   int rank, size;
   MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
@@ -642,7 +644,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, domain_error) {
 
 #ifdef TORSTEN_MPI
   MPI_Comm comm;
-  comm = MPI_COMM_WORLD;
+  comm = MPI_COMM_STAN;
   int rank, size;
   MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);

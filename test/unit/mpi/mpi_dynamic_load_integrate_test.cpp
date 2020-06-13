@@ -37,6 +37,8 @@ using stan::math::matrix_v;
 using stan::math::var;
 using std::vector;
 
+#include <stan/math/torsten/mpi/session_def.cpp>
+
 namespace torsten {
   namespace dsolve {
     template<typename... Args>
@@ -64,7 +66,7 @@ TEST_F(TorstenOdeTest_chem, mpi_dynamic_load_cvodes_ivp_system_bdf_mpi) {
   stan::math::mpi::Envionment::init();
 
   const stan::math::mpi::Communicator& pmx_comm =
-    torsten::mpi::Session::ode_parm_comm;
+    torsten::mpi::Session::ode_parm_comm();
 
   if (pmx_comm.rank() > 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_SLAVE> load(pmx_comm);
@@ -127,7 +129,7 @@ TEST_F(TorstenOdeTest_chem, mpi_dynamic_load_fwd_sensitivity_non_uniform_theta) 
   stan::math::mpi::Envionment::init();
 
   const stan::math::mpi::Communicator& pmx_comm =
-    torsten::mpi::Session::ode_parm_comm;
+    torsten::mpi::Session::ode_parm_comm();
 
   if (pmx_comm.rank() > 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_SLAVE> load(pmx_comm);
@@ -195,7 +197,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_fwd_sensitivity_uniform_thet
   stan::math::mpi::Envionment::init();
 
   const stan::math::mpi::Communicator& pmx_comm =
-    torsten::mpi::Session::ode_parm_comm;
+    torsten::mpi::Session::ode_parm_comm();
 
   if (pmx_comm.rank() > 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_SLAVE> load(pmx_comm);
@@ -260,7 +262,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_fwd_sensitivity_uniform_thet
   stan::math::mpi::Envionment::init();
 
   const stan::math::mpi::Communicator& pmx_comm =
-    torsten::mpi::Session::ode_parm_comm;
+    torsten::mpi::Session::ode_parm_comm();
 
   if (pmx_comm.rank() > 0) {
     torsten::mpi::PMXDynamicLoad<TORSTEN_MPI_DYN_SLAVE> load(pmx_comm);

@@ -21,6 +21,8 @@
 #include <ctime>
 #include <random>
 
+#include <stan/math/torsten/mpi/session_def.cpp>
+
 namespace torsten {
   namespace dsolve {
 
