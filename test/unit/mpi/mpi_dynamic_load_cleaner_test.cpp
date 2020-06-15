@@ -10,7 +10,7 @@
 #include <stan/math/torsten/test/unit/test_util.hpp>
 #include <stan/math/rev/functor/integrate_ode_bdf.hpp>
 #include <nvector/nvector_serial.h>
-#include <stan/math/mpi/envionment.hpp>
+#include <stan/math/mpi/environment.hpp>
 #include <test/unit/util.hpp>
 #include <gtest/gtest.h>
 #include <stdio.h>
