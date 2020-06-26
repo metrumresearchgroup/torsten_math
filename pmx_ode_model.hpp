@@ -877,6 +877,7 @@ namespace torsten {
       const double init_dt = (rate == 0.0 || ii > 0) ? ii_dbl : 24.0;
       PMXOdeFunctorSSAdaptor<It, T_amt, T_r, T_ii, F> fss;
       PMXOdeFunctorSSAdaptorPacker<F, T_amt, T_r, T_ii> packer;
+      try {
 #ifdef TORSTEN_AS_POWELL
       return algebra_solver_powell(fss, integrate(t0, rate_vec, init_dbl, init_dt, integrator),
                                    packer.adapted_param(par_, amt, rate, ii, x_i),
@@ -898,6 +899,13 @@ namespace torsten {
                                    x_i, 0,
                                    integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step);
 #endif
+      } catch (const std::exception& e) {
+        const char *text =
+          "Torsten failed to find steady state, due to "
+          "either system's intrinsic lack of such a state "
+          "or improper algebra solver controls. Details: ";
+        throw std::runtime_error(std::string(text) + e.what());
+      }
     }
   };
 }
