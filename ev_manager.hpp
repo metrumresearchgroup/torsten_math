@@ -190,7 +190,7 @@ namespace torsten {
         res = n;
       } else {
         // FIXME
-        res = EventsManager(id, rec).events().num_state_times();
+        res = EventsManager(id, rec).events().size();
       }
 
       return res;

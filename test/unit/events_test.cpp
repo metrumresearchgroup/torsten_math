@@ -45,7 +45,7 @@ TEST_F(TorstenOneCptTest, lag_time) {
     em(events_rec);
   auto ev = em.events();
 
-  EXPECT_EQ(ev.num_state_times(), nt + 1);  
+  EXPECT_EQ(ev.size(), nt + 1);  
 
   EXPECT_FLOAT_EQ(ev.time(0), 0.0);
   EXPECT_FLOAT_EQ(ev.time(1), 1.5);
@@ -79,8 +79,8 @@ TEST_F(TorstenTwoCptTest, events_addl) {
     ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
     EM em(events_rec);
     auto ev = em.events();
-    EXPECT_EQ(ev.num_state_times(), evid.size() + addl[0]);
-    EXPECT_EQ(ev.num_state_times(), EM::num_events(events_rec) );
+    EXPECT_EQ(ev.size(), evid.size() + addl[0]);
+    EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
   }
 
   {
@@ -88,8 +88,8 @@ TEST_F(TorstenTwoCptTest, events_addl) {
     ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
     EM em(events_rec);
     auto ev = em.events();
-    EXPECT_EQ(ev.num_state_times(), evid.size() + addl[0]);
-    EXPECT_EQ(ev.num_state_times(), EM::num_events(events_rec) );
+    EXPECT_EQ(ev.size(), evid.size() + addl[0]);
+    EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
   }
 
   amt[3] = 400.0;
@@ -97,8 +97,8 @@ TEST_F(TorstenTwoCptTest, events_addl) {
   ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
   EM em(events_rec);
   auto ev = em.events();
-  EXPECT_EQ(ev.num_state_times(), evid.size() + addl[0] + addl[3]);
-  EXPECT_EQ(ev.num_state_times(), EM::num_events(events_rec) );
+  EXPECT_EQ(ev.size(), evid.size() + addl[0] + addl[3]);
+  EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
 
   EXPECT_EQ(ev.time(0 ), 0    );  EXPECT_EQ(ev.amt(0 ), 1000);  EXPECT_EQ(ev.evid(0 ), 1);
   EXPECT_EQ(ev.time(1 ), 0.25 );  EXPECT_EQ(ev.amt(1 ), 0   );  EXPECT_EQ(ev.evid(1 ), 0);
@@ -132,8 +132,8 @@ TEST_F(TorstenTwoCptTest, events_addl_singled_ragged_array) {
     ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
     EM em(0, events_rec);
     auto ev = em.events();
-    EXPECT_EQ(ev.num_state_times(), evid.size() + addl[0]);
-    EXPECT_EQ(ev.num_state_times(), EM::num_events(events_rec) );
+    EXPECT_EQ(ev.size(), evid.size() + addl[0]);
+    EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
   }
 
   {
@@ -141,8 +141,8 @@ TEST_F(TorstenTwoCptTest, events_addl_singled_ragged_array) {
     ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
     EM em(0, events_rec);
     auto ev = em.events();
-    EXPECT_EQ(ev.num_state_times(), evid.size() + addl[0]);
-    EXPECT_EQ(ev.num_state_times(), EM::num_events(events_rec) );
+    EXPECT_EQ(ev.size(), evid.size() + addl[0]);
+    EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
   }
 
   amt[3] = 400.0;
@@ -150,8 +150,8 @@ TEST_F(TorstenTwoCptTest, events_addl_singled_ragged_array) {
   ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
   EM em(0, events_rec);
   auto ev = em.events();
-  EXPECT_EQ(ev.num_state_times(), evid.size() + addl[0] + addl[3]);
-  EXPECT_EQ(ev.num_state_times(), EM::num_events(events_rec) );
+  EXPECT_EQ(ev.size(), evid.size() + addl[0] + addl[3]);
+  EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
 
   EXPECT_EQ(ev.time(0 ), 0    );  EXPECT_EQ(ev.amt(0 ), 1000);  EXPECT_EQ(ev.evid(0 ), 1);
   EXPECT_EQ(ev.time(1 ), 0.25 );  EXPECT_EQ(ev.amt(1 ), 0   );  EXPECT_EQ(ev.evid(1 ), 0);
@@ -206,7 +206,7 @@ TEST_F(TorstenTwoCptTest, events_addl_multiple_identical_ragged_array) {
   {
     EM em(0, events_rec, 0, n1, 0, n2, 0, n3);
     auto ev = em.events();
-    EXPECT_EQ(ev.num_state_times(), EM::num_events(0, events_rec) );
+    EXPECT_EQ(ev.size(), EM::num_events(0, events_rec) );
     EXPECT_EQ(ev.time(0 ), 0    );  EXPECT_EQ(ev.amt(0 ), 1000);  EXPECT_EQ(ev.evid(0 ), 1);
     EXPECT_EQ(ev.time(1 ), 0.25 );  EXPECT_EQ(ev.amt(1 ), 0   );  EXPECT_EQ(ev.evid(1 ), 0);
     EXPECT_EQ(ev.time(2 ), 0.5  );  EXPECT_EQ(ev.amt(2 ), 0   );  EXPECT_EQ(ev.evid(2 ), 0);
@@ -230,7 +230,7 @@ TEST_F(TorstenTwoCptTest, events_addl_multiple_identical_ragged_array) {
   {
     EM em(1, events_rec, n1, n1, n2, n2, n3, n3);
     auto ev = em.events();
-    EXPECT_EQ(ev.num_state_times(), EM::num_events(1, events_rec));
+    EXPECT_EQ(ev.size(), EM::num_events(1, events_rec));
     EXPECT_EQ(ev.time(0 ), 0    );  EXPECT_EQ(ev.amt(0 ), 1000);  EXPECT_EQ(ev.evid(0 ), 1);
     EXPECT_EQ(ev.time(1 ), 0.25 );  EXPECT_EQ(ev.amt(1 ), 0   );  EXPECT_EQ(ev.evid(1 ), 0);
     EXPECT_EQ(ev.time(2 ), 0.5  );  EXPECT_EQ(ev.amt(2 ), 0   );  EXPECT_EQ(ev.evid(2 ), 0);
@@ -270,8 +270,8 @@ TEST_F(TorstenTwoCptTest, events_addl_rate) {
   auto ev = em.events();
 
   /* each IV dose has an end event.*/
-  EXPECT_EQ(ev.num_state_times(), evid.size() + addl[0] + addl[3] * 2 + 1);
-  EXPECT_EQ(ev.num_state_times(), EM::num_events(events_rec) );
+  EXPECT_EQ(ev.size(), evid.size() + addl[0] + addl[3] * 2 + 1);
+  EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
 
   EXPECT_FLOAT_EQ(ev.time(0 ), 0    );   EXPECT_EQ(ev.evid(0 ), 1);
   EXPECT_FLOAT_EQ(ev.time(1 ), 0.25 );   EXPECT_EQ(ev.evid(1 ), 0);
@@ -351,7 +351,7 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_multiple_identical_ragged_array) {
   {
     EM em(0, events_rec, 0, n1, 0, n2, 0, n3);
     auto ev = em.events();
-    EXPECT_EQ(ev.num_state_times(), EM::num_events(0, events_rec) );
+    EXPECT_EQ(ev.size(), EM::num_events(0, events_rec) );
     EXPECT_FLOAT_EQ(ev.time(0 ), 0    );   EXPECT_EQ(ev.evid(0 ), 1);
     EXPECT_FLOAT_EQ(ev.time(1 ), 0.25 );   EXPECT_EQ(ev.evid(1 ), 0);
     EXPECT_FLOAT_EQ(ev.time(2 ), 0.5  );   EXPECT_EQ(ev.evid(2 ), 0);
@@ -398,7 +398,7 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_multiple_identical_ragged_array) {
 {
     EM em(1, events_rec, n1, n1, n2, n2, n3, n3);
     auto ev = em.events();
-    EXPECT_EQ(ev.num_state_times(), EM::num_events(1, events_rec) );
+    EXPECT_EQ(ev.size(), EM::num_events(1, events_rec) );
     EXPECT_FLOAT_EQ(ev.time(0 ), 0    );   EXPECT_EQ(ev.evid(0 ), 1);
     EXPECT_FLOAT_EQ(ev.time(1 ), 0.25 );   EXPECT_EQ(ev.evid(1 ), 0);
     EXPECT_FLOAT_EQ(ev.time(2 ), 0.5  );   EXPECT_EQ(ev.evid(2 ), 0);
@@ -461,8 +461,8 @@ TEST_F(TorstenTwoCptTest, events_addl_const_tlag) {
     ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
     EM em(events_rec);
     auto ev = em.events();
-    EXPECT_EQ(ev.num_state_times(), time.size() + addl[0] * 2 + 1 + addl[3]);
-    EXPECT_EQ(ev.num_state_times(), EM::num_events(events_rec) );
+    EXPECT_EQ(ev.size(), time.size() + addl[0] * 2 + 1 + addl[3]);
+    EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
 
     EXPECT_FLOAT_EQ(ev.time(0 ), 0    ); EXPECT_FLOAT_EQ(ev.amt(0 ), 1000.);
     EXPECT_FLOAT_EQ(ev.time(1 ), 0.25 ); EXPECT_FLOAT_EQ(ev.amt(1 ), 0.   );
@@ -504,8 +504,8 @@ TEST_F(TorstenTwoCptTest, events_addl_const_tlag) {
     ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
     EM em(events_rec);
     auto ev = em.events();
-    EXPECT_EQ(ev.num_state_times(), time.size() + addl[3] * 2 + 1 + addl[0]);
-    EXPECT_EQ(ev.num_state_times(), EM::num_events(events_rec) );
+    EXPECT_EQ(ev.size(), time.size() + addl[3] * 2 + 1 + addl[0]);
+    EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
     
     EXPECT_FLOAT_EQ(ev.time(0 ), 0   );   EXPECT_FLOAT_EQ(ev.amt(0 ), 1000.);
     EXPECT_FLOAT_EQ(ev.time(1 ), 0.25);   EXPECT_FLOAT_EQ(ev.amt(1 ), 0.   );
@@ -560,8 +560,8 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_const_tlag) {
   ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
   EM em(events_rec);
   auto ev = em.events();
-  EXPECT_EQ(ev.num_state_times(), time.size() + addl[3] * 3 + 2 + addl[0]);
-  EXPECT_EQ(ev.num_state_times(), EM::num_events(events_rec) );
+  EXPECT_EQ(ev.size(), time.size() + addl[3] * 3 + 2 + addl[0]);
+  EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
 
   EXPECT_FLOAT_EQ(ev.time(0 ), 0    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(0 )[1], 0.  );
   EXPECT_FLOAT_EQ(ev.time(1 ), 0.25 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(1 )[1], 0.  );
@@ -658,9 +658,9 @@ TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_const_tlag) {
     ER events_rec(nCmt, time_i, amt_i, rate_i, ii_i, evid_i, cmt_i, addl_i, ss_i, pMatrix_i, biovar_i, tlag_i);
     EM em(events_rec);
     EM em_i(id, all_events_rec, ibegin_pMatrix, isize_pMatrix, ibegin_biovar, isize_biovar, ibegin_tlag, isize_tlag);
-    EXPECT_EQ(em.events().num_state_times(), em_i.events().num_state_times());
-    EXPECT_EQ(em.events().num_state_times(), EM::num_events(id, all_events_rec) );
-    for (size_t j = 0; j < em.events().num_state_times(); ++j) {
+    EXPECT_EQ(em.events().size(), em_i.events().size());
+    EXPECT_EQ(em.events().size(), EM::num_events(id, all_events_rec) );
+    for (size_t j = 0; j < em.events().size(); ++j) {
       EXPECT_FLOAT_EQ(em.events().time(j), em_i.events().time(j));
       EXPECT_FLOAT_EQ(em.events().amt(j), em_i.events().amt(j));
       EXPECT_FLOAT_EQ(em.events().fractioned_rates(j)[1], em_i.events().fractioned_rates(j)[1]);
@@ -693,7 +693,7 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_tlag) {
   // Last Observation Carried Forward for the parameters for
   // the addl events. Since the last param has no lags, the
   // addl events have no lags.
-  EXPECT_EQ(ev.num_state_times(), time.size() + addl[3] * 2 + 2);
+  EXPECT_EQ(ev.size(), time.size() + addl[3] * 2 + 2);
 
   EXPECT_FLOAT_EQ(ev.time(0 ), 0    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(0 )[1],    0.0);
   EXPECT_FLOAT_EQ(ev.time(1 ), 0.25 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(1 )[1],    0.0);
@@ -743,7 +743,7 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_tlag_LOCF) {
   // parameter for this event is the one of the subsequent
   // event, which has no lag. Therefore the 1st addl event
   // has no lag, but the 2nd has.
-  EXPECT_EQ(ev.num_state_times(), time.size() + 6);
+  EXPECT_EQ(ev.size(), time.size() + 6);
 
   EXPECT_FLOAT_EQ(ev.time(0 ), 0   ); EXPECT_FLOAT_EQ(ev.fractioned_rates(0 )[1], 0  );
   EXPECT_FLOAT_EQ(ev.time(1 ), 0.25); EXPECT_FLOAT_EQ(ev.fractioned_rates(1 )[1], 0  );
@@ -860,8 +860,8 @@ TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_tlag_LOCF) {
     ER events_rec(nCmt, time_i, amt_i, rate_i, ii_i, evid_i, cmt_i, addl_i, ss_i, pMatrix_i, biovar_i, tlag_i);
     EM em(events_rec);
     EM em_i(id, all_events_rec, ibegin_pMatrix, isize_pMatrix, ibegin_biovar, isize_biovar, ibegin_tlag, isize_tlag);
-    EXPECT_EQ(em.events().num_state_times(), em_i.events().num_state_times());
-    for (size_t j = 0; j < em.events().num_state_times(); ++j) {
+    EXPECT_EQ(em.events().size(), em_i.events().size());
+    for (size_t j = 0; j < em.events().size(); ++j) {
       EXPECT_FLOAT_EQ(em.events().time(j), em_i.events().time(j));
       EXPECT_FLOAT_EQ(em.events().fractioned_rates(j)[1], em_i.events().fractioned_rates(j)[1]);
       EXPECT_EQ(em.events().evid(j), em_i.events().evid(j));

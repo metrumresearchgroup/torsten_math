@@ -265,7 +265,7 @@ namespace torsten{
             try {
               EM em(id, events_rec);
               auto events = em.events();
-              assert(nev == events.num_state_times());
+              assert(nev == events.size());
               assert(nKeep == em.nKeep);
               init.setZero();
 

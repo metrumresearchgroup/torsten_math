@@ -46,6 +46,9 @@ namespace torsten {
     const std::vector<std::vector<T6> >& tlag_;
 
     // internally generated events
+    // these events are not from user input but required for event
+    // specification. Such examples include those from tlag or
+    // infusion dosing.
     const size_t num_event_times;
     std::vector<T_time> gen_time;
     std::vector<T1> gen_amt;
@@ -83,6 +86,27 @@ namespace torsten {
      * the location of the individual in the ragged arrays.
      * In this constructor we assume @c p_ii.size() > 1 and
      * @c p_ss.size() > 1.
+     *
+     * @param ncmt nb. of compartments
+     * @param ibegin beginning index of the subject in data array
+     * @param isize # of indices for current subject in data array
+     * @param p_time event time
+     * @param p_amt dosing amount
+     * @param p_rate dosing rate
+     * @param p_ii dosing interval
+     * @param p_evid event id
+     * @param p_cmt event compartment
+     * @param p_addl additional events
+     * @param p_ss steady states flag
+     * @param ibegin_theta beginning index of the subject in param array
+     * @param isize_theta # of indices for current subject in param array
+     * @param theta parameter vector
+     * @param ibegin_biovar beginning index of the subject in bioavailability array
+     * @param isize_biovar # of indices for current subject in bioavailability array
+     * @param biovar bioavailability
+     * @param ibegin_tlag beginning index of the subject in lagtime array
+     * @param isize_tlag # of indices for current subject in lagtime array
+     * @param tlag lag time
      */
     EventHistory(int ncmt, int ibegin, int isize,
                  const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
@@ -146,6 +170,23 @@ namespace torsten {
       attach_event_parameters();
     }
 
+    /**
+     * EventHistory constructor for an invidual, based on population
+     * version.
+     *
+     * @param ncmt nb. of compartments
+     * @param p_time event time
+     * @param p_amt dosing amount
+     * @param p_rate dosing rate
+     * @param p_ii dosing interval
+     * @param p_evid event id
+     * @param p_cmt event compartment
+     * @param p_addl additional events
+     * @param p_ss steady states flag
+     * @param theta parameter vector
+     * @param biovar bioavailability
+     * @param tlag lag time
+     */
     EventHistory(int ncmt,
                  const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
                  const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
@@ -162,7 +203,7 @@ namespace torsten {
     {}
 
     void attach_event_parameters() {
-      int nEvent = num_state_times();
+      int nEvent = size();
       assert(nEvent > 0);
       int len_Parameters = param_index.size();  // numbers of events for which parameters are determined
       assert(len_Parameters > 0);
@@ -260,7 +301,7 @@ namespace torsten {
      * Events is sorted at the end of the procedure.
      */
     void insert_addl_dose() {
-      for (int i = 0; i < num_state_times(); i++) {
+      for (int i = 0; i < size(); i++) {
         if (is_dosing(i) && ((addl(i) > 0) && (ii(i) > 0))) {
           for (int j = 1; j <= addl(i); j++) {
             insert_event(i);
@@ -316,7 +357,7 @@ namespace torsten {
       using std::vector;
       using stan::math::value_of;
 
-      const int n = num_state_times();
+      const int n = size();
       for (size_t i = 0; i < n; ++i) {
         if ((is_dosing(i)) && (rate(i) > 0 && amt(i) > 0)) {
           insert_event(i);
@@ -343,7 +384,7 @@ namespace torsten {
           return a.first < b.first;
         });
 
-      for (size_t i = 0; i < num_state_times(); ++i) {
+      for (size_t i = 0; i < size(); ++i) {
         if ((is_dosing(i)) && (rate(i) > 0 && amt(i) > 0)) {
           double t0 = value_of(time(i));
           double t1 = t0 + value_of(amt(i)/rate(i));
@@ -384,7 +425,7 @@ namespace torsten {
     inline int addl (int i) const { return addl(index[i]); }
     inline int ss (int i) const { return ss  (index[i]); }
 
-    inline size_t num_state_times() const { return index.size(); }
+    inline size_t size() const { return index.size(); }
 
     inline std::vector<T_rate> fractioned_rates(int i) const {
       const int n = rates[0].second.size();
@@ -420,7 +461,7 @@ namespace torsten {
      */
     void insert_lag_dose() {
       // reverse loop so we don't process same lagged events twice
-      int nEvent = num_state_times();
+      int nEvent = size();
       int iEvent = nEvent - 1;
       while (iEvent >= 0) {
         if (is_dosing(iEvent)) {
@@ -454,8 +495,6 @@ namespace torsten {
     inline const T6& GetValueTlag(int iEvent, int iParameter) const {
       return tlag_[std::get<1>(param_index[iEvent])[2]][iParameter];
     }
-
-    inline size_t size() const { return index.size(); }
 
     /*
      * Overloading the << Operator
