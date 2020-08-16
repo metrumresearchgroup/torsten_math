@@ -364,10 +364,7 @@ TEST_F(TorstenTwoCptTest, rk45_model_solve_d_rate_var) {
   std::vector<double>& par = pMatrix[0];
   model_t model(par, ncmt, f);
   std::vector<var> vars(pmx_model_vars<model_t>::vars(t1, init, rate, par));
-  std::vector<var> par_rate;
-  par_rate.insert(par_rate.end(), par.begin(), par.end());
-  par_rate.insert(par_rate.end(), rate.begin(), rate.end());
-  EXPECT_EQ(vars.size(), par_rate.size());
+  EXPECT_EQ(vars.size(), rate.size());
   
   vector_v sol1(to_var(init));
   model.solve(sol1, t, t1, rate, integrator);
@@ -375,7 +372,7 @@ TEST_F(TorstenTwoCptTest, rk45_model_solve_d_rate_var) {
   vector_v sol2 = torsten::mpi::precomputed_gradients(sol2_d, vars);
   
   // vars and init should be pointing to the same @c vari
-  torsten::test::test_grad(vars, par_rate, sol1, sol2, 1.E-8, 1.E-5);
+  torsten::test::test_grad(vars, rate, sol1, sol2, 1.E-8, 1.E-5);
 }
 
 TEST_F(TorstenTwoCptTest, rk45_model_solve_d_par_var) {
@@ -559,10 +556,7 @@ TEST_F(TorstenTwoCptTest, PkBdf_model_solve_d_rate_var) {
   std::vector<double>& par = pMatrix[0];
   model_t model(par, ncmt, f);
   std::vector<var> vars(pmx_model_vars<model_t>::vars(t1, init, rate, par));
-  std::vector<var> par_rate;
-  par_rate.insert(par_rate.end(), par.begin(), par.end());
-  par_rate.insert(par_rate.end(), rate.begin(), rate.end());
-  EXPECT_EQ(vars.size(), par_rate.size());
+  EXPECT_EQ(vars.size(), rate.size());
   
   vector_v sol1(to_var(init));
   model.solve(sol1, t, t1, rate, integrator);
@@ -570,7 +564,7 @@ TEST_F(TorstenTwoCptTest, PkBdf_model_solve_d_rate_var) {
   vector_v sol2 = torsten::mpi::precomputed_gradients(sol2_d, vars);
   
   // vars and init should be pointing to the same @c vari
-  torsten::test::test_grad(vars, par_rate, sol1, sol2, 1.E-8, 1.E-5);
+  torsten::test::test_grad(vars, rate, sol1, sol2, 1.E-8, 1.E-5);
 }
 
 TEST_F(TorstenTwoCptTest, PkBdf_model_solve_d_par_var) {

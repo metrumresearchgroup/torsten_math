@@ -18,6 +18,196 @@ namespace torsten {
   using torsten::PMXOdeIntegrator;
   using torsten::PMXOdeIntegratorId;
 
+  /** 
+   * Rate adapter for ODE
+   * 
+   * @tparam T_theta type of original ODE param
+   * @tparam T_rate  type of rate
+   * 
+   */
+  template<typename T_theta, typename T_rate>
+  struct PMXOdeFunctorRateAdaptorInternal {
+    
+    const std::vector<T_theta>& theta_;
+    const std::vector<T_rate>& rate_;
+
+    PMXOdeFunctorRateAdaptorInternal(const std::vector<T_theta>& theta,
+                                     const std::vector<T_rate>& rate) :
+      theta_(theta), rate_(rate) {}
+
+    /** 
+     * generate adapted ODE parameter vector for adatepd ODE
+     * 
+     * @return adapted parameter: theta_ & rate_
+     */
+    const std::vector<typename stan::return_type_t<T_theta, T_rate>>
+    adapted_param() const {
+      std::vector<typename stan::return_type_t<T_theta, T_rate>> res(theta_);
+      res.insert(res.end(), rate_.begin(), rate_.end());
+      return res;
+    }
+
+    /** 
+     * original ode param
+     * 
+     * 
+     * @return original ode param vector
+     */
+    template<typename t2>
+    const std::vector<t2> ode_par(const std::vector<t2>& theta) const {
+      return {theta.begin(), theta.begin() + theta_.size()};
+    }
+    
+    /** 
+     * add rate to original ode result
+     * 
+     * @param res original ode result
+     * @param theta adapted ode param that contains theta & rate
+     */
+    template<typename t, typename t2>
+    void apply_rate(std::vector<t>& res, const std::vector<t2>& theta) const {
+      for (size_t i = 0; i < res.size(); i++) {
+        res.at(i) += theta.at(i + theta.size() - res.size()); 
+      }
+    }
+  };
+
+  /** 
+   * rate adapter specification when original ode param is data
+   * 
+   * @tparam t_rate  type of rate, must be <code>var</code>
+   * 
+   */
+  template<>
+  struct PMXOdeFunctorRateAdaptorInternal<double, stan::math::var> {
+    
+    const std::vector<double>& theta_;
+    const std::vector<stan::math::var>& rate_;
+
+    PMXOdeFunctorRateAdaptorInternal(const std::vector<double>& theta,
+                                     const std::vector<stan::math::var>& rate) :
+      theta_(theta), rate_(rate) {}
+
+    /** 
+     * generate adapted ode parameter vector for adatepd ode
+     * 
+     * @return adapted parameter: rate_
+     */
+    const std::vector<stan::math::var>& adapted_param() const {
+      return rate_;
+    }
+
+    /** 
+     * original ode param
+     * 
+     * 
+     * @return rate vector
+     */
+    template<typename T2>
+    const std::vector<double>& ode_par(const std::vector<T2>& theta) const {
+      return theta_;
+    }
+    
+    /** 
+     * add rate to original ode result
+     * 
+     * @param res original ode result
+     * @param theta adapted ode param that equals to rate
+     */
+    template<typename T, typename T2>
+    void apply_rate(std::vector<T>& res, const std::vector<T2>& theta) const {
+      for (size_t i = 0; i < res.size(); i++) {
+        res.at(i) += theta.at(i + theta.size() - res.size());
+      }
+    }
+  };
+
+  /** 
+   * rate adapter specification when rate is data
+   * 
+   * @tparam t_theta  type of original ode param
+   * 
+   */
+  template<typename T_theta>
+  struct PMXOdeFunctorRateAdaptorInternal<T_theta, double> {
+    
+    const std::vector<T_theta>& theta_;
+    const std::vector<double>& rate_;
+
+    PMXOdeFunctorRateAdaptorInternal(const std::vector<T_theta>& theta,
+                                     const std::vector<double>& rate) :
+      theta_(theta), rate_(rate) {}
+
+    /** 
+     * generate adapted ode parameter vector for adatepd ode
+     * 
+     * @return adapted parameter: rate_
+     */
+    const std::vector<T_theta>& adapted_param() const {
+      return theta_;
+    }
+
+    /** 
+     * original ode param
+     * 
+     * 
+     * @return rate vector
+     */
+    template<typename T2>
+    const std::vector<T2>& ode_par(const std::vector<T2>& theta)const {
+      return theta;
+    }
+    
+    /** 
+     * add rate to original ODE result
+     * 
+     * @param res original ODE result
+     * @param theta adapted ODE param that equals to rate
+     */
+    template<typename T, typename T2>
+    void apply_rate(std::vector<T>& res, const std::vector<T2>& theta) const {
+      for (size_t i = 0; i < res.size(); i++) {
+        res.at(i) += rate_[i];
+      }
+    }
+  };
+
+  /** 
+   * Functor class that solves ODE & apply infusion dosing.
+   */
+  template<typename F, typename T_theta, typename T_rate>
+  struct PMXOdeFunctorRateAdaptorNew {
+
+    PMXOdeFunctorRateAdaptorInternal<T_theta, T_rate> adaptor;
+
+    PMXOdeFunctorRateAdaptorNew(const std::vector<T_theta>& theta,
+                                const std::vector<T_rate>& rate) :
+      adaptor(theta, rate) {}
+
+    /*
+     * Evaluate ODE functor, with @c theta contains original
+     * parameter vector followed by @c rate params. So the
+     * @c theta passed in must be modfified to reflect this
+     * data arrangement.
+     */
+    template <typename T0, typename T1, typename T2>
+    inline std::vector<typename stan::return_type<T1, T2>::type>
+    operator()(const T0& t,
+               const std::vector<T1>& y,
+               const std::vector<T2>& theta,
+               const std::vector<double>& x_r,
+               const std::vector<int>& x_i,
+               std::ostream* msgs) const {
+      std::vector<typename stan::return_type<T1, T2>::type>
+        res(F()(t, y, adaptor.ode_par(theta), x_r, x_i, msgs));
+      adaptor.apply_rate(res, theta);
+
+      return res;
+    }
+  };
+
+
+
   /*
    * Adaptor for ODE functor when rate is @c var and
    * appended to @c theta. When
@@ -636,11 +826,8 @@ namespace torsten {
       int res = 0;
       if (is_var<T0>::value) res += 1;
       if (is_var<T1>::value) res += y0.size();
-      if (is_var<T2>::value) {
-        res += rate.size() + par.size();
-      } else if (is_var<T3>::value) {
-        res += par.size();
-      }
+      if (is_var<T2>::value) res += rate.size();
+      if (is_var<T3>::value) res += par.size();
       return res;
     }
 
@@ -666,18 +853,17 @@ namespace torsten {
         }
       }
       if (is_var<T2>::value) {
-        std::vector<stan::math::var> theta(to_var(PMXOdeFunctorRateAdaptor<F, T2>::adapted_param(par, rate)));
-        for (size_t j = 0; j < theta.size(); ++j) {
-          res[i] = theta[j];
+        for (size_t j = 0; j < rate.size(); ++j) {
+          res[i] = rate[j];
           i++;
         }
-      } else if (is_var<T3>::value) {
+      }
+      if (is_var<T3>::value) {
         for (size_t j = 0; j < par.size(); ++j) {
           res[i] = par[j];
           i++;
         }
       }
-
       if (is_var<T0>::value) {
         res[i] = t1;
       }
@@ -769,15 +955,13 @@ namespace torsten {
                const PMXOdeIntegrator<It>& integrator) const {
       const double t0_d = stan::math::value_of(t0);
       std::vector<Tt1> ts(time_step(t0, t1));
-      PMXOdeFunctorRateAdaptor<F, T1> f_rate;
+      PMXOdeFunctorRateAdaptorNew<F, T_par, T1> f_rate(par_, rate);
       if (t1 > t0) {
         auto y_vec = stan::math::to_array_1d(y);
-        std::vector<int> x_i;
         std::vector<std::vector<T> > res_v =
           integrator(f_rate, y_vec, t0_d, ts,
-                     f_rate.adapted_param(par_, rate),
-                     f_rate.adapted_x_r(rate),
-                     x_i);
+                     f_rate.adaptor.adapted_param(),
+                     {}, {});
         y = stan::math::to_vector(res_v[0]);
       }
     }
@@ -803,14 +987,12 @@ namespace torsten {
 
       const double t0_d = value_of(t0);
       std::vector<T0> ts(time_step(t0, t1));
-      PMXOdeFunctorRateAdaptor<F, T1> f_rate;
+      PMXOdeFunctorRateAdaptorNew<F, T_par, T1> f_rate(par_, rate);
       if (t1 > t0) {
         auto y1d = stan::math::to_array_1d(y);
-        std::vector<int> x_i;
         yd = integrator.solve_d(f_rate, y1d, t0_d, ts,
-                                f_rate.adapted_param(par_, rate),
-                                f_rate.adapted_x_r(rate),
-                                x_i).col(0);
+                                f_rate.adaptor.adapted_param(),
+                                {}, {}).col(0);
       }
     }
 
