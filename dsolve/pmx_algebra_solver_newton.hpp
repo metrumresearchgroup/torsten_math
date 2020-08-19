@@ -394,9 +394,6 @@ Eigen::Matrix<T2, -1, 1> pmx_algebra_solver_newton (
   stan::math::algebra_solver_check(x, y, x_r, x_i, f_tol, max_num_steps);
   check_nonnegative("pmx_algebra_solver", "u_scale", u_scale);
   check_nonnegative("pmx_algebra_solver", "f_scale", f_scale);
-  stan::math::check_matching_sizes("pmx_algebra_solver_newton", "the algebraic system's output",
-                       value_of(f(x, y, x_r, x_i, msgs)),
-                       "the vector of unknowns, x,", x);
 
   KinsolNewtonEnv<F> env(f, x, y, x_r, x_i, msgs, u_scale, f_scale);
   NewtonSolver<KinsolNewtonEnv<F>, NewtonADJac> newton;
@@ -414,9 +411,6 @@ Eigen::Matrix<T2, -1, 1> pmx_algebra_solver_newton (
 
   stan::math::algebra_solver_check(x, y, x_r, x_i, f_tol, max_num_steps);
   const std::vector<double> scaling(x.size(), 1.0);
-  stan::math::check_matching_sizes("pmx_algebra_solver_newton", "the algebraic system's output",
-                       value_of(f(x, y, x_r, x_i, msgs)),
-                       "the vector of unknowns, x,", x);
 
   KinsolNewtonEnv<F> env(f, x, y, x_r, x_i, msgs, scaling, scaling);
   NewtonSolver<KinsolNewtonEnv<F>, NewtonADJac> newton;
