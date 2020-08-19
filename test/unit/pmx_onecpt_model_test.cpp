@@ -37,9 +37,9 @@ TEST_F(TorstenOneCptModelTest, rate_dbl) {
   using model_t = PMXOneCptModel<double>;
   model_t model(CL, V2, ka);
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE, double> f1;
+  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE, double, double> f1(model.par(), rate);
 
-  std::vector<double> y = f1(t0, yvec, model.par(), rate, x_i, msgs);
+  std::vector<double> y = f1(t0, yvec, f1.adaptor.adapted_param(), {}, {}, msgs);
   EXPECT_DOUBLE_EQ(y[0], rate[0]);
   EXPECT_DOUBLE_EQ(y[1], rate[1]);
 }
@@ -55,10 +55,9 @@ TEST_F(TorstenOneCptModelTest, rate_var) {
   model_t model(CLv, V2v, kav);
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
   std::vector<stan::math::var> theta(model.par());
-  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE, var> f1;
-  theta.insert(theta.end(), rate_var.begin(), rate_var.end());
+  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE, var, var> f1(theta, rate_var);
 
-  std::vector<var> y = f1(t0, yvec, theta, x_r, x_i, msgs);
+  std::vector<var> y = f1(t0, yvec, f1.adaptor.adapted_param(), x_r, x_i, msgs);
   EXPECT_FLOAT_EQ(y[0].val(), rate[0]);
   EXPECT_FLOAT_EQ(y[1].val(), rate[1]);
 }
@@ -76,10 +75,9 @@ TEST_F(TorstenOneCptModelTest, rate_var_y0) {
   model_t model(CLv, V2v, kav);
   std::vector<stan::math::var> theta(model.par());
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE, var> f1;
-  theta.insert(theta.end(), rate_var.begin(), rate_var.end());
+  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE, var, var> f1(theta, rate_var);
 
-  std::vector<var> y = f1(t0, yvec, theta, x_r, x_i, msgs);
+  std::vector<var> y = f1(t0, yvec, f1.adaptor.adapted_param(), x_r, x_i, msgs);
 
   EXPECT_TRUE((std::is_same<torsten::f_t<model_t>, torsten::PMXOneCptODE>::value));
 }
@@ -99,10 +97,9 @@ TEST_F(TorstenOneCptModelTest, sd_solver) {
   model_t model(CLv, V2v, kav);
   std::vector<stan::math::var> theta(model.par());
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE, var> f1;
-  theta.insert(theta.end(), rate_var.begin(), rate_var.end());
+  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE, var, var> f1(theta, rate_var);
 
-  auto y1 = pmx_integrate_ode_bdf(f1, yvec, t0, ts, theta, x_r, x_i, msgs);
+  auto y1 = pmx_integrate_ode_bdf(f1, yvec, t0, ts, f1.adaptor.adapted_param(), x_r, x_i, msgs);
   PKRec<var> y2(to_var(y0));
   model.solve(y2, t0, ts[0], rate_var);
 

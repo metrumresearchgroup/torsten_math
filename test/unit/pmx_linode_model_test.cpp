@@ -79,10 +79,10 @@ TEST_F(TorstenTwoCptModelTest, linode_solver) {
   using model_t = PMXLinODEModel<var>;
   model_t model(theta, y0.size());
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  PMXOdeFunctorRateAdaptor<PMXLinODE, var> f1;
-
   std::vector<var> theta_vec(theta.data(), theta.data() + theta.size());
   theta_vec.insert(theta_vec.end(), rate_var.begin(), rate_var.end());
+
+  PMXOdeFunctorRateAdaptor<PMXLinODE, var, var> f1(theta_vec, rate_var);
   auto y1 = pmx_integrate_ode_bdf(f1, yvec, t0, ts, theta_vec, x_r, x_i, msgs);
   PKRec<var> y2(to_var(y0));
   model.solve(y2, t0, ts[0], rate_var);
@@ -121,11 +121,10 @@ TEST_F(TorstenTwoCptModelTest, linode_solver_zero_rate) {
   using model_t = PMXLinODEModel<var>;
   model_t model(theta, y0.size());
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  PMXOdeFunctorRateAdaptor<PMXLinODE, double> f1;
-
   std::vector<var> theta_vec(theta.data(), theta.data() + theta.size());
 
-  auto y1 = pmx_integrate_ode_bdf(f1, yvec, t0, ts, theta_vec, rate, x_i, msgs);
+  PMXOdeFunctorRateAdaptor<PMXLinODE, var, double> f1(theta_vec, rate);
+  auto y1 = pmx_integrate_ode_bdf(f1, yvec, t0, ts, theta_vec, {}, x_i, msgs);
   PKRec<var> y2(to_var(y0));
   model.solve(y2, t0, ts[0], rate);
   EXPECT_NEAR(y1[0][0].val(), y2(0).val(), 1.E-7);
