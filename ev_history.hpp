@@ -58,15 +58,12 @@ namespace torsten {
     std::vector<int> gen_addl;
     std::vector<int> gen_ss;
 
-    using IDVec = std::array<int, 7>;
     // 0: original(0)/generated(1)
     // 1: index in original/generated arrays
     // 2: evid
     // 3: is new?(0/1)
-    // 4: theta id
-    // 5: biovar id
-    // 6: tlag id
-    std::vector<IDVec> index;
+    using IDVec = std::array<int, 4>;
+    std::vector<IDVec> idx;
 
     // rate at distinct time
     std::vector<rate_t> rates;
@@ -76,9 +73,9 @@ namespace torsten {
     inline bool isnew(const IDVec& id) const { return id[3] == 1; }
     inline int evid (const IDVec& id) const { return id[2] ; }
 
-    inline bool keep(int i)  const { return keep(index[i]); }
-    inline bool isnew(int i) const { return isnew(index[i]); }
-    inline int evid (int i) const { return evid(index[i]); }
+    inline bool keep(int i)  const { return keep(idx[i]); }
+    inline bool isnew(int i) const { return isnew(idx[i]); }
+    inline int evid (int i) const { return evid(idx[i]); }
 
     /*
      * for a population with data in ragged array form, we
@@ -132,7 +129,7 @@ namespace torsten {
       biovar_(biovar),
       tlag_(tlag),
       num_event_times(isize),
-      index(isize, {0, 0, 0, 0, ibegin_theta, ibegin_biovar, ibegin_tlag})
+      idx(isize, {0, 0, 0, 0})
     {
       const int iend = ibegin + isize;
       using stan::math::check_greater_or_equal;
@@ -147,11 +144,8 @@ namespace torsten {
       check_greater_or_equal(caller, "addl size", p_addl.size() , size_t(iend));
       check_greater_or_equal(caller, "ss size", p_ss.size()     , size_t(iend));
       for (size_t i = 0; i < isize; ++i) {
-        index[i][1] = ibegin + i;
-        index[i][2] = evid_[ibegin + i];
-        index[i][4] = isize_theta   > 1 ? ibegin_theta  + i : ibegin_theta;
-        index[i][5] = isize_biovar  > 1 ? ibegin_biovar + i : ibegin_biovar;
-        index[i][6] = isize_tlag    > 1 ? ibegin_tlag   + i : ibegin_tlag;
+        idx[i][1] = ibegin + i;
+        idx[i][2] = evid_[ibegin + i];
       }
       insert_addl_dose();
       sort_state_time();
@@ -221,7 +215,7 @@ namespace torsten {
       if (len_Parameters == 1)  {
         for (int i = 0; i < nEvent; i++) {
           param_index[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time(i)) , std::array<int,3>(std::get<1>(param_index[0])));
-          index[i][3] = 0;
+          idx[i][3] = 0;
         }
       } else {  // parameters are event dependent.
         std::vector<double> times(nEvent, 0);
@@ -242,7 +236,7 @@ namespace torsten {
             newParameter = lower == (it_param_end) ? param_index[len_Parameters-1] : *lower;
             newParameter.first = t;
             param_index[len_Parameters + j] = newParameter;
-            index[iEvent][3] = 0;
+            idx[iEvent][3] = 0;
             j++;
           }
         }
@@ -283,7 +277,7 @@ namespace torsten {
      * another event.
      */
     void insert_event(int i) {
-      index.push_back({1, int(gen_time.size()), index[i][2], 1, index[i][4], index[i][5], index[i][6]});
+      idx.push_back({1, int(gen_time.size()), idx[i][2], 1});
       gen_time. push_back(time (i));
       gen_amt.  push_back(amt  (i));
       gen_rate. push_back(rate (i));
@@ -317,7 +311,7 @@ namespace torsten {
     /*
      * sort PMX events and nonevents times
      */
-    void sort_state_time() { std::stable_sort(index.begin(), index.end(),
+    void sort_state_time() { std::stable_sort(idx.begin(), idx.end(),
                                               [this](const IDVec &a, const IDVec &b) {
                                                 using stan::math::value_of;
                                                 double ta = keep(a) ? value_of(time_[a[1]]) : value_of(gen_time[a[1]]);
@@ -361,7 +355,7 @@ namespace torsten {
       for (size_t i = 0; i < n; ++i) {
         if ((is_dosing(i)) && (rate(i) > 0 && amt(i) > 0)) {
           insert_event(i);
-          index.back()[2] = 9;    // set evid to a special type "9"
+          idx.back()[2] = 9;    // set evid to a special type "9"
           gen_time. back() += amt(i)/rate(i);
           gen_amt.  back() = 0;
           gen_rate. back() = 0;
@@ -400,9 +394,9 @@ namespace torsten {
        * rate index points to the rates for each state time,
        * since there is one rates vector per time, not per event.
        */
-      rate_index.resize(index.size());
+      rate_index.resize(idx.size());
       int iRate = 0;
-      for (size_t i = 0; i < index.size(); ++i) {
+      for (size_t i = 0; i < idx.size(); ++i) {
         if (rates[iRate].first != time(i)) iRate++;
         rate_index[i] = iRate;
       }
@@ -417,15 +411,15 @@ namespace torsten {
     inline int addl (const IDVec& id) const { return keep(id) ? addl_[id[1]] : gen_addl[id[1]] ; }
     inline int ss (const IDVec& id) const { return keep(id) ? ss_[id[1]] : gen_ss[id[1]] ; }
 
-    inline T_time time (int i) const { return time(index[i]); }
-    inline const T1& amt (int i) const { return amt (index[i]); }
-    inline const T2& rate (int i) const { return rate(index[i]); }
-    inline const T3& ii (int i) const { return ii  (index[i]); }
-    inline int cmt (int i) const { return cmt (index[i]); }
-    inline int addl (int i) const { return addl(index[i]); }
-    inline int ss (int i) const { return ss  (index[i]); }
+    inline T_time time (int i) const { return time(idx[i]); }
+    inline const T1& amt (int i) const { return amt (idx[i]); }
+    inline const T2& rate (int i) const { return rate(idx[i]); }
+    inline const T3& ii (int i) const { return ii  (idx[i]); }
+    inline int cmt (int i) const { return cmt (idx[i]); }
+    inline int addl (int i) const { return addl(idx[i]); }
+    inline int ss (int i) const { return ss  (idx[i]); }
 
-    inline size_t size() const { return index.size(); }
+    inline size_t size() const { return idx.size(); }
 
     inline std::vector<T_rate> fractioned_rates(int i) const {
       const int n = rates[0].second.size();
@@ -442,7 +436,7 @@ namespace torsten {
     }
 
     std::vector<int> unique_times() {
-      std::vector<int> t(index.size());
+      std::vector<int> t(idx.size());
       std::iota(t.begin(), t.end(), 0);
       auto last = std::unique(t.begin(), t.end(),
                               [this](const int& i, const int& j) {return time(i) == time(j);});
@@ -468,11 +462,7 @@ namespace torsten {
           if (GetValueTlag(iEvent, cmt(iEvent) - 1) != 0) {
             insert_event(iEvent);
             gen_time.back() += GetValueTlag(iEvent, cmt(iEvent) - 1);
-
-            // Events[iEvent].evid = 2;  // Check
-            // set old event to a speical type "9", on which no
-            // action is taken
-            index[iEvent][2] = 9;
+            idx[iEvent][2] = 9;
           }
         }
         iEvent--;
@@ -482,10 +472,6 @@ namespace torsten {
 
     inline const theta_container<T4>& model_param(int i) const {
       return theta_[param_index[i].second[0]];
-    }
-
-    inline const T4& GetValue(int iEvent, int iParameter) const {
-      return theta_[std::get<1>(param_index[iEvent])[0]][iParameter];
     }
 
     inline const T5& bioavailability(int iEvent, int iParameter) const {

@@ -244,7 +244,7 @@ namespace torsten {
      * 
      * @return len in @c biovar for the subject
      */
-    int len_biovar(int id) const {
+    inline int len_biovar(int id) const {
       return biovar_.size()  == len_.size() ? 1 : len_[id];
     }
 
@@ -257,7 +257,7 @@ namespace torsten {
      * 
      * @return begin index in @c tlag for the subject
      */
-    int begin_tlag(int id) const {
+    inline int begin_tlag(int id) const {
       return tlag_.size()  == len_.size() ? id : begin_[id];
     }
 
@@ -270,7 +270,7 @@ namespace torsten {
      * 
      * @return len in @c tlag for the subject
      */
-    int len_tlag(int id) const {
+    inline int len_tlag(int id) const {
       return tlag_.size()  == len_.size() ? 1 : len_[id];
     }
 
