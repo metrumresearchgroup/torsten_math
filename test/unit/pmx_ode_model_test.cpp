@@ -1063,3 +1063,82 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_long_infusion_theta_grad_vs_long_run
     torsten::test::test_grad(params, y1, y2, 5.e-8, 1.e-8);
   }
 }
+
+struct twocpt_ode_with_data {
+  /**
+   * standard two compartment PK ODE RHS function
+   * @tparam T0 t type
+   * @tparam T1 initial condition type
+   * @tparam T2 parameter type
+   * @tparam T3 real data/rate type
+   * @param t type
+   * @param x initial condition type
+   * @param parms parameters
+   * @param rate dosing rate
+   * @param dummy dummy
+   */
+  template <typename T0, typename T1, typename T2, typename T3>
+  inline
+  std::vector<typename stan::return_type<T0, T1, T2, T3>::type>
+  operator()(const T0& t,
+             const std::vector<T1>& x,
+             const std::vector<T2>& parms,
+             const std::vector<T3>& x_r,
+             const std::vector<int>& x_i, std::ostream* pstream__) const {
+    typedef typename stan::return_type<T0, T1, T2, T3>::type scalar;
+
+    scalar
+      CL = parms.at(0) + x_r[0] + double(x_i[0]),
+      Q = parms.at(1),
+      V1 = parms.at(2),
+      V2 = parms.at(3),
+      ka = parms.at(4),
+      k10 = CL / V1,
+      k12 = Q / V1,
+      k21 = Q / V2;
+
+    std::vector<scalar> y(3, 0);
+    y.at(0) = -ka * x.at(0);
+    y.at(1) = ka * x.at(0) - (k10 + k12) * x.at(1) + k21 * x.at(2);
+    y.at(2) = k12 * x.at(1) - k21 * x.at(2);
+
+    return y;
+  }
+};
+
+TEST_F(TorstenTwoCptModelTest, ode_model_with_data_ss_theta_grad) {
+  y0[0] = 150;
+  y0[1] = 55;
+  y0[2] = 120;
+
+  int cmt = 0;
+  double amt = 2100.0;
+  const double ii = 5.0;
+  std::vector<var> params{CL, Q, V2, V3, ka, amt, 330};
+
+  PMXTwoCptODE f2cpt;
+  std::vector<var> theta(params.begin(), params.begin() + 5);
+  auto f1 = [&](const auto& integrator) {
+              PKODEModel<var, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
+    var& r = params.back();
+    return model.solve(t0, amt, r, ii, cmt, integrator);
+  };
+
+  std::vector<double> x_r{5.5};
+  std::vector<int> x_i{2};
+  twocpt_ode_with_data f2cpt_d;
+  std::vector<var> theta_d(params.begin(), params.begin() + 5);
+  theta_d[0] -= (x_r[0] + double(x_i[0]));
+  auto f2 = [&](const auto& integrator) {
+              PKODEModel<var, twocpt_ode_with_data> model(theta_d, x_r, x_i, y0.size(), f2cpt_d);
+    var& r = params.back();
+    return model.solve(t0, amt, r, ii, cmt, integrator);
+  };
+
+  for (int i = 0; i < 3; ++i) {
+    cmt = i + 1;
+    Eigen::Matrix<var, -1, 1> y1 = f1(PMXOdeIntegrator<torsten::PkAdams>());
+    Eigen::Matrix<var, -1, 1> y2 = f2(PMXOdeIntegrator<torsten::PkAdams>());
+    torsten::test::test_grad(params, y1, y2, 2.e-7, 1.e-8);
+  }
+}

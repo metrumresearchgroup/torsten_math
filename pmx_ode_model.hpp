@@ -624,15 +624,16 @@ namespace torsten {
   /**
    * ODE-based PKPD models.
    *
-   * @tparam T_time t type
-   * @tparam T_rate dosing rate type
    * @tparam T_par PK parameters type
    * @tparam F ODE functor
-   * @tparam Ti ODE additional parameter type, usually the ODE size
    */
   template<typename T_par, typename F> // NOLINT
   class PKODEModel {
+    const std::vector<double> x_r_dummy;
+    const std::vector<int> x_i_dummy;
     const std::vector<T_par> &par_;
+    const std::vector<double>& x_r_;
+    const std::vector<int>& x_i_;
     const F &f_;
     const int ncmt_;
   public:
@@ -642,16 +643,27 @@ namespace torsten {
     /**
      * Constructor
      *
-     * @param t0 initial time
-     * @param rate dosing rate
+     * @param par model parameters
+     * @param f ODE functor
+     * @param ncmt the ODE size.
+     */
+    PKODEModel(const std::vector<T_par> &par, int ncmt, const F& f) :
+      x_r_dummy(), x_i_dummy(),
+      par_(par), x_r_(x_r_dummy), x_i_(x_i_dummy),f_(f), ncmt_(ncmt)
+    {}
+
+    /**
+     * Constructor
+     *
      * @param par model parameters
      * @param f ODE functor
      * @param ncmt the ODE size.
      */
     PKODEModel(const std::vector<T_par> &par,
-               int ncmt,
-               const F& f) :
-      par_(par), f_(f), ncmt_(ncmt)
+               const std::vector<double>& x_r,
+               const std::vector<int>& x_i,
+               int ncmt, const F& f) :
+      par_(par), x_r_(x_r), x_i_(x_i),f_(f), ncmt_(ncmt)
     {}
 
     /**
@@ -665,6 +677,7 @@ namespace torsten {
     template<template<typename...> class T_model, typename... Ts>    
     PKODEModel(const T_model<Ts...>& m) :
       par_(m.par()),
+      x_r_(m.x_r_), x_i_(m.x_i_),
       f_(m.f()),
       ncmt_(m.ncmt())
     {}
@@ -778,7 +791,7 @@ namespace torsten {
         const std::vector<double> pars{value_of(par_)};
         PMXOdeFunctorRateAdaptor<F, double, double> f(pars, rate);
         std::vector<std::vector<double> > res_v =
-          integrator(f, y, t0, ts, f.adaptor.adapted_param(), {}, {});
+          integrator(f, y, t0, ts, f.adaptor.adapted_param(), x_r_, x_i_);
         res = stan::math::to_vector(res_v[0]);
       }
       return res;
@@ -811,8 +824,7 @@ namespace torsten {
         auto y_vec = stan::math::to_array_1d(y);
         std::vector<std::vector<T> > res_v =
           integrator(f_rate, y_vec, t0_d, ts,
-                     f_rate.adaptor.adapted_param(),
-                     {}, {});
+                     f_rate.adaptor.adapted_param(), x_r_, x_i_);
         y = stan::math::to_vector(res_v[0]);
       }
     }
@@ -842,8 +854,7 @@ namespace torsten {
       if (t1 > t0) {
         auto y1d = stan::math::to_array_1d(y);
         yd = integrator.solve_d(f_rate, y1d, t0_d, ts,
-                                f_rate.adaptor.adapted_param(),
-                                {}, {}).col(0);
+                                f_rate.adaptor.adapted_param(), x_r_, x_i_).col(0);
       }
     }
 
@@ -914,20 +925,20 @@ namespace torsten {
 #ifdef TORSTEN_AS_POWELL
       return algebra_solver_powell(fss, integrate(t0, rate_vec, init_dbl, init_dt, integrator),
                                    fss.adapted_param(),
-                                   {}, {}, 0,
+                                   x_r_, x_i_, 0,
                                    integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step);
 #elif defined(TORSTEN_AS_FP)
       std::vector<double> u_scale(ncmt_, 1.0);
       std::vector<double> f_scale(ncmt_, 1.0);
       return algebra_solver_fp(fss, integrate(t0, rate_vec, init_dbl, init_dt, integrator),
                                fss.adapted_param(),
-                               {}, {},
+                               x_r_, x_i_,
                                u_scale, f_scale, 0,
                                integrator.as_atol, integrator.as_max_num_step);
 #else
       return pmx_algebra_solver_newton(fss, integrate(t0, rate_vec, init_dbl, init_dt, integrator),
                                        fss.adapted_param(),
-                                       {}, {}, 0,
+                                       x_r_, x_i_, 0,
                                        integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step);
 #endif
       } catch (const std::exception& e) {
@@ -939,6 +950,7 @@ namespace torsten {
       }
     }
   };
+
 }
 
 #endif
