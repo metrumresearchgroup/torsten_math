@@ -294,26 +294,26 @@ TEST_F(TorstenTwoCptTest, events_addl_rate) {
   EXPECT_FLOAT_EQ(ev.time(18), 48   );   EXPECT_EQ(ev.evid(18), 1);
   EXPECT_FLOAT_EQ(ev.time(19), 60   );   EXPECT_EQ(ev.evid(19), 1);
 
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(0 )[1], 0  );
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(1 )[1], 0  );
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(2 )[1], 0  );
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(3 )[1], 0  );
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(4 )[1], 400);
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(5 )[1], 400);
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(6 )[1], 400);
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(7 )[1], 400);
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(8 )[1], 400);
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(9 )[1], 400);
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(10)[1], 0  );
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(11)[1], 0  );
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(12)[1], 400);
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(13)[1], 0  );
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(14)[1], 400);
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(15)[1], 400);
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(16)[1], 0  );
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(17)[1], 0  );
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(18)[1], 0  );
-  EXPECT_FLOAT_EQ(ev.fractioned_rates(19)[1], 0  );
+  EXPECT_FLOAT_EQ(em.fractioned_rates(0 )[1], 0  );
+  EXPECT_FLOAT_EQ(em.fractioned_rates(1 )[1], 0  );
+  EXPECT_FLOAT_EQ(em.fractioned_rates(2 )[1], 0  );
+  EXPECT_FLOAT_EQ(em.fractioned_rates(3 )[1], 0  );
+  EXPECT_FLOAT_EQ(em.fractioned_rates(4 )[1], 400);
+  EXPECT_FLOAT_EQ(em.fractioned_rates(5 )[1], 400);
+  EXPECT_FLOAT_EQ(em.fractioned_rates(6 )[1], 400);
+  EXPECT_FLOAT_EQ(em.fractioned_rates(7 )[1], 400);
+  EXPECT_FLOAT_EQ(em.fractioned_rates(8 )[1], 400);
+  EXPECT_FLOAT_EQ(em.fractioned_rates(9 )[1], 400);
+  EXPECT_FLOAT_EQ(em.fractioned_rates(10)[1], 0  );
+  EXPECT_FLOAT_EQ(em.fractioned_rates(11)[1], 0  );
+  EXPECT_FLOAT_EQ(em.fractioned_rates(12)[1], 400);
+  EXPECT_FLOAT_EQ(em.fractioned_rates(13)[1], 0  );
+  EXPECT_FLOAT_EQ(em.fractioned_rates(14)[1], 400);
+  EXPECT_FLOAT_EQ(em.fractioned_rates(15)[1], 400);
+  EXPECT_FLOAT_EQ(em.fractioned_rates(16)[1], 0  );
+  EXPECT_FLOAT_EQ(em.fractioned_rates(17)[1], 0  );
+  EXPECT_FLOAT_EQ(em.fractioned_rates(18)[1], 0  );
+  EXPECT_FLOAT_EQ(em.fractioned_rates(19)[1], 0  );
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_rate_multiple_identical_ragged_array) {
@@ -373,26 +373,26 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_multiple_identical_ragged_array) {
     EXPECT_FLOAT_EQ(ev.time(18), 48   );   EXPECT_EQ(ev.evid(18), 1);
     EXPECT_FLOAT_EQ(ev.time(19), 60   );   EXPECT_EQ(ev.evid(19), 1);
 
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(0 )[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(1 )[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(2 )[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(3 )[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(4 )[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(5 )[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(6 )[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(7 )[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(8 )[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(9 )[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(10)[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(11)[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(12)[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(13)[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(14)[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(15)[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(16)[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(17)[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(18)[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(19)[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(0 )[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(1 )[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(2 )[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(3 )[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(4 )[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(5 )[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(6 )[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(7 )[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(8 )[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(9 )[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(10)[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(11)[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(12)[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(13)[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(14)[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(15)[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(16)[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(17)[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(18)[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(19)[1], 0  );
   }
 
 {
@@ -420,26 +420,26 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_multiple_identical_ragged_array) {
     EXPECT_FLOAT_EQ(ev.time(18), 48   );   EXPECT_EQ(ev.evid(18), 1);
     EXPECT_FLOAT_EQ(ev.time(19), 60   );   EXPECT_EQ(ev.evid(19), 1);
 
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(0 )[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(1 )[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(2 )[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(3 )[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(4 )[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(5 )[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(6 )[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(7 )[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(8 )[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(9 )[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(10)[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(11)[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(12)[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(13)[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(14)[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(15)[1], 400);
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(16)[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(17)[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(18)[1], 0  );
-    EXPECT_FLOAT_EQ(ev.fractioned_rates(19)[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(0 )[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(1 )[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(2 )[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(3 )[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(4 )[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(5 )[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(6 )[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(7 )[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(8 )[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(9 )[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(10)[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(11)[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(12)[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(13)[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(14)[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(15)[1], 400);
+    EXPECT_FLOAT_EQ(em.fractioned_rates(16)[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(17)[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(18)[1], 0  );
+    EXPECT_FLOAT_EQ(em.fractioned_rates(19)[1], 0  );
   }
 }
 
@@ -563,25 +563,25 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_const_tlag) {
   EXPECT_EQ(ev.size(), time.size() + addl[3] * 3 + 2 + addl[0]);
   EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
 
-  EXPECT_FLOAT_EQ(ev.time(0 ), 0    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(0 )[1], 0.  );
-  EXPECT_FLOAT_EQ(ev.time(1 ), 0.25 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(1 )[1], 0.  );
-  EXPECT_FLOAT_EQ(ev.time(2 ), 0.5  ); EXPECT_FLOAT_EQ(ev.fractioned_rates(2 )[1], 0.  );
-  EXPECT_FLOAT_EQ(ev.time(3 ), 0.75 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(3 )[1], 0.  );
-  EXPECT_FLOAT_EQ(ev.time(4 ), 1    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(4 )[1], 0.  );
-  EXPECT_FLOAT_EQ(ev.time(5 ), 1    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(5 )[1], 0.  );
-  EXPECT_FLOAT_EQ(ev.time(6 ), 1.25 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(6 )[1], 400.);
-  EXPECT_FLOAT_EQ(ev.time(7 ), 1.5  ); EXPECT_FLOAT_EQ(ev.fractioned_rates(7 )[1], 400.);
-  EXPECT_FLOAT_EQ(ev.time(8 ), 1.75 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(8 )[1], 400.);
-  EXPECT_FLOAT_EQ(ev.time(9 ), 2    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(9 )[1], 400.);
-  EXPECT_FLOAT_EQ(ev.time(10), 4    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(10)[1], 400.);
-  EXPECT_FLOAT_EQ(ev.time(11), 4    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(11)[1], 400.);
-  EXPECT_FLOAT_EQ(ev.time(12), 5.75 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(12)[1], 0.  );
-  EXPECT_FLOAT_EQ(ev.time(13), 6    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(13)[1], 0.  );
-  EXPECT_FLOAT_EQ(ev.time(14), 9    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(14)[1], 400.);
-  EXPECT_FLOAT_EQ(ev.time(15), 10.75); EXPECT_FLOAT_EQ(ev.fractioned_rates(15)[1], 0.  );
-  EXPECT_FLOAT_EQ(ev.time(16), 11   ); EXPECT_FLOAT_EQ(ev.fractioned_rates(16)[1], 0.  );
-  EXPECT_FLOAT_EQ(ev.time(17), 12   ); EXPECT_FLOAT_EQ(ev.fractioned_rates(17)[1], 400.);
-  EXPECT_FLOAT_EQ(ev.time(18), 14   ); EXPECT_FLOAT_EQ(ev.fractioned_rates(18)[1], 400.);
+  EXPECT_FLOAT_EQ(ev.time(0 ), 0    ); EXPECT_FLOAT_EQ(em.fractioned_rates(0 )[1], 0.  );
+  EXPECT_FLOAT_EQ(ev.time(1 ), 0.25 ); EXPECT_FLOAT_EQ(em.fractioned_rates(1 )[1], 0.  );
+  EXPECT_FLOAT_EQ(ev.time(2 ), 0.5  ); EXPECT_FLOAT_EQ(em.fractioned_rates(2 )[1], 0.  );
+  EXPECT_FLOAT_EQ(ev.time(3 ), 0.75 ); EXPECT_FLOAT_EQ(em.fractioned_rates(3 )[1], 0.  );
+  EXPECT_FLOAT_EQ(ev.time(4 ), 1    ); EXPECT_FLOAT_EQ(em.fractioned_rates(4 )[1], 0.  );
+  EXPECT_FLOAT_EQ(ev.time(5 ), 1    ); EXPECT_FLOAT_EQ(em.fractioned_rates(5 )[1], 0.  );
+  EXPECT_FLOAT_EQ(ev.time(6 ), 1.25 ); EXPECT_FLOAT_EQ(em.fractioned_rates(6 )[1], 400.);
+  EXPECT_FLOAT_EQ(ev.time(7 ), 1.5  ); EXPECT_FLOAT_EQ(em.fractioned_rates(7 )[1], 400.);
+  EXPECT_FLOAT_EQ(ev.time(8 ), 1.75 ); EXPECT_FLOAT_EQ(em.fractioned_rates(8 )[1], 400.);
+  EXPECT_FLOAT_EQ(ev.time(9 ), 2    ); EXPECT_FLOAT_EQ(em.fractioned_rates(9 )[1], 400.);
+  EXPECT_FLOAT_EQ(ev.time(10), 4    ); EXPECT_FLOAT_EQ(em.fractioned_rates(10)[1], 400.);
+  EXPECT_FLOAT_EQ(ev.time(11), 4    ); EXPECT_FLOAT_EQ(em.fractioned_rates(11)[1], 400.);
+  EXPECT_FLOAT_EQ(ev.time(12), 5.75 ); EXPECT_FLOAT_EQ(em.fractioned_rates(12)[1], 0.  );
+  EXPECT_FLOAT_EQ(ev.time(13), 6    ); EXPECT_FLOAT_EQ(em.fractioned_rates(13)[1], 0.  );
+  EXPECT_FLOAT_EQ(ev.time(14), 9    ); EXPECT_FLOAT_EQ(em.fractioned_rates(14)[1], 400.);
+  EXPECT_FLOAT_EQ(ev.time(15), 10.75); EXPECT_FLOAT_EQ(em.fractioned_rates(15)[1], 0.  );
+  EXPECT_FLOAT_EQ(ev.time(16), 11   ); EXPECT_FLOAT_EQ(em.fractioned_rates(16)[1], 0.  );
+  EXPECT_FLOAT_EQ(ev.time(17), 12   ); EXPECT_FLOAT_EQ(em.fractioned_rates(17)[1], 400.);
+  EXPECT_FLOAT_EQ(ev.time(18), 14   ); EXPECT_FLOAT_EQ(em.fractioned_rates(18)[1], 400.);
 
   EXPECT_EQ(ev.evid(0 ), 1);  EXPECT_EQ(ev.cmt(0 ), 1);
   EXPECT_EQ(ev.evid(1 ), 0);  EXPECT_EQ(ev.cmt(1 ), 3);
@@ -663,7 +663,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_const_tlag) {
     for (size_t j = 0; j < em.events().size(); ++j) {
       EXPECT_FLOAT_EQ(em.events().time(j), em_i.events().time(j));
       EXPECT_FLOAT_EQ(em.events().amt(j), em_i.events().amt(j));
-      EXPECT_FLOAT_EQ(em.events().fractioned_rates(j)[1], em_i.events().fractioned_rates(j)[1]);
+      EXPECT_FLOAT_EQ(em.fractioned_rates(j)[1], em_i.fractioned_rates(j)[1]);
       EXPECT_EQ(em.events().evid(j), em_i.events().evid(j));
     }
   }
@@ -695,22 +695,22 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_tlag) {
   // addl events have no lags.
   EXPECT_EQ(ev.size(), time.size() + addl[3] * 2 + 2);
 
-  EXPECT_FLOAT_EQ(ev.time(0 ), 0    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(0 )[1],    0.0);
-  EXPECT_FLOAT_EQ(ev.time(1 ), 0.25 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(1 )[1],    0.0);
-  EXPECT_FLOAT_EQ(ev.time(2 ), 0.5  ); EXPECT_FLOAT_EQ(ev.fractioned_rates(2 )[1],    0.0);
-  EXPECT_FLOAT_EQ(ev.time(3 ), 0.75 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(3 )[1],    0.0);
-  EXPECT_FLOAT_EQ(ev.time(4 ), 1    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(4 )[1],    0.0);
-  EXPECT_FLOAT_EQ(ev.time(5 ), 1    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(5 )[1],    0.0);
-  EXPECT_FLOAT_EQ(ev.time(6 ), 1.25 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(6 )[1],  400.0);
-  EXPECT_FLOAT_EQ(ev.time(7 ), 1.5  ); EXPECT_FLOAT_EQ(ev.fractioned_rates(7 )[1],  400.0);
-  EXPECT_FLOAT_EQ(ev.time(8 ), 1.75 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(8 )[1],  400.0);
-  EXPECT_FLOAT_EQ(ev.time(9 ), 2    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(9 )[1],  400.0);
-  EXPECT_FLOAT_EQ(ev.time(10), 4    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(10)[1],  400.0);
-  EXPECT_FLOAT_EQ(ev.time(11), 4    ); EXPECT_FLOAT_EQ(ev.fractioned_rates(11)[1],  400.0);
-  EXPECT_FLOAT_EQ(ev.time(12), 5.75 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(12)[1],    0.0);
-  EXPECT_FLOAT_EQ(ev.time(13), 8.75 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(13)[1],  400.0);
-  EXPECT_FLOAT_EQ(ev.time(14), 10.75); EXPECT_FLOAT_EQ(ev.fractioned_rates(14)[1],    0.0);
-  EXPECT_FLOAT_EQ(ev.time(15), 13.75); EXPECT_FLOAT_EQ(ev.fractioned_rates(15)[1],  400.0);
+  EXPECT_FLOAT_EQ(ev.time(0 ), 0    ); EXPECT_FLOAT_EQ(em.fractioned_rates(0 )[1],    0.0);
+  EXPECT_FLOAT_EQ(ev.time(1 ), 0.25 ); EXPECT_FLOAT_EQ(em.fractioned_rates(1 )[1],    0.0);
+  EXPECT_FLOAT_EQ(ev.time(2 ), 0.5  ); EXPECT_FLOAT_EQ(em.fractioned_rates(2 )[1],    0.0);
+  EXPECT_FLOAT_EQ(ev.time(3 ), 0.75 ); EXPECT_FLOAT_EQ(em.fractioned_rates(3 )[1],    0.0);
+  EXPECT_FLOAT_EQ(ev.time(4 ), 1    ); EXPECT_FLOAT_EQ(em.fractioned_rates(4 )[1],    0.0);
+  EXPECT_FLOAT_EQ(ev.time(5 ), 1    ); EXPECT_FLOAT_EQ(em.fractioned_rates(5 )[1],    0.0);
+  EXPECT_FLOAT_EQ(ev.time(6 ), 1.25 ); EXPECT_FLOAT_EQ(em.fractioned_rates(6 )[1],  400.0);
+  EXPECT_FLOAT_EQ(ev.time(7 ), 1.5  ); EXPECT_FLOAT_EQ(em.fractioned_rates(7 )[1],  400.0);
+  EXPECT_FLOAT_EQ(ev.time(8 ), 1.75 ); EXPECT_FLOAT_EQ(em.fractioned_rates(8 )[1],  400.0);
+  EXPECT_FLOAT_EQ(ev.time(9 ), 2    ); EXPECT_FLOAT_EQ(em.fractioned_rates(9 )[1],  400.0);
+  EXPECT_FLOAT_EQ(ev.time(10), 4    ); EXPECT_FLOAT_EQ(em.fractioned_rates(10)[1],  400.0);
+  EXPECT_FLOAT_EQ(ev.time(11), 4    ); EXPECT_FLOAT_EQ(em.fractioned_rates(11)[1],  400.0);
+  EXPECT_FLOAT_EQ(ev.time(12), 5.75 ); EXPECT_FLOAT_EQ(em.fractioned_rates(12)[1],    0.0);
+  EXPECT_FLOAT_EQ(ev.time(13), 8.75 ); EXPECT_FLOAT_EQ(em.fractioned_rates(13)[1],  400.0);
+  EXPECT_FLOAT_EQ(ev.time(14), 10.75); EXPECT_FLOAT_EQ(em.fractioned_rates(14)[1],    0.0);
+  EXPECT_FLOAT_EQ(ev.time(15), 13.75); EXPECT_FLOAT_EQ(em.fractioned_rates(15)[1],  400.0);
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_rate_tlag_LOCF) {
@@ -745,22 +745,22 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_tlag_LOCF) {
   // has no lag, but the 2nd has.
   EXPECT_EQ(ev.size(), time.size() + 6);
 
-  EXPECT_FLOAT_EQ(ev.time(0 ), 0   ); EXPECT_FLOAT_EQ(ev.fractioned_rates(0 )[1], 0  );
-  EXPECT_FLOAT_EQ(ev.time(1 ), 0.25); EXPECT_FLOAT_EQ(ev.fractioned_rates(1 )[1], 0  );
-  EXPECT_FLOAT_EQ(ev.time(2 ), 0.5 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(2 )[1], 0  );
-  EXPECT_FLOAT_EQ(ev.time(3 ), 0.75); EXPECT_FLOAT_EQ(ev.fractioned_rates(3 )[1], 0  );
-  EXPECT_FLOAT_EQ(ev.time(4 ), 1   ); EXPECT_FLOAT_EQ(ev.fractioned_rates(4 )[1], 400);
-  EXPECT_FLOAT_EQ(ev.time(5 ), 1.25); EXPECT_FLOAT_EQ(ev.fractioned_rates(5 )[1], 400);
-  EXPECT_FLOAT_EQ(ev.time(6 ), 1.5 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(6 )[1], 400);
-  EXPECT_FLOAT_EQ(ev.time(7 ), 1.75); EXPECT_FLOAT_EQ(ev.fractioned_rates(7 )[1], 400);
-  EXPECT_FLOAT_EQ(ev.time(8 ), 2.85); EXPECT_FLOAT_EQ(ev.fractioned_rates(8 )[1], 400);
-  EXPECT_FLOAT_EQ(ev.time(9 ), 3   ); EXPECT_FLOAT_EQ(ev.fractioned_rates(9 )[1], 800);
-  EXPECT_FLOAT_EQ(ev.time(10), 3.75); EXPECT_FLOAT_EQ(ev.fractioned_rates(10)[1], 800);
-  EXPECT_FLOAT_EQ(ev.time(11), 4   ); EXPECT_FLOAT_EQ(ev.fractioned_rates(11)[1], 400);
-  EXPECT_FLOAT_EQ(ev.time(12), 4.95); EXPECT_FLOAT_EQ(ev.fractioned_rates(12)[1], 400);
-  EXPECT_FLOAT_EQ(ev.time(13), 5.2 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(13)[1], 400);
-  EXPECT_FLOAT_EQ(ev.time(14), 5.85); EXPECT_FLOAT_EQ(ev.fractioned_rates(14)[1], 800);
-  EXPECT_FLOAT_EQ(ev.time(15), 8.2 ); EXPECT_FLOAT_EQ(ev.fractioned_rates(15)[1], 400);
+  EXPECT_FLOAT_EQ(ev.time(0 ), 0   ); EXPECT_FLOAT_EQ(em.fractioned_rates(0 )[1], 0  );
+  EXPECT_FLOAT_EQ(ev.time(1 ), 0.25); EXPECT_FLOAT_EQ(em.fractioned_rates(1 )[1], 0  );
+  EXPECT_FLOAT_EQ(ev.time(2 ), 0.5 ); EXPECT_FLOAT_EQ(em.fractioned_rates(2 )[1], 0  );
+  EXPECT_FLOAT_EQ(ev.time(3 ), 0.75); EXPECT_FLOAT_EQ(em.fractioned_rates(3 )[1], 0  );
+  EXPECT_FLOAT_EQ(ev.time(4 ), 1   ); EXPECT_FLOAT_EQ(em.fractioned_rates(4 )[1], 400);
+  EXPECT_FLOAT_EQ(ev.time(5 ), 1.25); EXPECT_FLOAT_EQ(em.fractioned_rates(5 )[1], 400);
+  EXPECT_FLOAT_EQ(ev.time(6 ), 1.5 ); EXPECT_FLOAT_EQ(em.fractioned_rates(6 )[1], 400);
+  EXPECT_FLOAT_EQ(ev.time(7 ), 1.75); EXPECT_FLOAT_EQ(em.fractioned_rates(7 )[1], 400);
+  EXPECT_FLOAT_EQ(ev.time(8 ), 2.85); EXPECT_FLOAT_EQ(em.fractioned_rates(8 )[1], 400);
+  EXPECT_FLOAT_EQ(ev.time(9 ), 3   ); EXPECT_FLOAT_EQ(em.fractioned_rates(9 )[1], 800);
+  EXPECT_FLOAT_EQ(ev.time(10), 3.75); EXPECT_FLOAT_EQ(em.fractioned_rates(10)[1], 800);
+  EXPECT_FLOAT_EQ(ev.time(11), 4   ); EXPECT_FLOAT_EQ(em.fractioned_rates(11)[1], 400);
+  EXPECT_FLOAT_EQ(ev.time(12), 4.95); EXPECT_FLOAT_EQ(em.fractioned_rates(12)[1], 400);
+  EXPECT_FLOAT_EQ(ev.time(13), 5.2 ); EXPECT_FLOAT_EQ(em.fractioned_rates(13)[1], 400);
+  EXPECT_FLOAT_EQ(ev.time(14), 5.85); EXPECT_FLOAT_EQ(em.fractioned_rates(14)[1], 800);
+  EXPECT_FLOAT_EQ(ev.time(15), 8.2 ); EXPECT_FLOAT_EQ(em.fractioned_rates(15)[1], 400);
 
   EXPECT_EQ(ev.evid(0 ), 1);
   EXPECT_EQ(ev.evid(1 ), 0);
@@ -863,7 +863,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_tlag_LOCF) {
     EXPECT_EQ(em.events().size(), em_i.events().size());
     for (size_t j = 0; j < em.events().size(); ++j) {
       EXPECT_FLOAT_EQ(em.events().time(j), em_i.events().time(j));
-      EXPECT_FLOAT_EQ(em.events().fractioned_rates(j)[1], em_i.events().fractioned_rates(j)[1]);
+      EXPECT_FLOAT_EQ(em.fractioned_rates(j)[1], em_i.fractioned_rates(j)[1]);
       EXPECT_EQ(em.events().evid(j), em_i.events().evid(j));
     }
   }

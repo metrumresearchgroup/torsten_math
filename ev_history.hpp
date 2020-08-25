@@ -16,15 +16,156 @@
 
 namespace torsten {
 
+  template<typename T0, typename T4, typename T5, typename T6,
+           template<typename...> class theta_container>
+  struct NonEventParameters {
+    
+    /// <time, <theta index, F index, lag index> >
+    static constexpr int npar = 3;
+    using par_t = std::pair<double, std::array<int, npar> >;
+
+    std::vector<par_t> pars;
+    const std::vector<T0>& time_;
+    const std::vector<theta_container<T4>>& theta_;
+    const std::vector<std::vector<T5> >& biovar_;
+    const std::vector<std::vector<T6> >& tlag_;
+    // const std::vector<std::vector<double> >& x_r_;
+    // const std::vector<std::vector<int> >& x_i_;
+
+    NonEventParameters(int ibegin, int isize,
+                       const std::vector<T0>& time,
+                       int ibegin_theta, int isize_theta,
+                       const std::vector<theta_container<T4>>& theta,
+                       int ibegin_biovar, int isize_biovar,
+                       const std::vector<std::vector<T5> >& biovar,
+                       int ibegin_tlag, int isize_tlag,
+                       const std::vector<std::vector<T6> >& tlag) :
+      pars(isize),
+      time_(time),
+      theta_(theta),
+      biovar_(biovar),
+      tlag_(tlag)
+    {
+      for (int i = 0; i < isize; ++i) {
+        int j = isize_theta   > 1 ? ibegin_theta  + i : ibegin_theta;
+        int k = isize_biovar  > 1 ? ibegin_biovar + i : ibegin_biovar;
+        int l = isize_tlag    > 1 ? ibegin_tlag   + i : ibegin_tlag;
+        pars[i] = std::make_pair<double, std::array<int, npar> >(stan::math::value_of(time_[ibegin + i]), {j, k, l });
+      }
+      sort();
+    }
+
+    inline int size() { return pars.size(); }
+    /*
+     * return if an event is a "reset" event(evid=3 or 4)
+     */
+    void sort() {
+      std::sort(pars.begin(), pars.end(),
+                [](const par_t& a, const par_t& b)
+                { return a.first < b.first; });
+    }
+
+    bool is_ordered() {
+      // check that elements are in chronological order.
+      int i = pars.size() - 1;
+      bool ordered = true;
+
+      while (i > 0 && ordered) {
+        ordered = (pars[i].first >= pars[i-1].first);
+        i--;
+      }
+      return ordered;
+    }
+
+    // /** 
+    //  * begin of parameters for a subject @c id
+    //  * in @c pMatrix. It is assumed that all the paramter are
+    //  * either constant or time dependent.
+    //  *
+    //  * @param id subject id
+    //  * 
+    //  * @return begin index in @c pMatrix for the subject
+    //  */
+    // int begin_theta(int id) const {
+    //   return theta_.size() == len_.size() ? id : begin_[id];
+    // }
+
+    // /**
+    //  * length of parameters for a subject @c id
+    //  * in @c pMatrix. It is assumed that all the paramter are
+    //  * either constant or time dependent.
+    //  *
+    //  * @param id subject id
+    //  * 
+    //  * @return len in @c pMatrix for the subject
+    //  */
+    // int len_param(int id) const {
+    //   return pMatrix_.size() == len_.size() ? 1 : len_[id]; 
+    // }
+
+    // /**
+    //  * begin of bioavailability for a subject @c id
+    //  * in @c biovar. It is assumed that all the paramter are
+    //  * either constant or time dependent.
+    //  *
+    //  * @param id subject id
+    //  * 
+    //  * @return begin index in @c biovar for the subject
+    //  */
+    // int begin_biovar(int id) const {
+    //   return biovar_.size()  == len_.size() ? id : begin_[id];
+    // }
+
+    // /**
+    //  * length of bioavailability for a subject @c id
+    //  * in @c biovar. It is assumed that all the paramter are
+    //  * either constant or time dependent.
+    //  *
+    //  * @param id subject id
+    //  * 
+    //  * @return len in @c biovar for the subject
+    //  */
+    // inline int len_biovar(int id) const {
+    //   return biovar_.size()  == len_.size() ? 1 : len_[id];
+    // }
+
+    // /**
+    //  * begin of lag time for a subject @c id
+    //  * in @c tlag. It is assumed that all the paramter are
+    //  * either constant or time dependent.
+    //  *
+    //  * @param id subject id
+    //  * 
+    //  * @return begin index in @c tlag for the subject
+    //  */
+    // inline int begin_tlag(int id) const {
+    //   return tlag_.size()  == len_.size() ? id : begin_[id];
+    // }
+
+    // /**
+    //  * length of lag time for a subject @c id
+    //  * in @c tlag. It is assumed that all the paramter are
+    //  * either constant or time dependent.
+    //  *
+    //  * @param id subject id
+    //  * 
+    //  * @return len in @c tlag for the subject
+    //  */
+    // inline int len_tlag(int id) const {
+    //   return tlag_.size()  == len_.size() ? 1 : len_[id];
+    // }
+
+  };
+
   /**
    * The EventHistory class defines objects that contain a vector of Events,
    * along with a series of functions that operate on them.
    */
-  template<typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
-            template<class...> class theta_container>
+  template<typename T0, typename T1, typename T2, typename T3,
+           typename T4, typename T5, typename T6>
   struct EventHistory {
     using T_scalar = typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>;
-    using T_time = typename stan::return_type_t<T0, T1, T3, T6, T2>;
+    using T_time = typename stan::return_type_t<T0, T1, T2, T3, T6>;
     using T_rate = typename stan::return_type_t<T2, T5>;
     using T_amt = typename stan::return_type_t<T1, T5>;
     /// <time, <theta index, F index, lag index> >
@@ -39,11 +180,6 @@ namespace torsten {
     const std::vector<int>& cmt_;
     const std::vector<int>& addl_;
     const std::vector<int>& ss_;
-
-    std::vector<Param> param_index;
-    const std::vector<theta_container<T4>>& theta_;
-    const std::vector<std::vector<T5> >& biovar_;
-    const std::vector<std::vector<T6> >& tlag_;
 
     // internally generated events
     // these events are not from user input but required for event
@@ -95,27 +231,12 @@ namespace torsten {
      * @param p_cmt event compartment
      * @param p_addl additional events
      * @param p_ss steady states flag
-     * @param ibegin_theta beginning index of the subject in param array
-     * @param isize_theta # of indices for current subject in param array
-     * @param theta parameter vector
-     * @param ibegin_biovar beginning index of the subject in bioavailability array
-     * @param isize_biovar # of indices for current subject in bioavailability array
-     * @param biovar bioavailability
-     * @param ibegin_tlag beginning index of the subject in lagtime array
-     * @param isize_tlag # of indices for current subject in lagtime array
-     * @param tlag lag time
      */
     EventHistory(int ncmt, int ibegin, int isize,
                  const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
                  const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
                  const std::vector<int>& p_evid, const std::vector<int>& p_cmt,
-                 const std::vector<int>& p_addl, const std::vector<int>& p_ss,
-                 int ibegin_theta, int isize_theta,
-                 const std::vector<theta_container<T4>>& theta,
-                 int ibegin_biovar, int isize_biovar,
-                 const std::vector<std::vector<T5> >& biovar,
-                 int ibegin_tlag, int isize_tlag,
-                 const std::vector<std::vector<T6> >& tlag) :
+                 const std::vector<int>& p_addl, const std::vector<int>& p_ss) :
       time_(p_time),
       amt_(p_amt),
       rate_(p_rate),
@@ -124,10 +245,6 @@ namespace torsten {
       cmt_(p_cmt),
       addl_(p_addl),
       ss_(p_ss),
-      param_index(isize),
-      theta_(theta),
-      biovar_(biovar),
-      tlag_(tlag),
       num_event_times(isize),
       idx(isize, {0, 0, 0, 0})
     {
@@ -149,19 +266,6 @@ namespace torsten {
       }
       insert_addl_dose();
       sort_state_time();
-
-      for (int i = 0; i < isize; ++i) {
-        int j = isize_theta   > 1 ? ibegin_theta  + i : ibegin_theta;
-        int k = isize_biovar  > 1 ? ibegin_biovar + i : ibegin_biovar;
-        int l = isize_tlag    > 1 ? ibegin_tlag   + i : ibegin_tlag;
-        param_index[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time_[ibegin + i]), {j, k, l });
-      }
-      param_sort();
-
-      attach_event_parameters();
-      insert_lag_dose();
-      generate_rates(ncmt);
-      attach_event_parameters();
     }
 
     /**
@@ -185,64 +289,10 @@ namespace torsten {
                  const std::vector<T0>& p_time, const std::vector<T1>& p_amt,
                  const std::vector<T2>& p_rate, const std::vector<T3>& p_ii,
                  const std::vector<int>& p_evid, const std::vector<int>& p_cmt,
-                 const std::vector<int>& p_addl, const std::vector<int>& p_ss,
-                 const std::vector<theta_container<T4>>& theta,
-                 const std::vector<std::vector<T5> >& biovar,
-                 const std::vector<std::vector<T6> >& tlag)
+                 const std::vector<int>& p_addl, const std::vector<int>& p_ss)
     : EventHistory(ncmt,
-                   0, p_time.size(), p_time, p_amt, p_rate, p_ii, p_evid, p_cmt, p_addl, p_ss,
-                   0, theta.size(), theta,
-                   0, biovar.size(), biovar,
-                   0, tlag.size(), tlag)
+                   0, p_time.size(), p_time, p_amt, p_rate, p_ii, p_evid, p_cmt, p_addl, p_ss)
     {}
-
-    void attach_event_parameters() {
-      int nEvent = size();
-      assert(nEvent > 0);
-      int len_Parameters = param_index.size();  // numbers of events for which parameters are determined
-      assert(len_Parameters > 0);
-
-      if (!param_check()) param_sort();
-      param_index.resize(nEvent);
-
-      int iEvent = 0;
-      for (int i = 0; i < len_Parameters - 1; i++) {
-        while (isnew(iEvent)) iEvent++;  // skip new events
-        assert(std::get<0>(param_index[i]) == time(iEvent));  // compare time of "old' events to time of parameters.
-        iEvent++;
-      }
-
-      if (len_Parameters == 1)  {
-        for (int i = 0; i < nEvent; i++) {
-          param_index[i] = std::make_pair<double, std::array<int, 3> >(stan::math::value_of(time(i)) , std::array<int,3>(std::get<1>(param_index[0])));
-          idx[i][3] = 0;
-        }
-      } else {  // parameters are event dependent.
-        std::vector<double> times(nEvent, 0);
-        for (int i = 0; i < nEvent; i++) times[i] = param_index[i].first;
-        iEvent = 0;
-
-        Param newParameter;
-        int j = 0;
-        std::vector<Param>::const_iterator lower = param_index.begin();
-        std::vector<Param>::const_iterator it_param_end = param_index.begin() + len_Parameters;
-        for (int iEvent = 0; iEvent < nEvent; ++iEvent) {
-          if (isnew(iEvent)) {
-            // Find the index corresponding to the time of the new event in the
-            // times vector.
-            const double t = stan::math::value_of(time(iEvent));
-            lower = std::lower_bound(lower, it_param_end, t,
-                                     [](const Param& t1, const double& t2) {return t1.first < t2;});
-            newParameter = lower == (it_param_end) ? param_index[len_Parameters-1] : *lower;
-            newParameter.first = t;
-            param_index[len_Parameters + j] = newParameter;
-            idx[iEvent][3] = 0;
-            j++;
-          }
-        }
-      }
-      param_sort();
-    }
 
     bool is_reset(int i) const {
       return evid(i) == 3 || evid(i) == 4;
@@ -318,27 +368,6 @@ namespace torsten {
                                                 double tb = keep(b) ? value_of(time_[b[1]]) : value_of(gen_time[b[1]]);
                                                 return ta < tb;
                                               });
-    }
-
-    /*
-     * return if an event is a "reset" event(evid=3 or 4)
-     */
-    void param_sort() {
-      std::sort(param_index.begin(), param_index.end(),
-                [](const Param& a, const Param& b)
-                { return a.first < b.first; });
-    }
-
-    bool param_check() {
-      // check that elements are in chronological order.
-      int i = param_index.size() - 1;
-      bool ordered = true;
-
-      while (i > 0 && ordered) {
-        ordered = (param_index[i].first >= param_index[i-1].first);
-        i--;
-      }
-      return ordered;
     }
 
     /** 
@@ -421,19 +450,6 @@ namespace torsten {
 
     inline size_t size() const { return idx.size(); }
 
-    inline std::vector<T_rate> fractioned_rates(int i) const {
-      const int n = rates[0].second.size();
-      const std::vector<T2>& r = rates[rate_index[i]].second;
-      std::vector<T_rate> res(r.size());
-      for (size_t j = 0; j < r.size(); ++j) {
-        res[j] = r[j] * bioavailability(i, j);
-      }
-      return res;
-    }
-
-    inline T_amt fractioned_amt(int i) const {
-      return bioavailability(i, cmt(i) - 1) * amt(i);
-    }
 
     std::vector<int> unique_times() {
       std::vector<int> t(idx.size());
@@ -442,44 +458,6 @@ namespace torsten {
                               [this](const int& i, const int& j) {return time(i) == time(j);});
       t.erase(last, t.end());
       return t;
-    }
-
-    /**
-     * Implement absorption lag times by modifying the times of the dosing events.
-     * Two cases: parameters are either constant or vary with each event.
-     * Function sorts events at the end of the procedure.
-     * The old event is set with a special EVID = 9 and it introduces no action.
-     *
-     * @tparam T_parameters type of scalar model parameters
-     * @return - modified events that account for absorption lag times
-     */
-    void insert_lag_dose() {
-      // reverse loop so we don't process same lagged events twice
-      int nEvent = size();
-      int iEvent = nEvent - 1;
-      while (iEvent >= 0) {
-        if (is_dosing(iEvent)) {
-          if (GetValueTlag(iEvent, cmt(iEvent) - 1) != 0) {
-            insert_event(iEvent);
-            gen_time.back() += GetValueTlag(iEvent, cmt(iEvent) - 1);
-            idx[iEvent][2] = 9;
-          }
-        }
-        iEvent--;
-      }
-      sort_state_time();
-    }
-
-    inline const theta_container<T4>& model_param(int i) const {
-      return theta_[param_index[i].second[0]];
-    }
-
-    inline const T5& bioavailability(int iEvent, int iParameter) const {
-      return biovar_[std::get<1>(param_index[iEvent])[1]][iParameter];
-    }
-
-    inline const T6& GetValueTlag(int iEvent, int iParameter) const {
-      return tlag_[std::get<1>(param_index[iEvent])[2]][iParameter];
     }
 
     /*

@@ -140,8 +140,8 @@ namespace torsten{
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
       typename T_em::T_time model_time = tprev;
-      auto curr_rates = events.fractioned_rates(i);
-      T_model pkmodel {events.model_param(i), model_pars...};
+      auto curr_rates = em.fractioned_rates(i);
+      T_model pkmodel {em.theta(i), model_pars...};
       auto ev = em.event(i);
       ev(init, pkmodel, integrator);
     }
@@ -158,8 +158,8 @@ namespace torsten{
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
       typename T_em::T_time model_time = tprev;
-      auto curr_rates = events.fractioned_rates(i);
-      T_model pkmodel {events.model_param(i), model_pars...};
+      auto curr_rates = em.fractioned_rates(i);
+      T_model pkmodel {em.theta(i), model_pars...};
       auto ev = em.event(i);
       ev(sol_d, init, pkmodel, integrator, model_pars...);
     }
@@ -179,8 +179,8 @@ namespace torsten{
         init.setZero();
       } else if (events.is_ss_dosing(i)) {  // steady state event
         typename T_em::T_time model_time = events.time(i);
-        T_model pkmodel {events.model_param(i), model_pars...};
-        auto curr_amt = events.fractioned_amt(i);
+        T_model pkmodel {em.theta(i), model_pars...};
+        auto curr_amt = em.fractioned_amt(i);
         vector<var> v_i(dsolve::pk_vars(curr_amt, events.rate(i), events.ii(i), pkmodel.par()));
         int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
         if (events.ss(i) == 2)
@@ -189,8 +189,8 @@ namespace torsten{
           init = torsten::mpi::precomputed_gradients(sol_d.segment(0, nsys), v_i);  // steady state with reset (ss = 1)
       } else if (events.time(i) > tprev) {
           typename T_em::T_time model_time = tprev;
-          auto curr_rates = events.fractioned_rates(i);
-          T_model pkmodel {events.model_param(i), model_pars...};
+          auto curr_rates = em.fractioned_rates(i);
+          T_model pkmodel {em.theta(i), model_pars...};
           vector<var> v_i =
             pmx_model_vars<T_model>::vars(events.time(i), init, curr_rates, pkmodel.par());
           int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
@@ -198,7 +198,7 @@ namespace torsten{
       }
 
       if (events.is_bolus_dosing(i)) {
-        init(0, events.cmt(i) - 1) += events.fractioned_amt(i);
+        init(0, events.cmt(i) - 1) += em.fractioned_amt(i);
       }
     }
 

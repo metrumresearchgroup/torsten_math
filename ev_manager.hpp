@@ -16,8 +16,8 @@ namespace torsten {
 
   template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
             template<class...> class theta_container>
-  struct EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6,
-                                          theta_container> > {
+  struct EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6, theta_container>>{
+    using param_t = NonEventParameters<T0, T4, T5, T6, theta_container>;
     using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6, theta_container>;
     using T_scalar = typename ER::T_scalar;
     using T_time   = typename ER::T_time;
@@ -27,10 +27,11 @@ namespace torsten {
     using T_par_rate = typename ER::T_par_rate;
     using T_par_ii   = typename ER::T_par_ii;
 
-    EventHistory<T0, T1, T2, T3, T4, T5, T6, theta_container> event_his;
+    param_t params;
+    EventHistory<T0, T1, T2, T3, T4, T5, T6> event_his;
 
-    const int nKeep;
-    const int ncmt;
+    int nKeep;
+    int ncmt;
 
     static int nCmt(const ER& rec) {
       return rec.ncmt;
@@ -60,16 +61,123 @@ namespace torsten {
                   int ibegin_theta, int isize_theta,
                   int ibegin_biovar, int isize_biovar,
                   int ibegin_tlag, int isize_tlag) :
-      event_his(rec.ncmt, rec.begin_[id], rec.len_[id], rec.time_, rec.amt_, rec.rate_, rec.ii_, rec.evid_, rec.cmt_, rec.addl_, rec.ss_,
-                ibegin_theta, isize_theta, rec.pMatrix_,
-                ibegin_biovar, isize_biovar, rec.biovar_,
-                ibegin_tlag, isize_tlag, rec.tlag_),
-      nKeep(event_his.num_event_times),
-      ncmt(rec.ncmt)
-    {}
+      params(rec.begin_[id], rec.len_[id], rec.time_,
+             ibegin_theta, isize_theta, rec.pMatrix_,
+             ibegin_biovar, isize_biovar, rec.biovar_,
+             ibegin_tlag, isize_tlag, rec.tlag_),
+      event_his(rec.ncmt, rec.begin_[id], rec.len_[id], rec.time_, rec.amt_, rec.rate_, rec.ii_, rec.evid_, rec.cmt_, rec.addl_, rec.ss_)
+    {
+      ncmt = rec.ncmt;
 
-    const EventHistory<T0, T1, T2, T3, T4, T5, T6, theta_container>& events() const {
+      attach_event_parameters(event_his, params);
+      insert_lag_dose(event_his);
+      event_his.generate_rates(ncmt);
+      attach_event_parameters(event_his, params);
+
+      nKeep = event_his.num_event_times;
+    }
+
+    /**
+     * Implement absorption lag times by modifying the times of the dosing events.
+     * Two cases: parameters are either constant or vary with each event.
+     * Function sorts events at the end of the procedure.
+     * The old event is set with a special EVID = 9 and it introduces no action.
+     */
+    void insert_lag_dose(EventHistory<T0, T1, T2, T3, T4, T5, T6>& ev) {
+      // reverse loop so we don't process same lagged events twice
+      int nEvent = ev.size();
+      int iEvent = nEvent - 1;
+      while (iEvent >= 0) {
+        if (ev.is_dosing(iEvent)) {
+          if (GetValueTlag(iEvent, ev.cmt(iEvent) - 1) != 0) {
+            ev.insert_event(iEvent);
+            ev.gen_time.back() += GetValueTlag(iEvent, ev.cmt(iEvent) - 1);
+            ev.idx[iEvent][2] = 9;
+          }
+        }
+        iEvent--;
+      }
+      ev.sort_state_time();
+    }
+
+    const EventHistory<T0, T1, T2, T3, T4, T5, T6>& events() const {
       return event_his;
+    }
+
+    void attach_event_parameters(EventHistory<T0, T1, T2, T3, T4, T5, T6>& ev,
+                                 NonEventParameters<T0, T4, T5, T6, theta_container>& pev) {
+      int nEvent = ev.size();
+      assert(nEvent > 0);
+      int len_Parameters = pev.size();  // numbers of events for which parameters are determined
+      assert(len_Parameters > 0);
+
+      if (!pev.is_ordered()) pev.sort();
+      pev.pars.resize(nEvent);
+
+      int iEvent = 0;
+      for (int i = 0; i < len_Parameters - 1; ++i) {
+        while (ev.isnew(iEvent)) iEvent++;  // skip new events
+        assert(std::get<0>(pev.pars[i]) == ev.time(iEvent));  // compare time of "old' events to time of parameters.
+        iEvent++;
+      }
+
+      if (len_Parameters == 1)  {
+        for (int i = 0; i < nEvent; ++i) {
+          pev.pars[i] = std::make_pair<double, std::array<int,param_t::npar> >(stan::math::value_of(ev.time(i)) , std::array<int,param_t::npar>(std::get<1>(pev.pars[0])));
+          ev.idx[i][3] = 0;
+        }
+      } else {  // parameters are event dependent.
+        std::vector<double> times(nEvent, 0);
+        for (int i = 0; i < nEvent; ++i) times[i] = pev.pars[i].first;
+        iEvent = 0;
+
+        using par_t = typename param_t::par_t;
+        par_t newParameter;
+        int j = 0;
+        typename std::vector<par_t>::const_iterator lower = pev.pars.begin();
+        typename std::vector<par_t>::const_iterator it_param_end = pev.pars.begin() + len_Parameters;
+        for (int iEvent = 0; iEvent < nEvent; ++iEvent) {
+          if (ev.isnew(iEvent)) {
+            // Find the index corresponding to the time of the new event in the
+            // times vector.
+            const double t = stan::math::value_of(ev.time(iEvent));
+            lower = std::lower_bound(lower, it_param_end, t,
+                                     [](const par_t& t1, const double& t2) {return t1.first < t2;});
+            newParameter = lower == (it_param_end) ? pev.pars[len_Parameters-1] : *lower;
+            newParameter.first = t;
+            pev.pars[len_Parameters + j] = newParameter;
+            ev.idx[iEvent][3] = 0;
+            j++;
+          }
+        }
+      }
+      pev.sort();
+    }
+
+    inline const theta_container<T4>& theta(int i) const {
+      return params.theta_[params.pars[i].second[0]];
+    }
+
+    inline const T5& bioavailability(int iEvent, int iParameter) const {
+      return params.biovar_[std::get<1>(params.pars[iEvent])[1]][iParameter];
+    }
+
+    inline const T6& GetValueTlag(int iEvent, int iParameter) const {
+      return params.tlag_[std::get<1>(params.pars[iEvent])[2]][iParameter];
+    }
+
+    inline std::vector<T_rate> fractioned_rates(int i) const {
+      const int n = event_his.rates[0].second.size();
+      const std::vector<T2>& r = event_his.rates[event_his.rate_index[i]].second;
+      std::vector<T_rate> res(r.size());
+      for (size_t j = 0; j < r.size(); ++j) {
+        res[j] = r[j] * bioavailability(i, j);
+      }
+      return res;
+    }
+
+    inline T_amt fractioned_amt(int i) const {
+      return bioavailability(i, event_his.cmt(i) - 1) * event_his.amt(i);
     }
 
     /*
@@ -129,9 +237,9 @@ namespace torsten {
       }
       PKRec<T_amt> amt = PKRec<T_amt>::Zero(ncmt);
       if (event_his.is_bolus_dosing(i) || event_his.is_ss_dosing(i)) {
-        amt(event_his.cmt(i) - 1) = event_his.fractioned_amt(i);
+        amt(event_his.cmt(i) - 1) = fractioned_amt(i);
       }
-      std::vector<T_rate> rate(event_his.fractioned_rates(i));
+      std::vector<T_rate> rate(fractioned_rates(i));
       return {id, t0, t1, event_his.ii(i),
               amt, rate, event_his.rate(i), event_his.cmt(i)};
     }
