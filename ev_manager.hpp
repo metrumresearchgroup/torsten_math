@@ -69,10 +69,10 @@ namespace torsten {
     {
       ncmt = rec.ncmt;
 
-      attach_event_parameters(event_his, params);
-      insert_lag_dose(event_his);
+      attach_event_parameters();
+      insert_lag_dose();
       event_his.generate_rates(ncmt);
-      attach_event_parameters(event_his, params);
+      attach_event_parameters();
 
       nKeep = event_his.num_event_times;
     }
@@ -83,101 +83,114 @@ namespace torsten {
      * Function sorts events at the end of the procedure.
      * The old event is set with a special EVID = 9 and it introduces no action.
      */
-    void insert_lag_dose(EventHistory<T0, T1, T2, T3, T4, T5, T6>& ev) {
+    void insert_lag_dose() {
       // reverse loop so we don't process same lagged events twice
-      int nEvent = ev.size();
+      int nEvent = event_his.size();
       int iEvent = nEvent - 1;
       while (iEvent >= 0) {
-        if (ev.is_dosing(iEvent)) {
-          if (GetValueTlag(iEvent, ev.cmt(iEvent) - 1) != 0) {
-            ev.insert_event(iEvent);
-            ev.gen_time.back() += GetValueTlag(iEvent, ev.cmt(iEvent) - 1);
-            ev.idx[iEvent][2] = 9;
+        if (event_his.is_dosing(iEvent)) {
+          if (params.GetValueTlag(iEvent, event_his.cmt(iEvent) - 1) != 0) {
+            event_his.insert_event(iEvent);
+            event_his.gen_time.back() += params.GetValueTlag(iEvent, event_his.cmt(iEvent) - 1);
+            event_his.idx[iEvent][2] = 9;
           }
         }
         iEvent--;
       }
-      ev.sort_state_time();
+      event_his.sort_state_time();
     }
 
     const EventHistory<T0, T1, T2, T3, T4, T5, T6>& events() const {
       return event_his;
     }
 
-    void attach_event_parameters(EventHistory<T0, T1, T2, T3, T4, T5, T6>& ev,
-                                 NonEventParameters<T0, T4, T5, T6, theta_container>& pev) {
-      int nEvent = ev.size();
+    void attach_event_parameters() {
+      int nEvent = event_his.size();
       assert(nEvent > 0);
-      int len_Parameters = pev.size();  // numbers of events for which parameters are determined
+      int len_Parameters = params.size();  // numbers of events for which parameters are determined
       assert(len_Parameters > 0);
 
-      if (!pev.is_ordered()) pev.sort();
-      pev.pars.resize(nEvent);
+      if (!params.is_ordered()) params.sort();
+      params.pars.resize(nEvent);
 
       int iEvent = 0;
       for (int i = 0; i < len_Parameters - 1; ++i) {
-        while (ev.isnew(iEvent)) iEvent++;  // skip new events
-        assert(std::get<0>(pev.pars[i]) == ev.time(iEvent));  // compare time of "old' events to time of parameters.
+        while (event_his.isnew(iEvent)) iEvent++;  // skip new events
+        assert(params.get_par_time(i) == event_his.time(iEvent));  // compare time of "old' events to time of parameters.
         iEvent++;
       }
 
       if (len_Parameters == 1)  {
         for (int i = 0; i < nEvent; ++i) {
-          pev.pars[i] = std::make_pair<double, std::array<int,param_t::npar> >(stan::math::value_of(ev.time(i)) , std::array<int,param_t::npar>(std::get<1>(pev.pars[0])));
-          ev.idx[i][3] = 0;
+          params.set_par_time(i, stan::math::value_of(event_his.time(i)));
+          params.set_par_array(i, params.get_par_array(0));
+          event_his.idx[i][3] = 0;
         }
       } else {  // parameters are event dependent.
         std::vector<double> times(nEvent, 0);
-        for (int i = 0; i < nEvent; ++i) times[i] = pev.pars[i].first;
+        for (int i = 0; i < nEvent; ++i) times[i] = params.pars[i].first;
         iEvent = 0;
 
         using par_t = typename param_t::par_t;
         par_t newParameter;
         int j = 0;
-        typename std::vector<par_t>::const_iterator lower = pev.pars.begin();
-        typename std::vector<par_t>::const_iterator it_param_end = pev.pars.begin() + len_Parameters;
+        typename std::vector<par_t>::const_iterator lower = params.pars.begin();
+        typename std::vector<par_t>::const_iterator it_param_end = params.pars.begin() + len_Parameters;
         for (int iEvent = 0; iEvent < nEvent; ++iEvent) {
-          if (ev.isnew(iEvent)) {
+          if (event_his.isnew(iEvent)) {
             // Find the index corresponding to the time of the new event in the
             // times vector.
-            const double t = stan::math::value_of(ev.time(iEvent));
+            const double t = stan::math::value_of(event_his.time(iEvent));
             lower = std::lower_bound(lower, it_param_end, t,
                                      [](const par_t& t1, const double& t2) {return t1.first < t2;});
-            newParameter = lower == (it_param_end) ? pev.pars[len_Parameters-1] : *lower;
+            newParameter = lower == (it_param_end) ? params.pars[len_Parameters-1] : *lower;
             newParameter.first = t;
-            pev.pars[len_Parameters + j] = newParameter;
-            ev.idx[iEvent][3] = 0;
+            params.pars[len_Parameters + j] = newParameter;
+            event_his.idx[iEvent][3] = 0;
             j++;
           }
         }
       }
-      pev.sort();
+      params.sort();
     }
 
+    /** 
+     * Get model param for certain subject
+     * 
+     * @param i subject id
+     * 
+     * @return model param
+     */
     inline const theta_container<T4>& theta(int i) const {
-      return params.theta_[params.pars[i].second[0]];
+      return params.theta(i);
     }
 
-    inline const T5& bioavailability(int iEvent, int iParameter) const {
-      return params.biovar_[std::get<1>(params.pars[iEvent])[1]][iParameter];
-    }
-
-    inline const T6& GetValueTlag(int iEvent, int iParameter) const {
-      return params.tlag_[std::get<1>(params.pars[iEvent])[2]][iParameter];
-    }
-
+    /** 
+     * Get dosing rate adjusted with bioavailability for a subject
+     * 
+     * @param i subject id
+     * 
+     * @return dosing rate
+     */
     inline std::vector<T_rate> fractioned_rates(int i) const {
       const int n = event_his.rates[0].second.size();
       const std::vector<T2>& r = event_his.rates[event_his.rate_index[i]].second;
       std::vector<T_rate> res(r.size());
       for (size_t j = 0; j < r.size(); ++j) {
-        res[j] = r[j] * bioavailability(i, j);
+        res[j] = r[j] * params.bioavailability(i, j);
       }
       return res;
     }
 
+    /** 
+     * Get dosing amount adjusted with bioavailability for a subject
+     * 
+     * @param i subject id
+     * 
+     * @return dosing amount
+     */
     inline T_amt fractioned_amt(int i) const {
-      return bioavailability(i, event_his.cmt(i) - 1) * event_his.amt(i);
+      return params.bioavailability(i, event_his.cmt(i) - 1) * event_his.amt(i);
     }
 
     /*

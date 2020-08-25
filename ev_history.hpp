@@ -19,7 +19,6 @@ namespace torsten {
   template<typename T0, typename T4, typename T5, typename T6,
            template<typename...> class theta_container>
   struct NonEventParameters {
-    
     /// <time, <theta index, F index, lag index> >
     static constexpr int npar = 3;
     using par_t = std::pair<double, std::array<int, npar> >;
@@ -55,6 +54,35 @@ namespace torsten {
       sort();
     }
 
+    inline void set_par_time(int i, double t) {
+      std::get<0>(pars[i]) = t;
+    }
+
+    inline void set_par_array(int i, const std::array<int, npar>& a) {
+      std::get<1>(pars[i]) = a;
+    }
+
+    inline double get_par_time(int i) const {
+      return std::get<0>(pars[i]);
+    }
+
+    inline const std::array<int, npar>& get_par_array(int i) const {
+      return std::get<1>(pars[i]);
+    }
+
+    inline const theta_container<T4>& theta(int i) const {
+      return theta_[pars[i].second[0]];
+    }
+
+    inline const T5& bioavailability(int iEvent, int iParameter) const {
+      return biovar_[get_par_array(iEvent)[1]][iParameter];
+    }
+
+    inline const T6& GetValueTlag(int iEvent, int iParameter) const {
+      return tlag_[get_par_array(iEvent)[2]][iParameter];
+    }
+
+
     inline int size() { return pars.size(); }
     /*
      * return if an event is a "reset" event(evid=3 or 4)
@@ -76,84 +104,6 @@ namespace torsten {
       }
       return ordered;
     }
-
-    // /** 
-    //  * begin of parameters for a subject @c id
-    //  * in @c pMatrix. It is assumed that all the paramter are
-    //  * either constant or time dependent.
-    //  *
-    //  * @param id subject id
-    //  * 
-    //  * @return begin index in @c pMatrix for the subject
-    //  */
-    // int begin_theta(int id) const {
-    //   return theta_.size() == len_.size() ? id : begin_[id];
-    // }
-
-    // /**
-    //  * length of parameters for a subject @c id
-    //  * in @c pMatrix. It is assumed that all the paramter are
-    //  * either constant or time dependent.
-    //  *
-    //  * @param id subject id
-    //  * 
-    //  * @return len in @c pMatrix for the subject
-    //  */
-    // int len_param(int id) const {
-    //   return pMatrix_.size() == len_.size() ? 1 : len_[id]; 
-    // }
-
-    // /**
-    //  * begin of bioavailability for a subject @c id
-    //  * in @c biovar. It is assumed that all the paramter are
-    //  * either constant or time dependent.
-    //  *
-    //  * @param id subject id
-    //  * 
-    //  * @return begin index in @c biovar for the subject
-    //  */
-    // int begin_biovar(int id) const {
-    //   return biovar_.size()  == len_.size() ? id : begin_[id];
-    // }
-
-    // /**
-    //  * length of bioavailability for a subject @c id
-    //  * in @c biovar. It is assumed that all the paramter are
-    //  * either constant or time dependent.
-    //  *
-    //  * @param id subject id
-    //  * 
-    //  * @return len in @c biovar for the subject
-    //  */
-    // inline int len_biovar(int id) const {
-    //   return biovar_.size()  == len_.size() ? 1 : len_[id];
-    // }
-
-    // /**
-    //  * begin of lag time for a subject @c id
-    //  * in @c tlag. It is assumed that all the paramter are
-    //  * either constant or time dependent.
-    //  *
-    //  * @param id subject id
-    //  * 
-    //  * @return begin index in @c tlag for the subject
-    //  */
-    // inline int begin_tlag(int id) const {
-    //   return tlag_.size()  == len_.size() ? id : begin_[id];
-    // }
-
-    // /**
-    //  * length of lag time for a subject @c id
-    //  * in @c tlag. It is assumed that all the paramter are
-    //  * either constant or time dependent.
-    //  *
-    //  * @param id subject id
-    //  * 
-    //  * @return len in @c tlag for the subject
-    //  */
-    // inline int len_tlag(int id) const {
-    //   return tlag_.size()  == len_.size() ? 1 : len_[id];
-    // }
 
   };
 
