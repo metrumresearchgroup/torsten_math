@@ -11,24 +11,25 @@
 #include <vector>
 
 namespace torsten {
-  template <typename T_event_record>
+  template <typename T_event_record, typename T_params>
   struct EventsManager;
 
-  template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
-            template<class...> class theta_container>
-  struct EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6, theta_container>>{
-    using param_t = NonEventParameters<T0, T4, T5, T6, theta_container>;
-    using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6, theta_container>;
-    using T_scalar = typename ER::T_scalar;
-    using T_time   = typename ER::T_time;
-    using T_rate   = typename ER::T_rate;
-    using T_amt    = typename ER::T_amt;
-    using T_par    = typename ER::T_par;
-    using T_par_rate = typename ER::T_par_rate;
-    using T_par_ii   = typename ER::T_par_ii;
+  template <typename T0, typename T1, typename T2, typename T3, typename T4,
+            template<class...> class theta_container, int npar, typename... Ts>
+  struct EventsManager<NONMENEventsRecord<T0, T1, T2, T3>,
+                       NonEventParameters<T0, T4, theta_container, npar, Ts...> > {
+    using param_t = NonEventParameters<T0, T4, theta_container, npar, Ts...>;
+    using ER = NONMENEventsRecord<T0, T1, T2, T3>;
+    using T_scalar = typename stan::return_type_t<typename ER::T_scalar, T4, Ts...>;
+    using T_time   = typename stan::return_type_t<typename ER::T_time, typename param_t::lag_t>;
+    using T_rate   = typename stan::return_type_t<typename ER::T_rate, typename param_t::biovar_t>;
+    using T_amt    = typename stan::return_type_t<typename ER::T_amt, typename param_t::biovar_t>;
+    using T_par    = T4;
+    using T_par_rate = T2;
+    using T_par_ii   = T3;
 
     param_t params;
-    EventHistory<T0, T1, T2, T3, T4, T5, T6> event_his;
+    EventHistory<T0, T1, T2, T3, typename param_t::lag_t> event_his;
 
     int nKeep;
     int ncmt;
@@ -44,13 +45,23 @@ namespace torsten {
       return rec.begin_.at(id);
     }
 
-    EventsManager(const ER& rec) : EventsManager(0, rec) {}
+    // EventsManager(const ER& rec) : EventsManager(0, rec) {}
 
-    EventsManager(int id, const ER& rec) :
-      EventsManager(id, rec,
-                    rec.begin_param(id), rec.len_param(id),
-                    rec.begin_biovar(id), rec.len_biovar(id),
-                    rec.begin_tlag(id), rec.len_tlag(id))
+    // EventsManager(int id, const ER& rec) :
+    //   EventsManager(id, rec,
+    //                 rec.begin_param(id), rec.len_param(id),
+    //                 rec.begin_biovar(id), rec.len_biovar(id),
+    //                 rec.begin_tlag(id), rec.len_tlag(id))
+    // {}
+
+    /*
+     * For population models, we need generate events using
+     * ragged arrays.
+     */
+    EventsManager(const ER& rec,
+                  const std::vector<theta_container<T4>>& theta,
+                  const std::vector<std::vector<Ts>>&... more_params) :
+      EventsManager(0, rec, theta, more_params...)
     {}
 
     /*
@@ -58,13 +69,28 @@ namespace torsten {
      * ragged arrays.
      */
     EventsManager(int id, const ER& rec,
+                  const std::vector<theta_container<T4>>& theta,
+                  const std::vector<std::vector<Ts>>&... more_params) :
+      params(id, rec, theta, more_params...),
+      event_his(rec.ncmt, rec.begin_[id], rec.len_[id], rec.time_, rec.amt_, rec.rate_, rec.ii_, rec.evid_, rec.cmt_, rec.addl_, rec.ss_)
+    {
+      ncmt = rec.ncmt;
+
+      attach_event_parameters();
+      insert_lag_dose();
+      event_his.generate_rates(ncmt);
+      attach_event_parameters();
+
+      nKeep = event_his.num_event_times;
+    }
+
+    EventsManager(int id, const ER& rec,
                   int ibegin_theta, int isize_theta,
                   int ibegin_biovar, int isize_biovar,
-                  int ibegin_tlag, int isize_tlag) :
-      params(rec.begin_[id], rec.len_[id], rec.time_,
-             ibegin_theta, isize_theta, rec.pMatrix_,
-             ibegin_biovar, isize_biovar, rec.biovar_,
-             ibegin_tlag, isize_tlag, rec.tlag_),
+                  int ibegin_tlag, int isize_tlag,
+                  const std::vector<theta_container<T4>>& theta,
+                  const std::vector<std::vector<Ts>>&... more_params) :
+      params(id, rec, ibegin_theta, isize_theta, ibegin_biovar, isize_biovar, ibegin_tlag, isize_tlag, theta, more_params...),
       event_his(rec.ncmt, rec.begin_[id], rec.len_[id], rec.time_, rec.amt_, rec.rate_, rec.ii_, rec.evid_, rec.cmt_, rec.addl_, rec.ss_)
     {
       ncmt = rec.ncmt;
@@ -100,7 +126,7 @@ namespace torsten {
       event_his.sort_state_time();
     }
 
-    const EventHistory<T0, T1, T2, T3, T4, T5, T6>& events() const {
+    const EventHistory<T0, T1, T2, T3, typename param_t::lag_t>& events() const {
       return event_his;
     }
 
@@ -193,13 +219,6 @@ namespace torsten {
       return params.bioavailability(i, event_his.cmt(i) - 1) * event_his.amt(i);
     }
 
-    /*
-     * number of events for a sinlge individual
-     */
-    static int num_events(const ER& rec) {
-      return num_events(0, rec);
-    }
-
     Event<T_time, T3, T_amt, T_rate, T2> event(int i) const {
       int id;
       switch (event_his.evid(i)) {
@@ -257,40 +276,87 @@ namespace torsten {
               amt, rate, event_his.rate(i), event_his.cmt(i)};
     }
 
+    // inline bool has_lag(int id, const ER& rec) {
+    //   return false;
+    // }
+
+    // template<typename T5>
+    // inline bool has_lag(int id, const ER& rec, const std::vector<std::vector<T5> >& biovar) {
+    //   return false;
+    // }
+
+    template<typename T5, typename T6>
+    static bool has_tlag(int id, const ER& rec,
+                        const std::vector<std::vector<T5> >& biovar,
+                        const std::vector<std::vector<T6> >& tlag) {
+      return rec.has_positive_param(id, tlag);
+    }
+
+
+    // template<typename T5, typename T6, typename... Tss>
+    // inline bool has_lag(int id, const ER& rec,
+    //                     const std::vector<std::vector<T5> >& biovar,
+    //                     const std::vector<std::vector<T6> >& tlag,
+    //                     const std::vector<std::vector<Tss> >&... more_params) {
+    //   return rec.has_positive_param(id, tlag);
+    // }
+
     /*
-     * number of events for a sinlge individual when given a
-     * population and individual id.
+     * number of events for a sinlge individual
      */
-    static int num_events(int id, const ER& rec) {
-      using stan::math::value_of;
+    static int num_events(const ER& rec,
+                          const std::vector<theta_container<T4>>& theta,
+                          const std::vector<std::vector<Ts>>&... more_params) {
+      return num_events(0, rec, theta, more_params...);
+    }
 
+    static int num_events(int id, const ER& rec,
+                          const std::vector<theta_container<T4>>& theta) {
       int res;
-      bool has_lag = rec.has_lag(id);
-
-      if (!has_lag) {
-        int n = rec.len_[id];
-        for (int i = rec.begin_[id]; i < rec.begin_[id] + rec.len_[id]; ++i) {
-          if (rec.evid_[i] == 1 || rec.evid_[i] == 4) {      // is dosing event
-            if (rec.addl_[i] > 0 && rec.ii_[i] > 0) {        // has addl doses
-              if (rec.rate_[i] > 0 && rec.amt_[i] > 0) {
-                n++;                               // end event for original IV dose
-                n += 2 * rec.addl_[i];                  // end event for addl IV dose
-              } else {
-                n += rec.addl_[i];
-              }
-            } else if (rec.rate_[i] > 0 && rec.amt_[i] > 0) {
-              n++;                                 // end event for IV dose
+      int n = rec.len_[id];
+      for (int i = rec.begin_[id]; i < rec.begin_[id] + rec.len_[id]; ++i) {
+        if (rec.evid_[i] == 1 || rec.evid_[i] == 4) {      // is dosing event
+          if (rec.addl_[i] > 0 && rec.ii_[i] > 0) {        // has addl doses
+            if (rec.rate_[i] > 0 && rec.amt_[i] > 0) {
+              n++;                               // end event for original IV dose
+              n += 2 * rec.addl_[i];                  // end event for addl IV dose
+            } else {
+              n += rec.addl_[i];
             }
+          } else if (rec.rate_[i] > 0 && rec.amt_[i] > 0) {
+            n++;                                 // end event for IV dose
           }
         }
-        res = n;
-      } else if (rec.len_tlag(id) == 1) {
+      }
+      res = n;
+      return res;
+    }
+    
+    template<typename T5>
+    static int num_events(int id, const ER& rec,
+                          const std::vector<theta_container<T4>>& theta,
+                          const std::vector<std::vector<T5> >& biovar) {
+      return num_events(id, rec, theta);
+    }
+
+    template<typename T5, typename T6, typename... Tss>
+    static int num_events(int id, const ER& rec,
+                          const std::vector<theta_container<T4>>& theta,
+                          const std::vector<std::vector<T5> >& biovar,
+                          const std::vector<std::vector<T6> >& tlag,
+                          const std::vector<std::vector<Tss>>&... more_params) {
+      int res;
+      bool has_lag = rec.has_positive_param(id, tlag);
+
+      if (!has_lag) {
+        res = num_events(id, rec, theta);
+      } else if (rec.len_param(id, tlag) == 1) {
         int n = rec.len_[id];
         std::vector<std::tuple<double, int>> dose;
         dose.reserve(rec.len_[id]);
         for (int i = rec.begin_[id]; i < rec.begin_[id] + rec.len_[id]; ++i) {
           if (rec.evid_[i] == 1 || rec.evid_[i] == 4) {      // is dosing event
-            if (rec.tlag_[rec.begin_tlag(id)][rec.cmt_[i] - 1] > 0.0) {       // tlag dose
+            if (tlag[rec.begin_param(id, tlag)][rec.cmt_[i] - 1] > 0.0) {       // tlag dose
               n++;
             }
             if (rec.addl_[i] > 0 && rec.ii_[i] > 0) {        // has addl doses
@@ -300,7 +366,7 @@ namespace torsten {
               } else {
                 n += rec.addl_[i];
               }
-              if (rec.tlag_[rec.begin_tlag(id)][rec.cmt_[i] - 1] > 0.0) {     // tlag dose
+              if (tlag[rec.begin_param(id, tlag)][rec.cmt_[i] - 1] > 0.0) {     // tlag dose
                 n += rec.addl_[i];
               }
             } else if (rec.rate_[i] > 0 && rec.amt_[i] > 0) {
@@ -310,12 +376,60 @@ namespace torsten {
         }
         res = n;
       } else {
-        // FIXME
-        res = EventsManager(id, rec).events().size();
+        // FIXME not to use brute force
+        std::cout << "taki test: " << 2 << "\n";
+        res = EventsManager(id, rec, theta, biovar, tlag, more_params...).events().size();
       }
 
       return res;
     }
+
+
+    // /*
+    //  * number of events for a sinlge individual when given a
+    //  * population and individual id.
+    //  */
+    // static int num_events(int id, const ER& rec,
+    //                       const std::vector<std::vector<Ts>>&... more_params) {
+    //   using stan::math::value_of;
+
+    //   int res;
+    //   bool has_lag = rec.has_positive_param(id, tlag);
+
+    //   if (!has_lag) {
+    //     res = num_events(id, rec);
+    //   } else if (rec.len_param(id) == 1) {
+    //     int n = rec.len_[id];
+    //     std::vector<std::tuple<double, int>> dose;
+    //     dose.reserve(rec.len_[id]);
+    //     for (int i = rec.begin_[id]; i < rec.begin_[id] + rec.len_[id]; ++i) {
+    //       if (rec.evid_[i] == 1 || rec.evid_[i] == 4) {      // is dosing event
+    //         if (rec.tlag_[rec.begin_tlag(id)][rec.cmt_[i] - 1] > 0.0) {       // tlag dose
+    //           n++;
+    //         }
+    //         if (rec.addl_[i] > 0 && rec.ii_[i] > 0) {        // has addl doses
+    //           if (rec.rate_[i] > 0 && rec.amt_[i] > 0) {
+    //             n++;                               // end ev for IV dose
+    //             n += 2 * rec.addl_[i];                  // end ev for addl IV dose
+    //           } else {
+    //             n += rec.addl_[i];
+    //           }
+    //           if (rec.tlag_[rec.begin_tlag(id)][rec.cmt_[i] - 1] > 0.0) {     // tlag dose
+    //             n += rec.addl_[i];
+    //           }
+    //         } else if (rec.rate_[i] > 0 && rec.amt_[i] > 0) {
+    //           n++;                                 // end event for IV dose
+    //         }
+    //       }
+    //     }
+    //     res = n;
+    //   } else {
+    //     // FIXME
+    //     res = EventsManager(id, rec).events().size();
+    //   }
+
+    //   return res;
+    // }
   };
 
 }

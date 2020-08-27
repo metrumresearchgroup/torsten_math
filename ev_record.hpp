@@ -35,14 +35,17 @@ namespace torsten {
    * @tparam theta_container type of container for parameter. <code>linode</code> model uses
    *         matrix as parameter, other than <code>std::vector</code> used by others.
    */
-  template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
-            template<typename...> class theta_container = std::vector>
+  template <typename T0, typename T1, typename T2, typename T3>
   struct NONMENEventsRecord {
-    using T_scalar = typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>;
-    using T_time = typename stan::return_type_t<T0, T1, T3, T6, T2>;
-    using T_rate = typename stan::return_type_t<T2, T5>;
-    using T_amt = typename stan::return_type_t<T1, T5>;
-    using T_par = T4;
+    // using T_scalar = typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>;
+    // using T_time = typename stan::return_type_t<T0, T1, T3, T6, T2>;
+    // using T_rate = typename stan::return_type_t<T2, T5>;
+    // using T_amt = typename stan::return_type_t<T1, T5>;
+    // using T_par = T4;
+    using T_scalar = typename stan::return_type_t<T0, T1, T2, T3>;
+    using T_time = typename stan::return_type_t<T0, T1, T2, T3>;
+    using T_rate = T2;
+    using T_amt = T1;
     using T_par_rate = T2;
     using T_par_ii = T3;
 
@@ -80,12 +83,12 @@ namespace torsten {
     const std::vector<int>& addl_;
     /// steady-states flag
     const std::vector<int>& ss_;
-    /// parameters
-    const std::vector<theta_container<T4>>& pMatrix_;
-    /// bioavailability
-    const std::vector<std::vector<T5> >& biovar_;
-    /// lag time
-    const std::vector<std::vector<T6> >& tlag_;
+    // /// parameters
+    // const std::vector<theta_container<T4>>& pMatrix_;
+    // /// bioavailability
+    // const std::vector<std::vector<T5> >& biovar_;
+    // /// lag time
+    // const std::vector<std::vector<T6> >& tlag_;
 
     /**
      * Constructor using population data with parameter give as
@@ -109,7 +112,7 @@ namespace torsten {
      * @param[in] biovar bioavailability
      * @param[in] tlag lag time
      */
-    template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
+    template <typename T0_, typename T1_, typename T2_, typename T3_>
     NONMENEventsRecord(int n,
                        const std::vector<int>& len,
                        const std::vector<T0_>& time,
@@ -119,10 +122,7 @@ namespace torsten {
                        const std::vector<int>& evid,
                        const std::vector<int>& cmt,
                        const std::vector<int>& addl,
-                       const std::vector<int>& ss,
-                       const std::vector<theta_container<T4_>>& pMatrix,
-                       const std::vector<std::vector<T5_> >& biovar,
-                       const std::vector<std::vector<T6_> >& tlag) :
+                       const std::vector<int>& ss) :
       len_1_(),
       ncmt(n),
       begin_(len.size()),
@@ -135,10 +135,7 @@ namespace torsten {
       evid_   (evid   ),
       cmt_    (cmt    ),
       addl_   (addl   ),
-      ss_     (ss     ),
-      pMatrix_(pMatrix),
-      biovar_ (biovar ),
-      tlag_   (tlag   )
+      ss_     (ss     )
     {
       begin_[0] = 0;
       std::partial_sum(len.begin(), len.end() - 1, begin_.begin() + 1);
@@ -165,7 +162,7 @@ namespace torsten {
      * @param[in] biovar bioavailability
      * @param[in] tlag lag time
      */
-    template <typename T0_, typename T1_, typename T2_, typename T3_, typename T4_, typename T5_, typename T6_>
+    template <typename T0_, typename T1_, typename T2_, typename T3_>
     NONMENEventsRecord(int n,
                        const std::vector<T0_>& time,
                        const std::vector<T1_>& amt,
@@ -174,10 +171,7 @@ namespace torsten {
                        const std::vector<int>& evid,
                        const std::vector<int>& cmt,
                        const std::vector<int>& addl,
-                       const std::vector<int>& ss,
-                       const std::vector<theta_container<T4_>>& pMatrix,
-                       const std::vector<std::vector<T5_> >& biovar,
-                       const std::vector<std::vector<T6_> >& tlag) :
+                       const std::vector<int>& ss) :
       len_1_(1, time.size()),
       ncmt(n),
       begin_{0},
@@ -190,10 +184,7 @@ namespace torsten {
       evid_   (evid   ),
       cmt_    (cmt    ),
       addl_   (addl   ),
-      ss_     (ss     ),
-      pMatrix_(pMatrix),
-      biovar_ (biovar ),
-      tlag_   (tlag   )
+      ss_     (ss     )
     {}
   
     /** 
@@ -205,8 +196,9 @@ namespace torsten {
      * 
      * @return begin index in @c pMatrix for the subject
      */
-    int begin_param(int id) const {
-      return pMatrix_.size() == len_.size() ? id : begin_[id];
+    template<typename T>
+    int begin_param(int id, const std::vector<T>& param) const {
+      return param.size() == len_.size() ? id : begin_[id];
     }
 
     /**
@@ -218,60 +210,9 @@ namespace torsten {
      * 
      * @return len in @c pMatrix for the subject
      */
-    int len_param(int id) const {
-      return pMatrix_.size() == len_.size() ? 1 : len_[id]; 
-    }
-
-    /**
-     * begin of bioavailability for a subject @c id
-     * in @c biovar. It is assumed that all the paramter are
-     * either constant or time dependent.
-     *
-     * @param id subject id
-     * 
-     * @return begin index in @c biovar for the subject
-     */
-    int begin_biovar(int id) const {
-      return biovar_.size()  == len_.size() ? id : begin_[id];
-    }
-
-    /**
-     * length of bioavailability for a subject @c id
-     * in @c biovar. It is assumed that all the paramter are
-     * either constant or time dependent.
-     *
-     * @param id subject id
-     * 
-     * @return len in @c biovar for the subject
-     */
-    inline int len_biovar(int id) const {
-      return biovar_.size()  == len_.size() ? 1 : len_[id];
-    }
-
-    /**
-     * begin of lag time for a subject @c id
-     * in @c tlag. It is assumed that all the paramter are
-     * either constant or time dependent.
-     *
-     * @param id subject id
-     * 
-     * @return begin index in @c tlag for the subject
-     */
-    inline int begin_tlag(int id) const {
-      return tlag_.size()  == len_.size() ? id : begin_[id];
-    }
-
-    /**
-     * length of lag time for a subject @c id
-     * in @c tlag. It is assumed that all the paramter are
-     * either constant or time dependent.
-     *
-     * @param id subject id
-     * 
-     * @return len in @c tlag for the subject
-     */
-    inline int len_tlag(int id) const {
-      return tlag_.size()  == len_.size() ? 1 : len_[id];
+    template<typename T>
+    int len_param(int id, const std::vector<T>& param) const {
+      return param.size() == len_.size() ? 1 : len_[id]; 
     }
 
     /** 
@@ -311,11 +252,13 @@ namespace torsten {
      * 
      * @return if the subject has any time-lagged dosing event.
      */
-    bool has_lag(int id) const {
+    template<typename T>
+    inline bool has_positive_param(int id, const std::vector<std::vector<T>>& params) const {
       using stan::math::value_of;
-      return std::any_of(tlag_.begin() + begin_tlag(id), tlag_.begin() + begin_tlag(id) + len_tlag(id),
-                         [](const std::vector<T6>& v) {
-                           return std::any_of(v.begin(), v.end(), [](const T6& x) { return std::abs(value_of(x)) > 1.E-10; });
+      return std::any_of(params.begin() + begin_param(id, params),
+                         params.begin() + begin_param(id, params) + len_param(id, params),
+                         [](const std::vector<T>& v) {
+                           return std::any_of(v.begin(), v.end(), [](const T& x) { return std::abs(value_of(x)) > 1.E-12; });
                          });
     }
 
@@ -325,17 +268,18 @@ namespace torsten {
      * 
      * @return if the subject has any time-lagged dosing event.
      */
-    bool has_lag() const {
-      return has_lag(0);
+    template<typename T>
+    inline bool has_positive_param(const std::vector<std::vector<T>>& params) const {
+      return has_positive_param(0, params);
     }
 
     /** 
      * 
      * @return nb. of params for each event
      */
-    inline int parameter_size() const {
-      return pMatrix_[0].size();
-    }
+    // inline int parameter_size() const {
+    //   return pMatrix_[0].size();
+    // }
 
     /** 
      * @param id subject id

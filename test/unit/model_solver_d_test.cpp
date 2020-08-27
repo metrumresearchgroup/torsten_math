@@ -17,7 +17,6 @@ using stan::math::var;
 using stan::math::to_var;
 using stan::math::vector_v;
 using torsten::PKRec;
-using torsten::EventsManager;
 using torsten::PMXTwoCptModel;
 using torsten::PKODEModel;
 using torsten::PMXTwoCptODE;

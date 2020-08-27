@@ -90,9 +90,9 @@ pmx_solve_adams(const F& f,
   torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
                 pMatrix, biovar, tlag, function);
 
-  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
-  using EM = EventsManager<ER>;
-  const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+  using ER = NONMENEventsRecord<T0, T1, T2, T3>;
+  using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, 3, T5, T6>>;
+  const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
@@ -101,13 +101,13 @@ pmx_solve_adams(const F& f,
 
 #ifdef TORSTEN_USE_STAN_ODE
   PMXOdeIntegrator<StanAdams> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
-  EventSolver<model_type> pr;
+   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, 3, T5, T6>> pr;
 #else
   PMXOdeIntegrator<PkAdams> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
-  EventSolver<model_type> pr;
+   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, 3, T5, T6>> pr;
 #endif
 
-  pr.pred(0, events_rec, pred, integrator, nCmt, f);
+  pr.pred(0, events_rec, pred, integrator, pMatrix, biovar, tlag, nCmt, f);
   return pred;
 }
 
@@ -335,7 +335,7 @@ pmx_solve_adams(const F& f,
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
-Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
+Eigen::Matrix<typename  EventsManager<NONMENEventsRecord<T0, T1, T2, T3>, NonEventParameters<T0, T4, std::vector, 3, T5, T6> >::T_scalar, // NOLINT
               Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_group_adams(const F& f,
                       const int nCmt,
@@ -362,23 +362,23 @@ pmx_solve_group_adams(const F& f,
   torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
                                 pMatrix, biovar, tlag, caller);
 
-  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
-  using EM = EventsManager<ER>;
+  using ER = NONMENEventsRecord<T0, T1, T2, T3>;
+  using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, 3, T5, T6>>;
   using model_type = torsten::PKODEModel<typename EM::T_par, F>;
 
-  ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+  ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss);
 
 #ifdef TORSTEN_USE_STAN_ODE
   PMXOdeIntegrator<StanAdams> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
-  EventSolver<model_type> pr;
+   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, 3, T5, T6>> pr;
 #else
   PMXOdeIntegrator<PkAdams> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
-  EventSolver<model_type> pr;
+   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, 3, T5, T6>> pr;
 #endif
 
   Eigen::Matrix<typename EM::T_scalar, -1, -1> pred(nCmt, events_rec.total_num_event_times);
 
-  pr.pred(events_rec, pred, integrator, nCmt, f);
+  pr.pred(events_rec, pred, integrator, pMatrix, biovar, tlag, nCmt, f);
 
   return pred;
 }
@@ -388,7 +388,7 @@ pmx_solve_group_adams(const F& f,
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
-Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
+Eigen::Matrix<typename  EventsManager<NONMENEventsRecord<T0, T1, T2, T3>, NonEventParameters<T0, T4, std::vector, 3, T5, T6> >::T_scalar, // NOLINT
               Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_group_adams(const F& f,
                       const int nCmt,
@@ -418,7 +418,7 @@ pmx_solve_group_adams(const F& f,
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
-Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
+Eigen::Matrix<typename  EventsManager<NONMENEventsRecord<T0, T1, T2, T3>, NonEventParameters<T0, T4, std::vector, 3, T5, T6> >::T_scalar, // NOLINT
               Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_group_adams(const F& f,
                       const int nCmt,

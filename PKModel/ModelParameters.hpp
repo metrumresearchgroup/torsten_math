@@ -258,7 +258,7 @@ struct ModelParameterHistory {
    * @return - modified parameters and events.
    */
   template<typename T0, typename T_p1, typename T_p2, typename T_p3>
-  void CompleteParameterHistory(torsten::EventHistory<T0, T_p1, T_p2, T_p3, T4, T5, T6>& events) {
+  void CompleteParameterHistory(torsten::EventHistory<T0, T_p1, T_p2, T_p3, T6>& events) {
     int nEvent = events.size();
     assert(nEvent > 0);
     int len_Parameters = index.size();  // numbers of events for which parameters are determined

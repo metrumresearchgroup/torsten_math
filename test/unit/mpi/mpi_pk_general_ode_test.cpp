@@ -20,7 +20,6 @@ using Eigen::MatrixXd;
 using Eigen::Dynamic;
 using stan::math::var;
 using torsten::NONMENEventsRecord;
-using torsten::EventsManager;
 
 TEST_F(TorstenPopulationPMXTwoCptTest, rk45_solver_multiple_bolus_doses_data_only) {
   using model_t = torsten::PMXTwoCptModel<double>;

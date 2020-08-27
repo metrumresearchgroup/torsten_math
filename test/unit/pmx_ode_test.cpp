@@ -27,6 +27,7 @@ using torsten::pmx_solve_rk45;
 using torsten::pmx_solve_bdf;
 using torsten::pmx_solve_adams;
 using torsten::NONMENEventsRecord;
+using torsten::NonEventParameters;
 
 TEST_F(TorstenOneCptTest, ss_zero_rate) {
   // Steady state induced by multiple bolus doses (SS = 1, rate = 0)
@@ -290,23 +291,25 @@ TEST_F(TorstenOneCptTest, ss_multiple_infusion_tlag) {
       std::vector<std::vector<double> > tlag1(nt);
       for (int i = 0; i < nt; ++i) tlag1[i] = tlag[i];
       tlag1[3] = x;
-      NONMENEventsRecord<double, double, double, double, double, double, double>
-      events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag1);
-      torsten::EventsManager<NONMENEventsRecord<double, double, double, double, double, double, double>>
-      em(events_rec);
+      NONMENEventsRecord<double, double, double, double>
+      events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+      torsten::EventsManager<NONMENEventsRecord<double, double, double, double>,
+                             NonEventParameters<double, double, std::vector, 3, double, double>>
+        em(events_rec, pMatrix, biovar, tlag1);
       return torsten::pmx_solve_bdf(f_onecpt, nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag1,
-                                          rel_tol, abs_tol, max_num_steps);
+                                    rel_tol, abs_tol, max_num_steps);
     };
     auto f2 = [&] (const std::vector<stan::math::var>& x) {
       std::vector<std::vector<var> > tlag1(nt);
       for (int i = 0; i < nt; ++i) tlag1[i] = stan::math::to_var(tlag[i]);
       tlag1[3] = x;
-      NONMENEventsRecord<double, double, double, double, double, double, var>
-      events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag1);
-      torsten::EventsManager<NONMENEventsRecord<double, double, double, double, double, double, var>>
-      em(events_rec);
+      NONMENEventsRecord<double, double, double, double>
+      events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+      torsten::EventsManager<NONMENEventsRecord<double, double, double, double>,
+                             NonEventParameters<double, double, std::vector, 3, double, var>>
+        em(events_rec, pMatrix, biovar, tlag1);
       return torsten::pmx_solve_bdf(f_onecpt, nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag1,
-                                          rel_tol, abs_tol, max_num_steps);
+                                    rel_tol, abs_tol, max_num_steps);
     };
     std::vector<double> tlag_test(tlag[3]);
     torsten::test::test_grad(f1, f2, tlag_test, 2e-5, 1e-5, 1e-3, 1e-5);

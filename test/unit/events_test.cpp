@@ -17,6 +17,7 @@ using Eigen::Dynamic;
 using stan::math::var;
 using torsten::EventsManager;
 using torsten::NONMENEventsRecord;
+using torsten::NonEventParameters;
 
 TEST_F(TorstenOneCptTest, lag_time) {
   using stan::math::var;
@@ -39,10 +40,11 @@ TEST_F(TorstenOneCptTest, lag_time) {
 
   time[1] = 2.5;
 
-  const NONMENEventsRecord<double, double, double, double, double, double, double>
-    events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
-  EventsManager<NONMENEventsRecord<double, double, double, double, double, double, double> >
-    em(events_rec);
+  const NONMENEventsRecord<double, double, double, double>
+    events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+  EventsManager<NONMENEventsRecord<double, double, double, double>,
+                NonEventParameters<double, double, std::vector, 3, double, double>>
+    em(events_rec, pMatrix, biovar, tlag);
   auto ev = em.events();
 
   EXPECT_EQ(ev.size(), nt + 1);  
@@ -55,10 +57,11 @@ TEST_F(TorstenOneCptTest, lag_time) {
   EXPECT_EQ(ev.evid(2), 0);
 
   std::vector<std::vector<var> > tlag_v(1, stan::math::to_var(tlag[0]));
-  const NONMENEventsRecord<double, double, double, double, double, double, var>
-    events_rec_v(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag_v);
-  EventsManager<NONMENEventsRecord<double, double, double, double, double, double, var> >
-    em1(events_rec_v);
+  const NONMENEventsRecord<double, double, double, double>
+    events_rec_v(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+  EventsManager<NONMENEventsRecord<double, double, double, double>,
+                NonEventParameters<double, double, std::vector, 3, double, var>>
+    em1(events_rec_v, pMatrix, biovar, tlag_v);
   auto ev1 = em1.events();
   stan::math::set_zero_all_adjoints();
   std::vector<double> g;
@@ -68,37 +71,37 @@ TEST_F(TorstenOneCptTest, lag_time) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl) {
-  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
-  using EM = EventsManager<ER>;
+  using ER = NONMENEventsRecord<double, double, double, double>;
+  using EM = EventsManager<ER,NonEventParameters<double, double, std::vector, 3, double, double>>;
 
   int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 5;
   addl[3] = 3;
 
   {
-    ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
-    EM em(events_rec);
+    ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+    EM em(events_rec, pMatrix, biovar, tlag);
     auto ev = em.events();
     EXPECT_EQ(ev.size(), evid.size() + addl[0]);
-    EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
+    EXPECT_EQ(ev.size(), EM::num_events(events_rec, pMatrix, biovar, tlag) );
   }
 
   {
     ii[3] = 4.0;
-    ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
-    EM em(events_rec);
+    ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+    EM em(events_rec, pMatrix, biovar, tlag);
     auto ev = em.events();
     EXPECT_EQ(ev.size(), evid.size() + addl[0]);
-    EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
+    EXPECT_EQ(ev.size(), EM::num_events(events_rec, pMatrix, biovar, tlag) );
   }
 
   amt[3] = 400.0;
   evid[3] = 1;
-  ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
-  EM em(events_rec);
+  ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+  EM em(events_rec, pMatrix, biovar, tlag);
   auto ev = em.events();
   EXPECT_EQ(ev.size(), evid.size() + addl[0] + addl[3]);
-  EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
+  EXPECT_EQ(ev.size(), EM::num_events(events_rec, pMatrix, biovar, tlag) );
 
   EXPECT_EQ(ev.time(0 ), 0    );  EXPECT_EQ(ev.amt(0 ), 1000);  EXPECT_EQ(ev.evid(0 ), 1);
   EXPECT_EQ(ev.time(1 ), 0.25 );  EXPECT_EQ(ev.amt(1 ), 0   );  EXPECT_EQ(ev.evid(1 ), 0);
@@ -121,37 +124,37 @@ TEST_F(TorstenTwoCptTest, events_addl) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_singled_ragged_array) {
-  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
-  using EM = EventsManager<ER>;
+  using ER = NONMENEventsRecord<double, double, double, double>;
+  using EM = EventsManager<ER,NonEventParameters<double, double, std::vector, 3, double, double>>;
 
   int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 5;
   addl[3] = 3;
 
   {
-    ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
-    EM em(0, events_rec);
+    ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+    EM em(0, events_rec, pMatrix, biovar, tlag);
     auto ev = em.events();
     EXPECT_EQ(ev.size(), evid.size() + addl[0]);
-    EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
+    EXPECT_EQ(ev.size(), EM::num_events(events_rec, pMatrix, biovar, tlag) );
   }
 
   {
     ii[3] = 4.0;
-    ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
-    EM em(0, events_rec);
+    ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+    EM em(0, events_rec, pMatrix, biovar, tlag);
     auto ev = em.events();
     EXPECT_EQ(ev.size(), evid.size() + addl[0]);
-    EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
+    EXPECT_EQ(ev.size(), EM::num_events(events_rec, pMatrix, biovar, tlag) );
   }
 
   amt[3] = 400.0;
   evid[3] = 1;
-  ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
-  EM em(0, events_rec);
+  ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+  EM em(0, events_rec, pMatrix, biovar, tlag);
   auto ev = em.events();
   EXPECT_EQ(ev.size(), evid.size() + addl[0] + addl[3]);
-  EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
+  EXPECT_EQ(ev.size(), EM::num_events(events_rec, pMatrix, biovar, tlag) );
 
   EXPECT_EQ(ev.time(0 ), 0    );  EXPECT_EQ(ev.amt(0 ), 1000);  EXPECT_EQ(ev.evid(0 ), 1);
   EXPECT_EQ(ev.time(1 ), 0.25 );  EXPECT_EQ(ev.amt(1 ), 0   );  EXPECT_EQ(ev.evid(1 ), 0);
@@ -174,8 +177,8 @@ TEST_F(TorstenTwoCptTest, events_addl_singled_ragged_array) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_multiple_identical_ragged_array) {
-  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
-  using EM = EventsManager<ER>;
+  using ER = NONMENEventsRecord<double, double, double, double>;
+  using EM = EventsManager<ER,NonEventParameters<double, double, std::vector, 3, double, double>>;
 
   int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 5;
@@ -202,11 +205,11 @@ TEST_F(TorstenTwoCptTest, events_addl_multiple_identical_ragged_array) {
   tlag.resize   (2 * n3) ; std::copy_n(tlag.begin(),    n3, tlag.begin()    + n3);
 
   std::vector<int> len(2, n);
-  ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+  ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss);
   {
-    EM em(0, events_rec, 0, n1, 0, n2, 0, n3);
+    EM em(0, events_rec, 0, n1, 0, n2, 0, n3, pMatrix, biovar, tlag);
     auto ev = em.events();
-    EXPECT_EQ(ev.size(), EM::num_events(0, events_rec) );
+    EXPECT_EQ(ev.size(), EM::num_events(0, events_rec, pMatrix, biovar, tlag) );
     EXPECT_EQ(ev.time(0 ), 0    );  EXPECT_EQ(ev.amt(0 ), 1000);  EXPECT_EQ(ev.evid(0 ), 1);
     EXPECT_EQ(ev.time(1 ), 0.25 );  EXPECT_EQ(ev.amt(1 ), 0   );  EXPECT_EQ(ev.evid(1 ), 0);
     EXPECT_EQ(ev.time(2 ), 0.5  );  EXPECT_EQ(ev.amt(2 ), 0   );  EXPECT_EQ(ev.evid(2 ), 0);
@@ -228,9 +231,9 @@ TEST_F(TorstenTwoCptTest, events_addl_multiple_identical_ragged_array) {
   }
 
   {
-    EM em(1, events_rec, n1, n1, n2, n2, n3, n3);
+    EM em(1, events_rec, n1, n1, n2, n2, n3, n3, pMatrix, biovar, tlag);
     auto ev = em.events();
-    EXPECT_EQ(ev.size(), EM::num_events(1, events_rec));
+    EXPECT_EQ(ev.size(), EM::num_events(1, events_rec, pMatrix, biovar, tlag));
     EXPECT_EQ(ev.time(0 ), 0    );  EXPECT_EQ(ev.amt(0 ), 1000);  EXPECT_EQ(ev.evid(0 ), 1);
     EXPECT_EQ(ev.time(1 ), 0.25 );  EXPECT_EQ(ev.amt(1 ), 0   );  EXPECT_EQ(ev.evid(1 ), 0);
     EXPECT_EQ(ev.time(2 ), 0.5  );  EXPECT_EQ(ev.amt(2 ), 0   );  EXPECT_EQ(ev.evid(2 ), 0);
@@ -253,8 +256,8 @@ TEST_F(TorstenTwoCptTest, events_addl_multiple_identical_ragged_array) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_rate) {
-  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
-  using EM = EventsManager<ER>;
+  using ER = NONMENEventsRecord<double, double, double, double>;
+  using EM = EventsManager<ER,NonEventParameters<double, double, std::vector, 3, double, double>>;
 
   int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 5;
@@ -265,13 +268,13 @@ TEST_F(TorstenTwoCptTest, events_addl_rate) {
   rate[3] = 400;
   evid[3] = 1;
 
-  ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
-  EM em(events_rec);
+  ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+  EM em(events_rec, pMatrix, biovar, tlag);
   auto ev = em.events();
 
   /* each IV dose has an end event.*/
   EXPECT_EQ(ev.size(), evid.size() + addl[0] + addl[3] * 2 + 1);
-  EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
+  EXPECT_EQ(ev.size(), EM::num_events(events_rec, pMatrix, biovar, tlag) );
 
   EXPECT_FLOAT_EQ(ev.time(0 ), 0    );   EXPECT_EQ(ev.evid(0 ), 1);
   EXPECT_FLOAT_EQ(ev.time(1 ), 0.25 );   EXPECT_EQ(ev.evid(1 ), 0);
@@ -317,8 +320,8 @@ TEST_F(TorstenTwoCptTest, events_addl_rate) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_rate_multiple_identical_ragged_array) {
-  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
-  using EM = EventsManager<ER>;
+  using ER = NONMENEventsRecord<double, double, double, double>;
+  using EM = EventsManager<ER,NonEventParameters<double, double, std::vector, 3, double, double>>;
 
   int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 5;
@@ -347,11 +350,11 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_multiple_identical_ragged_array) {
   tlag.resize   (2 * n3) ; std::copy_n(tlag.begin(),    n3, tlag.begin()    + n3);
 
   std::vector<int> len(2, n);
-  ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+  ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss);
   {
-    EM em(0, events_rec, 0, n1, 0, n2, 0, n3);
+    EM em(0, events_rec, 0, n1, 0, n2, 0, n3, pMatrix, biovar, tlag);
     auto ev = em.events();
-    EXPECT_EQ(ev.size(), EM::num_events(0, events_rec) );
+    EXPECT_EQ(ev.size(), EM::num_events(0, events_rec, pMatrix, biovar, tlag) );
     EXPECT_FLOAT_EQ(ev.time(0 ), 0    );   EXPECT_EQ(ev.evid(0 ), 1);
     EXPECT_FLOAT_EQ(ev.time(1 ), 0.25 );   EXPECT_EQ(ev.evid(1 ), 0);
     EXPECT_FLOAT_EQ(ev.time(2 ), 0.5  );   EXPECT_EQ(ev.evid(2 ), 0);
@@ -396,9 +399,9 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_multiple_identical_ragged_array) {
   }
 
 {
-    EM em(1, events_rec, n1, n1, n2, n2, n3, n3);
+    EM em(1, events_rec, n1, n1, n2, n2, n3, n3, pMatrix, biovar, tlag);
     auto ev = em.events();
-    EXPECT_EQ(ev.size(), EM::num_events(1, events_rec) );
+    EXPECT_EQ(ev.size(), EM::num_events(1, events_rec, pMatrix, biovar, tlag) );
     EXPECT_FLOAT_EQ(ev.time(0 ), 0    );   EXPECT_EQ(ev.evid(0 ), 1);
     EXPECT_FLOAT_EQ(ev.time(1 ), 0.25 );   EXPECT_EQ(ev.evid(1 ), 0);
     EXPECT_FLOAT_EQ(ev.time(2 ), 0.5  );   EXPECT_EQ(ev.evid(2 ), 0);
@@ -444,8 +447,8 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_multiple_identical_ragged_array) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_const_tlag) {
-  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
-  using EM = EventsManager<ER>;
+  using ER = NONMENEventsRecord<double, double, double, double>;
+  using EM = EventsManager<ER,NonEventParameters<double, double, std::vector, 3, double, double>>;
 
   int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 1;
@@ -458,11 +461,11 @@ TEST_F(TorstenTwoCptTest, events_addl_const_tlag) {
   // lag for cmt 1, this shouldn't affect the dose on cmt 2.
   tlag[0][0] = 0.25;
   {
-    ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
-    EM em(events_rec);
+    ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+    EM em(events_rec, pMatrix, biovar, tlag);
     auto ev = em.events();
     EXPECT_EQ(ev.size(), time.size() + addl[0] * 2 + 1 + addl[3]);
-    EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
+    EXPECT_EQ(ev.size(), EM::num_events(events_rec, pMatrix, biovar, tlag) );
 
     EXPECT_FLOAT_EQ(ev.time(0 ), 0    ); EXPECT_FLOAT_EQ(ev.amt(0 ), 1000.);
     EXPECT_FLOAT_EQ(ev.time(1 ), 0.25 ); EXPECT_FLOAT_EQ(ev.amt(1 ), 0.   );
@@ -501,11 +504,11 @@ TEST_F(TorstenTwoCptTest, events_addl_const_tlag) {
   tlag[0][0] = 0.0;
   tlag[0][1] = 0.2;
   {
-    ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
-    EM em(events_rec);
+    ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+    EM em(events_rec, pMatrix, biovar, tlag);
     auto ev = em.events();
     EXPECT_EQ(ev.size(), time.size() + addl[3] * 2 + 1 + addl[0]);
-    EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
+    EXPECT_EQ(ev.size(), EM::num_events(events_rec, pMatrix, biovar, tlag) );
     
     EXPECT_FLOAT_EQ(ev.time(0 ), 0   );   EXPECT_FLOAT_EQ(ev.amt(0 ), 1000.);
     EXPECT_FLOAT_EQ(ev.time(1 ), 0.25);   EXPECT_FLOAT_EQ(ev.amt(1 ), 0.   );
@@ -544,8 +547,8 @@ TEST_F(TorstenTwoCptTest, events_addl_const_tlag) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_rate_const_tlag) {
-  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
-  using EM = EventsManager<ER>;
+  using ER = NONMENEventsRecord<double, double, double, double>;
+  using EM = EventsManager<ER,NonEventParameters<double, double, std::vector, 3, double, double>>;
 
   int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 1;
@@ -557,11 +560,11 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_const_tlag) {
   evid[3] = 1;
 
   tlag[0][1] = 0.25;
-  ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
-  EM em(events_rec);
+  ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+  EM em(events_rec, pMatrix, biovar, tlag);
   auto ev = em.events();
   EXPECT_EQ(ev.size(), time.size() + addl[3] * 3 + 2 + addl[0]);
-  EXPECT_EQ(ev.size(), EM::num_events(events_rec) );
+  EXPECT_EQ(ev.size(), EM::num_events(events_rec, pMatrix, biovar, tlag) );
 
   EXPECT_FLOAT_EQ(ev.time(0 ), 0    ); EXPECT_FLOAT_EQ(em.fractioned_rates(0 )[1], 0.  );
   EXPECT_FLOAT_EQ(ev.time(1 ), 0.25 ); EXPECT_FLOAT_EQ(em.fractioned_rates(1 )[1], 0.  );
@@ -605,8 +608,8 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_const_tlag) {
 }
 
 TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_const_tlag) {
-  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
-  using EM = EventsManager<ER>;
+  using ER = NONMENEventsRecord<double, double, double, double>;
+  using EM = EventsManager<ER,NonEventParameters<double, double, std::vector, 3, double, double>>;
 
   int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   int id = 1;
@@ -629,7 +632,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_const_tlag) {
   tlag_m[id * 1][1] = 0.12;
 
   std::vector<int> len(np, time.size());
-  ER all_events_rec(nCmt, len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m, pMatrix_m, biovar_m, tlag_m);
+  ER all_events_rec(nCmt, len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m);
 
   int ibegin = 0, ibegin_pMatrix = 0, ibegin_biovar = 0, ibegin_tlag = 0;
   int isize = 0, isize_pMatrix = 0, isize_biovar = 0, isize_tlag = 0;
@@ -655,11 +658,12 @@ TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_const_tlag) {
     std::vector<std::vector<double> > biovar_i(biovar_m.begin() + ibegin_biovar, biovar_m.begin() + ibegin_biovar + isize_biovar);
     std::vector<std::vector<double> > tlag_i(tlag_m.begin() + ibegin_tlag, tlag_m.begin() + ibegin_tlag + isize_tlag);
 
-    ER events_rec(nCmt, time_i, amt_i, rate_i, ii_i, evid_i, cmt_i, addl_i, ss_i, pMatrix_i, biovar_i, tlag_i);
-    EM em(events_rec);
-    EM em_i(id, all_events_rec, ibegin_pMatrix, isize_pMatrix, ibegin_biovar, isize_biovar, ibegin_tlag, isize_tlag);
+    ER events_rec(nCmt, time_i, amt_i, rate_i, ii_i, evid_i, cmt_i, addl_i, ss_i);
+    EM em(events_rec, pMatrix_i, biovar_i, tlag_i);
+    EM em_i(id, all_events_rec, ibegin_pMatrix, isize_pMatrix, ibegin_biovar, isize_biovar, ibegin_tlag, isize_tlag,
+            pMatrix_m, biovar_m, tlag_m);
     EXPECT_EQ(em.events().size(), em_i.events().size());
-    EXPECT_EQ(em.events().size(), EM::num_events(id, all_events_rec) );
+    EXPECT_EQ(em.events().size(), EM::num_events(id, all_events_rec, pMatrix_m, biovar_m, tlag_m) );
     for (size_t j = 0; j < em.events().size(); ++j) {
       EXPECT_FLOAT_EQ(em.events().time(j), em_i.events().time(j));
       EXPECT_FLOAT_EQ(em.events().amt(j), em_i.events().amt(j));
@@ -670,8 +674,8 @@ TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_const_tlag) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_rate_tlag) {
-  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
-  using EM = EventsManager<ER>;
+  using ER = NONMENEventsRecord<double, double, double, double>;
+  using EM = EventsManager<ER,NonEventParameters<double, double, std::vector, 3, double, double>>;
 
   int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 0;
@@ -686,8 +690,8 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_tlag) {
   for (auto& l : tlag) l.resize(nCmt);
   tlag[3][1] = 0.25;
 
-  ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
-  EM em(events_rec);
+  ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+  EM em(events_rec, pMatrix, biovar, tlag);
   auto ev = em.events();
 
   // Last Observation Carried Forward for the parameters for
@@ -714,8 +718,8 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_tlag) {
 }
 
 TEST_F(TorstenTwoCptTest, events_addl_rate_tlag_LOCF) {
-  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
-  using EM = EventsManager<ER>;
+  using ER = NONMENEventsRecord<double, double, double, double>;
+  using EM = EventsManager<ER,NonEventParameters<double, double, std::vector, 3, double, double>>;
 
   int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   addl[0] = 0;
@@ -731,8 +735,8 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_tlag_LOCF) {
   for (auto& l : tlag) l.resize(nCmt);
   tlag[time.size() - 1][1] = 0.25;
 
-  ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
-  EM em(events_rec);
+  ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+  EM em(events_rec, pMatrix, biovar, tlag);
   auto ev = em.events();
 
   // Last Observation Carried Forward for the parameters for
@@ -781,8 +785,8 @@ TEST_F(TorstenTwoCptTest, events_addl_rate_tlag_LOCF) {
 }
 
 TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_tlag_LOCF) {
-  using ER = NONMENEventsRecord<double, double, double, double, double, double, double>;
-  using EM = EventsManager<ER>;
+  using ER = NONMENEventsRecord<double, double, double, double>;
+  using EM = EventsManager<ER,NonEventParameters<double, double, std::vector, 3, double, double>>;
 
   int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
   int id = 1;
@@ -831,7 +835,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_tlag_LOCF) {
   }
   
   std::vector<int> len(np, time.size());
-  ER all_events_rec(nCmt, len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m, pMatrix_m, biovar_m, tlag_m);
+  ER all_events_rec(nCmt, len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m);
 
   int ibegin = 0, ibegin_pMatrix = 0, ibegin_biovar = 0, ibegin_tlag = 0;
   int isize = 0, isize_pMatrix = 0, isize_biovar = 0, isize_tlag = 0;
@@ -857,9 +861,10 @@ TEST_F(TorstenPopulationPMXTwoCptTest, events_addl_rate_tlag_LOCF) {
     std::vector<std::vector<double> > biovar_i(biovar_m.begin() + ibegin_biovar, biovar_m.begin() + ibegin_biovar + isize_biovar);
     std::vector<std::vector<double> > tlag_i(tlag_m.begin() + ibegin_tlag, tlag_m.begin() + ibegin_tlag + isize_tlag);
 
-    ER events_rec(nCmt, time_i, amt_i, rate_i, ii_i, evid_i, cmt_i, addl_i, ss_i, pMatrix_i, biovar_i, tlag_i);
-    EM em(events_rec);
-    EM em_i(id, all_events_rec, ibegin_pMatrix, isize_pMatrix, ibegin_biovar, isize_biovar, ibegin_tlag, isize_tlag);
+    ER events_rec(nCmt, time_i, amt_i, rate_i, ii_i, evid_i, cmt_i, addl_i, ss_i);
+    EM em(events_rec, pMatrix_i, biovar_i, tlag_i);
+    EM em_i(id, all_events_rec, ibegin_pMatrix, isize_pMatrix, ibegin_biovar, isize_biovar, ibegin_tlag, isize_tlag,
+            pMatrix_m, biovar_m, tlag_m);
     EXPECT_EQ(em.events().size(), em_i.events().size());
     for (size_t j = 0; j < em.events().size(); ++j) {
       EXPECT_FLOAT_EQ(em.events().time(j), em_i.events().time(j));

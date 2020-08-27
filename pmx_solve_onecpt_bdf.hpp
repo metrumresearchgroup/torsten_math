@@ -101,16 +101,16 @@ pmx_solve_onecpt_bdf(const F& f,
   PMXOdeIntegrator<StanBdf> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
   const int nCmt = nPK + nOde;
 
-  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
-  using EM = EventsManager<ER>;
-  const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  using ER = NONMENEventsRecord<T0, T1, T2, T3>;
+  using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, 3, T5, T6>>;
+  const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
   using model_type = torsten::PkOneCptOdeModel<typename EM::T_rate, typename EM::T_par, F>;
-  EventSolver<model_type> pr;
-  pr.pred(0, events_rec, pred, integrator, f, nOde);
+   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, 3, T5, T6>> pr;
+   pr.pred(0, events_rec, pred, integrator, theta, biovar, tlag, f, nOde);
   return pred;
 }
 

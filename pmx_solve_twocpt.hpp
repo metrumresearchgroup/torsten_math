@@ -107,16 +107,16 @@ pmx_solve_twocpt(const std::vector<T0>& time,
     "The number of lag times parameters per event (length of a vector in the eleventh argument) is", // NOLINT
     tlag[0].size(), "", length_error5);
 
-  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
-  using EM = EventsManager<ER>;
-  const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+  using ER = NONMENEventsRecord<T0, T1, T2, T3>;
+  using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, 3, T5, T6>>;
+  const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
   using model_type = torsten::PMXTwoCptModel<typename EM::T_par>;
-  EventSolver<model_type> pr;
-  pr.pred(0, events_rec, pred, PMXOdeIntegrator<Analytical>());
+   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, 3, T5, T6>> pr;
+  pr.pred(0, events_rec, pred, PMXOdeIntegrator<Analytical>(), pMatrix, biovar, tlag);
   return pred;
 }
 
@@ -208,7 +208,7 @@ pmx_solve_twocpt(const std::vector<T0>& time,
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6>
-Eigen::Matrix<typename EventsManager<NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6> >::T_scalar, // NOLINT
+Eigen::Matrix<typename  EventsManager<NONMENEventsRecord<T0, T1, T2, T3>, NonEventParameters<T0, T4, std::vector, 3, T5, T6> >::T_scalar, // NOLINT
               Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_group_twocpt(const std::vector<int>& len,
                        const std::vector<T0>& time,
@@ -222,22 +222,22 @@ pmx_solve_group_twocpt(const std::vector<int>& len,
                        const std::vector<std::vector<T4> >& pMatrix,
                        const std::vector<std::vector<T5> >& biovar,
                        const std::vector<std::vector<T6> >& tlag) {
-  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
-  using EM = EventsManager<ER>;
+  using ER = NONMENEventsRecord<T0, T1, T2, T3>;
+  using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, 3, T5, T6>>;
 
   int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
-  ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+  ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss);
 
   static const char* caller("pmx_solve_group_twocpt");
   torsten::pmx_population_check(len, time, amt, rate, ii, evid, cmt, addl, ss,
                                 pMatrix, biovar, tlag, caller);
 
   using model_type = torsten::PMXTwoCptModel<typename EM::T_par>;
-  EventSolver<model_type> pr;
+   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, 3, T5, T6>> pr;
 
   Eigen::Matrix<typename EM::T_scalar, -1, -1> pred(events_rec.total_num_event_times, nCmt);
 
-  pr.pred(events_rec, pred, PMXOdeIntegrator<Analytical>());
+  pr.pred(events_rec, pred, PMXOdeIntegrator<Analytical>(), pMatrix, biovar, tlag);
 
   return pred;
 }
