@@ -23,11 +23,11 @@ namespace torsten{
    */
   template<typename T_model,
            typename T0, typename T4, template<typename...> class theta_container,
-           int n_params, typename... more_params_t>
+           int n_params, typename... array_2d_pars_value_type>
   struct EventSolver<T_model,
-                     NonEventParameters<T0, T4, theta_container, n_params, more_params_t...>> {
+                     NonEventParameters<T0, T4, theta_container, n_params, array_2d_pars_value_type...>> {
 
-    using T_params = NonEventParameters<T0, T4, theta_container, n_params, more_params_t...>;
+    using T_params = NonEventParameters<T0, T4, theta_container, n_params, array_2d_pars_value_type...>;
     /*
      * Data used to fill the results when computation throws exception.
      */
@@ -101,34 +101,32 @@ namespace torsten{
      * at each event.
      */
     template<typename T_event_record,
-             PMXOdeIntegratorId It, typename... Ts>
+             PMXOdeIntegratorId It, typename... scalar_pars_type>
     void pred(int id,
               const T_event_record& events_rec,
               Eigen::Matrix<typename EventsManager<T_event_record,T_params>::T_scalar, -1, -1>& res,
               const PMXOdeIntegrator<It> integrator,
               const std::vector<theta_container<T4>>& theta,
-              const std::vector<std::vector<more_params_t>>&... more_params,
-              const Ts... model_pars) {
+              const std::vector<std::vector<array_2d_pars_value_type>>&... array_2d_pars,
+              const scalar_pars_type... scalar_pars) {
       using Eigen::Matrix;
       using Eigen::Dynamic;
       using std::vector;
       using torsten::PKRec;
       using EM = EventsManager<T_event_record, T_params>;
 
-      using scalar = typename EM::T_scalar;
-
       int nCmt = EM::nCmt(events_rec);
 
       res.resize(nCmt, events_rec.num_event_times(id));
-      PKRec<scalar> init(nCmt);
+      PKRec<typename EM::T_scalar> init(nCmt);
       init.setZero();
 
       try {
-        EM em(id, events_rec, theta, more_params...);
+        EM em(id, events_rec, theta, array_2d_pars...);
         auto events = em.events();
         int ikeep = 0, iev = 0;
         while(ikeep < em.nKeep) {
-          stepper(iev, init, em, integrator, model_pars...);
+          stepper(iev, init, em, integrator, scalar_pars...);
           if(events.keep(iev)) {
             res.col(ikeep) = init;
             ikeep++;
@@ -143,9 +141,9 @@ namespace torsten{
     /*
      * Step through a range of events.
      */
-    template<typename T_em, PMXOdeIntegratorId It, typename... Ts>
+    template<typename T_em, PMXOdeIntegratorId It, typename... scalar_pars_type>
     void stepper(int i, PKRec<typename T_em::T_scalar>& init,
-                 const T_em& em, const PMXOdeIntegrator<It> integrator, const Ts... model_pars) {
+                 const T_em& em, const PMXOdeIntegrator<It> integrator, const scalar_pars_type... scalar_pars) {
       auto events = em.events();
 
       using scalar = typename T_em::T_scalar;
@@ -153,15 +151,15 @@ namespace torsten{
 
       typename T_em::T_time model_time = tprev;
       auto curr_rates = em.fractioned_rates(i);
-      T_model pkmodel {em.theta(i), model_pars...};
+      T_model pkmodel {em.theta(i), scalar_pars...};
       auto ev = em.event(i);
       ev(init, pkmodel, integrator);
     }
 
-    template<typename T_em, PMXOdeIntegratorId It, typename... Ts>
+    template<typename T_em, PMXOdeIntegratorId It, typename... scalar_pars_type>
     void stepper_solve(int i, torsten::PKRec<typename T_em::T_scalar>& init,
                        torsten::PKRec<double>& sol_d,
-                       const T_em& em, const PMXOdeIntegrator<It> integrator, const Ts... model_pars) {
+                       const T_em& em, const PMXOdeIntegrator<It> integrator, const scalar_pars_type... scalar_pars) {
       using std::vector;
       using stan::math::var;
 
@@ -171,15 +169,15 @@ namespace torsten{
 
       typename T_em::T_time model_time = tprev;
       auto curr_rates = em.fractioned_rates(i);
-      T_model pkmodel {em.theta(i), model_pars...};
+      T_model pkmodel {em.theta(i), scalar_pars...};
       auto ev = em.event(i);
-      ev(sol_d, init, pkmodel, integrator, model_pars...);
+      ev(sol_d, init, pkmodel, integrator, scalar_pars...);
     }
 
-    template<typename T_em, PMXOdeIntegratorId It, typename... Ts>
+    template<typename T_em, PMXOdeIntegratorId It, typename... scalar_pars_type>
     void stepper_sync(int i, torsten::PKRec<typename T_em::T_scalar>& init,
                       torsten::PKRec<double>& sol_d,
-                      const T_em& em, const PMXOdeIntegrator<It> integrator, const Ts... model_pars) {
+                      const T_em& em, const PMXOdeIntegrator<It> integrator, const scalar_pars_type... scalar_pars) {
       using std::vector;
       using stan::math::var;
 
@@ -191,7 +189,7 @@ namespace torsten{
         init.setZero();
       } else if (events.is_ss_dosing(i)) {  // steady state event
         typename T_em::T_time model_time = events.time(i);
-        T_model pkmodel {em.theta(i), model_pars...};
+        T_model pkmodel {em.theta(i), scalar_pars...};
         auto curr_amt = em.fractioned_amt(i);
         vector<var> v_i(dsolve::pk_vars(curr_amt, events.rate(i), events.ii(i), pkmodel.par()));
         int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
@@ -202,7 +200,7 @@ namespace torsten{
       } else if (events.time(i) > tprev) {
           typename T_em::T_time model_time = tprev;
           auto curr_rates = em.fractioned_rates(i);
-          T_model pkmodel {em.theta(i), model_pars...};
+          T_model pkmodel {em.theta(i), scalar_pars...};
           vector<var> v_i =
             pmx_model_vars<T_model>::vars(events.time(i), init, curr_rates, pkmodel.par());
           int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
@@ -222,14 +220,14 @@ namespace torsten{
      *
      */
     template<typename T_event_record,
-             PMXOdeIntegratorId It, typename... Ts,
+             PMXOdeIntegratorId It, typename... scalar_pars_type,
              typename std::enable_if_t<stan::is_var<typename EventsManager<T_event_record,T_params>::T_scalar>::value >* = nullptr> //NOLINT
     void pred(const T_event_record& events_rec,
               Eigen::Matrix<typename EventsManager<T_event_record,T_params>::T_scalar, -1, -1>& res,
               const PMXOdeIntegrator<It> integrator,
               const std::vector<theta_container<T4>>& theta,
-              const std::vector<std::vector<more_params_t>>&... more_params,
-              const Ts... model_pars) {
+              const std::vector<std::vector<array_2d_pars_value_type>>&... array_2d_pars,
+              const scalar_pars_type... scalar_pars) {
       using Eigen::Matrix;
       using Eigen::MatrixXd;
       using Eigen::VectorXd;
@@ -265,7 +263,7 @@ namespace torsten{
 
         const int nKeep = events_rec.num_event_times(id);
 
-        int nev = EM::num_events(id, events_rec, theta, more_params...);
+        int nev = EM::num_events(id, events_rec, theta, array_2d_pars...);
         res_d[id].resize(system_size(id, events_rec, theta), nev);
         res_d[id].setConstant(0.0);
 
@@ -278,7 +276,7 @@ namespace torsten{
             res_d[id].setConstant(invalid_res_d);
           } else {
             try {
-              EM em(id, events_rec, theta, more_params...);
+              EM em(id, events_rec, theta, array_2d_pars...);
               auto events = em.events();
               assert(nev == events.size());
               assert(nKeep == em.nKeep);
@@ -286,7 +284,7 @@ namespace torsten{
 
               int ikeep = 0, iev = 0;
               while(ikeep < em.nKeep) {
-                stepper_solve(iev, init, pred1, em, integrator, model_pars...);
+                stepper_solve(iev, init, pred1, em, integrator, scalar_pars...);
                 res_d[id].col(iev).segment(0, pred1.size()) = pred1;
                 if(events.keep(iev)) {
                   res.col(EM::begin(id, events_rec) + ikeep) = init;
@@ -324,7 +322,7 @@ namespace torsten{
       //     int ikeep = 0, iev = 0;
       //     while(ikeep < em.nKeep) {
       //       pred1 = res_d[id].col(iev);
-      //       stepper_sync(iev, init, pred1, em, integrator, model_pars...);
+      //       stepper_sync(iev, init, pred1, em, integrator, scalar_pars...);
       //       if(events.keep(iev)) {
       //         res.col(EM::begin(id, events_rec) + ikeep) = init;
       //         ikeep++;
@@ -349,7 +347,7 @@ namespace torsten{
             is_invalid = true;
             rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
           } else {
-            EM em(id, events_rec, theta, more_params...);
+            EM em(id, events_rec, theta, array_2d_pars...);
             auto events = em.events();
             PKRec<scalar> init(nCmt); init.setZero();
             PKRec<double> pred1 = VectorXd::Zero(res_d[id].rows());
@@ -357,7 +355,7 @@ namespace torsten{
             int ikeep = 0, iev = 0;
             while(ikeep < em.nKeep) {
               pred1 = res_d[id].col(iev);
-              stepper_sync(iev, init, pred1, em, integrator, model_pars...);
+              stepper_sync(iev, init, pred1, em, integrator, scalar_pars...);
               if(events.keep(iev)) {
                 res.col(EM::begin(id, events_rec) + ikeep) = init;
                 ikeep++;
@@ -379,12 +377,12 @@ namespace torsten{
      * Data-only MPI solver that takes ragged arrays as input.
      */
     template<typename T_event_record,
-             PMXOdeIntegratorId It, typename... Ts>
+             PMXOdeIntegratorId It, typename... scalar_pars_type>
     void pred(const T_event_record& events_rec, Eigen::MatrixXd& res,
               const PMXOdeIntegrator<It> integrator,
               const std::vector<theta_container<T4>>& theta,
-              const std::vector<std::vector<more_params_t>>&... more_params,
-              const Ts... model_pars) {
+              const std::vector<std::vector<array_2d_pars_value_type>>&... array_2d_pars,
+              const scalar_pars_type... scalar_pars) {
       using Eigen::Matrix;
       using Eigen::MatrixXd;
       using Eigen::VectorXd;
@@ -424,12 +422,12 @@ namespace torsten{
 
         if (rank == my_worker_id) {
           try {
-            EM em(id, events_rec, theta, more_params...);
+            EM em(id, events_rec, theta, array_2d_pars...);
             auto events = em.events();
             init.setZero();
             int ikeep = 0, iev = 0;
             while(ikeep < em.nKeep) {
-              stepper(iev, init, em, integrator, model_pars...);
+              stepper(iev, init, em, integrator, scalar_pars...);
               if(events.keep(iev)) {
                 res.col(EM::begin(id, events_rec) + ikeep) = init;
                 ikeep++;
@@ -479,13 +477,13 @@ namespace torsten{
      * is required to locate the data in a single array for population.
      */
     template<typename T_event_record,
-             PMXOdeIntegratorId It, typename... Ts> //NOLINT
+             PMXOdeIntegratorId It, typename... scalar_pars_type> //NOLINT
     void pred(const T_event_record& events_rec,
               Eigen::Matrix<typename EventsManager<T_event_record,T_params>::T_scalar, -1, -1>& res,
               const PMXOdeIntegrator<It> integrator,
               const std::vector<theta_container<T4>>& theta,
-              const std::vector<std::vector<more_params_t>>&... more_params,
-              const Ts... model_pars) {
+              const std::vector<std::vector<array_2d_pars_value_type>>&... array_2d_pars,
+              const scalar_pars_type... scalar_pars) {
       using ER = T_event_record;
       using EM = EventsManager<ER, T_params>;
 
@@ -503,7 +501,7 @@ namespace torsten{
       for (int id = 0; id < np; ++id) {
         const int nKeep = events_rec.num_event_times(id);
         Eigen::Matrix<typename EventsManager<T_event_record,T_params>::T_scalar, -1, -1> res_id(nCmt, nKeep);
-        pred(id, events_rec, res_id, integrator, theta, more_params..., model_pars...);
+        pred(id, events_rec, res_id, integrator, theta, array_2d_pars..., scalar_pars...);
         for (int j = 0; j < nKeep; ++j) {
           res.col(EM::begin(id, events_rec) + j) = res_id.col(j);
         }
@@ -514,8 +512,8 @@ namespace torsten{
 
   template<typename T_model,
            typename T0, typename T4, template<typename...> class theta_container,
-           int n_params, typename... more_params_t>
+           int n_params, typename... array_2d_pars_value_type>
   constexpr double EventSolver<T_model,
-                               NonEventParameters<T0, T4, theta_container, n_params, more_params_t...>>::invalid_res_d;
+                               NonEventParameters<T0, T4, theta_container, n_params, array_2d_pars_value_type...>>::invalid_res_d;
 }
 #endif

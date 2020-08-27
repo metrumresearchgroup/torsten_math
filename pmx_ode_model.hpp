@@ -667,6 +667,20 @@ namespace torsten {
     {}
 
     /**
+     * Constructor
+     *
+     * @param par model parameters
+     * @param f ODE functor
+     * @param ncmt the ODE size.
+     */
+    PKODEModel(const std::vector<T_par> &par,
+               const std::vector<double>& x_r,
+               int ncmt, const F& f) :
+      x_r_dummy(), x_i_dummy(),
+      par_(par), x_r_(x_r), x_i_(x_i_dummy),f_(f), ncmt_(ncmt)
+    {}
+
+    /**
      * Constructor from any other model type as long as it
      * provides enough information to build an ODE model.
      *

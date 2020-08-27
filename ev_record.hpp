@@ -1,13 +1,12 @@
 /**
  * @file   ev_record.hpp
- * @author Yi Zhang <yiz@metrumrg.com>
- * @date   Fri Mar 13 22:54:57 2020
+ * @author Yi Zhang <yiz@Yis-MacBook-Pro.local>
+ * @date   Wed Aug 26 23:43:13 2020
  * 
  * @brief  raw event record
  * 
  * 
  */
-
 #ifndef STAN_MATH_TORSTEN_NONMEN_EVENTS_RECORD_HPP
 #define STAN_MATH_TORSTEN_NONMEN_EVENTS_RECORD_HPP
 
@@ -29,19 +28,11 @@ namespace torsten {
    * @tparam T1 type of scalar for amount at each event.
    * @tparam T2 type of scalar for rate at each event.
    * @tparam T3 type of scalar for inter-dose inteveral at each event.
-   * @tparam T4 type of scalars for the model parameters.
-   * @tparam T5 type of scalars for the bio-variability parameters.
-   * @tparam T6 type of scalars for the model tlag parameters.
    * @tparam theta_container type of container for parameter. <code>linode</code> model uses
    *         matrix as parameter, other than <code>std::vector</code> used by others.
    */
   template <typename T0, typename T1, typename T2, typename T3>
   struct NONMENEventsRecord {
-    // using T_scalar = typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>;
-    // using T_time = typename stan::return_type_t<T0, T1, T3, T6, T2>;
-    // using T_rate = typename stan::return_type_t<T2, T5>;
-    // using T_amt = typename stan::return_type_t<T1, T5>;
-    // using T_par = T4;
     using T_scalar = typename stan::return_type_t<T0, T1, T2, T3>;
     using T_time = typename stan::return_type_t<T0, T1, T2, T3>;
     using T_rate = T2;
@@ -83,12 +74,6 @@ namespace torsten {
     const std::vector<int>& addl_;
     /// steady-states flag
     const std::vector<int>& ss_;
-    // /// parameters
-    // const std::vector<theta_container<T4>>& pMatrix_;
-    // /// bioavailability
-    // const std::vector<std::vector<T5> >& biovar_;
-    // /// lag time
-    // const std::vector<std::vector<T6> >& tlag_;
 
     /**
      * Constructor using population data with parameter give as
@@ -108,9 +93,6 @@ namespace torsten {
      * @param[in] cmt compartment number at each event 
      * @param[in] addl additional dosing at each event 
      * @param[in] ss steady state approximation at each event (0: no, 1: yes)
-     * @param[in] pMatrix parameters at each event
-     * @param[in] biovar bioavailability
-     * @param[in] tlag lag time
      */
     template <typename T0_, typename T1_, typename T2_, typename T3_>
     NONMENEventsRecord(int n,
@@ -158,9 +140,6 @@ namespace torsten {
      * @param[in] cmt compartment number at each event 
      * @param[in] addl additional dosing at each event 
      * @param[in] ss steady state approximation at each event (0: no, 1: yes)
-     * @param[in] pMatrix parameters at each event
-     * @param[in] biovar bioavailability
-     * @param[in] tlag lag time
      */
     template <typename T0_, typename T1_, typename T2_, typename T3_>
     NONMENEventsRecord(int n,
@@ -272,14 +251,6 @@ namespace torsten {
     inline bool has_positive_param(const std::vector<std::vector<T>>& params) const {
       return has_positive_param(0, params);
     }
-
-    /** 
-     * 
-     * @return nb. of params for each event
-     */
-    // inline int parameter_size() const {
-    //   return pMatrix_[0].size();
-    // }
 
     /** 
      * @param id subject id
