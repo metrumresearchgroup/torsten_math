@@ -15,10 +15,10 @@ namespace torsten {
   struct EventsManager;
 
   template <typename T0, typename T1, typename T2, typename T3, typename T4,
-            template<class...> class theta_container, int npar, typename... Ts>
+            template<class...> class theta_container, typename... Ts>
   struct EventsManager<NONMENEventsRecord<T0, T1, T2, T3>,
-                       NonEventParameters<T0, T4, theta_container, npar, Ts...> > {
-    using param_t = NonEventParameters<T0, T4, theta_container, npar, Ts...>;
+                       NonEventParameters<T0, T4, theta_container, Ts...> > {
+    using param_t = NonEventParameters<T0, T4, theta_container, Ts...>;
     using ER = NONMENEventsRecord<T0, T1, T2, T3>;
     using T_scalar = typename stan::return_type_t<typename ER::T_scalar, T4, Ts...>;
     using T_time   = typename stan::return_type_t<typename ER::T_time, typename param_t::lag_t>;
@@ -343,7 +343,6 @@ namespace torsten {
         res = n;
       } else {
         // FIXME not to use brute force
-        std::cout << "taki test: " << 2 << "\n";
         res = EventsManager(id, rec, theta, biovar, tlag, more_params...).events().size();
       }
 

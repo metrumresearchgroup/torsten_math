@@ -103,14 +103,14 @@ pmx_solve_twocpt_rk45(const F& f,
   const int nCmt = nPK + nOde;
 
   using ER = NONMENEventsRecord<T0, T1, T2, T3>;
-  using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, 3, T5, T6>>;
+  using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, T5, T6>>;
   const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
   using model_type = torsten::PkTwoCptOdeModel<typename EM::T_rate, typename EM::T_par, F>;
-  EventSolver<model_type, NonEventParameters<T0, T4, std::vector, 3, T5, T6>> pr;
+  EventSolver<model_type, NonEventParameters<T0, T4, std::vector, T5, T6>> pr;
   pr.pred(0, events_rec, pred, integrator, theta, biovar, tlag, f, nOde);
   return pred;
 }

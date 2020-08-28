@@ -23,11 +23,11 @@ namespace torsten{
    */
   template<typename T_model,
            typename T0, typename T4, template<typename...> class theta_container,
-           int n_params, typename... array_2d_pars_value_type>
+           typename... array_2d_pars_value_type>
   struct EventSolver<T_model,
-                     NonEventParameters<T0, T4, theta_container, n_params, array_2d_pars_value_type...>> {
+                     NonEventParameters<T0, T4, theta_container, array_2d_pars_value_type...>> {
 
-    using T_params = NonEventParameters<T0, T4, theta_container, n_params, array_2d_pars_value_type...>;
+    using T_params = NonEventParameters<T0, T4, theta_container, array_2d_pars_value_type...>;
     /*
      * Data used to fill the results when computation throws exception.
      */
@@ -512,8 +512,8 @@ namespace torsten{
 
   template<typename T_model,
            typename T0, typename T4, template<typename...> class theta_container,
-           int n_params, typename... array_2d_pars_value_type>
+           typename... array_2d_pars_value_type>
   constexpr double EventSolver<T_model,
-                               NonEventParameters<T0, T4, theta_container, n_params, array_2d_pars_value_type...>>::invalid_res_d;
+                               NonEventParameters<T0, T4, theta_container, array_2d_pars_value_type...>>::invalid_res_d;
 }
 #endif
