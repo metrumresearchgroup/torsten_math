@@ -73,34 +73,48 @@ namespace torsten {
     }
   };
 
-  template<typename T0, typename T4,
+  template<typename T0,
+           typename T4,
            template<typename...> class theta_container,
+           typename params_tuple_type,
            typename... Ts>
-  struct NonEventParameters {
-    static constexpr int npar = NonEventParameters_Impl<Ts...>::npar;
+  struct NonEventParameters;
+  
+  template<typename T0,
+           typename T4,
+           template<typename...> class theta_container,
+           typename... tuple_pars_t,
+           typename... Ts>
+  struct NonEventParameters<T0, T4, theta_container,
+                            std::tuple<tuple_pars_t...>, Ts...> {
+    static constexpr int npar = NonEventParameters_Impl<tuple_pars_t..., Ts...>::npar;
     using par_t = std::pair<double, std::array<int, npar> >;
-    using biovar_t = typename NonEventParameters_Impl<Ts...>::biovar_t;
-    using lag_t = typename NonEventParameters_Impl<Ts...>::lag_t;
+    using biovar_t = typename NonEventParameters_Impl<tuple_pars_t...>::biovar_t;
+    using lag_t = typename NonEventParameters_Impl<tuple_pars_t...>::lag_t;
     using T5 = biovar_t;
     using T6 = lag_t;
 
     std::vector<par_t> pars;
     const std::vector<T0>& time_;
     const std::vector<theta_container<T4>>& theta_;
-    const std::tuple<const std::vector<std::vector<Ts> >&...> array_2d_params;
+    const std::tuple<const std::vector<std::vector<tuple_pars_t> >&...> event_array_2d_params;
+    const std::tuple<const std::vector<std::vector<Ts> >&...> model_array_2d_params;
 
     template <typename rec_t>
     NonEventParameters(int id, const rec_t& rec,
                        const std::vector<theta_container<T4>>& theta,
-                       const std::vector<std::vector<Ts> >&... array_2d_params0) :
+                       const std::vector<std::vector<tuple_pars_t> >&... event_array_2d_params0,
+                       const std::vector<std::vector<Ts> >&... model_array_2d_params0) :
       pars(rec.len_[id]),
       time_(rec.time_),
       theta_(theta),
-      array_2d_params{std::tie(array_2d_params0...)} {
+      event_array_2d_params{std::tie(event_array_2d_params0...)},
+      model_array_2d_params{std::tie(model_array_2d_params0...)} {
       int ibegin = rec.begin_[id];
       for (int i = 0; i < rec.len_[id]; ++i) {
         int theta_i = rec.len_param(id, theta) > 1 ? rec.begin_param(id, theta) + i : rec.begin_param(id, theta);
-        pars[i] = std::make_pair<double, std::array<int, npar> >(stan::math::value_of(time_[ibegin + i]), {theta_i,index_param(id,i,rec,array_2d_params0)...});
+        pars[i] = std::make_pair<double, std::array<int, npar> >(stan::math::value_of(time_[ibegin + i]),
+          {theta_i,index_param(id,i,rec,event_array_2d_params0)..., index_param(id,i,rec,model_array_2d_params0)...});
       }
       sort();
     }
@@ -120,17 +134,20 @@ namespace torsten {
      * @param array_2d_params0 additional params
      * 
      */
-    template <typename rec_t, std::enable_if_t<sizeof...(Ts) == 2>* = nullptr>
+    // template <typename rec_t, std::enable_if_t<sizeof...(Ts) == 2>* = nullptr>
+    template <typename rec_t>
     NonEventParameters(int id, const rec_t& rec,
                        int ibegin_theta, int isize_theta,
                        int ibegin_biovar, int isize_biovar,
                        int ibegin_tlag, int isize_tlag,
                        const std::vector<theta_container<T4>>& theta,
-                       const std::vector<std::vector<Ts> >&... array_2d_params0) :
+                       const std::vector<std::vector<tuple_pars_t> >&... event_array_2d_params0,
+                       const std::vector<std::vector<Ts> >&... model_array_2d_params0) :
       pars(rec.len_[id]),
       time_(rec.time_),
       theta_(theta),
-      array_2d_params{std::tie(array_2d_params0...)} {
+      event_array_2d_params{std::tie(event_array_2d_params0...)},
+      model_array_2d_params{std::tie(model_array_2d_params0...)} {
       int ibegin = rec.begin_[id];
       for (int i = 0; i < rec.len_[id]; ++i) {
         int j = isize_theta   > 1 ? ibegin_theta  + i : ibegin_theta;
@@ -161,14 +178,14 @@ namespace torsten {
       return theta_[pars[i].second[0]];
     }
 
-    inline const T5& bioavailability(int iEvent, int iParameter) const {
-      return NonEventParameters_Impl<Ts...>::bioavailability(get_par_array(iEvent)[1], iParameter,
-                                                             array_2d_params);
+    inline const T5 bioavailability(int iEvent, int iParameter) const {
+      return NonEventParameters_Impl<tuple_pars_t...>::bioavailability(get_par_array(iEvent)[1], iParameter,
+                                                                       event_array_2d_params);
     }
 
-    inline const T6& GetValueTlag(int iEvent, int iParameter) const {
-      return NonEventParameters_Impl<Ts...>::lag_time(get_par_array(iEvent)[2], iParameter,
-                                                      array_2d_params);
+    inline const T6 GetValueTlag(int iEvent, int iParameter) const {
+      return NonEventParameters_Impl<tuple_pars_t...>::lag_time(get_par_array(iEvent)[2], iParameter,
+                                                                event_array_2d_params);
     }
 
     inline int size() { return pars.size(); }
@@ -207,130 +224,6 @@ namespace torsten {
                          const std::vector<std::vector<T> >& param) {
     return rec.len_param(id, param) > 1 ? rec.begin_param(id, param) + i : rec.begin_param(id, param);
   }
-
-  /**
-   * Specialization of non-event param struct that consists of
-   * model param(theta), bioavailability,
-   * lag time.
-   */
-  // template<typename T0, typename T4,
-  //          template<typename...> class theta_container,
-  //          typename T5, typename T6>
-  // struct NonEventParameters<T0, T4, theta_container, 3, T5, T6> {
-  //   /// <time, <theta index, F index, lag index> >
-  //   static constexpr int npar = 3;
-  //   using par_t = std::pair<double, std::array<int, npar> >;
-  //   using lag_t = T6;
-  //   using biovar_t = T5;
-
-  //   std::vector<par_t> pars;
-  //   const std::vector<T0>& time_;
-  //   const std::vector<theta_container<T4>>& theta_;
-  //   const std::vector<std::vector<T5> >& biovar_;
-  //   const std::vector<std::vector<T6> >& tlag_;
-  //   // const std::vector<std::vector<double> >& x_r_;
-  //   // const std::vector<std::vector<int> >& x_i_;
-
-  // NonEventParameters(int ibegin, int isize, const std::vector<T0>& time,
-  //                    int ibegin_theta, int isize_theta,
-  //                    int ibegin_biovar, int isize_biovar,
-  //                    int ibegin_tlag, int isize_tlag,
-  //                    const std::vector<theta_container<T4>>& theta,
-  //                    const std::vector<std::vector<T5> >& biovar,
-  //                    const std::vector<std::vector<T6> >& tlag) :
-  //     pars(isize),
-  //     time_(time),
-  //     theta_(theta),
-  //     biovar_(biovar),
-  //     tlag_(tlag)
-  //   {
-  //     for (int i = 0; i < isize; ++i) {
-  //       int j = isize_theta   > 1 ? ibegin_theta  + i : ibegin_theta;
-  //       int k = isize_biovar  > 1 ? ibegin_biovar + i : ibegin_biovar;
-  //       int l = isize_tlag    > 1 ? ibegin_tlag   + i : ibegin_tlag;
-  //       pars[i] = std::make_pair<double, std::array<int, npar> >(stan::math::value_of(time_[ibegin + i]), {j, k, l });
-  //     }
-  //     sort();
-  //   }
-
-  // template <typename rec_t>
-  // NonEventParameters(int id, const rec_t& rec,
-  //                    int ibegin_theta, int isize_theta,
-  //                    int ibegin_biovar, int isize_biovar,
-  //                    int ibegin_tlag, int isize_tlag,
-  //                    const std::vector<theta_container<T4>>& theta,
-  //                    const std::vector<std::vector<T5> >& biovar,
-  //                    const std::vector<std::vector<T6> >& tlag) :
-  //   NonEventParameters(rec.begin_[id], rec.len_[id], rec.time_,
-  //                    ibegin_theta, isize_theta,
-  //                    ibegin_biovar, isize_biovar,
-  //                    ibegin_tlag, isize_tlag,
-  //                    theta, biovar, tlag)
-  //   {}
-
-  // template <typename rec_t>
-  // NonEventParameters(int id, const rec_t& rec,
-  //                    const std::vector<theta_container<T4>>& theta,
-  //                    const std::vector<std::vector<T5> >& biovar,
-  //                    const std::vector<std::vector<T6> >& tlag) :
-  //   NonEventParameters(rec.begin_[id], rec.len_[id], rec.time_,
-  //                      rec.begin_param(id, theta), rec.len_param(id, theta),
-  //                      rec.begin_param(id, biovar), rec.len_param(id, biovar),
-  //                      rec.begin_param(id, tlag), rec.len_param(id, tlag),
-  //                      theta, biovar, tlag)
-  //   {}
-
-  //   inline void set_par_time(int i, double t) {
-  //     std::get<0>(pars[i]) = t;
-  //   }
-
-  //   inline void set_par_array(int i, const std::array<int, npar>& a) {
-  //     std::get<1>(pars[i]) = a;
-  //   }
-
-  //   inline double get_par_time(int i) const {
-  //     return std::get<0>(pars[i]);
-  //   }
-
-  //   inline const std::array<int, npar>& get_par_array(int i) const {
-  //     return std::get<1>(pars[i]);
-  //   }
-
-  //   inline const theta_container<T4>& theta(int i) const {
-  //     return theta_[pars[i].second[0]];
-  //   }
-
-  //   inline const T5& bioavailability(int iEvent, int iParameter) const {
-  //     return biovar_[get_par_array(iEvent)[1]][iParameter];
-  //   }
-
-  //   inline const T6& GetValueTlag(int iEvent, int iParameter) const {
-  //     return tlag_[get_par_array(iEvent)[2]][iParameter];
-  //   }
-
-
-  //   inline int size() { return pars.size(); }
-  //   /*
-  //    * return if an event is a "reset" event(evid=3 or 4)
-  //    */
-  //   void sort() {
-  //     std::sort(pars.begin(), pars.end(),
-  //               [](const par_t& a, const par_t& b)
-  //               { return a.first < b.first; });
-  //   }
-
-  //   bool is_ordered() {
-  //     // check that elements are in chronological order.
-  //     int i = pars.size() - 1;
-  //     bool ordered = true;
-
-  //     while (i > 0 && ordered) {
-  //       ordered = (pars[i].first >= pars[i-1].first);
-  //       i--;
-  //     }
-  //     return ordered;
-  //   }
-  // };
 
   /**
    * The EventHistory class defines objects that contain a vector of Events,

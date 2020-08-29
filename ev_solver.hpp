@@ -23,11 +23,16 @@ namespace torsten{
    */
   template<typename T_model,
            typename T0, typename T4, template<typename...> class theta_container,
+           typename... array_2d_tuple_pars_value_type,
            typename... array_2d_pars_value_type>
   struct EventSolver<T_model,
-                     NonEventParameters<T0, T4, theta_container, array_2d_pars_value_type...>> {
+                     NonEventParameters<T0, T4, theta_container,
+                                        std::tuple<array_2d_tuple_pars_value_type...>,
+                                        array_2d_pars_value_type...> > {
 
-    using T_params = NonEventParameters<T0, T4, theta_container, array_2d_pars_value_type...>;
+    using T_params = NonEventParameters<T0, T4, theta_container,
+                                        std::tuple<array_2d_tuple_pars_value_type...>,
+                                        array_2d_pars_value_type...>;
     /*
      * Data used to fill the results when computation throws exception.
      */
@@ -107,6 +112,7 @@ namespace torsten{
               Eigen::Matrix<typename EventsManager<T_event_record,T_params>::T_scalar, -1, -1>& res,
               const PMXOdeIntegrator<It> integrator,
               const std::vector<theta_container<T4>>& theta,
+              const std::vector<std::vector<array_2d_tuple_pars_value_type>>&... array_2d_tuple_pars,
               const std::vector<std::vector<array_2d_pars_value_type>>&... array_2d_pars,
               const scalar_pars_type... scalar_pars) {
       using Eigen::Matrix;
@@ -122,7 +128,7 @@ namespace torsten{
       init.setZero();
 
       try {
-        EM em(id, events_rec, theta, array_2d_pars...);
+        EM em(id, events_rec, theta, array_2d_tuple_pars..., array_2d_pars...);
         auto events = em.events();
         int ikeep = 0, iev = 0;
         while(ikeep < em.nKeep) {
@@ -150,7 +156,6 @@ namespace torsten{
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
       typename T_em::T_time model_time = tprev;
-      auto curr_rates = em.fractioned_rates(i);
       T_model pkmodel {em.theta(i), scalar_pars...};
       auto ev = em.event(i);
       ev(init, pkmodel, integrator);
@@ -168,7 +173,6 @@ namespace torsten{
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
       typename T_em::T_time model_time = tprev;
-      auto curr_rates = em.fractioned_rates(i);
       T_model pkmodel {em.theta(i), scalar_pars...};
       auto ev = em.event(i);
       ev(sol_d, init, pkmodel, integrator, scalar_pars...);
@@ -226,6 +230,7 @@ namespace torsten{
               Eigen::Matrix<typename EventsManager<T_event_record,T_params>::T_scalar, -1, -1>& res,
               const PMXOdeIntegrator<It> integrator,
               const std::vector<theta_container<T4>>& theta,
+              const std::vector<std::vector<array_2d_tuple_pars_value_type>>&... array_2d_tuple_pars,
               const std::vector<std::vector<array_2d_pars_value_type>>&... array_2d_pars,
               const scalar_pars_type... scalar_pars) {
       using Eigen::Matrix;
@@ -276,7 +281,7 @@ namespace torsten{
             res_d[id].setConstant(invalid_res_d);
           } else {
             try {
-              EM em(id, events_rec, theta, array_2d_pars...);
+              EM em(id, events_rec, theta, array_2d_tuple_pars..., array_2d_pars...);
               auto events = em.events();
               assert(nev == events.size());
               assert(nKeep == em.nKeep);
@@ -347,7 +352,7 @@ namespace torsten{
             is_invalid = true;
             rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
           } else {
-            EM em(id, events_rec, theta, array_2d_pars...);
+            EM em(id, events_rec, theta, array_2d_tuple_pars..., array_2d_pars...);
             auto events = em.events();
             PKRec<scalar> init(nCmt); init.setZero();
             PKRec<double> pred1 = VectorXd::Zero(res_d[id].rows());
@@ -381,6 +386,7 @@ namespace torsten{
     void pred(const T_event_record& events_rec, Eigen::MatrixXd& res,
               const PMXOdeIntegrator<It> integrator,
               const std::vector<theta_container<T4>>& theta,
+              const std::vector<std::vector<array_2d_tuple_pars_value_type>>&... array_2d_tuple_pars,
               const std::vector<std::vector<array_2d_pars_value_type>>&... array_2d_pars,
               const scalar_pars_type... scalar_pars) {
       using Eigen::Matrix;
@@ -422,7 +428,7 @@ namespace torsten{
 
         if (rank == my_worker_id) {
           try {
-            EM em(id, events_rec, theta, array_2d_pars...);
+            EM em(id, events_rec, theta, array_2d_tuple_pars..., array_2d_pars...);
             auto events = em.events();
             init.setZero();
             int ikeep = 0, iev = 0;
@@ -482,6 +488,7 @@ namespace torsten{
               Eigen::Matrix<typename EventsManager<T_event_record,T_params>::T_scalar, -1, -1>& res,
               const PMXOdeIntegrator<It> integrator,
               const std::vector<theta_container<T4>>& theta,
+              const std::vector<std::vector<array_2d_tuple_pars_value_type>>&... array_2d_tuple_pars,
               const std::vector<std::vector<array_2d_pars_value_type>>&... array_2d_pars,
               const scalar_pars_type... scalar_pars) {
       using ER = T_event_record;
@@ -501,7 +508,8 @@ namespace torsten{
       for (int id = 0; id < np; ++id) {
         const int nKeep = events_rec.num_event_times(id);
         Eigen::Matrix<typename EventsManager<T_event_record,T_params>::T_scalar, -1, -1> res_id(nCmt, nKeep);
-        pred(id, events_rec, res_id, integrator, theta, array_2d_pars..., scalar_pars...);
+        pred(id, events_rec, res_id, integrator, theta,
+             array_2d_tuple_pars..., array_2d_pars..., scalar_pars...);
         for (int j = 0; j < nKeep; ++j) {
           res.col(EM::begin(id, events_rec) + j) = res_id.col(j);
         }
@@ -512,8 +520,11 @@ namespace torsten{
 
   template<typename T_model,
            typename T0, typename T4, template<typename...> class theta_container,
+           typename... array_2d_tuple_pars_value_type,
            typename... array_2d_pars_value_type>
   constexpr double EventSolver<T_model,
-                               NonEventParameters<T0, T4, theta_container, array_2d_pars_value_type...>>::invalid_res_d;
+                               NonEventParameters<T0, T4, theta_container,
+                                                  std::tuple<array_2d_tuple_pars_value_type...>,
+                                                  array_2d_pars_value_type...>>::invalid_res_d;
 }
 #endif

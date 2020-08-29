@@ -15,12 +15,12 @@ namespace torsten {
   struct EventsManager;
 
   template <typename T0, typename T1, typename T2, typename T3, typename T4,
-            template<class...> class theta_container, typename... Ts>
+            template<class...> class theta_container, typename... tuple_pars_t, typename... Ts>
   struct EventsManager<NONMENEventsRecord<T0, T1, T2, T3>,
-                       NonEventParameters<T0, T4, theta_container, Ts...> > {
-    using param_t = NonEventParameters<T0, T4, theta_container, Ts...>;
+                       NonEventParameters<T0, T4, theta_container, std::tuple<tuple_pars_t...>, Ts...> > {
+    using param_t = NonEventParameters<T0, T4, theta_container, std::tuple<tuple_pars_t...>, Ts...>;
     using ER = NONMENEventsRecord<T0, T1, T2, T3>;
-    using T_scalar = typename stan::return_type_t<typename ER::T_scalar, T4, Ts...>;
+    using T_scalar = typename stan::return_type_t<typename ER::T_scalar, T4, tuple_pars_t..., Ts...>;
     using T_time   = typename stan::return_type_t<typename ER::T_time, typename param_t::lag_t>;
     using T_rate   = typename stan::return_type_t<typename ER::T_rate, typename param_t::biovar_t>;
     using T_amt    = typename stan::return_type_t<typename ER::T_amt, typename param_t::biovar_t>;
@@ -49,9 +49,10 @@ namespace torsten {
      * For population models, we need generate events using
      * ragged arrays.
      */
+    template<typename... Tss>
     EventsManager(const ER& rec,
                   const std::vector<theta_container<T4>>& theta,
-                  const std::vector<std::vector<Ts>>&... more_params) :
+                  const std::vector<std::vector<Tss>>&... more_params) :
       EventsManager(0, rec, theta, more_params...)
     {}
 
@@ -59,9 +60,10 @@ namespace torsten {
      * For population models, we need generate events using
      * ragged arrays.
      */
+    template<typename... Tss>
     EventsManager(int id, const ER& rec,
                   const std::vector<theta_container<T4>>& theta,
-                  const std::vector<std::vector<Ts>>&... more_params) :
+                  const std::vector<std::vector<Tss>>&... more_params) :
       params(id, rec, theta, more_params...),
       event_his(rec.ncmt, rec.begin_[id], rec.len_[id], rec.time_, rec.amt_, rec.rate_, rec.ii_, rec.evid_, rec.cmt_, rec.addl_, rec.ss_)
     {
@@ -75,12 +77,13 @@ namespace torsten {
       nKeep = event_his.num_event_times;
     }
 
+    template<typename... Tss>
     EventsManager(int id, const ER& rec,
                   int ibegin_theta, int isize_theta,
                   int ibegin_biovar, int isize_biovar,
                   int ibegin_tlag, int isize_tlag,
                   const std::vector<theta_container<T4>>& theta,
-                  const std::vector<std::vector<Ts>>&... more_params) :
+                  const std::vector<std::vector<Tss>>&... more_params) :
       params(id, rec, ibegin_theta, isize_theta, ibegin_biovar, isize_biovar, ibegin_tlag, isize_tlag, theta, more_params...),
       event_his(rec.ncmt, rec.begin_[id], rec.len_[id], rec.time_, rec.amt_, rec.rate_, rec.ii_, rec.evid_, rec.cmt_, rec.addl_, rec.ss_)
     {
@@ -270,9 +273,10 @@ namespace torsten {
     /*
      * number of events for a sinlge individual
      */
+    template<typename... Tss>
     static int num_events(const ER& rec,
                           const std::vector<theta_container<T4>>& theta,
-                          const std::vector<std::vector<Ts>>&... more_params) {
+                          const std::vector<std::vector<Tss>>&... more_params) {
       return num_events(0, rec, theta, more_params...);
     }
 

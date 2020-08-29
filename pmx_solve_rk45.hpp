@@ -8,6 +8,7 @@
 #include <stan/math/torsten/ev_solver.hpp>
 #include <stan/math/torsten/pmx_ode_model.hpp>
 #include <stan/math/torsten/pmx_check.hpp>
+#include <stan/math/torsten/nonmem_events_args.hpp>
 #include <vector>
 
 namespace torsten {
@@ -66,14 +67,7 @@ Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
                Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_rk45(const F& f,
                const int nCmt,
-               const std::vector<T0>& time,
-               const std::vector<T1>& amt,
-               const std::vector<T2>& rate,
-               const std::vector<T3>& ii,
-               const std::vector<int>& evid,
-               const std::vector<int>& cmt,
-               const std::vector<int>& addl,
-               const std::vector<int>& ss,
+               TORSTEN_PMX_FUNC_EVENTS_ARGS,
                const std::vector<std::vector<T4> >& pMatrix,
                const std::vector<std::vector<T5> >& biovar,
                const std::vector<std::vector<T6> >& tlag,
@@ -94,7 +88,7 @@ pmx_solve_rk45(const F& f,
     pMatrix, biovar, tlag, function);
 
   using ER = NONMENEventsRecord<T0, T1, T2, T3>;
-  using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, T5, T6>>;
+  using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> >>;
   const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
@@ -104,10 +98,10 @@ pmx_solve_rk45(const F& f,
 
 #ifdef TORSTEN_USE_STAN_ODE
   PMXOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
-   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, T5, T6>> pr;
+   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> >> pr;
 #else
   PMXOdeIntegrator<PkRk45> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
-   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, T5, T6>> pr;
+   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> >> pr;
 #endif
 
   pr.pred(0, events_rec, pred, integrator, pMatrix, biovar, tlag, nCmt, f);
@@ -123,14 +117,7 @@ Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
                Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_rk45(const F& f,
                const int nCmt,
-               const std::vector<T0>& time,
-               const std::vector<T1>& amt,
-               const std::vector<T2>& rate,
-               const std::vector<T3>& ii,
-               const std::vector<int>& evid,
-               const std::vector<int>& cmt,
-               const std::vector<int>& addl,
-               const std::vector<int>& ss,
+               TORSTEN_PMX_FUNC_EVENTS_ARGS,
                const std::vector<std::vector<T4> >& pMatrix,
                const std::vector<std::vector<T5> >& biovar,
                const std::vector<std::vector<T6> >& tlag,
@@ -152,14 +139,7 @@ Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
                Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_rk45(const F& f,
                const int nCmt,
-               const std::vector<T0>& time,
-               const std::vector<T1>& amt,
-               const std::vector<T2>& rate,
-               const std::vector<T3>& ii,
-               const std::vector<int>& evid,
-               const std::vector<int>& cmt,
-               const std::vector<int>& addl,
-               const std::vector<int>& ss,
+               TORSTEN_PMX_FUNC_EVENTS_ARGS,
                const std::vector<std::vector<T4> >& pMatrix,
                const std::vector<std::vector<T5> >& biovar,
                const std::vector<std::vector<T6> >& tlag,
@@ -190,14 +170,7 @@ pmx_solve_rk45(const F& f,
                  Eigen::Dynamic, Eigen::Dynamic>
   pmx_solve_rk45(const F& f,
                  const int nCmt,
-                 const std::vector<T0>& time,
-                 const std::vector<T1>& amt,
-                 const std::vector<T2>& rate,
-                 const std::vector<T3>& ii,
-                 const std::vector<int>& evid,
-                 const std::vector<int>& cmt,
-                 const std::vector<int>& addl,
-                 const std::vector<int>& ss,
+                 TORSTEN_PMX_FUNC_EVENTS_ARGS,
                  const std::vector<T_par>& pMatrix,
                  const std::vector<T_biovar>& biovar,
                  const std::vector<T_tlag>& tlag,
@@ -236,14 +209,7 @@ pmx_solve_rk45(const F& f,
                  Eigen::Dynamic, Eigen::Dynamic>
   pmx_solve_rk45(const F& f,
                  const int nCmt,
-                 const std::vector<T0>& time,
-                 const std::vector<T1>& amt,
-                 const std::vector<T2>& rate,
-                 const std::vector<T3>& ii,
-                 const std::vector<int>& evid,
-                 const std::vector<int>& cmt,
-                 const std::vector<int>& addl,
-                 const std::vector<int>& ss,
+                 TORSTEN_PMX_FUNC_EVENTS_ARGS,
                  const std::vector<T_par>& pMatrix,
                  const std::vector<T_biovar>& biovar,
                  const std::vector<T_tlag>& tlag,
@@ -272,14 +238,7 @@ pmx_solve_rk45(const F& f,
                  Eigen::Dynamic, Eigen::Dynamic>
   pmx_solve_rk45(const F& f,
                  const int nCmt,
-                 const std::vector<T0>& time,
-                 const std::vector<T1>& amt,
-                 const std::vector<T2>& rate,
-                 const std::vector<T3>& ii,
-                 const std::vector<int>& evid,
-                 const std::vector<int>& cmt,
-                 const std::vector<int>& addl,
-                 const std::vector<int>& ss,
+                 TORSTEN_PMX_FUNC_EVENTS_ARGS,
                  const std::vector<T_par>& pMatrix,
                  const std::vector<T_biovar>& biovar,
                  const std::vector<T_tlag>& tlag,
@@ -295,6 +254,90 @@ pmx_solve_rk45(const F& f,
                           msgs);
   }
 
+  // no tlag version
+template <typename T0, typename T1, typename T2, typename T3, typename T4,
+          typename T5, typename F>
+Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5>,
+               Eigen::Dynamic, Eigen::Dynamic>
+pmx_solve_rk45(const F& f,
+               const int nCmt,
+               TORSTEN_PMX_FUNC_EVENTS_ARGS,
+               const std::vector<std::vector<T4> >& pMatrix,
+               const std::vector<std::vector<T5> >& biovar,
+               double rel_tol,
+               double abs_tol,
+               long int max_num_steps,
+               double as_rel_tol,
+               double as_abs_tol,
+               long int as_max_num_steps,
+               std::ostream* msgs = 0) {
+  // check arguments
+  static const char* function("pmx_solve_rk45");
+  const std::vector<std::vector<double> > tlag{{0.0}};
+  torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
+                     pMatrix, biovar, tlag, function);
+
+  using ER = NONMENEventsRecord<T0, T1, T2, T3>;
+  using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<T5>>>;
+  const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+
+  Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
+    Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
+
+  using model_type = torsten::PKODEModel<typename EM::T_par, F>;
+
+#ifdef TORSTEN_USE_STAN_ODE
+  PMXOdeIntegrator<StanRk45> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
+   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5>>> pr;
+#else
+  PMXOdeIntegrator<PkRk45> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
+   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5>>> pr;
+#endif
+
+  pr.pred(0, events_rec, pred, integrator, pMatrix, biovar, nCmt, f);
+  return pred;
+}
+
+  // no tlag version
+template <typename T0, typename T1, typename T2, typename T3, typename T4,
+          typename T5, typename F>
+Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5>,
+               Eigen::Dynamic, Eigen::Dynamic>
+pmx_solve_rk45(const F& f,
+               const int nCmt,
+               TORSTEN_PMX_FUNC_EVENTS_ARGS,
+               const std::vector<std::vector<T4> >& pMatrix,
+               const std::vector<std::vector<T5> >& biovar,
+               std::ostream* msgs = 0) {
+  return pmx_solve_rk45(f, nCmt,
+                        time, amt, rate, ii, evid, cmt, addl, ss,
+                        pMatrix, biovar,
+                        1.e-6, 1.e-6, 1e6,
+                        1.e-6, 1.e-6, 1e2,                        
+                        msgs);
+}
+
+template <typename T0, typename T1, typename T2, typename T3, typename T4,
+          typename T5, typename F>
+Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5>,
+               Eigen::Dynamic, Eigen::Dynamic>
+pmx_solve_rk45(const F& f,
+               const int nCmt,
+               TORSTEN_PMX_FUNC_EVENTS_ARGS,
+               const std::vector<std::vector<T4> >& pMatrix,
+               const std::vector<std::vector<T5> >& biovar,
+               double rel_tol,
+               double abs_tol,
+               long int max_num_steps,
+               std::ostream* msgs = 0) {
+  return pmx_solve_rk45(f, nCmt,
+                        time, amt, rate, ii, evid, cmt, addl, ss,
+                        pMatrix, biovar,
+                        rel_tol, abs_tol, max_num_steps,
+                        1.e-6, 1.e-6, 1e2,                        
+                        msgs);
+}
+  
   /*
    * For backward compatibility we keep old version of
    * return type using transpose. This is less efficient and
@@ -309,22 +352,15 @@ pmx_solve_rk45(const F& f,
                                             typename torsten::value_type<T_tlag>::type>,
                  Eigen::Dynamic, Eigen::Dynamic>
   generalOdeModel_rk45(const F& f,
-                      const int nCmt,
-                      const std::vector<T0>& time,
-                      const std::vector<T1>& amt,
-                      const std::vector<T2>& rate,
-                      const std::vector<T3>& ii,
-                      const std::vector<int>& evid,
-                      const std::vector<int>& cmt,
-                      const std::vector<int>& addl,
-                      const std::vector<int>& ss,
-                      const std::vector<T_par>& pMatrix,
-                      const std::vector<T_biovar>& biovar,
-                      const std::vector<T_tlag>& tlag,
-                      double rel_tol = 1e-6,
-                      double abs_tol = 1e-6,
-                      long int max_num_steps = 1e6,
-                      std::ostream* msgs = 0) {
+                       const int nCmt,
+                       TORSTEN_PMX_FUNC_EVENTS_ARGS,
+                       const std::vector<T_par>& pMatrix,
+                       const std::vector<T_biovar>& biovar,
+                       const std::vector<T_tlag>& tlag,
+                       double rel_tol = 1e-6,
+                       double abs_tol = 1e-6,
+                       long int max_num_steps = 1e6,
+                       std::ostream* msgs = 0) {
     auto x = pmx_solve_rk45(f, nCmt,
                             time, amt, rate, ii, evid, cmt, addl, ss,
                             pMatrix, biovar, tlag,
@@ -341,19 +377,12 @@ pmx_solve_rk45(const F& f,
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
-Eigen::Matrix<typename  EventsManager<NONMENEventsRecord<T0, T1, T2, T3>, NonEventParameters<T0, T4, std::vector, T5, T6> >::T_scalar, // NOLINT
+Eigen::Matrix<typename  EventsManager<NONMENEventsRecord<T0, T1, T2, T3>, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> > >::T_scalar, // NOLINT
               Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_group_rk45(const F& f,
                      const int nCmt,
                      const std::vector<int>& len,
-                     const std::vector<T0>& time,
-                     const std::vector<T1>& amt,
-                     const std::vector<T2>& rate,
-                     const std::vector<T3>& ii,
-                     const std::vector<int>& evid,
-                     const std::vector<int>& cmt,
-                     const std::vector<int>& addl,
-                     const std::vector<int>& ss,
+                     TORSTEN_PMX_FUNC_EVENTS_ARGS,
                      const std::vector<std::vector<T4> >& pMatrix,
                      const std::vector<std::vector<T5> >& biovar,
                      const std::vector<std::vector<T6> >& tlag,
@@ -369,12 +398,12 @@ pmx_solve_group_rk45(const F& f,
                                 pMatrix, biovar, tlag, caller);
 
   using ER = NONMENEventsRecord<T0, T1, T2, T3>;
-  using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, T5, T6>>;
+  using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> >>;
   ER events_rec(nCmt, len, time, amt, rate, ii, evid, cmt, addl, ss);
 
   using model_type = torsten::PKODEModel<typename EM::T_par, F>;
   PMXOdeIntegrator<PkRk45> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
-   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, T5, T6>> pr;
+   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> >> pr;
 
   Eigen::Matrix<typename EM::T_scalar, -1, -1> pred(nCmt, events_rec.total_num_event_times);
 
@@ -388,19 +417,12 @@ pmx_solve_group_rk45(const F& f,
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
-Eigen::Matrix<typename  EventsManager<NONMENEventsRecord<T0, T1, T2, T3>, NonEventParameters<T0, T4, std::vector, T5, T6> >::T_scalar, // NOLINT
+Eigen::Matrix<typename  EventsManager<NONMENEventsRecord<T0, T1, T2, T3>, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> > >::T_scalar, // NOLINT
               Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_group_rk45(const F& f,
                      const int nCmt,
                      const std::vector<int>& len,
-                     const std::vector<T0>& time,
-                     const std::vector<T1>& amt,
-                     const std::vector<T2>& rate,
-                     const std::vector<T3>& ii,
-                     const std::vector<int>& evid,
-                     const std::vector<int>& cmt,
-                     const std::vector<int>& addl,
-                     const std::vector<int>& ss,
+                     TORSTEN_PMX_FUNC_EVENTS_ARGS,
                      const std::vector<std::vector<T4> >& pMatrix,
                      const std::vector<std::vector<T5> >& biovar,
                      const std::vector<std::vector<T6> >& tlag,
@@ -418,19 +440,12 @@ pmx_solve_group_rk45(const F& f,
    */
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename F>
-Eigen::Matrix<typename  EventsManager<NONMENEventsRecord<T0, T1, T2, T3>, NonEventParameters<T0, T4, std::vector, T5, T6> >::T_scalar, // NOLINT
+Eigen::Matrix<typename  EventsManager<NONMENEventsRecord<T0, T1, T2, T3>, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> > >::T_scalar, // NOLINT
               Eigen::Dynamic, Eigen::Dynamic>
 pmx_solve_group_rk45(const F& f,
                      const int nCmt,
                      const std::vector<int>& len,
-                     const std::vector<T0>& time,
-                     const std::vector<T1>& amt,
-                     const std::vector<T2>& rate,
-                     const std::vector<T3>& ii,
-                     const std::vector<int>& evid,
-                     const std::vector<int>& cmt,
-                     const std::vector<int>& addl,
-                     const std::vector<int>& ss,
+                     TORSTEN_PMX_FUNC_EVENTS_ARGS,
                      const std::vector<std::vector<T4> >& pMatrix,
                      const std::vector<std::vector<T5> >& biovar,
                      const std::vector<std::vector<T6> >& tlag,

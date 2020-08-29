@@ -294,7 +294,7 @@ TEST_F(TorstenOneCptTest, ss_multiple_infusion_tlag) {
       NONMENEventsRecord<double, double, double, double>
       events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
       torsten::EventsManager<NONMENEventsRecord<double, double, double, double>,
-                             NonEventParameters<double, double, std::vector, double, double>>
+                             NonEventParameters<double, double, std::vector, std::tuple<double, double>>>
         em(events_rec, pMatrix, biovar, tlag1);
       return torsten::pmx_solve_bdf(f_onecpt, nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag1,
                                     rel_tol, abs_tol, max_num_steps);
@@ -306,7 +306,7 @@ TEST_F(TorstenOneCptTest, ss_multiple_infusion_tlag) {
       NONMENEventsRecord<double, double, double, double>
       events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
       torsten::EventsManager<NONMENEventsRecord<double, double, double, double>,
-                             NonEventParameters<double, double, std::vector, double, var>>
+                             NonEventParameters<double, double, std::vector, std::tuple<double, var>>>
         em(events_rec, pMatrix, biovar, tlag1);
       return torsten::pmx_solve_bdf(f_onecpt, nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag1,
                                     rel_tol, abs_tol, max_num_steps);
