@@ -78,20 +78,27 @@ namespace torsten {
                                             typename value_type<T_tlag>::type>,
                  Eigen::Dynamic, Eigen::Dynamic>
   generalOdeModel_adams(const F& f,
-                       const int nCmt,
-                       TORSTEN_PMX_FUNC_EVENTS_ARGS,
-                       const std::vector<T_par>& pMatrix,
-                       const std::vector<T_biovar>& biovar,
-                       const std::vector<T_tlag>& tlag,
-                       double rel_tol = 1e-6,
-                       double abs_tol = 1e-6,
-                       long int max_num_steps = 1e6,
-                       std::ostream* msgs = 0) {
+                        const int nCmt,
+                        const std::vector<T0>& time,
+                        const std::vector<T1>& amt,
+                        const std::vector<T2>& rate,
+                        const std::vector<T3>& ii,
+                        const std::vector<int>& evid,
+                        const std::vector<int>& cmt,
+                        const std::vector<int>& addl,
+                        const std::vector<int>& ss,
+                        const std::vector<T_par>& pMatrix,
+                        const std::vector<T_biovar>& biovar,
+                        const std::vector<T_tlag>& tlag,
+                        double rel_tol = 1e-6,
+                        double abs_tol = 1e-6,
+                        long int max_num_steps = 1e6,
+                        std::ostream* msgs = 0) {
     auto x = pmx_solve_adams(f, nCmt,
-                            time, amt, rate, ii, evid, cmt, addl, ss,
-                            pMatrix, biovar, tlag,
-                            rel_tol, abs_tol, max_num_steps,
-                            msgs);
+                             time, amt, rate, ii, evid, cmt, addl, ss,
+                             pMatrix, biovar, tlag,
+                             rel_tol, abs_tol, max_num_steps,
+                             msgs);
     return x.transpose();
   }
 
