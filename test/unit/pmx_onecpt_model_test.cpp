@@ -3,7 +3,7 @@
 #include <stan/math/torsten/pmx_ode_integrator.hpp>
 #include <test/unit/math/rev/fun/util.hpp>
 #include <stan/math/torsten/test/unit/pmx_onecpt_model_test_fixture.hpp>
-#include <stan/math/torsten/test/unit/test_util.hpp>
+#include <stan/math/torsten/test/unit/test_macros.hpp>
 #include <test/unit/util.hpp>
 #include <gtest/gtest.h>
 

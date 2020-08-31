@@ -1,4 +1,4 @@
-#include <stan/math/torsten/test/unit/test_util.hpp>
+#include <stan/math/torsten/test/unit/test_macros.hpp>
 #include <stan/math/torsten/test/unit/expect_matrix_eq.hpp>
 #include <stan/math/torsten/pmx_solve_linode.hpp>
 #include <stan/math/torsten/test/unit/util_pmx_solve_linode.hpp>

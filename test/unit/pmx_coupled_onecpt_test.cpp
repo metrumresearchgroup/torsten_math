@@ -3,10 +3,10 @@
 #include <stan/math/torsten/pmx_solve_onecpt_rk45.hpp>
 #include <stan/math/torsten/pmx_solve_rk45.hpp>
 #include <stan/math/torsten/pmx_solve_onecpt_bdf.hpp>
-#include <stan/math/torsten/test/unit/test_util.hpp>
+#include <stan/math/torsten/test/unit/test_macros.hpp>
 #include <stan/math/torsten/test/unit/util_mixOdeCptModel.hpp>
 #include <stan/math/torsten/test/unit/pmx_coupled_model_fixture.hpp>
-#include <stan/math/torsten/test/unit/test_util.hpp>
+#include <stan/math/torsten/test/unit/test_macros.hpp>
 #include <gtest/gtest.h>
 
 using std::vector;

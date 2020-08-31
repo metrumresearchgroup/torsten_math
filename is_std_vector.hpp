@@ -5,6 +5,11 @@
 #include <vector>
 
 namespace torsten {
+  /**
+   * type trait for a parameter pack with types that are not all
+   * <code>std::vector</code>
+   * 
+   */
   template<typename T1, typename... Tn>
   struct is_std_vector : std::false_type {};
 

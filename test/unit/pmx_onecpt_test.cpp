@@ -1,4 +1,4 @@
-#include <stan/math/torsten/test/unit/test_util.hpp>
+#include <stan/math/torsten/test/unit/test_macros.hpp>
 #include <gtest/gtest.h>
 #include <stan/math/torsten/test/unit/pmx_onecpt_test_fixture.hpp>
 #include <stan/math/torsten/pmx_solve_onecpt.hpp>

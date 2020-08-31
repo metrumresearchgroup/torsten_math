@@ -1,7 +1,7 @@
 #include <stan/math/rev/core.hpp>
 #include <stan/math/torsten/pmx_solve_bdf.hpp>
 #include <stan/math/torsten/pmx_solve_rk45.hpp>
-#include <stan/math/torsten/test/unit/test_util.hpp>
+#include <stan/math/torsten/test/unit/test_macros.hpp>
 #include <gtest/gtest.h>
 #include <stan/math/torsten/test/unit/util_mixOdeCptModel.hpp>
 #include <stan/math/torsten/test/unit/expect_near_matrix_eq.hpp>
