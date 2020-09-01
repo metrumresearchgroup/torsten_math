@@ -257,14 +257,17 @@ bool constexpr last_is_ostream_ptr<> = false;
                long int max_num_steps,
                std::ostream* msgs) {
       return solve(f, nCmt,
-                        time, amt, rate, ii, evid, cmt, addl, ss,
-                        pMatrix, biovar, tlag,
-                        rel_tol, abs_tol, max_num_steps,
-                        1.e-6, 1.e-6, 1e2,
-                        msgs);
+                   time, amt, rate, ii, evid, cmt, addl, ss,
+                   pMatrix, biovar, tlag,
+                   rel_tol, abs_tol, max_num_steps,
+                   1.e-6, 1.e-6, 1e2,
+                   msgs);
     }
 
-    // no tlag version
+    /** 
+     * Overload: omitting lag time, with full tolerance spec
+     * 
+     */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename T5, typename F>
     static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5>,
@@ -303,7 +306,10 @@ bool constexpr last_is_ostream_ptr<> = false;
       return pred;
     }
 
-    // no tlag version
+    /** 
+     * Overload: omitting lag time, with default ode & algebra solver spec
+     * 
+     */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename T5, typename F>
     static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5>,
@@ -322,7 +328,10 @@ bool constexpr last_is_ostream_ptr<> = false;
                    msgs);
     }
 
-    // no tlag version
+    /** 
+     * Overload: omitting lag time, with default algebra solver spec
+     * 
+     */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename T5, typename F>
     static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5>,
@@ -344,8 +353,10 @@ bool constexpr last_is_ostream_ptr<> = false;
                    msgs);
     }
 
-    /**
-     * no tlag version: overload array 2d function
+    /** 
+     * Overload: omitting lag time, allow population-wise 1d array,
+     * with full ode & algebra solver spec
+     * 
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename T_biovar, typename F,
@@ -377,8 +388,10 @@ bool constexpr last_is_ostream_ptr<> = false;
                    msgs);
     }
 
-    /**
-     * no tlag version: overload array 2d function
+    /** 
+     * Overload: omitting lag time, allow population-wise 1d array,
+     * with default ode & algebra solver spec
+     * 
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename T_biovar, typename F,
@@ -401,8 +414,10 @@ bool constexpr last_is_ostream_ptr<> = false;
                    msgs);
     }
 
-    /**
-     * no tlag version: overload array 2d function
+    /** 
+     * Overload: omitting lag time, allow population-wise 1d array,
+     * with default algebra solver spec
+     * 
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename T_biovar, typename F,
@@ -428,7 +443,11 @@ bool constexpr last_is_ostream_ptr<> = false;
                    msgs);
     }
 
-    // no tlag/biovar version
+    /** 
+     * Overload: omitting bioavailability & lag time,
+     * with full ode & algebra solver spec
+     * 
+     */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename F>
     static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4>,
@@ -467,7 +486,11 @@ bool constexpr last_is_ostream_ptr<> = false;
       return pred;
     }
 
-    // no tlag/biovar version
+    /** 
+     * Overload: omitting bioavailability & lag time,
+     * with default ode & algebra solver spec
+     * 
+     */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename F>
     static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4>,
@@ -485,7 +508,11 @@ bool constexpr last_is_ostream_ptr<> = false;
                    msgs);
     }
 
-    // no tlag/biovar version
+    /** 
+     * Overload: omitting bioavailability & lag time,
+     * with default algebra solver spec
+     * 
+     */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename F>
     static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4>,
@@ -506,8 +533,11 @@ bool constexpr last_is_ostream_ptr<> = false;
                    msgs);
     }
 
-    /**
-     * no tlag/biovar version: overload array 2d function
+    /** 
+     * Overload: omitting bioavailability & lag time, allow
+     * population-wise 1d array,
+     * with full algebra solver spec
+     * 
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename F,
@@ -536,8 +566,11 @@ bool constexpr last_is_ostream_ptr<> = false;
                    msgs);
     }
 
-    /**
-     * no tlag version: overload array 2d function
+    /** 
+     * Overload: omitting bioavailability & lag time, allow
+     * population-wise 1d array,
+     * with default ode & algebra solver spec
+     * 
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par,typename F,
@@ -558,8 +591,11 @@ bool constexpr last_is_ostream_ptr<> = false;
                    msgs);
     }
 
-    /**
-     * no tlag version: overload array 2d function
+    /** 
+     * Overload: omitting bioavailability & lag time, allow
+     * population-wise 1d array,
+     * with default algebra solver spec
+     * 
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename F,
@@ -583,6 +619,51 @@ bool constexpr last_is_ostream_ptr<> = false;
                    msgs);
     }
 
+
+    /** 
+     * Overload: additional real data for ODE, with full ode & algebra
+     * solver spec
+     * 
+     */
+    template <typename T0, typename T1, typename T2, typename T3, typename T4,
+              typename T5, typename T6, typename F>
+    static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
+                   Eigen::Dynamic, Eigen::Dynamic>
+    solve(const F& f,
+               const int nCmt,
+               TORSTEN_PMX_FUNC_EVENTS_ARGS,
+               const std::vector<std::vector<T4> >& pMatrix,
+               const std::vector<std::vector<T5> >& biovar,
+               const std::vector<std::vector<T6> >& tlag,
+               const std::vector<std::vector<double> >& x_r,
+               double rel_tol,
+               double abs_tol,
+               long int max_num_steps,
+               double as_rel_tol,
+               double as_abs_tol,
+               long int as_max_num_steps,
+               std::ostream* msgs) {
+      // check arguments
+      static const char* function("solve");
+      torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
+                         pMatrix, biovar, tlag, function);
+
+      using ER = NONMENEventsRecord<T0, T1, T2, T3>;
+      using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector,
+                                                      std::tuple<T5, T6>, double>>;
+      const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+
+      Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
+        Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
+
+      using model_type = torsten::PKODEModel<typename EM::T_par, F>;
+
+      PMXOdeIntegrator<It> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
+      EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5>>> pr;
+
+      pr.pred(0, events_rec, pred, integrator, pMatrix, biovar, tlag, x_r, nCmt, f);
+      return pred;
+    }
   };
 }  
 #endif

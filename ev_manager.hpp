@@ -185,6 +185,11 @@ namespace torsten {
       return params.theta(i);
     }
 
+    template<size_t Is>
+    inline auto& get_model_array_1d_param(int i) const {
+      return params.template get_model_array_1d_param<Is>(i);
+    }
+
     /** 
      * Get dosing rate adjusted with bioavailability for a subject
      * 

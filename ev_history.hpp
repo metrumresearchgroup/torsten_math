@@ -27,7 +27,7 @@ namespace torsten {
 
   template<typename... Ts>
   struct NonEventParameters_Impl {
-    static constexpr int npar = sizeof...(Ts) + 1;
+    static constexpr int npar = sizeof...(Ts) + 1; // all Ts pars & theta
     using biovar_t = NthTypeOf<0, Ts...>;
     using lag_t = NthTypeOf<1, Ts...>;
 
@@ -175,7 +175,14 @@ namespace torsten {
     }
 
     inline const theta_container<T4>& theta(int i) const {
-      return theta_[pars[i].second[0]];
+      return theta_[std::get<0>(pars[i].second)];
+    }
+
+    template<size_t Is>
+    inline auto& get_model_array_1d_param(int i) const {
+      using Tuple = std::tuple<const std::vector<std::vector<Ts> >&...>;
+      constexpr size_t Is_param = Is + NonEventParameters_Impl<tuple_pars_t...>::npar;
+      return std::get<Is>(model_array_2d_params)[std::get<Is_param>(pars[i].second)];
     }
 
     inline const T5 bioavailability(int iEvent, int iParameter) const {

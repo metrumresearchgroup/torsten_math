@@ -148,8 +148,10 @@ namespace torsten{
      * Step through a range of events.
      */
     template<typename T_em, PMXOdeIntegratorId It, typename... scalar_pars_type>
-    void stepper(int i, PKRec<typename T_em::T_scalar>& init,
-                 const T_em& em, const PMXOdeIntegrator<It> integrator, const scalar_pars_type... scalar_pars) {
+    void stepper(int i, PKRec<typename T_em::T_scalar>& init, const T_em& em,
+                 const PMXOdeIntegrator<It> integrator,
+                 // const std::vector<std::vector<array_2d_pars_value_type>>&... array_2d_pars,
+                 const scalar_pars_type... scalar_pars) {
       auto events = em.events();
 
       using scalar = typename T_em::T_scalar;

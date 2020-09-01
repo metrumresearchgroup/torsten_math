@@ -2,6 +2,7 @@
 #include <stan/math/rev/core.hpp>
 #include <test/unit/math/rev/fun/util.hpp>
 #include <stan/math/torsten/test/unit/pmx_cpt_model_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/pmx_twocpt_functor_with_data.hpp>
 #include <test/unit/util.hpp>
 #include <gtest/gtest.h>
 
@@ -1063,48 +1064,6 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_long_infusion_theta_grad_vs_long_run
     torsten::test::test_grad(params, y1, y2, 5.e-8, 1.e-8);
   }
 }
-
-struct twocpt_ode_with_data {
-  /**
-   * standard two compartment PK ODE RHS function
-   * @tparam T0 t type
-   * @tparam T1 initial condition type
-   * @tparam T2 parameter type
-   * @tparam T3 real data/rate type
-   * @param t type
-   * @param x initial condition type
-   * @param parms parameters
-   * @param rate dosing rate
-   * @param dummy dummy
-   */
-  template <typename T0, typename T1, typename T2, typename T3>
-  inline
-  std::vector<typename stan::return_type<T0, T1, T2, T3>::type>
-  operator()(const T0& t,
-             const std::vector<T1>& x,
-             const std::vector<T2>& parms,
-             const std::vector<T3>& x_r,
-             const std::vector<int>& x_i, std::ostream* pstream__) const {
-    typedef typename stan::return_type<T0, T1, T2, T3>::type scalar;
-
-    scalar
-      CL = parms.at(0) + x_r[0] + double(x_i[0]),
-      Q = parms.at(1),
-      V1 = parms.at(2),
-      V2 = parms.at(3),
-      ka = parms.at(4),
-      k10 = CL / V1,
-      k12 = Q / V1,
-      k21 = Q / V2;
-
-    std::vector<scalar> y(3, 0);
-    y.at(0) = -ka * x.at(0);
-    y.at(1) = ka * x.at(0) - (k10 + k12) * x.at(1) + k21 * x.at(2);
-    y.at(2) = k12 * x.at(1) - k21 * x.at(2);
-
-    return y;
-  }
-};
 
 TEST_F(TorstenTwoCptModelTest, ode_model_with_data_ss_theta_grad) {
   y0[0] = 150;
