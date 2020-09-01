@@ -6,6 +6,7 @@
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/pmx_ode_integrator.hpp>
 #include <stan/math/torsten/ev_manager.hpp>
+#include <stan/math/torsten/model_factory.hpp>
 #include <stan/math/torsten/event.hpp>
 #include <stan/math/torsten/mpi/session.hpp>
 #include <stan/math/torsten/mpi/my_worker.hpp>
@@ -14,6 +15,9 @@
 #include <vector>
 
 namespace torsten{
+
+
+
   template<typename T_model, typename T_params>
   struct EventSolver;
 
@@ -158,7 +162,10 @@ namespace torsten{
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
       typename T_em::T_time model_time = tprev;
-      T_model pkmodel {em.theta(i), scalar_pars...};
+      // T_model pkmodel {em.theta(i), scalar_pars...};
+      T_model pkmodel {model_factory<T_model, T_em, scalar_pars_type...>::model(em, i,
+                                                                                par_index_seq<array_2d_pars_value_type...>{},
+                                                                                scalar_pars...)};
       auto ev = em.event(i);
       ev(init, pkmodel, integrator);
     }
@@ -175,7 +182,9 @@ namespace torsten{
       typename T_em::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
       typename T_em::T_time model_time = tprev;
-      T_model pkmodel {em.theta(i), scalar_pars...};
+      T_model pkmodel {model_factory<T_model, T_em, scalar_pars_type...>::model(em, i,
+                                                                                par_index_seq<array_2d_pars_value_type...>{},
+                                                                                scalar_pars...)};
       auto ev = em.event(i);
       ev(sol_d, init, pkmodel, integrator, scalar_pars...);
     }
@@ -195,7 +204,9 @@ namespace torsten{
         init.setZero();
       } else if (events.is_ss_dosing(i)) {  // steady state event
         typename T_em::T_time model_time = events.time(i);
-        T_model pkmodel {em.theta(i), scalar_pars...};
+        T_model pkmodel {model_factory<T_model, T_em, scalar_pars_type...>::model(em, i,
+                                                                                  par_index_seq<array_2d_pars_value_type...>{},
+                                                                                  scalar_pars...)};
         auto curr_amt = em.fractioned_amt(i);
         vector<var> v_i(dsolve::pk_vars(curr_amt, events.rate(i), events.ii(i), pkmodel.par()));
         int nsys = torsten::pk_nsys(em.ncmt, v_i.size());
@@ -206,7 +217,9 @@ namespace torsten{
       } else if (events.time(i) > tprev) {
           typename T_em::T_time model_time = tprev;
           auto curr_rates = em.fractioned_rates(i);
-          T_model pkmodel {em.theta(i), scalar_pars...};
+          T_model pkmodel {model_factory<T_model, T_em, scalar_pars_type...>::model(em, i,
+                                                                                    par_index_seq<array_2d_pars_value_type...>{},
+                                                                                    scalar_pars...)};
           vector<var> v_i =
             pmx_model_vars<T_model>::vars(events.time(i), init, curr_rates, pkmodel.par());
           int nsys = torsten::pk_nsys(em.ncmt, v_i.size());

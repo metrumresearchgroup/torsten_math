@@ -649,8 +649,7 @@ bool constexpr last_is_ostream_ptr<> = false;
                          pMatrix, biovar, tlag, function);
 
       using ER = NONMENEventsRecord<T0, T1, T2, T3>;
-      using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector,
-                                                      std::tuple<T5, T6>, double>>;
+      using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6>, double>>;
       const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
 
       Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
@@ -659,9 +658,54 @@ bool constexpr last_is_ostream_ptr<> = false;
       using model_type = torsten::PKODEModel<typename EM::T_par, F>;
 
       PMXOdeIntegrator<It> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
-      EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5>>> pr;
+      EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6>, double>> pr;
 
       pr.pred(0, events_rec, pred, integrator, pMatrix, biovar, tlag, x_r, nCmt, f);
+      return pred;
+    }
+
+    /** 
+     * Overload: additional real & int data for ODE, with full ode & algebra
+     * solver spec
+     * 
+     */
+    template <typename T0, typename T1, typename T2, typename T3, typename T4,
+              typename T5, typename T6, typename F>
+    static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
+                          Eigen::Dynamic, Eigen::Dynamic>
+    solve(const F& f,
+          const int nCmt,
+          TORSTEN_PMX_FUNC_EVENTS_ARGS,
+          const std::vector<std::vector<T4> >& pMatrix,
+          const std::vector<std::vector<T5> >& biovar,
+          const std::vector<std::vector<T6> >& tlag,
+          const std::vector<std::vector<double> >& x_r,
+          const std::vector<std::vector<int> >& x_i,
+          double rel_tol,
+          double abs_tol,
+          long int max_num_steps,
+          double as_rel_tol,
+          double as_abs_tol,
+          long int as_max_num_steps,
+          std::ostream* msgs) {
+      // check arguments
+      static const char* function("solve");
+      torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
+                         pMatrix, biovar, tlag, function);
+
+      using ER = NONMENEventsRecord<T0, T1, T2, T3>;
+      using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6>, double, int>>;
+      const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
+
+      Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
+        Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
+
+      using model_type = torsten::PKODEModel<typename EM::T_par, F>;
+
+      PMXOdeIntegrator<It> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
+      EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6>, double, int>> pr;
+
+      pr.pred(0, events_rec, pred, integrator, pMatrix, biovar, tlag, x_r, x_i, nCmt, f);
       return pred;
     }
   };
