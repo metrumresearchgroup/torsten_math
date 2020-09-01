@@ -8,7 +8,6 @@
 #include <stan/math/torsten/ev_solver.hpp>
 #include <stan/math/torsten/pmx_ode_model.hpp>
 #include <stan/math/torsten/pmx_check.hpp>
-#include <stan/math/torsten/nonmem_events_args.hpp>
 #include <vector>
 
 namespace torsten {
@@ -26,9 +25,31 @@ bool constexpr last_is_ostream_ptr =
 template<>
 bool constexpr last_is_ostream_ptr<> = false;
 
+/**
+ * simpily pmx function declare
+ * 
+ */
+#define TORSTEN_PMX_FUNC_EVENTS_ARGS const std::vector<T0>& time,\
+    const std::vector<T1>& amt,                                  \
+    const std::vector<T2>& rate,                                 \
+    const std::vector<T3>& ii,                                   \
+    const std::vector<int>& evid,                                \
+    const std::vector<int>& cmt,                                 \
+    const std::vector<int>& addl,                                \
+    const std::vector<int>& ss
+
   template<PMXOdeIntegratorId It>
   struct PMXSolveODE {
     
+    /// default tolerances & max steps for
+    /// differential eq(DE) and algebra solver(AS)
+    static constexpr double RTOL_DE = 1.e-6;
+    static constexpr double ATOL_DE = 1.e-6;
+    static constexpr int MAXSTEP_DE = 1e6;
+    static constexpr double RTOL_AS = 1.e-6;
+    static constexpr double ATOL_AS = 1.e-6;
+    static constexpr int MAXSTEP_AS = 1e2;
+
     /**
      * Computes the predicted amounts in each compartment at each event
      * for a general compartment model, defined by a system of ordinary
@@ -135,8 +156,8 @@ bool constexpr last_is_ostream_ptr<> = false;
       return solve(f, nCmt,
                         time, amt, rate, ii, evid, cmt, addl, ss,
                         pMatrix, biovar, tlag,
-                        1.e-6, 1.e-6, 1e6,
-                        1.e-6, 1.e-6, 1e2,                        
+                        RTOL_DE, ATOL_DE, MAXSTEP_DE,
+                        RTOL_AS, ATOL_AS, MAXSTEP_AS,                        
                         msgs);
     }
 
@@ -161,7 +182,7 @@ bool constexpr last_is_ostream_ptr<> = false;
                         time, amt, rate, ii, evid, cmt, addl, ss,
                         pMatrix, biovar, tlag,
                         rel_tol, abs_tol, max_num_steps,
-                        1.e-6, 1.e-6, 1e2,                        
+                        RTOL_AS, ATOL_AS, MAXSTEP_AS,                        
                         msgs);
     }
 
@@ -227,8 +248,8 @@ bool constexpr last_is_ostream_ptr<> = false;
       return solve(f, nCmt,
                         time, amt, rate, ii, evid, cmt, addl, ss,
                         pMatrix, biovar, tlag,
-                        1.e-6, 1.e-6, 1e6,
-                        1.e-6, 1.e-6, 1e2,
+                        RTOL_DE, ATOL_DE, MAXSTEP_DE,
+                        RTOL_AS, ATOL_AS, MAXSTEP_AS,
                         msgs);
     }
 
@@ -260,7 +281,7 @@ bool constexpr last_is_ostream_ptr<> = false;
                    time, amt, rate, ii, evid, cmt, addl, ss,
                    pMatrix, biovar, tlag,
                    rel_tol, abs_tol, max_num_steps,
-                   1.e-6, 1.e-6, 1e2,
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
                    msgs);
     }
 
@@ -323,8 +344,8 @@ bool constexpr last_is_ostream_ptr<> = false;
       return solve(f, nCmt,
                    time, amt, rate, ii, evid, cmt, addl, ss,
                    pMatrix, biovar,
-                   1.e-6, 1.e-6, 1e6,
-                   1.e-6, 1.e-6, 1e2,                        
+                   RTOL_DE, ATOL_DE, MAXSTEP_DE,
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,                        
                    msgs);
     }
 
@@ -349,7 +370,7 @@ bool constexpr last_is_ostream_ptr<> = false;
                    time, amt, rate, ii, evid, cmt, addl, ss,
                    pMatrix, biovar,
                    rel_tol, abs_tol, max_num_steps,
-                   1.e-6, 1.e-6, 1e2,                        
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,                        
                    msgs);
     }
 
@@ -409,8 +430,8 @@ bool constexpr last_is_ostream_ptr<> = false;
       return solve(f, nCmt,
                    time, amt, rate, ii, evid, cmt, addl, ss,
                    pMatrix, biovar,
-                   1.e-6, 1.e-6, 1e6,
-                   1.e-6, 1.e-6, 1e2,
+                   RTOL_DE, ATOL_DE, MAXSTEP_DE,
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
                    msgs);
     }
 
@@ -439,7 +460,7 @@ bool constexpr last_is_ostream_ptr<> = false;
                    time, amt, rate, ii, evid, cmt, addl, ss,
                    pMatrix, biovar,
                    rel_tol, abs_tol, max_num_steps,
-                   1.e-6, 1.e-6, 1e2,
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
                    msgs);
     }
 
@@ -503,8 +524,8 @@ bool constexpr last_is_ostream_ptr<> = false;
       return solve(f, nCmt,
                    time, amt, rate, ii, evid, cmt, addl, ss,
                    pMatrix,
-                   1.e-6, 1.e-6, 1e6,
-                   1.e-6, 1.e-6, 1e2,                        
+                   RTOL_DE, ATOL_DE, MAXSTEP_DE,
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,                        
                    msgs);
     }
 
@@ -529,7 +550,7 @@ bool constexpr last_is_ostream_ptr<> = false;
                    time, amt, rate, ii, evid, cmt, addl, ss,
                    pMatrix,
                    rel_tol, abs_tol, max_num_steps,
-                   1.e-6, 1.e-6, 1e2,                        
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,                        
                    msgs);
     }
 
@@ -586,8 +607,8 @@ bool constexpr last_is_ostream_ptr<> = false;
       return solve(f, nCmt,
                    time, amt, rate, ii, evid, cmt, addl, ss,
                    pMatrix,
-                   1.e-6, 1.e-6, 1e6,
-                   1.e-6, 1.e-6, 1e2,
+                   RTOL_DE, ATOL_DE, MAXSTEP_DE,
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
                    msgs);
     }
 
@@ -615,7 +636,7 @@ bool constexpr last_is_ostream_ptr<> = false;
                    time, amt, rate, ii, evid, cmt, addl, ss,
                    pMatrix,
                    rel_tol, abs_tol, max_num_steps,
-                   1.e-6, 1.e-6, 1e2,
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
                    msgs);
     }
 
@@ -665,6 +686,59 @@ bool constexpr last_is_ostream_ptr<> = false;
     }
 
     /** 
+     * Overload: additional real data for ODE, with default ode & algebra 
+     * solver spec
+     * 
+     */
+    template <typename T0, typename T1, typename T2, typename T3, typename T4,
+              typename T5, typename T6, typename F>
+    static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
+                   Eigen::Dynamic, Eigen::Dynamic>
+    solve(const F& f,
+               const int nCmt,
+               TORSTEN_PMX_FUNC_EVENTS_ARGS,
+               const std::vector<std::vector<T4> >& pMatrix,
+               const std::vector<std::vector<T5> >& biovar,
+               const std::vector<std::vector<T6> >& tlag,
+               const std::vector<std::vector<double> >& x_r,
+               std::ostream* msgs) {
+      return solve(f, nCmt,
+                   time, amt, rate, ii, evid, cmt, addl, ss,
+                   pMatrix, biovar, tlag, x_r,
+                   RTOL_DE, ATOL_DE, MAXSTEP_DE,
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
+                   msgs);
+    }
+
+    /** 
+     * Overload: additional real data for ODE, with default algebra 
+     * solver spec
+     * 
+     */
+    template <typename T0, typename T1, typename T2, typename T3, typename T4,
+              typename T5, typename T6, typename F>
+    static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
+                          Eigen::Dynamic, Eigen::Dynamic>
+    solve(const F& f,
+               const int nCmt,
+               TORSTEN_PMX_FUNC_EVENTS_ARGS,
+               const std::vector<std::vector<T4> >& pMatrix,
+               const std::vector<std::vector<T5> >& biovar,
+               const std::vector<std::vector<T6> >& tlag,
+               const std::vector<std::vector<double> >& x_r,
+               double rel_tol,
+               double abs_tol,
+               long int max_num_steps,
+               std::ostream* msgs) {
+      return solve(f, nCmt,
+                   time, amt, rate, ii, evid, cmt, addl, ss,
+                   pMatrix, biovar, tlag, x_r,
+                   rel_tol, abs_tol, max_num_steps,
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
+                   msgs);
+    }
+
+    /** 
      * Overload: additional real & int data for ODE, with full ode & algebra
      * solver spec
      * 
@@ -708,6 +782,62 @@ bool constexpr last_is_ostream_ptr<> = false;
       pr.pred(0, events_rec, pred, integrator, pMatrix, biovar, tlag, x_r, x_i, nCmt, f);
       return pred;
     }
+
+    /** 
+     * Overload: additional real & int data for ODE, with default ode & algebra
+     * solver spec
+     * 
+     */
+    template <typename T0, typename T1, typename T2, typename T3, typename T4,
+              typename T5, typename T6, typename F>
+    static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
+                          Eigen::Dynamic, Eigen::Dynamic>
+    solve(const F& f,
+          const int nCmt,
+          TORSTEN_PMX_FUNC_EVENTS_ARGS,
+          const std::vector<std::vector<T4> >& pMatrix,
+          const std::vector<std::vector<T5> >& biovar,
+          const std::vector<std::vector<T6> >& tlag,
+          const std::vector<std::vector<double> >& x_r,
+          const std::vector<std::vector<int> >& x_i,
+          std::ostream* msgs) {
+      return solve(f, nCmt,
+                   time, amt, rate, ii, evid, cmt, addl, ss,
+                   pMatrix, biovar, tlag, x_r, x_i,
+                   RTOL_DE, ATOL_DE, MAXSTEP_DE,
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
+                   msgs);
+    }
+
+    /** 
+     * Overload: additional real & int data for ODE, with default algebra 
+     * solver spec
+     * 
+     */
+    template <typename T0, typename T1, typename T2, typename T3, typename T4,
+              typename T5, typename T6, typename F>
+    static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
+                          Eigen::Dynamic, Eigen::Dynamic>
+    solve(const F& f,
+               const int nCmt,
+               TORSTEN_PMX_FUNC_EVENTS_ARGS,
+               const std::vector<std::vector<T4> >& pMatrix,
+               const std::vector<std::vector<T5> >& biovar,
+               const std::vector<std::vector<T6> >& tlag,
+               const std::vector<std::vector<double> >& x_r,
+               const std::vector<std::vector<int> >& x_i,
+               double rel_tol,
+               double abs_tol,
+               long int max_num_steps,
+               std::ostream* msgs) {
+      return solve(f, nCmt,
+                   time, amt, rate, ii, evid, cmt, addl, ss,
+                   pMatrix, biovar, tlag, x_r, x_i,
+                   rel_tol, abs_tol, max_num_steps,
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
+                   msgs);
+    }
+
   };
 }  
 #endif

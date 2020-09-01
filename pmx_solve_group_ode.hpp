@@ -5,10 +5,9 @@
 #include <stan/math/torsten/to_array_2d.hpp>
 #include <stan/math/torsten/ev_manager.hpp>
 #include <stan/math/torsten/pmx_population_check.hpp>
-#include <stan/math/torsten/ev_solver.hpp>
 #include <stan/math/torsten/pmx_ode_model.hpp>
 #include <stan/math/torsten/pmx_check.hpp>
-#include <stan/math/torsten/nonmem_events_args.hpp>
+#include <stan/math/torsten/pmx_solve_ode.hpp>
 #include <vector>
 
 namespace torsten {

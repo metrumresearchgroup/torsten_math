@@ -182,7 +182,7 @@ TEST_F(TorstenOneCptTest, variadic_get_model_array_1d_param) {
                   PMXTwoCptODE>::model(em2, 0, par_index_seq<double, int>{}, 3, PMXTwoCptODE())};
 }
 
-TEST_F(TorstenTwoCptTest, variadic_real_data) {
+TEST_F(TorstenTwoCptTest, variadic_real_and_int_data) {
   using stan::math::var;
 
   resize(3);
@@ -226,5 +226,48 @@ TEST_F(TorstenTwoCptTest, variadic_real_data) {
   auto y4 = pmx_solve_bdf(f2, nCmt, time, amt, rate,
                           ii, evid, cmt, addl, ss, pMatrix_var, biovar, tlag, x_r, x_i,
                           rtol, atol, max_num_steps, rtol, atol, max_num_steps);
+  torsten::test::test_grad(theta_2[0], pMatrix_var[0], y3, y4, 1e-5, 1e-6);
+}
+
+TEST_F(TorstenTwoCptTest, variadic_real_and_int_data_default_control) {
+  using stan::math::var;
+
+  resize(3);
+  time[0] = 0.0;
+  time[1] = 0.0;
+  for(int i = 2; i < nt; i++) time[i] = time[i - 1] + 5;
+
+  amt[0] = 1200;
+  addl[0] = 2;
+  ss[0] = 1;
+
+  double rtol = 1e-12, atol = 1e-12;
+  long int max_num_steps = 1e8;
+
+  biovar[0] = std::vector<double>{1.0, 1.0, 1.0};
+  tlag[0] = std::vector<double>{0.0, 0.0, 0.0};
+
+  std::vector<std::vector<var> > pMatrix_var(torsten::to_var(pMatrix));  
+
+  double cl_add = 0.2;
+  std::vector<std::vector<var> > theta_1(torsten::to_var(pMatrix));
+  theta_1[0][0] += cl_add;
+  std::vector<std::vector<double> > x_r{{cl_add}};
+  twocpt_ode_with_real_data f1;
+  auto y1 = pmx_solve_rk45(f_twocpt, nCmt, time, amt, rate,
+                          ii, evid, cmt, addl, ss, theta_1, biovar, tlag);
+  auto y2 = pmx_solve_rk45(f1, nCmt, time, amt, rate,
+                          ii, evid, cmt, addl, ss, pMatrix_var, biovar, tlag, x_r);
+  torsten::test::test_grad(theta_1[0], pMatrix_var[0], y1, y2, 1e-5, 1e-6);
+
+  int cl_add_int = 1;
+  std::vector<std::vector<var> > theta_2(torsten::to_var(pMatrix));
+  theta_2[0][0] += cl_add + double(cl_add_int);
+  std::vector<std::vector<int> > x_i{{cl_add_int}};
+  twocpt_ode_with_data f2;
+  auto y3 = pmx_solve_rk45(f_twocpt, nCmt, time, amt, rate,
+                          ii, evid, cmt, addl, ss, theta_2, biovar, tlag);
+  auto y4 = pmx_solve_rk45(f2, nCmt, time, amt, rate,
+                          ii, evid, cmt, addl, ss, pMatrix_var, biovar, tlag, x_r, x_i);
   torsten::test::test_grad(theta_2[0], pMatrix_var[0], y3, y4, 1e-5, 1e-6);
 }
