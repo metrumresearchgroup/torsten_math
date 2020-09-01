@@ -50,7 +50,7 @@ namespace torsten {
 
       using model_type = torsten::PKODEModel<typename EM::T_par, F>;
       PMXOdeIntegrator<It> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
-      EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> >> pr;
+      EventSolver<model_type, EM> pr;
 
       Eigen::Matrix<typename EM::T_scalar, -1, -1> pred(nCmt, events_rec.total_num_event_times);
 

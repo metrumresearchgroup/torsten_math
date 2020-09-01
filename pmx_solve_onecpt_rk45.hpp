@@ -111,7 +111,7 @@ pmx_solve_onecpt_rk45(const F& f,
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
   using model_type = torsten::PkOneCptOdeModel<typename EM::T_rate, typename EM::T_par, F>;
-  EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> >> pr;
+  EventSolver<model_type, EM> pr;
   pr.pred(0, events_rec, pred, integrator, theta, biovar, tlag, f, nOde);
   return pred;
 }

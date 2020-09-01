@@ -112,7 +112,7 @@ bool constexpr last_is_ostream_ptr<> = false;
       using model_type = torsten::PKODEModel<typename EM::T_par, F>;
 
       PMXOdeIntegrator<It> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
-      EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> >> pr;
+      EventSolver<model_type, EM> pr;
 
       pr.pred(0, events_rec, pred, integrator, pMatrix, biovar, tlag, nCmt, f);
       return pred;
@@ -300,7 +300,7 @@ bool constexpr last_is_ostream_ptr<> = false;
       using model_type = torsten::PKODEModel<typename EM::T_par, F>;
 
       PMXOdeIntegrator<It> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
-      EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5>>> pr;
+      EventSolver<model_type, EM> pr;
 
       pr.pred(0, events_rec, pred, integrator, pMatrix, biovar, nCmt, f);
       return pred;
@@ -480,7 +480,7 @@ bool constexpr last_is_ostream_ptr<> = false;
       using model_type = torsten::PKODEModel<typename EM::T_par, F>;
 
       PMXOdeIntegrator<It> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
-      EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<>>> pr;
+      EventSolver<model_type, EM> pr;
 
       pr.pred(0, events_rec, pred, integrator, pMatrix, nCmt, f);
       return pred;
@@ -658,7 +658,7 @@ bool constexpr last_is_ostream_ptr<> = false;
       using model_type = torsten::PKODEModel<typename EM::T_par, F>;
 
       PMXOdeIntegrator<It> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
-      EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6>, double>> pr;
+      EventSolver<model_type, EM> pr;
 
       pr.pred(0, events_rec, pred, integrator, pMatrix, biovar, tlag, x_r, nCmt, f);
       return pred;
@@ -703,7 +703,7 @@ bool constexpr last_is_ostream_ptr<> = false;
       using model_type = torsten::PKODEModel<typename EM::T_par, F>;
 
       PMXOdeIntegrator<It> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
-      EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6>, double, int>> pr;
+      EventSolver<model_type, EM> pr;
 
       pr.pred(0, events_rec, pred, integrator, pMatrix, biovar, tlag, x_r, x_i, nCmt, f);
       return pred;

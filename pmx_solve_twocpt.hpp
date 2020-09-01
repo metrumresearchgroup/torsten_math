@@ -115,7 +115,7 @@ pmx_solve_twocpt(const std::vector<T0>& time,
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
   using model_type = torsten::PMXTwoCptModel<typename EM::T_par>;
-   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> >> pr;
+   EventSolver<model_type, EM> pr;
   pr.pred(0, events_rec, pred, PMXOdeIntegrator<Analytical>(), pMatrix, biovar, tlag);
   return pred;
 }
@@ -233,7 +233,7 @@ pmx_solve_group_twocpt(const std::vector<int>& len,
                                 pMatrix, biovar, tlag, caller);
 
   using model_type = torsten::PMXTwoCptModel<typename EM::T_par>;
-   EventSolver<model_type, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> >> pr;
+   EventSolver<model_type, EM> pr;
 
   Eigen::Matrix<typename EM::T_scalar, -1, -1> pred(events_rec.total_num_event_times, nCmt);
 
