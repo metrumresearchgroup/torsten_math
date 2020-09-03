@@ -3,8 +3,8 @@
 // #include <stan/math/torsten/test/unit/expect_matrix_eq.hpp>
 // #include <stan/math/torsten/test/unit/pmx_twocpt_mpi_test_fixture.hpp>
 // #include <stan/math/torsten/test/unit/util_generalOdeModel.hpp>
-// #include <stan/math/torsten/test/unit/test_util.hpp>
 // #include <stan/math/mpi/environment.hpp>
+// #include <stan/math/torsten/test/unit/test_macros.hpp>
 // #include <stan/math/torsten/pmx_solve_twocpt.hpp>
 // #include <stan/math/torsten/pmx_onecpt_model.hpp>
 // #include <stan/math/torsten/pmx_twocpt_model.hpp>

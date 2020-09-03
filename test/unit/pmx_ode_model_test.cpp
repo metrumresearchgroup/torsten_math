@@ -2,6 +2,7 @@
 #include <stan/math/rev/core.hpp>
 #include <test/unit/math/rev/fun/util.hpp>
 #include <stan/math/torsten/test/unit/pmx_cpt_model_test_fixture.hpp>
+#include <stan/math/torsten/test/unit/pmx_twocpt_functor_with_data.hpp>
 #include <test/unit/util.hpp>
 #include <gtest/gtest.h>
 
@@ -13,7 +14,6 @@ using torsten::PMXTwoCptModel;
 using torsten::pmx_integrate_ode_bdf;
 using stan::math::integrate_ode_bdf;
 using torsten::PMXTwoCptODE;
-using torsten::PMXOdeFunctorRateAdaptor;
 using torsten::PKODEModel;
 using torsten::PMXOdeIntegrator;
 using torsten::PkBdf;
@@ -396,7 +396,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_data_ss_infusion_grad_vs_long_run_s
     std::vector<var> rvec{r};
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_rk45);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_rk45);
-    torsten::test::test_grad(rvec, y1, y2, 5.e-8, 3.e-12);
+    torsten::test::test_grad(rvec, y1, y2, 5.e-8, 2.e-11);
   }
 }
 
@@ -622,21 +622,21 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_param_ss_infusion_grad_vs_long_run_
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_adams);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_adams);
-    torsten::test::test_grad(params, y1, y2, 3.e-7, 5.e-12);
+    torsten::test::test_grad(params, y1, y2, 3.e-7, 1.1e-11);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_bdf);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_bdf);
-    torsten::test::test_grad(params, y1, y2, 5.e-9, 5.e-12);
+    torsten::test::test_grad(params, y1, y2, 5.e-9, 1.1e-11);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, integrator_rk45);
     Eigen::Matrix<var, -1, 1> y2 = f2(r, integrator_rk45);
-    torsten::test::test_grad(params, y1, y2, 5.e-8, 5.e-12);
+    torsten::test::test_grad(params, y1, y2, 5.e-8, 1.1e-11);
   }
 }
 
@@ -985,21 +985,21 @@ TEST_F(TorstenTwoCptModelTest, ode_model_amt_param_ss_long_infusion_grad_vs_long
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, PMXOdeIntegrator<torsten::PkAdams>());
     Eigen::Matrix<var, -1, 1> y2 = f2(r, PMXOdeIntegrator<torsten::PkAdams>());
-    torsten::test::test_grad(params, y1, y2, 5.e-7, 5.e-11);
+    torsten::test::test_grad(params, y1, y2, 5.e-7, 2.e-10);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, PMXOdeIntegrator<torsten::PkBdf>());
     Eigen::Matrix<var, -1, 1> y2 = f2(r, PMXOdeIntegrator<torsten::PkBdf>());
-    torsten::test::test_grad(params, y1, y2, 1.e-7, 5.e-12);
+    torsten::test::test_grad(params, y1, y2, 1.e-7, 8.e-11);
   }
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
     Eigen::Matrix<var, -1, 1> y1 = f1(r, PMXOdeIntegrator<torsten::PkRk45>());
     Eigen::Matrix<var, -1, 1> y2 = f2(r, PMXOdeIntegrator<torsten::PkRk45>());
-    torsten::test::test_grad(params, y1, y2, 1.e-8, 5.e-12);
+    torsten::test::test_grad(params, y1, y2, 1.e-8, 8.e-11);
   }
 }
 
@@ -1062,5 +1062,42 @@ TEST_F(TorstenTwoCptModelTest, ode_model_ss_long_infusion_theta_grad_vs_long_run
     Eigen::Matrix<var, -1, 1> y1 = f1(PMXOdeIntegrator<torsten::PkRk45>());
     Eigen::Matrix<var, -1, 1> y2 = f2(PMXOdeIntegrator<torsten::PkRk45>());
     torsten::test::test_grad(params, y1, y2, 5.e-8, 1.e-8);
+  }
+}
+
+TEST_F(TorstenTwoCptModelTest, ode_model_with_data_ss_theta_grad) {
+  y0[0] = 150;
+  y0[1] = 55;
+  y0[2] = 120;
+
+  int cmt = 0;
+  double amt = 2100.0;
+  const double ii = 5.0;
+  std::vector<var> params{CL, Q, V2, V3, ka, amt, 330};
+
+  PMXTwoCptODE f2cpt;
+  std::vector<var> theta(params.begin(), params.begin() + 5);
+  auto f1 = [&](const auto& integrator) {
+              PKODEModel<var, PMXTwoCptODE> model(theta, y0.size(), f2cpt);
+    var& r = params.back();
+    return model.solve(t0, amt, r, ii, cmt, integrator);
+  };
+
+  std::vector<double> x_r{5.5};
+  std::vector<int> x_i{2};
+  twocpt_ode_with_data f2cpt_d;
+  std::vector<var> theta_d(params.begin(), params.begin() + 5);
+  theta_d[0] -= (x_r[0] + double(x_i[0]));
+  auto f2 = [&](const auto& integrator) {
+              PKODEModel<var, twocpt_ode_with_data> model(theta_d, x_r, x_i, y0.size(), f2cpt_d);
+    var& r = params.back();
+    return model.solve(t0, amt, r, ii, cmt, integrator);
+  };
+
+  for (int i = 0; i < 3; ++i) {
+    cmt = i + 1;
+    Eigen::Matrix<var, -1, 1> y1 = f1(PMXOdeIntegrator<torsten::PkAdams>());
+    Eigen::Matrix<var, -1, 1> y2 = f2(PMXOdeIntegrator<torsten::PkAdams>());
+    torsten::test::test_grad(params, y1, y2, 2.e-7, 1.e-8);
   }
 }

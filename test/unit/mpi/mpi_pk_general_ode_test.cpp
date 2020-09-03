@@ -3,8 +3,7 @@
 #include <stan/math/torsten/test/unit/pmx_twocpt_mpi_test_fixture.hpp>
 #include <stan/math/torsten/test/unit/pmx_neut_mpi_test_fixture.hpp>
 #include <stan/math/torsten/test/unit/util_generalOdeModel.hpp>
-#include <stan/math/torsten/test/unit/test_util.hpp>
-#include <stan/math/mpi/environment.hpp>
+#include <stan/math/torsten/test/unit/test_macros.hpp>
 #include <stan/math/torsten/pmx_solve_twocpt.hpp>
 #include <stan/math/torsten/pmx_solve_bdf.hpp>
 #include <stan/math/torsten/pmx_solve_adams.hpp>
@@ -20,7 +19,6 @@ using Eigen::MatrixXd;
 using Eigen::Dynamic;
 using stan::math::var;
 using torsten::NONMENEventsRecord;
-using torsten::EventsManager;
 
 #include <stan/math/torsten/mpi/session_def.cpp>
 

@@ -4,8 +4,8 @@
 #include <test/unit/math/rev/fun/util.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_rk45.hpp>
 #include <stan/math/torsten/test/unit/pmx_ode_test_fixture.hpp>
-#include <stan/math/torsten/test/unit/test_util.hpp>
 #include <stan/math/mpi/environment.hpp>
+#include <stan/math/torsten/test/unit/test_macros.hpp>
 #include <test/unit/util.hpp>
 #include <gtest/gtest.h>
 #include <stdio.h>

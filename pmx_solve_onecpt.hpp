@@ -99,16 +99,16 @@ pmx_solve_onecpt(const std::vector<T0>& time,
                                  "The number of lag times parameters per event (length of a vector in the eleventh argument) is", // NOLINT
                                  tlag[0].size(), "", length_error5);
 
-  using ER = NONMENEventsRecord<T0, T1, T2, T3, T4, T5, T6>;
-  using EM = EventsManager<ER>;
-  const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
+  using ER = NONMENEventsRecord<T0, T1, T2, T3>;
+  using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> >>;
+  const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
 
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
   using model_type = torsten::PMXOneCptModel<typename EM::T_par>;
-  EventSolver<model_type> pr;
-  pr.pred(0, events_rec, pred, PMXOdeIntegrator<Analytical>());
+  EventSolver<model_type, EM> pr;
+  pr.pred(0, events_rec, pred, PMXOdeIntegrator<Analytical>(), pMatrix, biovar, tlag);
   return pred;
 }
 

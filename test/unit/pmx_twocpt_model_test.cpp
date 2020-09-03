@@ -41,9 +41,9 @@ TEST_F(TorstenTwoCptModelTest, rate_dbl) {
   using model_t = PMXTwoCptModel<double>;
   model_t model(CL, Q, V2, V3, ka);
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  PMXOdeFunctorRateAdaptor<PMXTwoCptODE, double> f1;
+  PMXOdeFunctorRateAdaptor<PMXTwoCptODE, double, double> f1(model.par(), rate);
 
-  std::vector<double> y = f1(t0, yvec, model.par(), rate, x_i, msgs);
+  std::vector<double> y = f1(t0, yvec, f1.adaptor.adapted_param(), {}, {}, msgs);
   EXPECT_FLOAT_EQ(y[0], rate[0]);
   EXPECT_FLOAT_EQ(y[1], rate[1]);
   EXPECT_FLOAT_EQ(y[2], rate[2]);
@@ -63,10 +63,9 @@ TEST_F(TorstenTwoCptModelTest, rate_var) {
   model_t model(CLv, Qv, V2v, V3v, kav);
   std::vector<stan::math::var> theta(model.par());
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  PMXOdeFunctorRateAdaptor<PMXTwoCptODE, var> f1;
-  theta.insert(theta.end(), rate_var.begin(), rate_var.end());
+  PMXOdeFunctorRateAdaptor<PMXTwoCptODE, var, var> f1(theta, rate_var);
 
-  std::vector<var> y = f1(t0, yvec, theta, x_r, x_i, msgs);
+  std::vector<var> y = f1(t0, yvec, f1.adaptor.adapted_param(), x_r, x_i, msgs);
   EXPECT_FLOAT_EQ(y[0].val(), rate[0]);
   EXPECT_FLOAT_EQ(y[1].val(), rate[1]);
   EXPECT_FLOAT_EQ(y[2].val(), rate[2]);
@@ -86,13 +85,13 @@ TEST_F(TorstenTwoCptModelTest, sd_solver) {
   var V2v = to_var(V2);
   var V3v = to_var(V3);
   var kav = to_var(ka);
-  std::vector<var> theta{CLv, Qv, V2v, V3v, kav};
+  // std::vector<var> theta{CLv, Qv, V2v, V3v, kav};
   std::vector<stan::math::var> rate_var{to_var(rate)};
   using model_t = PMXTwoCptModel<var>;
   model_t model(CLv, Qv, V2v, V3v, kav);
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  PMXOdeFunctorRateAdaptor<PMXTwoCptODE, var> f1;
-  theta.insert(theta.end(), rate_var.begin(), rate_var.end());
+  PMXOdeFunctorRateAdaptor<PMXTwoCptODE, var, var> f1(model.par(), rate_var);
+  std::vector<var> theta = f1.adaptor.adapted_param();
 
   auto y1 = pmx_integrate_ode_bdf(f1, yvec, t0, ts, theta, x_r, x_i, msgs);
   PKRec<var> y2(to_var(y0));

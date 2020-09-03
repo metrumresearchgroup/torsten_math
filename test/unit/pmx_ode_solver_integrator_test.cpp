@@ -306,7 +306,7 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver) {
   rate[2] = 3000;
   PMXTwoCptModel<double> model0(CL, Q, V2, V3, ka); // NOLINT
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  PMXOdeFunctorRateAdaptor<PMXTwoCptODE, double> f1;
+  PMXOdeFunctorRateAdaptor<PMXTwoCptODE, double, double> f1(model0.par(), rate);
   using model_t = PKODEModel<double, PMXTwoCptODE>;
   model_t model(model0.par(), y0.size(), model0.f());
 
@@ -317,35 +317,35 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver) {
 
   torsten::PMXOdeIntegrator<torsten::StanRk45> integ1(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ1);
-  y1 = stan::math::integrate_ode_rk45(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_rk45(f1, yvec, t0, ts, f1.adaptor.adapted_param(), {}, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::StanAdams> integ2(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ2);
-  y1 = stan::math::integrate_ode_adams(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_adams(f1, yvec, t0, ts, f1.adaptor.adapted_param(), {}, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::StanBdf> integ3(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ3);
-  y1 = stan::math::integrate_ode_bdf(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_bdf(f1, yvec, t0, ts, f1.adaptor.adapted_param(), {}, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::PkAdams> integ4(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ4);
-  y1 = torsten::pmx_integrate_ode_adams(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
+  y1 = torsten::pmx_integrate_ode_adams(f1, yvec, t0, ts, f1.adaptor.adapted_param(), {}, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::PkBdf> integ5(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ5);
-  y1 = torsten::pmx_integrate_ode_bdf(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
+  y1 = torsten::pmx_integrate_ode_bdf(f1, yvec, t0, ts, f1.adaptor.adapted_param(), {}, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
@@ -360,7 +360,7 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver_y0) {
   y0[2] = 8000;
   PMXTwoCptModel<double> model0(CL, Q, V2, V3, ka); // NOLINT
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  PMXOdeFunctorRateAdaptor<PMXTwoCptODE, double> f1;
+  PMXOdeFunctorRateAdaptor<PMXTwoCptODE, double, double> f1(model0.par(), rate);
   using model_t = PKODEModel<double, PMXTwoCptODE>;
   model_t model(model0.par(), y0.size(), model0.f());
 
@@ -371,35 +371,35 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver_y0) {
 
   torsten::PMXOdeIntegrator<torsten::StanRk45> integ1(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ1);
-  y1 = stan::math::integrate_ode_rk45(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_rk45(f1, yvec, t0, ts, f1.adaptor.adapted_param(), {}, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::StanAdams> integ2(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ2);
-  y1 = stan::math::integrate_ode_adams(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_adams(f1, yvec, t0, ts, f1.adaptor.adapted_param(), {}, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::StanBdf> integ3(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ3);
-  y1 = stan::math::integrate_ode_bdf(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_bdf(f1, yvec, t0, ts, f1.adaptor.adapted_param(), {}, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::PkAdams> integ4(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ4);
-  y1 = torsten::pmx_integrate_ode_adams(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
+  y1 = torsten::pmx_integrate_ode_adams(f1, yvec, t0, ts, f1.adaptor.adapted_param(), {}, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
 
   torsten::PMXOdeIntegrator<torsten::PkBdf> integ5(rtol, atol, max_num_steps, msgs);
   y = y0; model.solve(y, t0, ts[0], rate, integ5);
-  y1 = torsten::pmx_integrate_ode_bdf(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
+  y1 = torsten::pmx_integrate_ode_bdf(f1, yvec, t0, ts, f1.adaptor.adapted_param(), {}, x_i, msgs); // NOLINT
   EXPECT_FLOAT_EQ(y(0), y1[0][0]);
   EXPECT_FLOAT_EQ(y(1), y1[0][1]);
   EXPECT_FLOAT_EQ(y(2), y1[0][2]);
@@ -416,7 +416,7 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver_par_sens) {
 
   PMXTwoCptModel<var> model0(theta);
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  PMXOdeFunctorRateAdaptor<PMXTwoCptODE, double> f1;
+  PMXOdeFunctorRateAdaptor<PMXTwoCptODE, var, double> f1(model0.par(), rate);
   using model_t = PKODEModel<var, PMXTwoCptODE>;
   model_t model(model0.par(), y0.size(), model0.f());
 
@@ -449,23 +449,23 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver_par_sens) {
   torsten::PMXOdeIntegrator<torsten::PkBdf> integ5(rtol, atol, max_num_steps, msgs);
 
   y = to_var(y0); model.solve(y, t0, ts[0], rate, integ1);
-  y1 = stan::math::integrate_ode_rk45(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_rk45(f1, yvec, t0, ts, f1.adaptor.adapted_param(), {}, x_i, msgs); // NOLINT
   test_it();
 
   y = to_var(y0); model.solve(y, t0, ts[0], rate, integ2);
-  y1 = stan::math::integrate_ode_adams(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_adams(f1, yvec, t0, ts, f1.adaptor.adapted_param(), {}, x_i, msgs); // NOLINT
   test_it();
 
   y = to_var(y0); model.solve(y, t0, ts[0], rate, integ3);
-  y1 = stan::math::integrate_ode_bdf(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
+  y1 = stan::math::integrate_ode_bdf(f1, yvec, t0, ts, f1.adaptor.adapted_param(), {}, x_i, msgs); // NOLINT
   test_it();
 
   y = to_var(y0); model.solve(y, t0, ts[0], rate, integ4);
-  y1 = torsten::pmx_integrate_ode_adams(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
+  y1 = torsten::pmx_integrate_ode_adams(f1, yvec, t0, ts, f1.adaptor.adapted_param(), {}, x_i, msgs); // NOLINT
   test_it();
 
   y = to_var(y0); model.solve(y, t0, ts[0], rate, integ5);
-  y1 = torsten::pmx_integrate_ode_bdf(f1, yvec, t0, ts, model.par(), rate, x_i, msgs); // NOLINT
+  y1 = torsten::pmx_integrate_ode_bdf(f1, yvec, t0, ts, f1.adaptor.adapted_param(), {}, x_i, msgs); // NOLINT
   test_it();
 }
 
@@ -485,7 +485,7 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver_par_rate_sens) {
 
   PMXTwoCptModel<var> model0(theta);
   std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  PMXOdeFunctorRateAdaptor<PMXTwoCptODE, var> f1;
+  PMXOdeFunctorRateAdaptor<PMXTwoCptODE, var, var> f1(model0.par(), rate_var);
   using model_t = PKODEModel<var, PMXTwoCptODE>;
   model_t model(theta, y0.size(), model0.f()); // NOLINT
   theta.insert(theta.end(), rate_var.begin(), rate_var.end());
