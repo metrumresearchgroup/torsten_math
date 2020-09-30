@@ -120,8 +120,8 @@ bool constexpr last_is_ostream_ptr<> = false;
 
       // check arguments
       static const char* function("PMX SOLVE ODE");
-      torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
-                         pMatrix, biovar, tlag, function);
+      torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, function);
+      torsten::pmx_check(time.size(), nCmt, biovar, tlag);
 
       using ER = NONMENEventsRecord<T0, T1, T2, T3>;
       using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> >>;
@@ -307,9 +307,8 @@ bool constexpr last_is_ostream_ptr<> = false;
                std::ostream* msgs) {
       // check arguments
       static const char* function("solve");
-      const std::vector<std::vector<double> > tlag{{0.0}};
-      torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
-                         pMatrix, biovar, tlag, function);
+      torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, function);
+      torsten::pmx_check(time.size(), nCmt, biovar);
 
       using ER = NONMENEventsRecord<T0, T1, T2, T3>;
       using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<T5>>>;
@@ -486,10 +485,7 @@ bool constexpr last_is_ostream_ptr<> = false;
                std::ostream* msgs) {
       // check arguments
       static const char* function("solve");
-      const std::vector<std::vector<double> > tlag{{0.0}};
-      const std::vector<std::vector<double> > biovar{{1.0}};
-      torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
-                         pMatrix, biovar, tlag, function);
+      torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, function);
 
       using ER = NONMENEventsRecord<T0, T1, T2, T3>;
       using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<>>>;
@@ -666,8 +662,8 @@ bool constexpr last_is_ostream_ptr<> = false;
                std::ostream* msgs) {
       // check arguments
       static const char* function("solve");
-      torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
-                         pMatrix, biovar, tlag, function);
+      torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, function);
+      torsten::pmx_check(time.size(), nCmt, biovar, tlag);
 
       using ER = NONMENEventsRecord<T0, T1, T2, T3>;
       using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6>, double>>;
@@ -764,8 +760,8 @@ bool constexpr last_is_ostream_ptr<> = false;
           std::ostream* msgs) {
       // check arguments
       static const char* function("solve");
-      torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
-                         pMatrix, biovar, tlag, function);
+      torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, function);
+      torsten::pmx_check(time.size(), nCmt, biovar, tlag);
 
       using ER = NONMENEventsRecord<T0, T1, T2, T3>;
       using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6>, double, int>>;
@@ -837,7 +833,6 @@ bool constexpr last_is_ostream_ptr<> = false;
                    RTOL_AS, ATOL_AS, MAXSTEP_AS,
                    msgs);
     }
-
   };
 }  
 #endif

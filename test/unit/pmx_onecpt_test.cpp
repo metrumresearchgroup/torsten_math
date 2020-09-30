@@ -410,6 +410,22 @@ TEST_F(TorstenOneCptTest, single_iv_central_cmt_var) {
   TORSTEN_CPT_GRAD_RATE_TEST(pmx_solve_onecpt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag, 2e-5, 1e-6, 1e-6, 1e-6);
 }
 
+TEST_F(TorstenOneCptTest, single_iv_central_cmt_var_optoinal_biovar_tlag) {
+  cmt[0] = 2;  // IV infusion, not absorption from the gut
+  rate[0] = 600;
+
+  std::vector<stan::math::var> rate_var = stan::math::to_var(rate);
+  auto x1 = pmx_solve_onecpt(time, amt, rate_var, ii, evid, cmt, addl, ss,
+                                 pMatrix, biovar, tlag);
+  auto x2 = pmx_solve_onecpt(time, amt, rate_var, ii, evid, cmt, addl, ss,
+                                 pMatrix, biovar);
+  auto x3 = pmx_solve_onecpt(time, amt, rate_var, ii, evid, cmt, addl, ss,
+                                 pMatrix);
+
+  torsten::test::test_grad(rate_var, x1, x2, 1.e-12, 1.e-12);
+  torsten::test::test_grad(rate_var, x1, x3, 1.e-12, 1.e-12);
+}
+
 TEST_F(TorstenOneCptTest, single_iv_central_cmt_var_overload) {
   resize(3);
   cmt[0] = 2;  // IV infusion, not absorption from the gut
