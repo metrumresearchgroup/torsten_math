@@ -88,8 +88,7 @@ pmx_solve_onecpt_bdf(const F& f,
 
   // check arguments
   static const char* function("pmx_solve_onecpt_bdf");
-  torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
-                theta, biovar, tlag, function);
+  torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss, theta, function);
 
   // Construct dummy array of matrix for last argument of pred
   Matrix<T4, Dynamic, Dynamic> dummy_system;

@@ -73,6 +73,32 @@ namespace torsten {
     }
   };
 
+  /**
+   * Parameters & controls that are not part of event sequence,
+   * including
+   * <code>theta</code>,
+   * <code>bioavailability</code>,
+   * <code>tlag</code>(lag time),
+   * <code>x_r</code>(real data for ODE functor),
+   * <code>x_i</code>(integer data for ODE functor)
+   *
+   * except <code>theta</code>, the above parameters are optional and
+   * are handled by parameter packs. Here two packas are used for
+   * different purposes: 
+   * 1. bioavailability and lag time are related to PMX events and
+   *    grouped into a <code>tuple</code>. One can specify none,
+   *    bioavailability only, or bioavailability + tlag.
+   * 2. ODE's real and int data are grouped into a pack. One can specify none,
+   *    real data only, or real + int data.
+   *
+   * @tparam T0 type for time
+   * @tparam T4 type for system parameter, usually refered as <code>pMatrix</code> or <code>theta</code>.
+   * @tparam theta_container type of container,  <code>std::vector</code> or 
+   *                         <code>Eigen::Matrix</code>(for linear * system)
+   * @tparam params_tuple_type tuple with a parameter pack for PMX events: bioavailability and lag time.
+   * @tparam Ts pack of types for ODE data: real & integer.
+   * 
+   */
   template<typename T0,
            typename T4,
            template<typename...> class theta_container,
@@ -80,6 +106,11 @@ namespace torsten {
            typename... Ts>
   struct NonEventParameters;
   
+  /** 
+   * Parameters & controls that are not part of event sequence,
+   * specialization when types for both bioavailability and lag time
+   * are provided in <code>tuple_pars_t</code>.
+   **/
   template<typename T0,
            typename T4,
            template<typename...> class theta_container,
@@ -88,16 +119,20 @@ namespace torsten {
   struct NonEventParameters<T0, T4, theta_container,
                             std::tuple<tuple_pars_t...>, Ts...> {
     static constexpr int npar = NonEventParameters_Impl<tuple_pars_t..., Ts...>::npar;
+    /// time & index for an event entry's parameters
     using par_t = std::pair<double, std::array<int, npar> >;
     using biovar_t = typename NonEventParameters_Impl<tuple_pars_t...>::biovar_t;
     using lag_t = typename NonEventParameters_Impl<tuple_pars_t...>::lag_t;
     using T5 = biovar_t;
     using T6 = lag_t;
 
+    /// mapping between time and corresponding parameter index
     std::vector<par_t> pars;
     const std::vector<T0>& time_;
     const std::vector<theta_container<T4>>& theta_;
+    /// put parameter pack for bioavailability and lag time into tuple for later retrieval
     const std::tuple<const std::vector<std::vector<tuple_pars_t> >&...> event_array_2d_params;
+    /// put parameter pack for ODE's data into tuple for later retrieval
     const std::tuple<const std::vector<std::vector<Ts> >&...> model_array_2d_params;
 
     template <typename rec_t>

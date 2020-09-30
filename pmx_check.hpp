@@ -8,6 +8,7 @@
 #include <stan/math/prim/err/check_nonnegative.hpp>
 #include <stan/math/prim/err/check_consistent_sizes.hpp>
 #include <stan/math/prim/err/check_nonzero_size.hpp>
+#include <stan/math/prim/err/check_size_match.hpp>
 #include <stan/math/torsten/PKModel/pmxModel.hpp>
 #include <stan/math/prim/err/invalid_argument.hpp>
 #include <Eigen/Dense>
@@ -52,8 +53,7 @@ namespace torsten {
  * @return void
  *
  */
-template <typename T0, typename T1, typename T2, typename T3, typename T4,
-  typename T5, typename T6>
+template <typename T0, typename T1, typename T2, typename T3, typename T4>
 void pmx_check(const std::vector<T0>& time,
                const std::vector<T1>& amt,
                const std::vector<T2>& rate,
@@ -63,8 +63,6 @@ void pmx_check(const std::vector<T0>& time,
                const std::vector<int>& addl,
                const std::vector<int>& ss,
                const std::vector<std::vector<T4> >& pMatrix,
-               const std::vector<std::vector<T5> >& biovar,
-               const std::vector<std::vector<T6> >& tlag,
                const char* function) {
   using std::vector;
   using std::string;
@@ -115,21 +113,28 @@ void pmx_check(const std::vector<T0>& time,
       "the number of parameters per event is", pMatrix[0].size(),
       "", " but must be greater than 0!");
   }
-
-  if (!((biovar.size() == time.size()) || (biovar.size() == 1)))
-    invalid_argument(function, "length of the biovariability parameter (2d) array,",  // NOLINT
-      biovar.size(), "", length_error2);
-  if (!(biovar[0].size() > 0)) invalid_argument(function,
-    "the number of biovariability parameters per event is", biovar[0].size(),
-    "", " but must be greater than 0!");
-
-  if (!((tlag.size() == time.size()) || (tlag.size() == 1)))
-    invalid_argument(function, "length of the lag times (2d) array,",  // NOLINT
-                     tlag.size(), "", length_error2);
-  if (!(tlag[0].size() > 0)) invalid_argument(function,
-      "the number of lagtimes parameters per event is", tlag[0].size(),
-      "", " but must be greater than 0!");
 }
+
+  template<typename T>
+  inline int check_param_size_match(size_t n, size_t ncmt,
+                             const std::vector<std::vector<T> >& param) {
+    if (param.size() != n && param.size() != 1) {
+      stan::math::invalid_argument("check param size", "length of the parameter 2d array,",
+                                   param.size(), "", "but must be of event time array size or size 1");
+    }
+
+    for (size_t i = 0; i < param.size(); ++i) {      
+      stan::math::check_size_match("CPT model", "bioavailability/tlag",
+                                   param[i].size(), "nCmt", ncmt);
+    }
+    return 0;
+  }
+
+  template<typename... Ts>
+  void pmx_check(size_t n, size_t ncmt,
+                 const std::vector<std::vector<Ts> >&... params) {
+    std::vector<int> dummy{check_param_size_match(n, ncmt, params)...};
+  }
 
 }    // torsten namespace
 

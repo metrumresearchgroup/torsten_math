@@ -406,3 +406,28 @@ TEST_F(TorstenTwoCptTest, single_iv_central_cmt_var_overload) {
   TORSTEN_CPT_PARAM_OVERLOAD_TEST(pmx_solve_twocpt, time, amt, rate_v, ii, evid, cmt, addl, ss,
                                   pMatrix, biovar, tlag, 1e-6, 1e-6);
 }
+
+TEST_F(TorstenTwoCptTest, multiple_iv_var_optional_biovar_tlag) {
+  using std::vector;
+
+  pMatrix[0][0] = 5;  // CL
+  pMatrix[0][1] = 8;  // Q
+  pMatrix[0][2] = 35;  // Vc
+  pMatrix[0][3] = 105;  // Vp
+  pMatrix[0][4] = 1.2;  // ka
+  
+  amt[0] = 1200;
+  rate[0] = 1200;
+
+  std::vector<stan::math::var> amt_var(stan::math::to_var(amt));
+
+  auto x1 = torsten::pmx_solve_twocpt(time, amt_var, rate, ii, evid, cmt, addl, ss,
+                                      pMatrix, biovar, tlag);
+  auto x2 = torsten::pmx_solve_twocpt(time, amt_var, rate, ii, evid, cmt, addl, ss,
+                                      pMatrix, biovar);
+  auto x3 = torsten::pmx_solve_twocpt(time, amt_var, rate, ii, evid, cmt, addl, ss,
+                                      pMatrix);
+
+  torsten::test::test_grad(amt_var, x1, x2, 1.e-12, 1.e-12);
+  torsten::test::test_grad(amt_var, x1, x3, 1.e-12, 1.e-12);
+}

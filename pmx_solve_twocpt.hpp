@@ -5,6 +5,8 @@
 #include <stan/math/prim/err/check_greater_or_equal.hpp>
 #include <stan/math/torsten/to_array_2d.hpp>
 #include <stan/math/torsten/is_std_vector.hpp>
+#include <stan/math/torsten/pmx_solve_ode.hpp>
+#include <stan/math/torsten/pmx_solve_cpt.hpp>
 #include <stan/math/torsten/ev_solver.hpp>
 #include <stan/math/torsten/ev_manager.hpp>
 #include <stan/math/torsten/pmx_twocpt_model.hpp>
@@ -17,108 +19,18 @@ namespace torsten {
 
 /**
  * Computes the predicted amounts in each compartment at each event
- * for a two compartment model with first oder absorption.
+ * for a two-compartment model with analytical solution.
  *
- * @tparam T0 type of scalar for time of events.
- * @tparam T1 type of scalar for amount at each event.
- * @tparam T2 type of scalar for rate at each event.
- * @tparam T3 type of scalar for inter-dose inteveral at each event.
- * @tparam T4 type of scalars for the model parameters.
- * @tparam T5 type of scalars for the 
- * @param[in] pMatrix parameters at each event
- * @param[in] time times of events
- * @param[in] amt amount at each event
- * @param[in] rate rate at each event
- * @param[in] ii inter-dose interval at each event
- * @param[in] evid event identity:
- *                    (0) observation
- *                    (1) dosing
- *                    (2) other
- *                    (3) reset
- *                    (4) reset AND dosing
- * @param[in] cmt compartment number at each event
- * @param[in] addl additional dosing at each event
- * @param[in] ss steady state approximation at each event (0: no, 1: yes)
- * @return a matrix with predicted amount in each compartment
- *         at each event.
+ * @tparam Ts types of parameters, see <code>pmx_solve_cpt</code> for
+ *         details. 
+ * @return a matrix with predicted amount in each compartment 
+ *         at each event. 
+ *
  */
-template <typename T0, typename T1, typename T2, typename T3, typename T4,
-          typename T5, typename T6>
-Eigen::Matrix<typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
-              Eigen::Dynamic, Eigen::Dynamic>
-pmx_solve_twocpt(const std::vector<T0>& time,
-              const std::vector<T1>& amt,
-              const std::vector<T2>& rate,
-              const std::vector<T3>& ii,
-              const std::vector<int>& evid,
-              const std::vector<int>& cmt,
-              const std::vector<int>& addl,
-              const std::vector<int>& ss,
-              const std::vector<std::vector<T4> >& pMatrix,
-              const std::vector<std::vector<T5> >& biovar,
-              const std::vector<std::vector<T6> >& tlag) {
-  using std::vector;
-  using Eigen::Dynamic;
-  using Eigen::Matrix;
-  using boost::math::tools::promote_args;
-  using stan::math::check_positive_finite;
-
-  int nCmt = torsten::PMXTwoCptModel<double>::Ncmt;
-  int nParms = torsten::PMXTwoCptModel<double>::Npar;
-  static const char* function("pmx_solve_twocpt");
-
-  // Check arguments
-  torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss,
-                pMatrix, biovar, tlag, function);
-  for (size_t i = 0; i < pMatrix.size(); i++) {
-    check_positive_finite(function, "PK parameter CL", pMatrix[i][0]);
-    check_positive_finite(function, "PK parameter Q", pMatrix[i][1]);
-    check_positive_finite(function, "PK parameter V2", pMatrix[i][2]);
-    check_positive_finite(function, "PK parameter V3", pMatrix[i][3]);
+  template <typename... Ts>
+  auto pmx_solve_twocpt(Ts... args) {
+    return PMXSolveCPT<PMXTwoCptModel>::solve(args...);
   }
-  std::string message4 = ", but must equal the number of parameters in the model: " // NOLINT
-    + boost::lexical_cast<std::string>(nParms) + "!";
-  const char* length_error4 = message4.c_str();
-  if (!(pMatrix[0].size() == (size_t) nParms))
-    stan::math::invalid_argument(function,
-    "The number of parameters per event (length of a vector in the first argument) is", // NOLINT
-    pMatrix[0].size(), "", length_error4);
-
-  // FIX ME - we want to check every array of pMatrix, not
-  // just the first one (at index 0)
-  std::string message5 = ", but must equal the number of parameters in the model: " // NOLINT
-  + boost::lexical_cast<std::string>(nParms) + "!";
-  const char* length_error5 = message5.c_str();
-  if (!(pMatrix[0].size() == (size_t) nParms))
-    stan::math::invalid_argument(function,
-    "The number of parameters per event (length of a vector in the ninth argument) is", // NOLINT
-    pMatrix[0].size(), "", length_error5);
-
-  std::string message6 = ", but must equal the number of compartments in the model: " // NOLINT
-  + boost::lexical_cast<std::string>(nCmt) + "!";
-  const char* length_error6 = message6.c_str();
-  if (!(biovar[0].size() == (size_t) nCmt))
-    stan::math::invalid_argument(function,
-    "The number of biovariability parameters per event (length of a vector in the tenth argument) is", // NOLINT
-    biovar[0].size(), "", length_error6);
-
-  if (!(tlag[0].size() == (size_t) nCmt))
-    stan::math::invalid_argument(function,
-    "The number of lag times parameters per event (length of a vector in the eleventh argument) is", // NOLINT
-    tlag[0].size(), "", length_error5);
-
-  using ER = NONMENEventsRecord<T0, T1, T2, T3>;
-  using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> >>;
-  const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
-
-  Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
-    Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
-
-  using model_type = torsten::PMXTwoCptModel<typename EM::T_par>;
-   EventSolver<model_type, EM> pr;
-  pr.pred(0, events_rec, pred, PMXOdeIntegrator<Analytical>(), pMatrix, biovar, tlag);
-  return pred;
-}
 
 /**
  * Overload function to allow user to pass an std::vector for 
