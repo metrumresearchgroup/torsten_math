@@ -1708,4 +1708,8 @@ TEST_F(TorstenTwoCptTest, ss_multiple_bolus_ii_rate) {
                            time, amt, rate_var, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag,
                            rel_tol, abs_tol, max_num_steps,
                            2e-5, 1e-6, 1e-5, 1e-6);
+
+  TORSTEN_ODE_PARAM_OVERLOAD_TEST(pmx_solve_bdf, f_twocpt, nCmt,
+                                  time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag,
+                                  1e-10, 1e-10);
 }

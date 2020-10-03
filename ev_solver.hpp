@@ -251,7 +251,6 @@ namespace torsten{
       using::stan::math::var;
       using torsten::PKRec;
 
-      using ER = T_event_record;
       using scalar = typename EM::T_scalar;
 
       const int nCmt = EM::nCmt(events_rec);

@@ -212,16 +212,14 @@ bool constexpr last_is_ostream_ptr<> = false;
                double as_abs_tol,
                long int as_max_num_steps,
                std::ostream* msgs) {
-      auto param_ = torsten::to_array_2d(pMatrix);
-      auto biovar_ = torsten::to_array_2d(biovar);
-      auto tlag_ = torsten::to_array_2d(tlag);
-
       return solve(f, nCmt,
-                        time, amt, rate, ii, evid, cmt, addl, ss,
-                        param_, biovar_, tlag_,
-                        rel_tol, abs_tol, max_num_steps,
-                        as_rel_tol, as_abs_tol, as_max_num_steps,
-                        msgs);
+                   time, amt, rate, ii, evid, cmt, addl, ss,
+                   torsten::to_array_2d(pMatrix),
+                   torsten::to_array_2d(biovar),
+                   torsten::to_array_2d(tlag),
+                   rel_tol, abs_tol, max_num_steps,
+                   as_rel_tol, as_abs_tol, as_max_num_steps,
+                   msgs);
     }
 
     /**
@@ -397,12 +395,9 @@ bool constexpr last_is_ostream_ptr<> = false;
                double as_abs_tol,
                long int as_max_num_steps,
                std::ostream* msgs) {
-      auto param_ = torsten::to_array_2d(pMatrix);
-      auto biovar_ = torsten::to_array_2d(biovar);
-
       return solve(f, nCmt,
                    time, amt, rate, ii, evid, cmt, addl, ss,
-                   param_, biovar_,
+                   torsten::to_array_2d(pMatrix), torsten::to_array_2d(biovar),
                    rel_tol, abs_tol, max_num_steps,
                    as_rel_tol, as_abs_tol, as_max_num_steps,
                    msgs);
@@ -573,11 +568,9 @@ bool constexpr last_is_ostream_ptr<> = false;
                double as_abs_tol,
                long int as_max_num_steps,
                std::ostream* msgs) {
-      auto param_ = torsten::to_array_2d(pMatrix);
-
       return solve(f, nCmt,
                    time, amt, rate, ii, evid, cmt, addl, ss,
-                   param_,
+                   torsten::to_array_2d(pMatrix),
                    rel_tol, abs_tol, max_num_steps,
                    as_rel_tol, as_abs_tol, as_max_num_steps,
                    msgs);

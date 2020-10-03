@@ -333,6 +333,23 @@
       torsten::test::test_grad(tlag_v[0],  x0, x6, EPS_VAL, EPS_GRAD);                                               \
       torsten::test::test_grad(tlag_v[0],  x0, x7, EPS_VAL, EPS_GRAD);                                               \
   }                                                                                                                  \
+  {                                                                                                                                           \
+      auto x0 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v,    BIOVAR,    TLAG);                                          \
+      auto x1 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v[0], BIOVAR,    TLAG, 1.e-6, 1.e-6, 1e6);                       \
+      auto x2 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v[0], BIOVAR[0], TLAG, 1.e-6, 1.e-6, 1e6);                       \
+      auto x3 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v[0], BIOVAR[0], TLAG[0], 1.e-6, 1.e-6, 1e6, 1.e-6, 1.e-6, 1e2); \
+      auto x4 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v[0], BIOVAR,    TLAG[0], 1.e-6, 1.e-6, 1e6, 1.e-6, 1.e-6, 1e2); \
+      auto x5 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v,    BIOVAR[0], TLAG, 1.e-6, 1.e-6, 1e6);                       \
+      auto x6 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v,    BIOVAR[0], TLAG[0], 1.e-6, 1.e-6, 1e6);                    \
+      auto x7 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v,    BIOVAR,    TLAG[0], 1.e-6, 1.e-6, 1e6);                    \
+      torsten::test::test_grad(theta_v[0],  x0, x1, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x2, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x3, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x4, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x5, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x6, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x7, EPS_VAL, EPS_GRAD);                                                                       \
+  }                                                                                                                                           \
   }
 
 
