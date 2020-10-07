@@ -271,3 +271,50 @@ TEST_F(TorstenTwoCptTest, variadic_real_and_int_data_default_control) {
                           ii, evid, cmt, addl, ss, pMatrix_var, biovar, tlag, x_r, x_i);
   torsten::test::test_grad(theta_2[0], pMatrix_var[0], y3, y4, 1e-5, 1e-6);
 }
+
+TEST_F(TorstenOneCptTest, multiple_bolus_tlag_overload) {
+  resize(3);
+  addl[0] = 1;
+  tlag[0] = std::vector<double>{2.8, 3.9};
+
+  TORSTEN_ODE_PARAM_VARI_OVERLOAD_TEST(torsten::pmx_solve_bdf, f_onecpt, nCmt,
+                                  time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag,
+                                  1e-10, 1e-10);
+}
+
+TEST_F(TorstenOneCptTest, multiple_bolus_dummy_tlag_overload) {
+  resize(3);
+  addl[0] = 1;
+  tlag[0] = std::vector<double>{0.0, 0.0};
+
+  TORSTEN_ODE_PARAM_VARI_TLAG_OVERLOAD_TEST(torsten::pmx_solve_bdf, f_onecpt, nCmt,
+                                  time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag,
+                                  1e-10, 1e-10);
+}
+
+TEST_F(TorstenTwoCptTest, ss_multiple_bolus_ii_rate) {
+  time[0] = 0.0;
+  time[1] = 5.0;
+  time[2] = 6.0;
+  resize(3);
+
+  amt[0] = 1200;
+  amt[1] = 800;
+  amt[2] = 900;
+  addl[0] = 0;
+  addl[1] = 0;
+  addl[2] = 0;
+  ii[0] = 1.0;
+  ii[1] = 2.0;
+  ii[2] = 3.0;
+  ss[0] = 1;
+  ss[1] = 1;
+  ss[2] = 1;
+
+  double rel_tol = 1e-8, abs_tol = 1e-8;
+  long int max_num_steps = 1e8;
+
+  TORSTEN_ODE_PARAM_VARI_OVERLOAD_TEST(pmx_solve_bdf, f_twocpt, nCmt,
+                                  time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag,
+                                  1e-10, 1e-10);
+}

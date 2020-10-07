@@ -19,6 +19,26 @@ namespace torsten {
   template<typename T, typename... Ts, typename... Tn>
   struct is_std_vector<std::vector<T, Ts...>, Tn...> : torsten::is_std_vector<Tn...> {};
 
+  /**
+   * type trait for a parameter pack with types none of which is
+   * <code>std::vector</code>
+   * 
+   */
+  template<typename... Ts>
+  struct none_std_vector;
+
+  template<typename T>
+  struct none_std_vector<T> : std::true_type {};
+
+  template<typename T, typename... Ts>
+  struct none_std_vector<std::vector<T, Ts...>> : std::false_type {};
+
+  template<typename T, typename... Tn>
+  struct none_std_vector<T, Tn...> {
+    static constexpr bool value = torsten::none_std_vector<T>::value && torsten::none_std_vector<Tn...>::value;
+  };
+
+  // value type of std vector
   template<typename T>
   struct value_type {
     using type = T;

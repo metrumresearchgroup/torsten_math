@@ -333,6 +333,15 @@
       torsten::test::test_grad(tlag_v[0],  x0, x6, EPS_VAL, EPS_GRAD);                                               \
       torsten::test::test_grad(tlag_v[0],  x0, x7, EPS_VAL, EPS_GRAD);                                               \
   }                                                                                                                  \
+  }
+
+// test varyadic solvers
+#define TORSTEN_ODE_PARAM_VARI_OVERLOAD_TEST(FUN, F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, THETA, BIOVAR, TLAG,                     \
+                                             EPS_VAL, EPS_GRAD)                                                                               \
+  {                                                                                                                                           \
+  std::vector<std::vector<stan::math::var> > theta_v(1, stan::math::to_var(THETA[0]));                                                        \
+  std::vector<std::vector<stan::math::var> > biovar_v(1, stan::math::to_var(BIOVAR[0]));                                                      \
+  std::vector<std::vector<stan::math::var> > tlag_v(1, stan::math::to_var(tlag[0]));                                                          \
   {                                                                                                                                           \
       auto x0 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v,    BIOVAR,    TLAG);                                          \
       auto x1 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v[0], BIOVAR,    TLAG, 1.e-6, 1.e-6, 1e6);                       \
@@ -350,8 +359,50 @@
       torsten::test::test_grad(theta_v[0],  x0, x6, EPS_VAL, EPS_GRAD);                                                                       \
       torsten::test::test_grad(theta_v[0],  x0, x7, EPS_VAL, EPS_GRAD);                                                                       \
   }                                                                                                                                           \
+  {                                                                                                                                           \
+      auto x0 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v,    BIOVAR);                                          \
+      auto x1 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v[0], 1.e-6, 1.e-6, 1e6);                             \
+      auto x2 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v[0], 1.e-6, 1.e-6, 1e6);                             \
+      auto x3 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v[0], 1.e-6, 1.e-6, 1e6, 1.e-6, 1.e-6, 1e2);          \
+      auto x4 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v[0], 1.e-6, 1.e-6, 1e6, 1.e-6, 1.e-6, 1e2);          \
+      auto x5 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v,    1.e-6, 1.e-6, 1e6);                             \
+      auto x6 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v,    1.e-6, 1.e-6, 1e6);                             \
+      auto x7 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v,    1.e-6, 1.e-6, 1e6);                             \
+      torsten::test::test_grad(theta_v[0],  x0, x1, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x2, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x3, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x4, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x5, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x6, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x7, EPS_VAL, EPS_GRAD);                                                                       \
+  }                                                                                                                                           \
   }
 
+// test varyadic solvers for tlag
+#define TORSTEN_ODE_PARAM_VARI_TLAG_OVERLOAD_TEST(FUN, F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, THETA, BIOVAR, TLAG,                     \
+                                             EPS_VAL, EPS_GRAD)                                                                               \
+  {                                                                                                                                           \
+  std::vector<std::vector<stan::math::var> > theta_v(1, stan::math::to_var(THETA[0]));                                                        \
+  std::vector<std::vector<stan::math::var> > biovar_v(1, stan::math::to_var(BIOVAR[0]));                                                      \
+  std::vector<std::vector<stan::math::var> > tlag_v(1, stan::math::to_var(tlag[0]));                                                          \
+  {                                                                                                                                           \
+      auto x0 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v,    BIOVAR,    TLAG);                                          \
+      auto x1 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v[0], BIOVAR,    1.e-6, 1.e-6, 1e6);                       \
+      auto x2 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v[0], BIOVAR[0], 1.e-6, 1.e-6, 1e6);                       \
+      auto x3 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v[0], BIOVAR[0], 1.e-6, 1.e-6, 1e6, 1.e-6, 1.e-6, 1e2); \
+      auto x4 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v[0], BIOVAR,    1.e-6, 1.e-6, 1e6, 1.e-6, 1.e-6, 1e2); \
+      auto x5 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v,    BIOVAR[0], 1.e-6, 1.e-6, 1e6);                       \
+      auto x6 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v,    BIOVAR[0], 1.e-6, 1.e-6, 1e6);                    \
+      auto x7 = FUN(F, NCMT, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, theta_v,    BIOVAR,    1.e-6, 1.e-6, 1e6);                    \
+      torsten::test::test_grad(theta_v[0],  x0, x1, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x2, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x3, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x4, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x5, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x6, EPS_VAL, EPS_GRAD);                                                                       \
+      torsten::test::test_grad(theta_v[0],  x0, x7, EPS_VAL, EPS_GRAD);                                                                       \
+  }                                                                                                                                           \
+  }
 
 #define TORSTEN_CPT_GRAD_THETA_TEST(FUN, TIME, AMT, RATE, II, EVID, CMT, ADDL, SS, THETA, BIOVAR, TLAG, \
                                     H, EPS_VAL, EPS_RTOL, EPS_ATOL)                                     \

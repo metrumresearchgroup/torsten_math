@@ -179,11 +179,11 @@ bool constexpr last_is_ostream_ptr<> = false;
                long int max_num_steps,
                std::ostream* msgs) {
       return solve(f, nCmt,
-                        time, amt, rate, ii, evid, cmt, addl, ss,
-                        pMatrix, biovar, tlag,
-                        rel_tol, abs_tol, max_num_steps,
-                        RTOL_AS, ATOL_AS, MAXSTEP_AS,                        
-                        msgs);
+                   time, amt, rate, ii, evid, cmt, addl, ss,
+                   pMatrix, biovar, tlag,
+                   rel_tol, abs_tol, max_num_steps,
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,                        
+                   msgs);
     }
 
     /**
@@ -193,94 +193,27 @@ bool constexpr last_is_ostream_ptr<> = false;
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename T_biovar, typename T_tlag,
               typename F,
-              typename std::enable_if_t<!(torsten::is_std_vector<T_par, T_biovar, T_tlag>::value)>* = nullptr> //NOLINT
+              typename std::enable_if_t<!(torsten::is_std_vector<T_par, T_biovar, T_tlag>::value)>* = nullptr,
+              typename... Ts,
+              typename std::enable_if_t<torsten::none_std_vector<Ts...>::value>* = nullptr>
     static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
                                                        typename torsten::value_type<T_par>::type,
                                                        typename torsten::value_type<T_biovar>::type,
                                                        typename torsten::value_type<T_tlag>::type>,
                           Eigen::Dynamic, Eigen::Dynamic>
     solve(const F& f,
-               const int nCmt,
-               TORSTEN_PMX_FUNC_EVENTS_ARGS,
-               const std::vector<T_par>& pMatrix,
-               const std::vector<T_biovar>& biovar,
-               const std::vector<T_tlag>& tlag,
-               double rel_tol,
-               double abs_tol,
-               long int max_num_steps,
-               double as_rel_tol,
-               double as_abs_tol,
-               long int as_max_num_steps,
-               std::ostream* msgs) {
+          const int nCmt,
+          TORSTEN_PMX_FUNC_EVENTS_ARGS,
+          const std::vector<T_par>& pMatrix,
+          const std::vector<T_biovar>& biovar,
+          const std::vector<T_tlag>& tlag,
+          Ts... solver_ctrl) {
       return solve(f, nCmt,
                    time, amt, rate, ii, evid, cmt, addl, ss,
                    torsten::to_array_2d(pMatrix),
                    torsten::to_array_2d(biovar),
                    torsten::to_array_2d(tlag),
-                   rel_tol, abs_tol, max_num_steps,
-                   as_rel_tol, as_abs_tol, as_max_num_steps,
-                   msgs);
-    }
-
-    /**
-     * Overload function to allow user to pass an std::vector for 
-     * pMatrix/bioavailability/tlag, with default ODE &
-     * algebra solver controls.
-     */
-    template <typename T0, typename T1, typename T2, typename T3,
-              typename T_par, typename T_biovar, typename T_tlag,
-              typename F,
-              typename std::enable_if_t<!(torsten::is_std_vector<T_par, T_biovar, T_tlag>::value)>* = nullptr> //NOLINT
-    static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
-                                                typename torsten::value_type<T_par>::type,
-                                                typename torsten::value_type<T_biovar>::type,
-                                                typename torsten::value_type<T_tlag>::type>,
-                   Eigen::Dynamic, Eigen::Dynamic>
-    solve(const F& f,
-               const int nCmt,
-               TORSTEN_PMX_FUNC_EVENTS_ARGS,
-               const std::vector<T_par>& pMatrix,
-               const std::vector<T_biovar>& biovar,
-               const std::vector<T_tlag>& tlag,
-               std::ostream* msgs) {
-      return solve(f, nCmt,
-                        time, amt, rate, ii, evid, cmt, addl, ss,
-                        pMatrix, biovar, tlag,
-                        RTOL_DE, ATOL_DE, MAXSTEP_DE,
-                        RTOL_AS, ATOL_AS, MAXSTEP_AS,
-                        msgs);
-    }
-
-    /**
-     * Overload function to allow user to pass an std::vector for 
-     * pMatrix/bioavailability/tlag, with default
-     * algebra solver controls.
-     */
-    template <typename T0, typename T1, typename T2, typename T3,
-              typename T_par, typename T_biovar, typename T_tlag,
-              typename F,
-              typename std::enable_if_t<!(torsten::is_std_vector<T_par, T_biovar, T_tlag>::value)>* = nullptr> //NOLINT
-    static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
-                                                typename torsten::value_type<T_par>::type,
-                                                typename torsten::value_type<T_biovar>::type,
-                                                typename torsten::value_type<T_tlag>::type>,
-                   Eigen::Dynamic, Eigen::Dynamic>
-    solve(const F& f,
-               const int nCmt,
-               TORSTEN_PMX_FUNC_EVENTS_ARGS,
-               const std::vector<T_par>& pMatrix,
-               const std::vector<T_biovar>& biovar,
-               const std::vector<T_tlag>& tlag,
-               double rel_tol,
-               double abs_tol,
-               long int max_num_steps,
-               std::ostream* msgs) {
-      return solve(f, nCmt,
-                   time, amt, rate, ii, evid, cmt, addl, ss,
-                   pMatrix, biovar, tlag,
-                   rel_tol, abs_tol, max_num_steps,
-                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
-                   msgs);
+                   solver_ctrl...);
     }
 
     /** 
@@ -303,7 +236,6 @@ bool constexpr last_is_ostream_ptr<> = false;
                double as_abs_tol,
                long int as_max_num_steps,
                std::ostream* msgs) {
-      // check arguments
       static const char* function("solve");
       torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, function);
       torsten::pmx_check(time.size(), nCmt, biovar);
@@ -378,84 +310,23 @@ bool constexpr last_is_ostream_ptr<> = false;
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename T_biovar, typename F,
-              typename std::enable_if_t<!(torsten::is_std_vector<T_par, T_biovar>::value)>* = nullptr> //NOLINT
+              typename std::enable_if_t<!(torsten::is_std_vector<T_par, T_biovar>::value)>* = nullptr,
+              typename... Ts,
+              typename std::enable_if_t<torsten::none_std_vector<Ts...>::value>* = nullptr>
     static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
                                                        typename torsten::value_type<T_par>::type,
                                                        typename torsten::value_type<T_biovar>::type>,
                           Eigen::Dynamic, Eigen::Dynamic>
     solve(const F& f,
-               const int nCmt,
-               TORSTEN_PMX_FUNC_EVENTS_ARGS,
-               const std::vector<T_par>& pMatrix,
-               const std::vector<T_biovar>& biovar,
-               double rel_tol,
-               double abs_tol,
-               long int max_num_steps,
-               double as_rel_tol,
-               double as_abs_tol,
-               long int as_max_num_steps,
-               std::ostream* msgs) {
+          const int nCmt,
+          TORSTEN_PMX_FUNC_EVENTS_ARGS,
+          const std::vector<T_par>& pMatrix,
+          const std::vector<T_biovar>& biovar,
+          Ts... solver_ctrl) {
       return solve(f, nCmt,
                    time, amt, rate, ii, evid, cmt, addl, ss,
                    torsten::to_array_2d(pMatrix), torsten::to_array_2d(biovar),
-                   rel_tol, abs_tol, max_num_steps,
-                   as_rel_tol, as_abs_tol, as_max_num_steps,
-                   msgs);
-    }
-
-    /** 
-     * Overload: omitting lag time, allow population-wise 1d array,
-     * with default ode & algebra solver spec
-     * 
-     */
-    template <typename T0, typename T1, typename T2, typename T3,
-              typename T_par, typename T_biovar, typename F,
-              typename std::enable_if_t<!(torsten::is_std_vector<T_par, T_biovar>::value)>* = nullptr> //NOLINT
-    static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
-                                                       typename torsten::value_type<T_par>::type,
-                                                       typename torsten::value_type<T_biovar>::type>,
-                          Eigen::Dynamic, Eigen::Dynamic>
-    solve(const F& f,
-               const int nCmt,
-               TORSTEN_PMX_FUNC_EVENTS_ARGS,
-               const std::vector<T_par>& pMatrix,
-               const std::vector<T_biovar>& biovar,
-               std::ostream* msgs) {
-      return solve(f, nCmt,
-                   time, amt, rate, ii, evid, cmt, addl, ss,
-                   pMatrix, biovar,
-                   RTOL_DE, ATOL_DE, MAXSTEP_DE,
-                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
-                   msgs);
-    }
-
-    /** 
-     * Overload: omitting lag time, allow population-wise 1d array,
-     * with default algebra solver spec
-     * 
-     */
-    template <typename T0, typename T1, typename T2, typename T3,
-              typename T_par, typename T_biovar, typename F,
-              typename std::enable_if_t<!(torsten::is_std_vector<T_par, T_biovar>::value)>* = nullptr> //NOLINT
-    static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
-                                                       typename torsten::value_type<T_par>::type,
-                                                       typename torsten::value_type<T_biovar>::type>,
-                          Eigen::Dynamic, Eigen::Dynamic>
-    solve(const F& f,
-               const int nCmt,
-               TORSTEN_PMX_FUNC_EVENTS_ARGS,
-               const std::vector<T_par>& pMatrix,
-               const std::vector<T_biovar>& biovar,
-               double rel_tol,
-               double abs_tol,
-               long int max_num_steps,
-               std::ostream* msgs) {
-      return solve(f, nCmt,
-                   time, amt, rate, ii, evid, cmt, addl, ss,
-                   pMatrix, biovar,
-                   rel_tol, abs_tol, max_num_steps,
-                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
-                   msgs);
+                   solver_ctrl...);
     }
 
     /** 
@@ -553,82 +424,22 @@ bool constexpr last_is_ostream_ptr<> = false;
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename F,
-              typename std::enable_if_t<!(torsten::is_std_vector<T_par>::value)>* = nullptr> //NOLINT
+              typename std::enable_if_t<!(torsten::is_std_vector<T_par>::value)>* = nullptr,
+              typename... Ts,
+              typename std::enable_if_t<torsten::none_std_vector<Ts...>::value>* = nullptr>
     static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
                                                        typename torsten::value_type<T_par>::type>,
                           Eigen::Dynamic, Eigen::Dynamic>
     solve(const F& f,
-               const int nCmt,
-               TORSTEN_PMX_FUNC_EVENTS_ARGS,
-               const std::vector<T_par>& pMatrix,
-               double rel_tol,
-               double abs_tol,
-               long int max_num_steps,
-               double as_rel_tol,
-               double as_abs_tol,
-               long int as_max_num_steps,
-               std::ostream* msgs) {
+          const int nCmt,
+          TORSTEN_PMX_FUNC_EVENTS_ARGS,
+          const std::vector<T_par>& pMatrix,
+          Ts... solver_ctrl) {
       return solve(f, nCmt,
                    time, amt, rate, ii, evid, cmt, addl, ss,
                    torsten::to_array_2d(pMatrix),
-                   rel_tol, abs_tol, max_num_steps,
-                   as_rel_tol, as_abs_tol, as_max_num_steps,
-                   msgs);
+                   solver_ctrl...);
     }
-
-    /** 
-     * Overload: omitting bioavailability & lag time, allow
-     * population-wise 1d array,
-     * with default ode & algebra solver spec
-     * 
-     */
-    template <typename T0, typename T1, typename T2, typename T3,
-              typename T_par,typename F,
-              typename std::enable_if_t<!(torsten::is_std_vector<T_par>::value)>* = nullptr> //NOLINT
-    static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
-                                                       typename torsten::value_type<T_par>::type>,
-                          Eigen::Dynamic, Eigen::Dynamic>
-    solve(const F& f,
-               const int nCmt,
-               TORSTEN_PMX_FUNC_EVENTS_ARGS,
-               const std::vector<T_par>& pMatrix,
-               std::ostream* msgs) {
-      return solve(f, nCmt,
-                   time, amt, rate, ii, evid, cmt, addl, ss,
-                   pMatrix,
-                   RTOL_DE, ATOL_DE, MAXSTEP_DE,
-                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
-                   msgs);
-    }
-
-    /** 
-     * Overload: omitting bioavailability & lag time, allow
-     * population-wise 1d array,
-     * with default algebra solver spec
-     * 
-     */
-    template <typename T0, typename T1, typename T2, typename T3,
-              typename T_par, typename F,
-              typename std::enable_if_t<!(torsten::is_std_vector<T_par>::value)>* = nullptr> //NOLINT
-    static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
-                                                       typename torsten::value_type<T_par>::type>,
-                          Eigen::Dynamic, Eigen::Dynamic>
-    solve(const F& f,
-               const int nCmt,
-               TORSTEN_PMX_FUNC_EVENTS_ARGS,
-               const std::vector<T_par>& pMatrix,
-               double rel_tol,
-               double abs_tol,
-               long int max_num_steps,
-               std::ostream* msgs) {
-      return solve(f, nCmt,
-                   time, amt, rate, ii, evid, cmt, addl, ss,
-                   pMatrix,
-                   rel_tol, abs_tol, max_num_steps,
-                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
-                   msgs);
-    }
-
 
     /** 
      * Overload: additional real data for ODE, with full ode & algebra
@@ -640,19 +451,19 @@ bool constexpr last_is_ostream_ptr<> = false;
     static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
                    Eigen::Dynamic, Eigen::Dynamic>
     solve(const F& f,
-               const int nCmt,
-               TORSTEN_PMX_FUNC_EVENTS_ARGS,
-               const std::vector<std::vector<T4> >& pMatrix,
-               const std::vector<std::vector<T5> >& biovar,
-               const std::vector<std::vector<T6> >& tlag,
-               const std::vector<std::vector<double> >& x_r,
-               double rel_tol,
-               double abs_tol,
-               long int max_num_steps,
-               double as_rel_tol,
-               double as_abs_tol,
-               long int as_max_num_steps,
-               std::ostream* msgs) {
+          const int nCmt,
+          TORSTEN_PMX_FUNC_EVENTS_ARGS,
+          const std::vector<std::vector<T4> >& pMatrix,
+          const std::vector<std::vector<T5> >& biovar,
+          const std::vector<std::vector<T6> >& tlag,
+          const std::vector<std::vector<double> >& x_r,
+          double rel_tol,
+          double abs_tol,
+          long int max_num_steps,
+          double as_rel_tol,
+          double as_abs_tol,
+          long int as_max_num_steps,
+          std::ostream* msgs) {
       // check arguments
       static const char* function("solve");
       torsten::pmx_check(time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, function);
@@ -684,13 +495,13 @@ bool constexpr last_is_ostream_ptr<> = false;
     static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
                    Eigen::Dynamic, Eigen::Dynamic>
     solve(const F& f,
-               const int nCmt,
-               TORSTEN_PMX_FUNC_EVENTS_ARGS,
-               const std::vector<std::vector<T4> >& pMatrix,
-               const std::vector<std::vector<T5> >& biovar,
-               const std::vector<std::vector<T6> >& tlag,
-               const std::vector<std::vector<double> >& x_r,
-               std::ostream* msgs) {
+          const int nCmt,
+          TORSTEN_PMX_FUNC_EVENTS_ARGS,
+          const std::vector<std::vector<T4> >& pMatrix,
+          const std::vector<std::vector<T5> >& biovar,
+          const std::vector<std::vector<T6> >& tlag,
+          const std::vector<std::vector<double> >& x_r,
+          std::ostream* msgs) {
       return solve(f, nCmt,
                    time, amt, rate, ii, evid, cmt, addl, ss,
                    pMatrix, biovar, tlag, x_r,
@@ -709,22 +520,50 @@ bool constexpr last_is_ostream_ptr<> = false;
     static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>,
                           Eigen::Dynamic, Eigen::Dynamic>
     solve(const F& f,
-               const int nCmt,
-               TORSTEN_PMX_FUNC_EVENTS_ARGS,
-               const std::vector<std::vector<T4> >& pMatrix,
-               const std::vector<std::vector<T5> >& biovar,
-               const std::vector<std::vector<T6> >& tlag,
-               const std::vector<std::vector<double> >& x_r,
-               double rel_tol,
-               double abs_tol,
-               long int max_num_steps,
-               std::ostream* msgs) {
+          const int nCmt,
+          TORSTEN_PMX_FUNC_EVENTS_ARGS,
+          const std::vector<std::vector<T4> >& pMatrix,
+          const std::vector<std::vector<T5> >& biovar,
+          const std::vector<std::vector<T6> >& tlag,
+          const std::vector<std::vector<double> >& x_r,
+          double rel_tol,
+          double abs_tol,
+          long int max_num_steps,
+          std::ostream* msgs) {
       return solve(f, nCmt,
                    time, amt, rate, ii, evid, cmt, addl, ss,
                    pMatrix, biovar, tlag, x_r,
                    rel_tol, abs_tol, max_num_steps,
                    RTOL_AS, ATOL_AS, MAXSTEP_AS,
                    msgs);
+    }
+
+    // Overload: with real data, PMX params can be either 1d or 2d arrays.
+    template <typename T0, typename T1, typename T2, typename T3,
+              typename T_par, typename T_biovar, typename T_tlag,
+              typename F,
+              typename std::enable_if_t<!(torsten::is_std_vector<T_par, T_biovar, T_tlag>::value)>* = nullptr,
+              typename... Ts,
+              typename std::enable_if_t<torsten::none_std_vector<Ts...>::value>* = nullptr>
+    static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
+                                                       typename torsten::value_type<T_par>::type,
+                                                       typename torsten::value_type<T_biovar>::type,
+                                                       typename torsten::value_type<T_tlag>::type>,
+                          Eigen::Dynamic, Eigen::Dynamic>
+    solve(const F& f,
+          const int nCmt,
+          TORSTEN_PMX_FUNC_EVENTS_ARGS,
+          const std::vector<T_par>& pMatrix,
+          const std::vector<T_biovar>& biovar,
+          const std::vector<T_tlag>& tlag,
+          const std::vector<std::vector<double> >& x_r,
+          Ts... solver_ctrl) {
+      return solve(f, nCmt,
+                   time, amt, rate, ii, evid, cmt, addl, ss,
+                   torsten::to_array_2d(pMatrix),
+                   torsten::to_array_2d(biovar),
+                   torsten::to_array_2d(tlag), x_r,
+                   solver_ctrl...);
     }
 
     /** 
@@ -825,6 +664,35 @@ bool constexpr last_is_ostream_ptr<> = false;
                    rel_tol, abs_tol, max_num_steps,
                    RTOL_AS, ATOL_AS, MAXSTEP_AS,
                    msgs);
+    }
+
+    // Overload: with real & int data, PMX params can be either 1d or 2d arrays.
+    template <typename T0, typename T1, typename T2, typename T3,
+              typename T_par, typename T_biovar, typename T_tlag,
+              typename F,
+              typename std::enable_if_t<!(torsten::is_std_vector<T_par, T_biovar, T_tlag>::value)>* = nullptr,
+              typename... Ts,
+              typename std::enable_if_t<torsten::none_std_vector<Ts...>::value>* = nullptr>
+    static Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
+                                                       typename torsten::value_type<T_par>::type,
+                                                       typename torsten::value_type<T_biovar>::type,
+                                                       typename torsten::value_type<T_tlag>::type>,
+                          Eigen::Dynamic, Eigen::Dynamic>
+    solve(const F& f,
+          const int nCmt,
+          TORSTEN_PMX_FUNC_EVENTS_ARGS,
+          const std::vector<T_par>& pMatrix,
+          const std::vector<T_biovar>& biovar,
+          const std::vector<T_tlag>& tlag,
+          const std::vector<std::vector<double> >& x_r,
+          const std::vector<std::vector<int> >& x_i,
+          Ts... solver_ctrl) {
+      return solve(f, nCmt,
+                   time, amt, rate, ii, evid, cmt, addl, ss,
+                   torsten::to_array_2d(pMatrix),
+                   torsten::to_array_2d(biovar),
+                   torsten::to_array_2d(tlag), x_r, x_i,
+                   solver_ctrl...);
     }
   };
 }  

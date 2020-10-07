@@ -42,12 +42,27 @@ TEST(Torsten, return_t_long) {
 
 TEST(Torsten, is_std_vector) {
   EXPECT_FALSE((torsten::is_std_vector<var>::value));
+  EXPECT_FALSE((torsten::is_std_vector<var, double>::value));
+  EXPECT_FALSE((torsten::is_std_vector<double, std::vector<double>>::value));
   EXPECT_FALSE((torsten::is_std_vector<std::vector<double>, double>::value));
-  EXPECT_FALSE((torsten::is_std_vector<var>::value));
   EXPECT_FALSE((torsten::is_std_vector<var, std::vector<double>, std::vector<var> >::value));
   EXPECT_FALSE((torsten::is_std_vector<std::vector<double>, var, std::vector<var> >::value));
 
   EXPECT_TRUE((torsten::is_std_vector<std::vector<var>>::value));
   EXPECT_TRUE((torsten::is_std_vector<std::vector<var>, std::vector<double> >::value));
   EXPECT_TRUE((torsten::is_std_vector<std::vector<var>, std::vector<double>, std::vector<double> >::value));
+}
+
+TEST(Torsten, none_std_vector) {
+  EXPECT_FALSE((torsten::none_std_vector<std::vector<double>, std::vector<double>>::value));
+  EXPECT_FALSE((torsten::none_std_vector<std::vector<double>, double>::value));
+  EXPECT_FALSE((torsten::none_std_vector<var, std::vector<double>, std::vector<var> >::value));
+  EXPECT_FALSE((torsten::none_std_vector<std::vector<double>, var, std::vector<var> >::value));
+  EXPECT_FALSE((torsten::none_std_vector<var, std::vector<double>, var>::value));
+  EXPECT_FALSE((torsten::none_std_vector<var, var, var, std::vector<double>, var>::value));
+
+  EXPECT_TRUE((torsten::none_std_vector<var>::value));
+  EXPECT_TRUE((torsten::none_std_vector<var, double>::value));
+  EXPECT_TRUE((torsten::none_std_vector<var, var, var, var>::value));
+  EXPECT_TRUE((torsten::none_std_vector<double, var, double>::value));
 }
