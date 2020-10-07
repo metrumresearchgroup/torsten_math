@@ -51,8 +51,7 @@ namespace torsten {
  * @return void
  *
  */
-template <typename T0, typename T1, typename T2, typename T3, typename T4,
-  typename T5, typename T6>
+template <typename T0, typename T1, typename T2, typename T3, typename T4>
 void pmx_population_check(const std::vector<int>& len,
                           const std::vector<T0>& time,
                           const std::vector<T1>& amt,
@@ -63,8 +62,6 @@ void pmx_population_check(const std::vector<int>& len,
                           const std::vector<int>& addl,
                           const std::vector<int>& ss,
                           const std::vector<std::vector<T4> >& pMatrix,
-                          const std::vector<std::vector<T5> >& biovar,
-                          const std::vector<std::vector<T6> >& tlag,
                           const char* function) {
   using std::vector;
   using std::string;
@@ -115,6 +112,20 @@ void pmx_population_check(const std::vector<int>& len,
     check_finite(function, "parameters", p);
     check_not_nan(function, "parameters", p);
   }
+}
+
+template <typename T0, typename T5, typename T6>
+void pmx_population_check(const std::vector<int>& len,
+                          const std::vector<T0>& time,
+                          const std::vector<std::vector<T5> >& biovar,
+                          const std::vector<std::vector<T6> >& tlag,
+                          const char* function) {
+  using stan::math::invalid_argument;
+  using stan::math::check_greater_or_equal;
+  using stan::math::check_consistent_sizes;
+  using stan::math::check_finite;
+  using stan::math::check_not_nan;
+  using stan::math::check_nonnegative;
 
   if (biovar.size() > len.size()) {
     check_consistent_sizes(function, "bioavailability", biovar, "time", time);
@@ -136,6 +147,30 @@ void pmx_population_check(const std::vector<int>& len,
     check_nonnegative(function, "lag time", p);
     check_finite(function, "lag time", p);
     check_not_nan(function, "lag time", p);
+  }
+}
+
+template <typename T0, typename T5>
+void pmx_population_check(const std::vector<int>& len,
+                          const std::vector<T0>& time,
+                          const std::vector<std::vector<T5> >& biovar,
+                          const char* function) {
+  using stan::math::invalid_argument;
+  using stan::math::check_greater_or_equal;
+  using stan::math::check_consistent_sizes;
+  using stan::math::check_finite;
+  using stan::math::check_not_nan;
+  using stan::math::check_nonnegative;
+
+  if (biovar.size() > len.size()) {
+    check_consistent_sizes(function, "bioavailability", biovar, "time", time);
+  } else {
+    check_consistent_sizes(function, "bioavailability", biovar, "len", len);
+  }
+  for (auto const & p : biovar) {
+    check_nonnegative(function, "bioavailability", p);
+    check_finite(function, "bioavailability", p);
+    check_not_nan(function, "bioavailability", p);
   }
 }
 

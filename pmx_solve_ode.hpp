@@ -154,11 +154,11 @@ bool constexpr last_is_ostream_ptr<> = false;
                const std::vector<std::vector<T6> >& tlag,
                std::ostream* msgs) {
       return solve(f, nCmt,
-                        time, amt, rate, ii, evid, cmt, addl, ss,
-                        pMatrix, biovar, tlag,
-                        RTOL_DE, ATOL_DE, MAXSTEP_DE,
-                        RTOL_AS, ATOL_AS, MAXSTEP_AS,                        
-                        msgs);
+                   time, amt, rate, ii, evid, cmt, addl, ss,
+                   pMatrix, biovar, tlag,
+                   RTOL_DE, ATOL_DE, MAXSTEP_DE,
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
+                   msgs);
     }
 
     /*
@@ -182,7 +182,7 @@ bool constexpr last_is_ostream_ptr<> = false;
                    time, amt, rate, ii, evid, cmt, addl, ss,
                    pMatrix, biovar, tlag,
                    rel_tol, abs_tol, max_num_steps,
-                   RTOL_AS, ATOL_AS, MAXSTEP_AS,                        
+                   RTOL_AS, ATOL_AS, MAXSTEP_AS,
                    msgs);
     }
 
