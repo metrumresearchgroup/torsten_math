@@ -139,14 +139,11 @@ namespace torsten {
                  const std::vector<T_par>& pMatrix,
                  const std::vector<T_biovar>& biovar,
                  const std::vector<T_tlag>& tlag) {
-      auto param_ = torsten::to_array_2d(pMatrix);
-      auto biovar_ = torsten::to_array_2d(biovar);
-      auto tlag_ = torsten::to_array_2d(tlag);
-
       return solve(time, amt, rate, ii, evid, cmt, addl, ss,
-                   param_, biovar_, tlag_);
+                   torsten::to_array_2d(pMatrix),
+                   torsten::to_array_2d(biovar),
+                   torsten::to_array_2d(tlag));
     }
-
 
     /**
      * Overload function to allow user to pass an std::vector for 
@@ -163,10 +160,7 @@ namespace torsten {
     static solve(TORSTEN_PMX_FUNC_EVENTS_ARGS,
                  const std::vector<T_par>& pMatrix,
                  const std::vector<T_biovar>& biovar) {
-      auto param_ = torsten::to_array_2d(pMatrix);
-      auto biovar_ = torsten::to_array_2d(biovar);
-
-      return solve(time, amt, rate, ii, evid, cmt, addl, ss, param_, biovar_);
+      return solve(time, amt, rate, ii, evid, cmt, addl, ss, torsten::to_array_2d(pMatrix), torsten::to_array_2d(biovar));
     }
 
     /**
@@ -182,9 +176,7 @@ namespace torsten {
                    Eigen::Dynamic, Eigen::Dynamic>
     static solve(TORSTEN_PMX_FUNC_EVENTS_ARGS,
                  const std::vector<T_par>& pMatrix) {
-      auto param_ = torsten::to_array_2d(pMatrix);
-
-      return solve(time, amt, rate, ii, evid, cmt, addl, ss, param_);
+      return solve(time, amt, rate, ii, evid, cmt, addl, ss, torsten::to_array_2d(pMatrix));
     }
 
   };
