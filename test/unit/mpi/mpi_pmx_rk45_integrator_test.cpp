@@ -3,6 +3,7 @@
 #include <stan/math/rev/fun/typedefs.hpp>
 #include <test/unit/math/rev/fun/util.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_rk45.hpp>
+#include <stan/math/torsten/dsolve/pmx_integrate_ode_group_rk45.hpp>
 #include <stan/math/torsten/test/unit/pmx_ode_test_fixture.hpp>
 #include <stan/math/mpi/environment.hpp>
 #include <stan/math/torsten/test/unit/test_macros.hpp>

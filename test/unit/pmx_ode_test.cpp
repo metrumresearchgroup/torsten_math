@@ -1049,7 +1049,7 @@ TEST_F(TorstenOdeTest_neutropenia, max_cvodes_fails) {
 
   y0 = y0_bad;
   EXPECT_THROW(stan::math::integrate_ode_bdf(f, y0, t0, ts, theta, x_r, x_i, 0, rtol, atol, max_num_steps), // NOLINT
-               std::runtime_error);
+               std::domain_error);
   EXPECT_THROW(torsten::pmx_integrate_ode_bdf(f, y0, t0, ts, theta, x_r, x_i, rtol, atol, max_num_steps), // NOLINT
                std::runtime_error);
 

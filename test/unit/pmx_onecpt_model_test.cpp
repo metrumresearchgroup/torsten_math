@@ -13,6 +13,7 @@ using torsten::PMXOneCptModel;
 using stan::math::integrate_ode_bdf;
 using torsten::pmx_integrate_ode_bdf;
 using torsten::PMXOneCptODE;
+using torsten::PKODEModel;
 using torsten::PMXOdeFunctorRateAdaptor;
 using torsten::PMXOdeIntegrator;
 using torsten::PMXOdeIntegratorId;
@@ -25,7 +26,7 @@ TEST_F(TorstenOneCptModelTest, ka_zero) {
   ka = 0.0;
   using model_t = PMXOneCptModel<double>;
   model_t model(CL, V2, ka);
-  PKRec<double> y(y0);
+  torsten::PKRec<double> y(y0);
   model.solve(y, t0, ts[0], rate);
   EXPECT_FLOAT_EQ(y(0), 865.0);
   EXPECT_FLOAT_EQ(y(1), 113.32912);
@@ -100,7 +101,7 @@ TEST_F(TorstenOneCptModelTest, sd_solver) {
   torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE, var, var> f1(theta, rate_var);
 
   auto y1 = pmx_integrate_ode_bdf(f1, yvec, t0, ts, f1.adaptor.adapted_param(), x_r, x_i, msgs);
-  PKRec<var> y2(to_var(y0));
+  torsten::PKRec<var> y2(to_var(y0));
   model.solve(y2, t0, ts[0], rate_var);
 
   stan::math::vector_v y1_v = stan::math::to_vector(y1[0]);
@@ -120,21 +121,21 @@ TEST_F(TorstenOneCptModelTest, infusion_theta_grad) {
   auto f1 = [&](const std::vector<double>& pars) {
     using model_t = PMXOneCptModel<double>;
     model_t model(pars[0], pars[1], pars[2]);
-    PKRec<double> y(y0);
+    torsten::PKRec<double> y(y0);
     model.solve(y, t0, dt, rate);
     return y;
   };
   auto f2 = [&](const std::vector<double>& pars) {
     using model_t = PMXOneCptModel<double>;
     model_t model(pars[0], pars[1], pars[2]);
-    PKRec<double> y(y0);
+    torsten::PKRec<double> y(y0);
     model.solve_analytical(y, t0, dt, rate);
     return y;
   };
   auto f3 = [&](const std::vector<var>& pars) {
     using model_t = PMXOneCptModel<var>;
     model_t model(pars[0], pars[1], pars[2]);
-    PKRec<var> y(to_var(y0));
+    torsten::PKRec<var> y(to_var(y0));
     model.solve(y, t0, dt, rate);
     return y;
   };
@@ -171,7 +172,7 @@ TEST_F(TorstenOneCptModelTest, ss_bolus_amt_grad) {
   auto f3 = [&](const std::vector<var>& amt_vec) {
     return model.solve_analytical(t0, amt_vec[0], rate[cmt-1], ii, cmt);
   };
-  PKRec<var> y2, y3;
+  torsten::PKRec<var> y2, y3;
   std::vector<var> amt_vec_var = stan::math::to_var(amt_vec);
   for (int i = 0; i < 2; ++i) {
     cmt = i + 1;
@@ -208,7 +209,7 @@ TEST_F(TorstenOneCptModelTest, ss_infusion_rate_grad) {
   auto f3 = [&](const std::vector<var>& rate_vec) {
     return model.solve_analytical(t0, amt, rate_vec[0], ii, cmt);
   };
-  PKRec<var> y2, y3;
+  torsten::PKRec<var> y2, y3;
   std::vector<var> rate_var = stan::math::to_var(rate_vec);
   for (int i = 0; i < 2; ++i) {
     cmt = i + 1;
@@ -687,7 +688,7 @@ TEST_F(TorstenOneCptModelTest, long_long_ss_infusion_vs_ode) {
 
   const PMXOdeIntegrator<torsten::Analytical> integ1;
   const PMXOdeIntegrator<torsten::PkBdf> integ2;
-  PKRec<var> y1 = model1.solve(ts[0], amt, r, ii, 1, integ1);
-  PKRec<var> y2 = model2.solve(ts[0], amt, r, ii, 1, integ2);
+  torsten::PKRec<var> y1 = model1.solve(ts[0], amt, r, ii, 1, integ1);
+  torsten::PKRec<var> y2 = model2.solve(ts[0], amt, r, ii, 1, integ2);
   torsten::test::test_grad(par_var, y1, y2, 2e-6, 6e-6);
 }

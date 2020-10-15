@@ -3,6 +3,8 @@
 
 #include <gtest/gtest.h>
 #include <stan/math/rev/core.hpp>
+#include <stan/math/prim/meta.hpp>
+#include <stan/math/prim/meta/is_eigen_matrix_base.hpp>
 #include <stan/math/rev/meta.hpp>
 #include <stan/math/prim/fun/Eigen.hpp>
 #include <stan/math/torsten/finite_diff_gradient.hpp>
@@ -26,10 +28,10 @@ namespace torsten {
      * @param y2 the other result to be compared against
      *              with, must of same shape and size as to @c pk_y
      */
-    template<typename T1, typename T2>
+    template<typename T1, typename T2,
+             stan::require_all_stan_scalar_t<T1, T2>* = nullptr>
     inline void test_val(const T1& y1, const T2& y2) {
-      using stan::math::value_of;
-      EXPECT_FLOAT_EQ(value_of(y1), value_of(y2));
+      EXPECT_FLOAT_EQ(stan::math::value_of(y1), stan::math::value_of(y2));
     }
 
     /*
@@ -42,13 +44,13 @@ namespace torsten {
      * @param y2 the other result to be compared against
      *              with, must of same shape and size as to @c pk_y
      */
-    template<typename T1, typename T2>
+    template<typename T1, typename T2,
+             stan::require_all_stan_scalar_t<T1, T2>* = nullptr>
     inline void test_val(const std::vector<T1>& y1,
                          const std::vector<T2>& y2) {
-      using stan::math::value_of;
       EXPECT_EQ(y1.size(), y2.size());
       for (size_t i = 0; i < y1.size(); ++i) {
-        EXPECT_FLOAT_EQ(value_of(y1[i]), value_of(y2[i]));
+        EXPECT_FLOAT_EQ(stan::math::value_of(y1[i]), stan::math::value_of(y2[i]));
       }
     }
 
@@ -62,15 +64,15 @@ namespace torsten {
      * @param y2 the other result to be compared against
      *              with, must of same shape and size as to @c pk_y
      */
-    template<typename T1, typename T2>
+    template<typename T1, typename T2,
+             stan::require_all_stan_scalar_t<T1, T2>* = nullptr>
     void test_val(const std::vector<std::vector<T1>>& y1,
                   const std::vector<std::vector<T2>>& y2) {
-      using stan::math::value_of;
       EXPECT_EQ(y1.size(), y2.size());
       for (size_t i = 0; i < y1.size(); ++i) {
         EXPECT_EQ(y1[i].size(), y2[i].size());
         for (size_t j = 0; j < y1[i].size(); ++j) {
-          EXPECT_FLOAT_EQ(value_of(y1[i][j]), value_of(y2[i][j]));
+          EXPECT_FLOAT_EQ(stan::math::value_of(y1[i][j]), stan::math::value_of(y2[i][j]));
         }
       }
     }
@@ -87,7 +89,7 @@ namespace torsten {
      * @param rtol relative tolerance
      * @param rtol absolute tolerance
      */
-    template<typename T1, typename T2>
+    template<typename T1, typename T2, stan::require_all_stan_scalar_t<T1, T2>* = nullptr>
     void test_val(const std::vector<std::vector<T1>>& y1,
                   const std::vector<std::vector<T2>>& y2,
                   double rtol, double atol) {
@@ -117,9 +119,9 @@ namespace torsten {
      * @param y2 the other result to be compared against
      *              with, must of same shape and size as to @c pk_y
      */
-    template<typename T1, typename T2>
-    void test_val(const Eigen::Matrix<T1, -1, -1>& y1,
-                  const Eigen::Matrix<T2, -1, -1>& y2) {
+    template<typename T1, typename T2,
+             stan::require_all_eigen_matrix_base_t<T1, T2>* = nullptr>
+    void test_val(const T1& y1, const T2& y2) {
       using stan::math::value_of;
       EXPECT_EQ(y1.rows(), y2.rows());
       EXPECT_EQ(y1.cols(), y2.cols());
@@ -140,9 +142,9 @@ namespace torsten {
      * @param rtol relative tolerance
      * @param rtol absolute tolerance
      */
-    template<typename T1, typename T2>
-    void test_val(const Eigen::Matrix<T1, -1, -1>& y1,
-                  const Eigen::Matrix<T2, -1, -1>& y2,
+    template<typename T1, typename T2,
+             stan::require_all_eigen_matrix_base_t<T1, T2>* = nullptr>
+    void test_val(const T1& y1, const T2& y2,
                   double rtol, double atol) {
       using stan::math::value_of;
       EXPECT_EQ(y1.rows(), y2.rows());
@@ -155,26 +157,6 @@ namespace torsten {
         } else {
           EXPECT_NEAR(y1_i, y2_i, std::max(abs(y1_i), abs(y2_i)) * rtol);
         }
-      }
-    }
-
-    /*
-     * Test @c MatrixXd results between two results.
-     * An example use would be to have the results coming from torsten
-     * and stan, respectively, so ensure the soundness of
-     * torsten results.
-     *
-     * @param y1 one result
-     * @param y2 the other result to be compared against
-     *              with, must of same shape and size as to @c pk_y
-     */
-    template<typename T1, typename T2>
-    void test_val(const Eigen::Matrix<T1, -1, 1>& y1,
-                  const Eigen::Matrix<T2, -1, 1>& y2) {
-      using stan::math::value_of;
-      EXPECT_EQ(y1.size(), y2.size());
-      for (int i = 0; i < y1.size(); ++i) {
-        EXPECT_FLOAT_EQ(value_of(y1(i)), value_of(y2(i)));
       }
     }
 
@@ -556,14 +538,14 @@ namespace torsten {
      * @param sens_esp tolerance of gradients
      */
     void test_grad(std::vector<stan::math::var>& theta1,
-                   PKRec<stan::math::var>& theta2,
+                   torsten::PKRec<stan::math::var>& theta2,
                    stan::math::vector_v& y1,
                    stan::math::vector_v& y2,
                    double fval_eps,
                    double sens_eps) {
       // grad() only accepts std::vector
       std::vector<stan::math::var> theta(theta2.size());
-      PKRec<stan::math::var>::Map(theta.data(), theta2.size()) = theta2;
+      torsten::PKRec<stan::math::var>::Map(theta.data(), theta2.size()) = theta2;
 
       test_grad(theta1, theta, y1, y2, fval_eps, sens_eps);
     }

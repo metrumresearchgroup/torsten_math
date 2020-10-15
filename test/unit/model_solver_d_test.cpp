@@ -38,7 +38,7 @@ TEST_F(TorstenTwoCptTest, model_solve_d_data_only) {
 
   model_t model(pMatrix[0]);
   
-  PKRec<double> y1(init), y2(init);
+  torsten::PKRec<double> y1(init), y2(init);
   model.solve(y1, t, t1, rate);
   y2 = model_solve_d(model, init, t, t1, rate, integ_t());
   
@@ -80,11 +80,11 @@ TEST_F(TorstenTwoCptTest, model_solve_d_rate_var) {
 
   model_t model(pMatrix[0]);
 
-  PKRec<var> y0(to_var(init));
+  torsten::PKRec<var> y0(to_var(init));
   std::vector<var> vars(pk_vars(t1, init, rate, pMatrix[0]));
   EXPECT_EQ(vars.size(), rate.size());
 
-  PKRec<var> sol1(y0);
+  torsten::PKRec<var> sol1(y0);
   model.solve(sol1, t, t1, rate);
   Eigen::VectorXd sol2_d;
   sol2_d = model_solve_d(model, init, t, t1, rate, integ_t());
@@ -105,11 +105,11 @@ TEST_F(TorstenTwoCptTest, model_solve_d_par_var) {
   std::vector<var> pars(stan::math::to_var(pMatrix[0]));
   model_t model(pars);
 
-  PKRec<var> y0(to_var(init));
+  torsten::PKRec<var> y0(to_var(init));
   std::vector<var> vars(pk_vars(t1, init, rate, pars));
   EXPECT_EQ(vars.size(), pars.size());
 
-  PKRec<var> sol1(y0);
+  torsten::PKRec<var> sol1(y0);
   model.solve(sol1, t, t1, rate);
   Eigen::VectorXd sol2_d;
   sol2_d = model_solve_d(model, init, t, t1, rate, integ_t());
@@ -303,7 +303,7 @@ TEST_F(TorstenTwoCptTest, rk45_model_solve_d_data_only) {
   PMXTwoCptODE f;
 
   using model_t = PKODEModel<double, PMXTwoCptODE>;
-  PMXOdeIntegrator<torsten::StanRk45> integrator;
+  PMXOdeIntegrator<torsten::PkRk45> integrator;
 
   torsten::PKRec<double> init(ncmt);
   init << 0, 100, 0;
@@ -325,7 +325,7 @@ TEST_F(TorstenTwoCptTest, rk45_model_solve_d_init_var) {
   PMXTwoCptODE f;
 
   using model_t = PKODEModel<double, PMXTwoCptODE>;
-  PMXOdeIntegrator<torsten::StanRk45> integrator;
+  PMXOdeIntegrator<torsten::PkRk45> integrator;
 
   torsten::PKRec<var> init(ncmt);
   init << 0, 100, 0;
@@ -352,7 +352,7 @@ TEST_F(TorstenTwoCptTest, rk45_model_solve_d_rate_var) {
   PMXTwoCptODE f;
 
   using model_t = PKODEModel<double, PMXTwoCptODE>;
-  PMXOdeIntegrator<torsten::StanRk45> integrator;
+  PMXOdeIntegrator<torsten::PkRk45> integrator;
 
   torsten::PKRec<double> init(ncmt);
   init << 0, 100, 0;
@@ -379,7 +379,7 @@ TEST_F(TorstenTwoCptTest, rk45_model_solve_d_par_var) {
   PMXTwoCptODE f;
 
   using model_t = PKODEModel<var, PMXTwoCptODE>;
-  PMXOdeIntegrator<torsten::StanRk45> integrator;
+  PMXOdeIntegrator<torsten::PkRk45> integrator;
 
   torsten::PKRec<double> init(ncmt);
   init << 0, 100, 0;
@@ -406,7 +406,7 @@ TEST_F(TorstenTwoCptTest, rk45_model_solve_d_data_only_ss) {
   PMXTwoCptODE f;
 
   using model_t = PKODEModel<double, PMXTwoCptODE>;
-  PMXOdeIntegrator<torsten::StanRk45> integrator;
+  PMXOdeIntegrator<torsten::PkRk45> integrator;
 
   torsten::PKRec<double> init(ncmt);
   init << 0, 100, 0;
@@ -430,7 +430,7 @@ TEST_F(TorstenTwoCptTest, rk45_model_solve_d_init_var_ss) {
   PMXTwoCptODE f;
 
   using model_t = PKODEModel<double, PMXTwoCptODE>;
-  PMXOdeIntegrator<torsten::StanRk45> integrator;
+  PMXOdeIntegrator<torsten::PkRk45> integrator;
 
   torsten::PKRec<var> init(ncmt);
   init << 0, 100, 0;
@@ -464,7 +464,7 @@ TEST_F(TorstenTwoCptTest, rk45_model_solve_d_par_var_ss) {
   PMXTwoCptODE f;
 
   using model_t = PKODEModel<var, PMXTwoCptODE>;
-  PMXOdeIntegrator<torsten::StanRk45> integrator;
+  PMXOdeIntegrator<torsten::PkRk45> integrator;
 
   torsten::PKRec<double> init(ncmt);
   init << 0, 100, 0;

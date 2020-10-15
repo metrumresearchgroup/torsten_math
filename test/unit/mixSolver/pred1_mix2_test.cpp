@@ -1,4 +1,5 @@
-//  // FIX ME - more specific
+#include <stan/math/prim/fun/eval.hpp>
+#include <stan/math/rev/functor/jacobian.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_mix2.hpp>
 #include <stan/math/torsten/PKModel/functors/mix2_functor.hpp>
 #include <stan/math/rev/fun/pow.hpp>

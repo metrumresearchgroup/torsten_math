@@ -1,7 +1,10 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_CVODES_INTEGRATOR_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_CVODES_INTEGRATOR_HPP
 
+#include <stan/math/rev/fun/value_of.hpp>
+#include <stan/math/prim/fun/value_of.hpp>
 #include <stan/math/torsten/dsolve/pmx_cvodes_fwd_system.hpp>
+#include <stan/math/torsten/dsolve/sundials_check.hpp>
 #include <stan/math/torsten/dsolve/cvodes_jac.hpp>
 #include <type_traits>
 
@@ -494,7 +497,7 @@ namespace dsolve {
     std::vector<double> g(ns + ts.size(), 0.0);
 
     for (size_t i = 0; i < ts.size(); ++i) {
-      double time = value_of(ts[i]);
+      double time = stan::math::value_of(ts[i]);
       CHECK_SUNDIALS_CALL(CVode(mem, time, y, &t1, CV_NORMAL));
       if (ode.need_fwd_sens) {
         CHECK_SUNDIALS_CALL(CVodeGetSens(mem, &t1, ys));

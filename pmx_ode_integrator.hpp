@@ -1,6 +1,8 @@
 #ifndef STAN_MATH_TORSTEN_PMX_ODE_INTEGRATOR_HPP
 #define STAN_MATH_TORSTEN_PMX_ODE_INTEGRATOR_HPP
 
+#include <stan/math/prim/fun/eval.hpp>
+#include <stan/math/rev/functor/jacobian.hpp>
 #include <stan/math/prim/meta/return_type.hpp>
 #include <stan/math/prim/fun/value_of.hpp>
 #include <stan/math/prim/functor/integrate_ode_rk45.hpp>

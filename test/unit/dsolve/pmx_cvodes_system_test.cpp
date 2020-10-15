@@ -1,6 +1,10 @@
 #include <stan/math.hpp>
 #include <stan/math/rev/core.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
+#include <stan/math/torsten/dsolve/pmx_cvodes_fwd_system.hpp>
+#include <stan/math/torsten/dsolve/pmx_cvodes_system.hpp>
+#include <stan/math/torsten/dsolve/pmx_odeint_system.hpp>
+#include <stan/math/torsten/dsolve/cvodes_service.hpp>
 #include <test/unit/math/rev/fun/util.hpp>
 #include <stan/math/torsten/test/unit/pmx_ode_test_fixture.hpp>
 #include <test/unit/math/prim/functor/harmonic_oscillator.hpp>

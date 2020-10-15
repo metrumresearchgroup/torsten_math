@@ -13,6 +13,8 @@
 #include <algorithm>
 #include <numeric>
 #include <vector>
+#include <utility>
+#include <functional>
 
 namespace torsten {
 
@@ -148,7 +150,7 @@ namespace torsten {
       int ibegin = rec.begin_[id];
       for (int i = 0; i < rec.len_[id]; ++i) {
         int theta_i = rec.len_param(id, theta) > 1 ? rec.begin_param(id, theta) + i : rec.begin_param(id, theta);
-        pars[i] = std::make_pair<double, std::array<int, npar> >(stan::math::value_of(time_[ibegin + i]),
+        pars[i] = std::make_pair<double, std::array<int, npar> >(double(stan::math::value_of(time_[ibegin + i])),
           {theta_i,index_param(id,i,rec,event_array_2d_params0)..., index_param(id,i,rec,model_array_2d_params0)...});
       }
       sort();
@@ -188,7 +190,7 @@ namespace torsten {
         int j = isize_theta   > 1 ? ibegin_theta  + i : ibegin_theta;
         int k = isize_biovar  > 1 ? ibegin_biovar + i : ibegin_biovar;
         int l = isize_tlag    > 1 ? ibegin_tlag   + i : ibegin_tlag;
-        pars[i] = std::make_pair<double, std::array<int, npar> >(stan::math::value_of(time_[ibegin + i]), {j, k, l });
+        pars[i] = std::make_pair<double, std::array<int, npar> >(double(stan::math::value_of(time_[ibegin + i])), {j, k, l });
       }
       sort();
     }

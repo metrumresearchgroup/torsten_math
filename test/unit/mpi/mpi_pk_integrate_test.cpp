@@ -4,6 +4,8 @@
 #include <test/unit/math/rev/fun/util.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_adams.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_bdf.hpp>
+#include <stan/math/torsten/dsolve/pmx_integrate_ode_group_adams.hpp>
+#include <stan/math/torsten/dsolve/pmx_integrate_ode_group_bdf.hpp>
 #include <stan/math/torsten/test/unit/pmx_ode_test_fixture.hpp>
 #include <stan/math/torsten/test/unit/test_macros.hpp>
 #include <stan/math/rev/functor/integrate_ode_bdf.hpp>

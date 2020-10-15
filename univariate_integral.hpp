@@ -3,10 +3,10 @@
 
 #include <stan/math/rev/core.hpp>
 #include <stan/math/rev/fun/to_var.hpp>
-#include <stan/math/prim/functor/coupled_ode_observer.hpp>
+// #include <stan/math/prim/functor/coupled_ode_observer.hpp>
 #include <stan/math/prim/functor/coupled_ode_system.hpp>
-#include <stan/math/prim/functor/integrate_ode_rk45.hpp>
-#include <stan/math/rev/functor/integrate_ode_bdf.hpp>
+#include <stan/math/torsten/dsolve/pmx_integrate_ode_rk45.hpp>
+#include <stan/math/torsten/dsolve/pmx_integrate_ode_bdf.hpp>
 #include <stan/math/torsten/PKModel/functors/functor.hpp>
 #include <vector>
 #include <algorithm>
@@ -109,7 +109,7 @@ namespace torsten {
       std::vector<scalar> par = torsten::theta_x(theta, t0, t1);
 
       std::vector<std::vector<scalar>> ode_res_vd =
-        stan::math::integrate_ode_bdf(f, y0, t, ts, par, x_r, x_i);
+        torsten::pmx_integrate_ode_bdf(f, y0, t, ts, par, x_r, x_i);
 
       return ode_res_vd.back().back();
     }
@@ -154,7 +154,7 @@ namespace torsten {
       std::vector<scalar> par = torsten::theta_x(theta, t0, t1);
 
       std::vector<std::vector<scalar>> ode_res_vd =
-        stan::math::integrate_ode_rk45(f, y0, t, ts, par, x_r, x_i);
+        torsten::pmx_integrate_ode_rk45(f, y0, t, ts, par, x_r, x_i);
 
       return ode_res_vd.back().back();
     }

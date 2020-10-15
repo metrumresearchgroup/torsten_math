@@ -12,6 +12,7 @@
 #include <stan/math/prim/fun/to_array_1d.hpp>
 #include <stan/math/prim/fun/to_vector.hpp>
 #include <stan/math/prim/fun/value_of.hpp>
+#include <stan/math/torsten/dsolve/sundials_check.hpp>
 #include <kinsol/kinsol.h>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>

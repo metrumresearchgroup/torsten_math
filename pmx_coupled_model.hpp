@@ -40,10 +40,10 @@ namespace torsten {
      * FIXME: spurious @c var parameters will be generated
      * if the original parameters are data.
      */
-    template<typename T, typename T0, int R, int C>
-    static std::vector<typename stan::return_type_t<T, T0, T_rate>>
+    template<typename T, typename EigenMat, stan::require_eigen_t<EigenMat>* = nullptr>
+    static std::vector<typename stan::return_type_t<T, typename EigenMat::Scalar, T_rate>>
     adapted_param(const std::vector<T> &par, const std::vector<T_rate> &rate,
-                  const Eigen::Matrix<T0, R, C>& y0_pk) {
+                  const EigenMat& y0_pk) {
       std::vector<stan::math::var> theta;
       theta.reserve(par.size() + rate.size() + y0_pk.size());
       theta.insert(theta.end(), par.begin(), par.end());
@@ -61,10 +61,10 @@ namespace torsten {
      * FIXME: spurious @c var parameters will be generated
      * if the original parameters are data.
      */
-    template<typename T, typename T0, int R, int C>
-    static std::vector<typename stan::return_type_t<T, T0, T_rate>>
+    template<typename T, typename EigenMat, stan::require_eigen_t<EigenMat>* = nullptr>
+    static std::vector<typename stan::return_type_t<T, typename EigenMat::Scalar, T_rate>>
     adapted_param(const std::vector<T> &par, int cmt, int ncmt, const T_rate& rate,
-                  const Eigen::Matrix<T0, R, C>& y0_pk) {
+                  const EigenMat& y0_pk) {
       std::vector<stan::math::var> theta(par.size() + ncmt + y0_pk.size(), 0.0);
       std::copy(par.begin(), par.end(), theta.begin());
       theta[par.size() + cmt - 1] = rate;
@@ -81,10 +81,10 @@ namespace torsten {
      * when solving coupled model with @c var rate, @c x_r
      * is filled with initial time
      */
-    template<typename T0, int R, int C>
+    template<typename EigenMat, stan::require_eigen_t<EigenMat>* = nullptr>
     static std::vector<double>
     adapted_x_r(const std::vector<T_rate> &rate,
-                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
+                const EigenMat& y0_pk, double t0) {
       return {t0};
     }
 
@@ -92,10 +92,10 @@ namespace torsten {
      * when solving coupled model with @c var rate, @c x_r
      * is filled with initial time
      */
-    template<typename T0, int R, int C>
+    template<typename EigenMat, stan::require_eigen_t<EigenMat>* = nullptr>
     static std::vector<double>
     adapted_x_r(int cmt, int ncmt, const T_rate& rate,
-                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
+                const EigenMat& y0_pk, double t0) {
       return {t0};
     }
   };
@@ -115,11 +115,11 @@ namespace torsten {
      * FIXME: spurious @c var parameters will be generated
      * if the original parameters are data.
      */
-    template<typename T, typename T0, int R, int C>
-    static std::vector<typename stan::return_type_t<T, T0>>
+    template<typename T, typename EigenMat, stan::require_eigen_t<EigenMat>* = nullptr>
+    static std::vector<typename stan::return_type_t<T, typename EigenMat::Scalar>>
     adapted_param(const std::vector<T> &par, const std::vector<double> &rate,
-                  const Eigen::Matrix<T0, R, C>& y0_pk) {
-      std::vector<typename stan::return_type_t<T, T0>> theta;
+                  const EigenMat& y0_pk) {
+      std::vector<typename stan::return_type_t<T, typename EigenMat::Scalar>> theta;
       theta.reserve(par.size() + y0_pk.size());
       theta.insert(theta.end(), par.begin(), par.end());
       for (int i = 0; i < y0_pk.size(); ++i) {
@@ -135,10 +135,10 @@ namespace torsten {
      * FIXME: spurious @c var parameters will be generated
      * if the original parameters are data.
      */
-    template<typename T, typename T0, int R, int C>
-    static std::vector<typename stan::return_type_t<T, T0>>
+    template<typename T, typename EigenMat, stan::require_eigen_t<EigenMat>* = nullptr>
+    static std::vector<typename stan::return_type_t<T, typename EigenMat::Scalar>>
     adapted_param(const std::vector<T> &par, int cmt, int ncmt, double rate,
-                  const Eigen::Matrix<T0, R, C>& y0_pk) {
+                  const EigenMat& y0_pk) {
       return adapted_param(par, std::vector<double>(), y0_pk);
     }
 
@@ -146,10 +146,10 @@ namespace torsten {
      * when solving coupled model with @c var rate, @c x_r
      * is filled with initial time
      */
-    template<typename T0, int R, int C>
+    template<typename EigenMat, stan::require_eigen_t<EigenMat>* = nullptr>
     static std::vector<double>
     adapted_x_r(const std::vector<double> &rate,
-                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
+                const EigenMat& y0_pk, double t0) {
       std::vector<double> res(rate);
       res.push_back(t0);
       return res;
@@ -159,10 +159,10 @@ namespace torsten {
      * when solving coupled model with @c var rate, @c x_r
      * is filled with initial time
      */
-    template<typename T0, int R, int C>
+    template<typename EigenMat, stan::require_eigen_t<EigenMat>* = nullptr>
     static std::vector<double>
     adapted_x_r(int cmt, int ncmt, double rate,
-                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
+                const EigenMat& y0_pk, double t0) {
       std::vector<double> res(ncmt + 1, 0.0);
       res[cmt - 1] = rate;
       res.back() = t0;
@@ -194,11 +194,11 @@ namespace torsten {
      * FIXME: spurious @c var parameters will be generated
      * if the original parameters are data.
      */
-    template<typename T, typename T0, int R, int C>
-    static Eigen::Matrix<typename stan::return_type_t<T, T0>, -1, 1>
+    template<typename T, typename EigenMat, stan::require_eigen_t<EigenMat>* = nullptr>
+    static Eigen::Matrix<typename stan::return_type_t<T, typename EigenMat::Scalar>, -1, 1>
     adapted_param(const std::vector<T> &par, int cmt, int ncmt, double rate,
-                  const Eigen::Matrix<T0, R, C>& y0_pk) {
-      Eigen::Matrix<typename stan::return_type_t<T, T0>, -1, 1> theta(par.size() + y0_pk.size());
+                  const EigenMat& y0_pk) {
+      Eigen::Matrix<typename stan::return_type_t<T, typename EigenMat::Scalar>, -1, 1> theta(par.size() + y0_pk.size());
       for (size_t i = 0; i < par.size(); ++i) {
         theta(i) = par[i];
       }
@@ -212,10 +212,10 @@ namespace torsten {
      * when solving coupled model with @c var rate, @c x_r
      * is filled with initial time
      */
-    template<typename T0, int R, int C>
+    template<typename EigenMat, stan::require_eigen_t<EigenMat>* = nullptr>
     static std::vector<double>
     adapted_x_r(int cmt, int ncmt, double rate, double amt, double ii,
-                const Eigen::Matrix<T0, R, C>& y0_pk, double t0) {
+                const EigenMat& y0_pk, double t0) {
       std::vector<double> res(PMXOdeFunctorCouplingAdaptorPacker<double, double, double>::
                               adapted_x_r(cmt, ncmt, rate, y0_pk, t0));
       res.push_back(amt);

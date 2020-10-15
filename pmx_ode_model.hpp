@@ -10,7 +10,7 @@
 #include <stan/math/prim/err/check_less_or_equal.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
 #include <stan/math/torsten/dsolve/pmx_algebra_solver_newton.hpp>
-#include <stan/math/torsten/PKModel/functors/check_mti.hpp>
+#include <stan/math/torsten/pmx_ode_integrator.hpp>
 
 namespace torsten {
 
