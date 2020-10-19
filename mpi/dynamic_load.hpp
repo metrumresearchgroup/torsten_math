@@ -1,7 +1,11 @@
 #ifndef STAN_MATH_TORSTEN_MPI_DYNAMIC_LOAD_HPP
 #define STAN_MATH_TORSTEN_MPI_DYNAMIC_LOAD_HPP
 
+#include <stan/math/mpi/environment.hpp>
+#include <stan/math/torsten/mpi/precomputed_gradients.hpp>
 #include <stan/math/torsten/dsolve/group_functor.hpp>
+#include <stan/math/torsten/dsolve/pmx_cvodes_integrator.hpp>
+#include <stan/math/torsten/dsolve/pmx_odeint_integrator.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
 #include <stan/math/torsten/is_var.hpp>
 #include <stan/math/prim/err/check_greater.hpp>

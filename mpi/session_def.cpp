@@ -1,3 +1,5 @@
+#include <stan/math/mpi/environment.hpp>
+#include <stan/math/torsten/mpi/session.hpp>
 /**
  * Define static variables of <code>Session</code>
  * Only to be included in tests & cmdstan top level <code>command.hpp</code>
