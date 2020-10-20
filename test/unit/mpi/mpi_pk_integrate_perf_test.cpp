@@ -7,6 +7,7 @@
 #include <stan/math/torsten/dsolve/pmx_cvodes_integrator.hpp>
 #include <stan/math/prim/fun/eval.hpp>
 #include <stan/math/rev/functor/jacobian.hpp>
+#include <stan/math/torsten/mpi.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_adams.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_bdf.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_group_adams.hpp>
@@ -30,7 +31,7 @@
 #include <chrono>
 #include <ctime>
 
-#include <stan/math/torsten/mpi/session_def.cpp>
+TORSTEN_MPI_SESSION_INIT;
 
 TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_bdf_mpi) {
   using torsten::dsolve::PMXCvodesFwdSystem;

@@ -10,6 +10,7 @@
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_group_adams.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_group_bdf.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_group_rk45.hpp>
+#include <stan/math/torsten/mpi.hpp>
 #include <test/unit/math/rev/fun/util.hpp>
 #include <stan/math/torsten/test/unit/pmx_ode_test_fixture.hpp>
 #include <nvector/nvector_serial.h>
@@ -28,7 +29,7 @@
 #include <ctime>
 #include <random>
 
-#include <stan/math/torsten/mpi/session_def.cpp>
+TORSTEN_MPI_SESSION_INIT;
 
 namespace torsten {
   namespace dsolve {

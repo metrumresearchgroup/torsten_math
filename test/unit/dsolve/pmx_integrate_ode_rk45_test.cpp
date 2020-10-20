@@ -4,6 +4,7 @@
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_group_rk45.hpp>
 #include <stan/math.hpp>
 #include <stan/math/rev/core.hpp>
+#include <stan/math/torsten/mpi.hpp>
 #include <test/unit/math/rev/fun/util.hpp>
 #include <stan/math/torsten/test/unit/pmx_ode_test_fixture.hpp>
 #include <test/unit/math/prim/functor/harmonic_oscillator.hpp>
@@ -28,7 +29,9 @@ using torsten::pmx_integrate_ode_group_rk45;
 using stan::math::var;
 using std::vector;
 
-#include <stan/math/torsten/mpi/session_def.cpp>
+#if defined(STAN_LANG_MPI) || defined(TORSTEN_MPI)
+TORSTEN_MPI_SESSION_INIT;
+#endif
 
 TEST_F(TorstenOdeTest_sho, odeint_rk45_ivp_system) {
   std::vector<std::vector<double> > y1(integrate_ode_rk45(f, y0, t0, ts, theta , x_r, x_i));

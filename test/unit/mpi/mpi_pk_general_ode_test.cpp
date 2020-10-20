@@ -1,3 +1,4 @@
+#include <stan/math/torsten/mpi.hpp>
 #include <stan/math/torsten/test/unit/expect_near_matrix_eq.hpp>
 #include <stan/math/torsten/test/unit/expect_matrix_eq.hpp>
 #include <stan/math/torsten/test/unit/pmx_twocpt_mpi_test_fixture.hpp>
@@ -20,7 +21,9 @@ using Eigen::Dynamic;
 using stan::math::var;
 using torsten::NONMENEventsRecord;
 
-#include <stan/math/torsten/mpi/session_def.cpp>
+#if defined(STAN_LANG_MPI) || defined(TORSTEN_MPI)
+TORSTEN_MPI_SESSION_INIT;
+#endif
 
 TEST_F(TorstenPopulationPMXTwoCptTest, rk45_solver_multiple_bolus_doses_data_only) {
   using model_t = torsten::PMXTwoCptModel<double>;

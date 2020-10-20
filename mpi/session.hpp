@@ -3,7 +3,7 @@
 
 #if defined(STAN_LANG_MPI) || defined(TORSTEN_MPI)
 
-#include <stan/math/mpi/environment.hpp>
+#include <stan/math/torsten/mpi/environment.hpp>
 
 /*
  * Given a Torsten communicator comm that has m workers and solves a group of

@@ -2,10 +2,11 @@
 #include <stan/math/rev/core.hpp>
 #include <stan/math/rev/fun/typedefs.hpp>
 #include <test/unit/math/rev/fun/util.hpp>
+#include <stan/math/torsten/mpi.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_rk45.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_group_rk45.hpp>
 #include <stan/math/torsten/test/unit/pmx_ode_test_fixture.hpp>
-#include <stan/math/mpi/environment.hpp>
+#include <stan/math/torsten/mpi/environment.hpp>
 #include <stan/math/torsten/test/unit/test_macros.hpp>
 #include <test/unit/util.hpp>
 #include <gtest/gtest.h>
@@ -27,7 +28,9 @@ using stan::math::matrix_v;
 using stan::math::var;
 using std::vector;
 
-#include <stan/math/torsten/mpi/session_def.cpp>
+#if defined(STAN_LANG_MPI) || defined(TORSTEN_MPI)
+TORSTEN_MPI_SESSION_INIT;
+#endif
 
 TEST_F(TorstenOdeTest_chem, group_rk45_ivp) {
   stan::math::mpi::Envionment::init();
