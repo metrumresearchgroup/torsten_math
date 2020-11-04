@@ -34,9 +34,9 @@ namespace torsten {
   struct none_std_vector<std::vector<T, Ts...>> : std::false_type {};
 
   template<typename T, typename... Tn>
-  struct none_std_vector<T, Tn...> {
-    static constexpr bool value = torsten::none_std_vector<T>::value && torsten::none_std_vector<Tn...>::value;
-  };
+  struct none_std_vector<T, Tn...> :
+    std::conditional<none_std_vector<T>::value, none_std_vector<Tn...>, std::false_type>::type {};
+
 
   // value type of std vector
   template<typename T>

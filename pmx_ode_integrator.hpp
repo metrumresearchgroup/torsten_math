@@ -27,6 +27,8 @@ namespace torsten {
   using torsten::pmx_integrate_ode_adams;
   using torsten::pmx_integrate_ode_bdf;
   using torsten::pmx_integrate_ode_rk45;
+  using torsten::dsolve::PMXCvodesFwdSystem;
+  using torsten::dsolve::cvodes_def_staggered;
 
 #define DEF_STAN_INTEGRATOR(INT_NAME)                                                 \
   template <typename F, typename Tt, typename T_initial, typename T_param>            \
@@ -174,11 +176,11 @@ namespace torsten {
             const std::vector<T_param>& theta,
             const std::vector<double>& x_r,
             const std::vector<int>& x_i) const {
-      using Ode = torsten::dsolve::PMXCvodesFwdSystem<F, Tt, T_initial, T_param, CV_BDF, AD>;
+      using Ode = PMXCvodesFwdSystem<F, Tt, T_initial, T_param, cvodes_def_staggered<AD, CV_BDF>>;
       const int m = theta.size();
       const int n = y0.size();
 
-      dsolve::PMXOdeService<typename Ode::Ode> serv(n, m);
+      dsolve::PMXOdeService<Ode> serv(n, m);
 
       Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
 
@@ -213,11 +215,11 @@ namespace torsten {
             const std::vector<T_param>& theta,
             const std::vector<double>& x_r,
             const std::vector<int>& x_i) const {
-      using Ode = torsten::dsolve::PMXCvodesFwdSystem<F, Tt, T_initial, T_param, CV_ADAMS, AD>;
+      using Ode = PMXCvodesFwdSystem<F, Tt, T_initial, T_param, cvodes_def_staggered<AD, CV_ADAMS>>;
       const int m = theta.size();
       const int n = y0.size();
 
-      dsolve::PMXOdeService<typename Ode::Ode> serv(n, m);
+      dsolve::PMXOdeService<Ode> serv(n, m);
 
       Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
 

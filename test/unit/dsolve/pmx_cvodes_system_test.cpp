@@ -21,6 +21,9 @@
 #include <vector>
 #include <limits>
 
+using torsten::dsolve::cvodes_def;
+using torsten::dsolve::cvodes_def_staggered;
+
 TEST_F(TorstenOdeTest_sho, PMXCvodesSystem) {
   using torsten::dsolve::PMXCvodesSystem;
   using torsten::dsolve::PMXCvodesFwdSystem;
@@ -31,19 +34,19 @@ TEST_F(TorstenOdeTest_sho, PMXCvodesSystem) {
   std::vector<stan::math::var> theta_var{to_var(theta)};
   std::vector<stan::math::var> y0_var{to_var(y0)};
 
-  using Ode1 = PMXCvodesFwdSystem<F, double, double, double, CV_ADAMS, torsten::CSDA>;
+  using Ode1 = PMXCvodesFwdSystem<F, double, double, double,  cvodes_def_staggered<torsten::CSDA, CV_ADAMS>>;
   
   PMXOdeService<typename Ode1::Ode> s1(2, 1);
   Ode1 ode1(s1, f, t0, ts, y0, theta, x_r, x_i, msgs);
   test_cvodes_system(ode1, y0, theta, ts);
 
-  using Ode2 = PMXCvodesFwdSystem<F, double, var, double, CV_BDF, torsten::CSDA>;
+  using Ode2 = PMXCvodesFwdSystem<F, double, var, double, cvodes_def_staggered<torsten::CSDA, CV_BDF>>;
   
   PMXOdeService<typename Ode2::Ode> s2(2, 1);
   Ode2 ode2(s2, f, t0, ts, y0_var, theta, x_r, x_i, msgs);
   test_cvodes_system(ode2, y0, theta, ts);
 
-  using Ode3 = PMXCvodesFwdSystem<F, double, var, var, CV_BDF, torsten::CSDA>;
+  using Ode3 = PMXCvodesFwdSystem<F, double, var, var, cvodes_def_staggered<torsten::CSDA, CV_BDF>>;
   PMXOdeService<typename Ode3::Ode> s3(2, 1);
   Ode3 ode3(s3, f, t0, ts, y0_var, theta_var, x_r, x_i, msgs);
   Ode3 ode4(s3, f, t0, ts, y0_var, theta_var, x_r, x_i, msgs);
@@ -61,13 +64,13 @@ TEST_F(TorstenOdeTest_chem, PMXCvodesSystem) {
   std::vector<stan::math::var> theta_var{to_var(theta)};
   std::vector<stan::math::var> y0_var{to_var(y0)};
 
-  using Ode1 = PMXCvodesFwdSystem<F, double, double, double, CV_ADAMS, torsten::CSDA>;
+  using Ode1 = PMXCvodesFwdSystem<F, double, double, double,  cvodes_def_staggered<torsten::CSDA, CV_ADAMS>>;
   
   PMXOdeService<typename Ode1::Ode> s1(3, 3);
   Ode1 ode1(s1, f, t0, ts, y0, theta, x_r, x_i, msgs);
   test_cvodes_system(ode1, y0, theta, ts);
 
-  using Ode2 = PMXCvodesFwdSystem<F, double, var, double, CV_BDF, torsten::CSDA>;
+  using Ode2 = PMXCvodesFwdSystem<F, double, var, double, cvodes_def_staggered<torsten::CSDA, CV_BDF>>;
   
   PMXOdeService<typename Ode2::Ode> s2(3, 3);
   Ode2 ode2(s2, f, t0, ts, y0_var, theta, x_r, x_i, msgs);
@@ -84,13 +87,13 @@ TEST_F(TorstenOdeTest_lorenz, PMXCvodesSystem) {
   std::vector<stan::math::var> theta_var{to_var(theta)};
   std::vector<stan::math::var> y0_var{to_var(y0)};
 
-  using Ode1 = PMXCvodesFwdSystem<F, double, double, double, CV_ADAMS, torsten::CSDA>;
+  using Ode1 = PMXCvodesFwdSystem<F, double, double, double,  cvodes_def_staggered<torsten::CSDA, CV_ADAMS>>;
   
   PMXOdeService<typename Ode1::Ode> s1(3, 3);
   Ode1 ode1(s1, f, t0, ts, y0, theta, x_r, x_i, msgs);
   test_cvodes_system(ode1, y0, theta, ts);
 
-  using Ode2 = PMXCvodesFwdSystem<F, double, var, double, CV_BDF, torsten::CSDA>;
+  using Ode2 = PMXCvodesFwdSystem<F, double, var, double, cvodes_def_staggered<torsten::CSDA, CV_BDF>>;
   
   PMXOdeService<typename Ode2::Ode> s2(3, 3);
   Ode2 ode2(s2, f, t0, ts, y0_var, theta, x_r, x_i, msgs);
@@ -104,8 +107,8 @@ TEST_F(TorstenOdeTest_sho, cvodes_constructor_errors) {
   using stan::math::var;
   using stan::math::to_var;
 
-  using Ode1 = PMXCvodesFwdSystem<F, double, double, double, CV_ADAMS, torsten::CSDA>;
-  using Ode2 = PMXCvodesFwdSystem<F, double, var, var, CV_ADAMS, torsten::CSDA>;
+  using Ode1 = PMXCvodesFwdSystem<F, double, double, double,  cvodes_def_staggered<torsten::CSDA, CV_ADAMS>>;
+  using Ode2 = PMXCvodesFwdSystem<F, double, var, var,  cvodes_def_staggered<torsten::CSDA, CV_ADAMS>>;
   
   PMXOdeService<typename Ode1::Ode> s1(2, 1);
   PMXOdeService<typename Ode2::Ode> s2(2, 1);

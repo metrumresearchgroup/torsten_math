@@ -51,50 +51,50 @@ namespace dsolve {
     };
 
     // Seqential
-    template <typename F, int Lmm, PMXCvodesSensMethod Sm>
-    void solve(PMXCvodesFwdSystem<F, double, double, double, Lmm, Sm>& ode,
+    template <typename F, typename cv_def>
+    void solve(PMXCvodesFwdSystem<F, double, double, double, cv_def>& ode,
                std::vector<std::vector<double> >& res_y);
 
-    template <typename F, int Lmm, PMXCvodesSensMethod Sm>
-    void solve(PMXCvodesFwdSystem<F, stan::math::var, double, double, Lmm, Sm>& ode,
+    template <typename F, typename cv_def>
+    void solve(PMXCvodesFwdSystem<F, stan::math::var, double, double, cv_def>& ode,
                std::vector<std::vector<stan::math::var> >& res_y);
 
-    template <typename F, typename Ty0, int Lmm, PMXCvodesSensMethod Sm>
-    void solve(PMXCvodesFwdSystem<F, double, Ty0, double, Lmm, Sm>& ode,
+    template <typename F, typename Ty0, typename cv_def>
+    void solve(PMXCvodesFwdSystem<F, double, Ty0, double, cv_def>& ode,
                std::vector<std::vector<stan::math::var> >& res_y);
 
-    template <typename F, typename Tpar, int Lmm, PMXCvodesSensMethod Sm>
-    void solve(PMXCvodesFwdSystem<F, double, double, Tpar, Lmm, Sm>& ode,
+    template <typename F, typename Tpar, typename cv_def>
+    void solve(PMXCvodesFwdSystem<F, double, double, Tpar, cv_def>& ode,
                std::vector<std::vector<stan::math::var> >& res_y);
 
-    template <typename F, typename Ty0, typename Tpar, int Lmm, PMXCvodesSensMethod Sm>
-    void solve(PMXCvodesFwdSystem<F, double, Ty0, Tpar, Lmm, Sm>& ode,
+    template <typename F, typename Ty0, typename Tpar, typename cv_def>
+    void solve(PMXCvodesFwdSystem<F, double, Ty0, Tpar, cv_def>& ode,
                std::vector<std::vector<stan::math::var> >& res_y);
 
-    template <typename F, typename Ty0, typename Tpar, int Lmm, PMXCvodesSensMethod Sm>
-    void solve(PMXCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, Lmm, Sm>& ode,
+    template <typename F, typename Ty0, typename Tpar, typename cv_def>
+    void solve(PMXCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, cv_def>& ode,
                std::vector<std::vector<stan::math::var> >& res_y);
 
     // MPI
-    template <typename F, int Lmm, PMXCvodesSensMethod Sm>
-    void solve(PMXCvodesFwdSystem<F, double, double, double, Lmm, Sm>& ode,
+    template <typename F, typename cv_def>
+    void solve(PMXCvodesFwdSystem<F, double, double, double, cv_def>& ode,
                Eigen::MatrixXd& res_y);
 
-    template <typename F, int Lmm, PMXCvodesSensMethod Sm>
-    void solve(PMXCvodesFwdSystem<F, stan::math::var, double, double, Lmm, Sm>& ode,
+    template <typename F, typename cv_def>
+    void solve(PMXCvodesFwdSystem<F, stan::math::var, double, double, cv_def>& ode,
                Eigen::MatrixXd& res_y);
 
-    template <typename F, typename Ty0, typename Tpar, int Lmm, PMXCvodesSensMethod Sm>
-    void solve(PMXCvodesFwdSystem<F, double, Ty0, Tpar, Lmm, Sm>& ode,
+    template <typename F, typename Ty0, typename Tpar, typename cv_def>
+    void solve(PMXCvodesFwdSystem<F, double, Ty0, Tpar, cv_def>& ode,
                Eigen::MatrixXd& res_y);
 
-    template <typename F, typename Ty0, typename Tpar, int Lmm, PMXCvodesSensMethod Sm>
-    void solve(PMXCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, Lmm, Sm>& ode, // NOLINT
+    template <typename F, typename Ty0, typename Tpar, typename cv_def>
+    void solve(PMXCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, cv_def>& ode, // NOLINT
                                    Eigen::MatrixXd& res_y);
 
     // TODO
-    // template <typename F, typename Ty0, typename Tpar, int Lmm, PMXCvodesSensMethod Sm>
-    // void solve(PMXCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, Lmm, Sm>& ode,
+    // template <typename F, typename Ty0, typename Tpar, typename cv_def>
+    // void solve(PMXCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, cv_def>& ode,
     //            Eigen::MatrixXd& res_y);
 
     // TODO(yizhang): adjoint sensitivity solver
@@ -208,9 +208,9 @@ namespace dsolve {
    * @param[out] ode ODE system
    * @param[out] res_y ODE solutions
    */
-  template <typename F, int Lmm, PMXCvodesSensMethod Sm>
+  template <typename F, typename cv_def>
   void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, double,
-                                 double, double, Lmm, Sm>& ode,
+                                 double, double, cv_def>& ode,
                                  std::vector<std::vector<double> >& res_y) {
     double t1 = ode.t0();
     const std::vector<double>& ts = ode.ts();
@@ -230,8 +230,8 @@ namespace dsolve {
    * @param[out] ode ODE system
    * @param[out] res_y ODE solutions
    */
-  template <typename F, int Lmm, PMXCvodesSensMethod Sm>
-  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, double, double, double, Lmm, Sm>& ode,
+  template <typename F, typename cv_def>
+  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, double, double, double, cv_def>& ode,
                                  Eigen::MatrixXd& res_y) {
     double t1 = ode.t0();
     const std::vector<double>& ts = ode.ts();
@@ -258,9 +258,9 @@ namespace dsolve {
    * @param[out] ode ODE system
    * @param[out] res_y ODE solutions
    */
-  template <typename F, int Lmm, PMXCvodesSensMethod Sm>
+  template <typename F, typename cv_def>
   void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F,
-                                 stan::math::var, double, double, Lmm, Sm>& ode,
+                                 stan::math::var, double, double, cv_def>& ode,
                                  std::vector<std::vector<stan::math::var> >& res_y) {
     using stan::math::value_of;
     using stan::math::var;
@@ -306,8 +306,8 @@ namespace dsolve {
    * corresponds a time step, arranged as:
    * @c res_y = [y1, y2, ... dy1/dt1, dy2/dt1...dy1/dtn, dy2/dtn...]
    */
-  template <typename F, int Lmm, PMXCvodesSensMethod Sm>
-  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, stan::math::var, double, double, Lmm, Sm>& ode, // NOLINT
+  template <typename F, typename cv_def>
+  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, stan::math::var, double, double, cv_def>& ode, // NOLINT
                                  Eigen::MatrixXd& res_y) {
     double t1 = ode.t0();
     const std::vector<stan::math::var>& ts = ode.ts();
@@ -333,8 +333,8 @@ namespace dsolve {
    * @param[out] ode ODE system
    * @param[out] res_y ODE solutions
    */
-  template <typename F, typename Ty0, int Lmm, PMXCvodesSensMethod Sm>
-  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, double, Ty0, double, Lmm, Sm>& ode, // NOLINT
+  template <typename F, typename Ty0, typename cv_def>
+  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, double, Ty0, double, cv_def>& ode, // NOLINT
                                   std::vector<std::vector<stan::math::var> >& res_y) { // NOLINT
     using stan::math::precomputed_gradients;
     double t1 = ode.t0();
@@ -370,8 +370,8 @@ namespace dsolve {
    * @param[out] ode ODE system
    * @param[out] res_y ODE solutions
    */
-  template <typename F, typename Tpar, int Lmm, PMXCvodesSensMethod Sm>
-  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, double, double, Tpar, Lmm, Sm>& ode, // NOLINT
+  template <typename F, typename Tpar, typename cv_def>
+  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, double, double, Tpar, cv_def>& ode, // NOLINT
                                   std::vector<std::vector<stan::math::var> >& res_y) { // NOLINT
     using stan::math::precomputed_gradients;
     double t1 = ode.t0();
@@ -407,8 +407,8 @@ namespace dsolve {
    * @param[out] ode ODE system
    * @param[out] res_y ODE solutions
    */
-  template <typename F, typename Ty0, typename Tpar, int Lmm, PMXCvodesSensMethod Sm> // NOLINT
-  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, double, Ty0, Tpar, Lmm, Sm>& ode, // NOLINT
+  template <typename F, typename Ty0, typename Tpar, typename cv_def> // NOLINT
+  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, double, Ty0, Tpar, cv_def>& ode, // NOLINT
                                  std::vector<std::vector<stan::math::var> >& res_y) { // NOLINT
     using stan::math::precomputed_gradients;
     double t1 = ode.t0();
@@ -447,8 +447,8 @@ namespace dsolve {
    * @param[out] ode ODE system
    * @param[out] res_y ODE solutions
    */
-  template <typename F, typename Ty0, typename Tpar, int Lmm, PMXCvodesSensMethod Sm> // NOLINT
-  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, double, Ty0, Tpar, Lmm, Sm>& ode, // NOLINT
+  template <typename F, typename Ty0, typename Tpar, typename cv_def> // NOLINT
+  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, double, Ty0, Tpar, cv_def>& ode, // NOLINT
                                   Eigen::MatrixXd& res_y) {
     double t1 = ode.t0();
     const std::vector<double>& ts = ode.ts();
@@ -480,8 +480,8 @@ namespace dsolve {
    * @param[out] ode ODE system
    * @param[out] res_y ODE solutions
    */
-  template <typename F, typename Ty0, typename Tpar, int Lmm, PMXCvodesSensMethod Sm> // NOLINT
-  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, Lmm, Sm>& ode, // NOLINT
+  template <typename F, typename Ty0, typename Tpar, typename cv_def> // NOLINT
+  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, cv_def>& ode, // NOLINT
                                  std::vector<std::vector<stan::math::var> >& res_y) { // NOLINT
     using stan::math::precomputed_gradients;
     using stan::math::var;
@@ -522,8 +522,8 @@ namespace dsolve {
    * @param[out] res_y ODE solutions with sensitivity,
    * arranged as (sol value, grad(y0), grad(theta), grad(ts))
    */
-  template <typename F, typename Ty0, typename Tpar, int Lmm, PMXCvodesSensMethod Sm> // NOLINT
-  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, Lmm, Sm>& ode, // NOLINT
+  template <typename F, typename Ty0, typename Tpar, typename cv_def> // NOLINT
+  void PMXCvodesIntegrator::solve(PMXCvodesFwdSystem<F, stan::math::var, Ty0, Tpar, cv_def>& ode, // NOLINT
                                  Eigen::MatrixXd& res_y) {
     double t1 = ode.t0();
     const std::vector<stan::math::var>& ts = ode.ts();

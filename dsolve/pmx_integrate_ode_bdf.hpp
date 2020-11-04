@@ -44,11 +44,12 @@ namespace torsten {
     static const char* caller = "pmx_integrate_ode_bdf";
     dsolve::ode_check(y0, t0, ts, theta, x_r, x_i, caller);
 
-    using Ode = dsolve::PMXCvodesFwdSystem<F, Tt, T_initial, T_param, CV_BDF, AD>;
+    using Ode = dsolve::PMXCvodesFwdSystem<F, Tt, T_initial, T_param,
+                                           dsolve::cvodes_def<AD, CV_BDF, CV_STAGGERED>>;
     const int m = theta.size();
     const int n = y0.size();
 
-    static dsolve::PMXOdeService<typename Ode::Ode> serv(n, m);
+    static dsolve::PMXOdeService<Ode> serv(n, m);
 
     Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
     dsolve::PMXCvodesIntegrator solver(rtol, atol, max_num_step);

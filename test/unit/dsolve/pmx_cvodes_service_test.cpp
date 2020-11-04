@@ -17,8 +17,10 @@
 
 using torsten::dsolve::PMXOdeintSystem;
 
+template<typename F>
 struct Sho {
-  harm_osc_ode_fun f;
+  // harm_osc_ode_fun f;
+  F f;
   std::vector<double> y;
   std::vector<double> fy;
   const std::vector<double>& p;
@@ -52,14 +54,14 @@ TEST_F(TorstenOdeTest_sho, service) {
   using torsten::dsolve::PMXCvodesIntegrator;
   using torsten::dsolve::PMXOdeService;
 
-  PMXOdeService<Sho> serv(2, 1);
+  PMXOdeService<Sho<harm_osc_ode_fun> > serv(2, 1);
 
   size_t n = 2;
   N_Vector& y = serv.nv_y;
   double t1 = t0;
   auto yy = stan::math::integrate_ode_adams(f, y0, t0,
                                             ts, theta, x_r, x_i);
-  Sho ode(theta, x_r, x_i, msgs);
+  Sho<harm_osc_ode_fun> ode(theta, x_r, x_i, msgs);
   void* user_data = static_cast<void*>(&ode);
   for (int i = 0; i < 10; ++i) {
     void* mem = serv.mem;

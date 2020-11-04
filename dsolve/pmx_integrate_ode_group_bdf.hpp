@@ -6,6 +6,10 @@
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 
 namespace torsten {
+  template <typename F, typename Tts, typename Ty0, typename Tpar>
+  using PMXCvodesFwdSystem_bdf_ad =
+    dsolve::PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, dsolve::cvodes_def<AD, CV_BDF, CV_STAGGERED>>;
+
   /**
    * Solve population ODE model by delegating the population
    * ODE integration task to multiple processors through
@@ -49,9 +53,11 @@ namespace torsten {
     static const char* caller("pmx_integrate_ode_bdf");
     dsolve::ode_group_check(y0, t0, len, ts, theta, x_r, x_i, caller);
 
+
+
     dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
     torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXCvodesIntegrator,
-                                          dsolve::PMXCvodesFwdSystem_bdf_ad> solver(integrator);
+                                          PMXCvodesFwdSystem_bdf_ad> solver(integrator);
 
     return solver(f, y0, t0, len, ts, theta, x_r, x_i, msgs);
   }
@@ -123,7 +129,7 @@ namespace torsten {
 
     dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
     torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXCvodesIntegrator,
-                                          dsolve::PMXCvodesFwdSystem_bdf_ad> solver(integrator);
+                                          PMXCvodesFwdSystem_bdf_ad> solver(integrator);
 
     return solver(f, y0, t0, len, ts, group_theta, theta, x_r, x_i, msgs);
   }

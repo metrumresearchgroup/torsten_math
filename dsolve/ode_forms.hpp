@@ -7,7 +7,7 @@ namespace torsten {
     template <typename F, typename Tt, typename T_init, typename T_par>
     struct PMXOdeintSystem;
 
-    template <typename F, typename Tts, typename Ty0, typename Tpar, int Lmm>
+    template <typename F, typename Tts, typename Ty0, typename Tpar, typename cv_def>
     class PMXCvodesSystem;
 
     enum PMXOdeForms { Odeint, Cvodes };

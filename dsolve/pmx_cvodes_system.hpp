@@ -24,11 +24,10 @@ namespace torsten {
      * @tparam Ty0 scalar type of initial unknown values
      * @tparam Tpar scalar type of parameters
      */
-    template <typename F, typename Tts, typename Ty0, typename Tpar, int Lmm>
+    template <typename F, typename Tts, typename Ty0, typename Tpar, typename cv_def>
     class PMXCvodesSystem {
     public:
-      using Ode = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
-
+      using Ode = PMXCvodesSystem<F, Tts, Ty0, Tpar, cv_def>;
     protected:
       const F& f_;
       const double t0_;
@@ -53,7 +52,7 @@ namespace torsten {
       static constexpr bool is_var_y0 = stan::is_var<Ty0>::value;
       static constexpr bool is_var_par = stan::is_var<Tpar>::value;
       static constexpr bool need_fwd_sens = is_var_y0 || is_var_par;
-      static constexpr int lmm_type = Lmm;
+      static constexpr int lmm_type = cv_def::cv_lmm;
 
       // when ts is param, we don't have to do fwd
       // sensitivity by solving extra ODEs, because in this
@@ -96,10 +95,10 @@ namespace torsten {
           N_(y0.size()),
           M_(theta.size()),
           ns_((is_var_y0 ? N_ : 0) + (is_var_par ? M_ : 0)),
-          size_(serv.size),
+          size_(serv.user_data.fwd_ode_dim),
           nv_y_(serv.nv_y),
-          y_vec_(serv.y),
-          fval_(serv.fval),
+          y_vec_(serv.user_data.y),
+          fval_(serv.user_data.fval),
           mem_(serv.mem),
           msgs_(msgs) {
         using stan::math::system_error;
@@ -112,13 +111,13 @@ namespace torsten {
 
         static const char* caller = "PMXCvodesSystem";
         int err = 1;
-        if (N_ != serv.N)
+        if (N_ != serv.user_data.N)
           system_error(caller, "N_", err, "inconsistent allocated memory");
         if (N_ != size_t(N_VGetLength_Serial(nv_y_)))
           system_error(caller, "nv_y", err, "inconsistent allocated memory");
-        if (M_ != serv.M)
+        if (M_ != serv.user_data.M)
           system_error(caller, "M_", err, "inconsistent allocated memory");
-        if (ns_ != serv.ns)
+        if (ns_ != serv.user_data.ns)
           system_error(caller, "ns_", err, "inconsistent allocated memory");
 
         // initial condition

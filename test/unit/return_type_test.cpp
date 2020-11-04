@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <stan/math/torsten/is_var.hpp>
 #include <stan/math/torsten/is_std_vector.hpp>
-#include <gtest/gtest.h>
 
 using stan::math::var;
 

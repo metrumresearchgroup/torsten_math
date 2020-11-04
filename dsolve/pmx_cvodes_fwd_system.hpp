@@ -5,20 +5,8 @@
 #include <stan/math/torsten/dsolve/pmx_cvodes_system.hpp>
 #include <stan/math/torsten/dsolve/cvodes_sens_rhs.hpp>
 #include <stan/math/torsten/pmx_csda.hpp>
-
-namespace torsten {
-
-  /**
-   * Choose among three methods to calculate the
-   * sensitivities:
-   * CSDA: complex step derivative approximation
-   * AD: automatic differentiation by Stan
-   * differential quotient provided by CVODES
-   **/
-  enum PMXCvodesSensMethod {
-    CSDA, AD, DQ
-  };
-}
+#include <stan/math/torsten/cvodes_sens_method.hpp>
+#include <stan/math/torsten/dsolve/cvodes_def.hpp>
 
 namespace torsten {
   namespace dsolve {
@@ -32,7 +20,7 @@ namespace torsten {
      * @tparam Lmm method of integration(CV_ADAMS or CV_BDF)
      * @tparam Sm method of sensitivity calculatioin, choose among @c PMXCvodesSensMethod.
      */
-    template <typename F, typename Tts, typename Ty0, typename Tpar, int Lmm, PMXCvodesSensMethod Sm>  // NOLINT
+    template <typename F, typename Tts, typename Ty0, typename Tpar, typename cv_def>  // NOLINT
     class PMXCvodesFwdSystem;
 
     /**
@@ -41,12 +29,15 @@ namespace torsten {
      * able to operate on complex numbers, most of current Stan
      * math functions do not support this.
      */
-    template <typename F, typename Tts, typename Ty0, typename Tpar, int Lmm>
-    class PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, Lmm, CSDA> : public PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm> {  // NOLINT
+    template <typename F, typename Tts, typename Ty0, typename Tpar, int Lmm, int ism>
+    class PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, cvodes_def<CSDA, Lmm, ism>> :
+      public PMXCvodesSystem<F, Tts, Ty0, Tpar, cvodes_def<CSDA, Lmm, ism>> {
     public:
-      using Ode = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
+      using Ode = PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, cvodes_def<CSDA, Lmm, ism>>;
+      static constexpr bool need_fwd_sens = Ode::is_var_y0 || Ode::is_var_par;
     private:
       N_Vector* nv_ys_;
+      PMXOdeService<Ode>& serv_;
       std::vector<std::complex<double> >& yy_cplx_;
       std::vector<std::complex<double> >& theta_cplx_;
       std::vector<std::complex<double> >& fval_cplx_;
@@ -61,8 +52,8 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE
        * @param[in] msgs stream to which messages are printed
        */
-      template<typename ode_t>
-      PMXCvodesFwdSystem(PMXOdeService<ode_t>& serv,
+      // template<typename PMXOdeService<Ode, Cvodes> >
+      PMXCvodesFwdSystem(PMXOdeService<Ode>& serv,
                          const F& f,
                          double t0,
                          const std::vector<Tts>& ts,
@@ -71,8 +62,9 @@ namespace torsten {
                          const std::vector<double>& x_r,
                          const std::vector<int>& x_i,
                          std::ostream* msgs) :
-        Ode(serv, f, t0, ts, y0, theta, x_r, x_i, msgs),
+        PMXCvodesSystem<F, Tts, Ty0, Tpar, cvodes_def<CSDA, Lmm, ism>>(serv, f, t0, ts, y0, theta, x_r, x_i, msgs),
         nv_ys_(serv.nv_ys),
+        serv_(serv),
         yy_cplx_(serv.yy_cplx),
         theta_cplx_(serv.theta_cplx),
         fval_cplx_(serv.fval_cplx)
@@ -97,6 +89,10 @@ namespace torsten {
         return static_cast<void*>(this);
       }
 
+      void reset_sens_mem() {
+        serv_.reset_sens_mem();
+      }
+
       /**
        * Calculate sensitivity rhs using CVODES vectors. The
        * internal workspace is allocated by @c PMXOdeService.
@@ -108,7 +104,7 @@ namespace torsten {
                          N_Vector temp1, N_Vector temp2) {
         using std::complex;
         using cplx = complex<double>;
-        using B = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
+        using B = PMXCvodesSystem<F, Tts, Ty0, Tpar, cvodes_def<CSDA, Lmm, ism>>;
         const int n = B::N_;
         const double h = 1.E-20;
         for (int i = 0; i < ns; ++i) {
@@ -146,12 +142,15 @@ namespace torsten {
     /**
      * use autodiff to calculate sensitivity
      */
-    template <typename F, typename Tts, typename Ty0, typename Tpar, int Lmm>
-    class PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, Lmm, AD> : public PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm> {  // NOLINT
+    template <typename F, typename Tts, typename Ty0, typename Tpar, int Lmm, int ism>
+    class PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, cvodes_def<AD, Lmm, ism>> :
+      public PMXCvodesSystem<F, Tts, Ty0, Tpar, cvodes_def<AD, Lmm, ism>> {
     public:
-      using Ode = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
+      using Ode = PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, cvodes_def<AD, Lmm, ism>>;
+      static constexpr bool need_fwd_sens = Ode::is_var_y0 || Ode::is_var_par;
     private:
       N_Vector* nv_ys_;
+      PMXOdeService<Ode>& serv_;
     public:
       /**
        * Construct CVODES ODE system from initial condition and parameters
@@ -163,8 +162,7 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE
        * @param[in] msgs stream to which messages are printed
        */
-      template<typename ode_t>
-      PMXCvodesFwdSystem(PMXOdeService<ode_t>& serv,
+      PMXCvodesFwdSystem(PMXOdeService<Ode>& serv,
                            const F& f,
                            double t0,
                            const std::vector<Tts>& ts,
@@ -173,7 +171,8 @@ namespace torsten {
                            const std::vector<double>& x_r,
                            const std::vector<int>& x_i,
                            std::ostream* msgs) :
-        Ode(serv, f, t0, ts, y0, theta, x_r, x_i, msgs),
+        PMXCvodesSystem<F, Tts, Ty0, Tpar, cvodes_def<AD, Lmm, ism>>(serv, f, t0, ts, y0, theta, x_r, x_i, msgs),
+        serv_(serv),
         nv_ys_(serv.nv_ys)
       {}
 
@@ -196,6 +195,10 @@ namespace torsten {
         return static_cast<void*>(this);
       }
 
+      void reset_sens_mem() {
+        serv_.reset_sens_mem();
+      }
+
       /**
        * Calculate sensitivity rhs using CVODES vectors. The
        * internal workspace is allocated by @c PMXOdeService.
@@ -204,7 +207,7 @@ namespace torsten {
                          N_Vector* ys, N_Vector* ysdot,
                          N_Vector temp1, N_Vector temp2) {
         using stan::math::var;
-        using B = PMXCvodesSystem<F, Tts, Ty0, Tpar, Lmm>;
+        using B = PMXCvodesSystem<F, Tts, Ty0, Tpar, cvodes_def<AD, Lmm, ism>>;
 
         const int& n = B::N_;
         const int& m = B::M_;
@@ -256,12 +259,6 @@ namespace torsten {
         stan::math::recover_memory_nested();
       }
     };
-
-    template <typename F, typename Tts, typename Ty0, typename Tpar>
-    using PMXCvodesFwdSystem_adams_ad = PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, CV_ADAMS, AD>;
-
-    template <typename F, typename Tts, typename Ty0, typename Tpar>
-    using PMXCvodesFwdSystem_bdf_ad = PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, CV_BDF, AD>;
   }  // namespace dsolve
 }  // namespace torsten
 

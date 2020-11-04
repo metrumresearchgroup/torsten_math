@@ -19,7 +19,7 @@ namespace torsten {
      * specialization for adams integrator.
      */
     template <typename F, typename Tts, typename Ty0, typename Tpar>
-    struct integrator_id<dsolve::PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, CV_ADAMS, AD>> {
+    struct integrator_id<dsolve::PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, cvodes_def<AD, CV_ADAMS, CV_STAGGERED>>> {
       static constexpr int value = 1;
     };
 
@@ -27,7 +27,7 @@ namespace torsten {
      * specialization for bdf integrator.
      */
     template <typename F, typename Tts, typename Ty0, typename Tpar>
-    struct integrator_id<dsolve::PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, CV_BDF, AD>> {
+    struct integrator_id<dsolve::PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, cvodes_def<AD, CV_BDF, CV_STAGGERED>>> {
       static constexpr int value = 2;
     };
 
