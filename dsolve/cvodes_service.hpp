@@ -20,8 +20,6 @@ namespace torsten {
     template<typename Ode>
     struct cvodes_user_data {
       using F = typename ode_func<Ode>::type;
-      const std::vector<double> x_r_dummy;
-      const std::vector<int> x_i_dummy;
 
       const F* f;
       const size_t N;
@@ -31,17 +29,139 @@ namespace torsten {
       std::vector<double> y;
       std::vector<double> fval;
       std::vector<double> theta_d;
-      const std::vector<double> & x_r;
-      const std::vector<int> & x_i;
+      const std::vector<double>* px_r;
+      const std::vector<int>* px_i;
       std::ostream* msgs;
 
+      /** 
+       * constructor
+       * 
+       * @param n dim of original ODE
+       * @param m # of theta params
+       * 
+       */
       cvodes_user_data(int n, int m) :
         f(nullptr), N(n), M(m),
         ns((Ode::is_var_y0 ? n : 0) + (Ode::is_var_par ? m : 0)),
         fwd_ode_dim(N + N * ns),
         y(n), fval(n), theta_d(m),
-        x_r(x_r_dummy), x_i(x_i_dummy), msgs(nullptr)
+        px_r(nullptr), px_i(nullptr), msgs(nullptr)
       {}
+
+      /**
+       * evaluate RHS function using current state, store
+       * the result in @c N_Vector.
+       */
+      inline void eval_rhs(double t, N_Vector& nv_y, N_Vector& ydot) {
+        for (size_t i = 0; i < N; ++i) {
+         y[i] = NV_Ith_S(nv_y, i); 
+        }
+        fval = (*f)(t, y, theta_d, *px_r, *px_i, msgs);
+        for (size_t i = 0; i < N; ++i) {
+          NV_Ith_S(ydot, i) = fval[i];
+        }
+      }
+
+
+
+      /**
+       * Calculate sensitivity rhs using CVODES vectors. The
+       * internal workspace is allocated by @c PMXOdeService.
+       */
+      void eval_sens_rhs(int ns, double t, N_Vector nv_y, N_Vector ydot,
+                         N_Vector* ys, N_Vector* ysdot,
+                         N_Vector temp1, N_Vector temp2) {
+        using stan::math::var;
+
+        for (int i = 0; i < N; ++i) y[i] = NV_Ith_S(nv_y, i);
+
+        // initialize ysdot
+        for (int i = 0; i < ns; ++i) N_VConst(0.0, ysdot[i]);
+
+        try {
+          stan::math::start_nested();
+
+          std::vector<var> yv_work(NV_DATA_S(nv_y), NV_DATA_S(nv_y) + N);
+          std::vector<var> theta_work(theta_d.begin(), theta_d.end());
+          std::vector<var> fyv_work(Ode::is_var_par ?
+                                    (*f)(t, yv_work, theta_work, *px_r, *px_i, msgs) :
+                                    (*f)(t, yv_work, theta_d, *px_r, *px_i, msgs));
+
+          stan::math::check_size_match("PMXOdeSystem", "dz_dt", fyv_work.size(), "states", N);
+
+          for (int j = 0; j < N; ++j) {
+            stan::math::set_zero_all_adjoints_nested();
+            fyv_work[j].grad();
+
+            // df/dy*s_i term, for i = 1...ns
+            for (int i = 0; i < ns; ++i) {
+              auto ysp = N_VGetArrayPointer(ys[i]);
+              auto nvp = N_VGetArrayPointer(ysdot[i]);
+              for (int k = 0; k < N; ++k) nvp[j] += yv_work[k].adj() * ysp[k];
+            }
+
+            // df/dp_i term, for i = n...n+m-1
+            if (Ode::is_var_par) {
+              for (int i = 0; i < M; ++i) {
+                auto nvp = N_VGetArrayPointer(ysdot[ns - M + i]);
+                nvp[j] += theta_work[i].adj();
+              }
+            }
+          }
+        } catch (const std::exception& e) {
+          stan::math::recover_memory_nested();
+          throw;
+        }
+        stan::math::recover_memory_nested();
+      }
+
+      /**
+       * return a closure for CVODES residual callback using a
+       * non-capture lambda.
+       *
+       * @tparam Ode type of Ode
+       * @return RHS function for Cvodes
+       */
+      inline CVDlsJacFn cvodes_jac() {
+        return [](realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void* user_data, // NOLINT
+                  N_Vector tmp1, N_Vector tmp2, N_Vector tmp3) -> int {
+          cvodes_user_data<Ode>* ode = static_cast<cvodes_user_data<Ode>*>(user_data);
+          ode -> eval_jac(t, y, fy, J);
+          return 0;
+        };
+      }
+
+      /**
+       * evaluate Jacobian matrix using current state, store
+       * the result in @c SUNMatrix J.
+       *
+       * @param t current time
+       * @param y current y
+       * @param fy current f(y)
+       * @param J Jacobian matrix J(i,j) = df_i/dy_j
+       */
+      inline void eval_jac(double t, N_Vector& nv_y, N_Vector& fy, SUNMatrix& J) {
+        using stan::math::var;
+
+        try {
+          stan::math::start_nested();
+
+          std::vector<var> yv_work(NV_DATA_S(nv_y), NV_DATA_S(nv_y) + N);
+          std::vector<var> fyv_work((*f)(t, yv_work, theta_d, *px_r, *px_i, msgs));
+
+          for (int i = 0; i < N; ++i) {
+            stan::math::set_zero_all_adjoints_nested();
+            fyv_work[i].grad();
+            for (int j = 0; j < N; ++j) {
+              SM_ELEMENT_D(J, i, j) = yv_work[j].adj();
+            }
+          }
+        } catch (const std::exception& e) {
+          stan::math::recover_memory_nested();
+          throw;
+        }
+        stan::math::recover_memory_nested();
+      }
     };
 
     /* For each type of Ode(with different rhs functor F and
@@ -99,20 +219,68 @@ namespace torsten {
         /*
          * initialize cvodes system and attach linear solver
          */ 
-        CHECK_SUNDIALS_CALL(CVodeInit(mem, cvodes_rhs<Ode>(), t0, nv_y));
+        // CHECK_SUNDIALS_CALL(CVodeInit(mem, cvodes_rhs<Ode>(), t0, nv_y));
+        CHECK_SUNDIALS_CALL(CVodeInit(mem, cvodes_rhs, t0, nv_y));
+        CHECK_SUNDIALS_CALL(CVodeSetUserData(mem, static_cast<void*>(&user_data)));
         CHECK_SUNDIALS_CALL(CVDlsSetLinearSolver(mem, LS, A));
+
+        if (Ode::need_fwd_sens) {
+          // std::cout << "taki test: " << "init" << "\n";
+          CHECK_SUNDIALS_CALL(CVodeSensInit(mem, user_data.ns, CV_STAGGERED, cvodes_sens_rhs, nv_ys)); 
+        }
       }
 
       ~PMXOdeService() {
         SUNLinSolFree(LS);
         SUNMatDestroy(A);
         CVodeFree(&mem);
-        // if (Ode::need_fwd_sens) {
-        //   CVodeSensFree(mem);
-        // }
+        if (Ode::need_fwd_sens) {
+          CVodeSensFree(mem);
+        }
         N_VDestroyVectorArray(nv_ys, user_data.ns);
         N_VDestroy(nv_y);
       }
+
+      static int cvodes_rhs(double t, N_Vector y, N_Vector ydot, void* user_data) {
+          cvodes_user_data<Ode>* ode = static_cast<cvodes_user_data<Ode>*>(user_data);
+          ode -> eval_rhs(t, y, ydot);
+          return 0;
+      }
+
+      // sens
+      template <bool needs_sens>
+      struct cvodes_sens_rhs_impl {
+        static int f(int ns, double t, N_Vector y, N_Vector ydot,
+                     N_Vector* ys, N_Vector* ysdot, void* user_data,
+                     N_Vector temp1, N_Vector temp2) {
+            cvodes_user_data<Ode>* ode = static_cast<cvodes_user_data<Ode>*>(user_data);
+            ode -> eval_sens_rhs(ns, t, y, ydot, ys, ysdot, temp1, temp2);
+            return 0;
+          }
+      };
+
+      template <>
+      struct cvodes_sens_rhs_impl<false> {
+        static int f(int ns, double t, N_Vector y, N_Vector ydot,
+                     N_Vector* ys, N_Vector* ysdot, void* user_data,
+                     N_Vector temp1, N_Vector temp2) {
+          return 0;
+        }
+      };
+
+      /**
+       * return a closure for CVODES sensitivity RHS callback using a
+       * non-capture lambda.
+       *
+       * @tparam Ode type of Ode
+       * @return RHS function for Cvodes
+       */
+      static int cvodes_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
+                                 N_Vector* ys, N_Vector* ysdot, void* user_data,
+                                 N_Vector temp1, N_Vector temp2) {
+        return cvodes_sens_rhs_impl<Ode::need_fwd_sens>::f(ns, t, y, ydot, ys, ysdot, user_data, temp1, temp2);
+      }
+
 
       void reset_sens_mem() {
         // if (sens_inited) {

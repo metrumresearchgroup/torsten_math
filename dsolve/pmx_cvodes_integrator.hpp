@@ -165,15 +165,21 @@ namespace dsolve {
         N_VConst(RCONST(0.0), ys[is]);
       }
 
+      // setup user_data
+      ode.serv.user_data.f = &ode.f();
+      ode.serv.user_data.theta_d = stan::math::value_of(ode.theta());
+      ode.serv.user_data.px_r = &ode.x_r();
+      ode.serv.user_data.px_i = &ode.x_i();
+      ode.serv.user_data.msgs = ode.msgs();
+
       try {
         CHECK_SUNDIALS_CALL(CVodeReInit(mem, ode.t0(), y));
         CHECK_SUNDIALS_CALL(CVodeSStolerances(mem, rtol_, atol_));
-        CHECK_SUNDIALS_CALL(CVodeSetUserData(mem, ode.to_user_data()));
         CHECK_SUNDIALS_CALL(CVodeSetMaxNumSteps(mem, max_num_steps_));
         CHECK_SUNDIALS_CALL(CVodeSetMaxErrTestFails(mem, 20));
         CHECK_SUNDIALS_CALL(CVodeSetMaxConvFails(mem, 20));
 #ifdef TORSTEN_CVS_JAC_AD
-        CHECK_SUNDIALS_CALL(CVDlsSetJacFn(mem, cvodes_jac<Ode>()));
+        CHECK_SUNDIALS_CALL(CVDlsSetJacFn(mem, ode.serv.user_data.cvodes_jac()));
 #endif
 
         /** if y0 is parameter, the first n sensitivity vector
@@ -181,7 +187,7 @@ namespace dsolve {
          **/
         if (Ode::need_fwd_sens) {
           if (Ode::is_var_y0) for (size_t i = 0; i < n; ++i) NV_Ith_S(ys[i], i) = 1.0;
-          CHECK_SUNDIALS_CALL(CVodeSensInit(mem, ode.ns(), CV_STAGGERED, cvodes_sens_rhs<Ode>(), ys));  // NOLINT
+          CHECK_SUNDIALS_CALL(CVodeSensReInit(mem, CV_STAGGERED, ys));
           CHECK_SUNDIALS_CALL(CVodeSensEEtolerances(mem));
         }
 
@@ -191,11 +197,11 @@ namespace dsolve {
         // sequential version.
         solve(ode, observer.y);
       } catch (const std::exception& e) {
-        CVodeSensFree(mem);
+        // CVodeSensFree(mem);
         throw;
       }
 
-      CVodeSensFree(mem);
+      // CVodeSensFree(mem);
 
       return observer.y;
     }

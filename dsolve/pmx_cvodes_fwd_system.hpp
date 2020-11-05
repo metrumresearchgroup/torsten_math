@@ -35,9 +35,9 @@ namespace torsten {
     public:
       using Ode = PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, cvodes_def<CSDA, Lmm, ism>>;
       static constexpr bool need_fwd_sens = Ode::is_var_y0 || Ode::is_var_par;
+      PMXOdeService<Ode>& serv;
     private:
       N_Vector* nv_ys_;
-      PMXOdeService<Ode>& serv_;
       std::vector<std::complex<double> >& yy_cplx_;
       std::vector<std::complex<double> >& theta_cplx_;
       std::vector<std::complex<double> >& fval_cplx_;
@@ -53,7 +53,7 @@ namespace torsten {
        * @param[in] msgs stream to which messages are printed
        */
       // template<typename PMXOdeService<Ode, Cvodes> >
-      PMXCvodesFwdSystem(PMXOdeService<Ode>& serv,
+      PMXCvodesFwdSystem(PMXOdeService<Ode>& serv0,
                          const F& f,
                          double t0,
                          const std::vector<Tts>& ts,
@@ -62,12 +62,12 @@ namespace torsten {
                          const std::vector<double>& x_r,
                          const std::vector<int>& x_i,
                          std::ostream* msgs) :
-        PMXCvodesSystem<F, Tts, Ty0, Tpar, cvodes_def<CSDA, Lmm, ism>>(serv, f, t0, ts, y0, theta, x_r, x_i, msgs),
-        nv_ys_(serv.nv_ys),
-        serv_(serv),
-        yy_cplx_(serv.yy_cplx),
-        theta_cplx_(serv.theta_cplx),
-        fval_cplx_(serv.fval_cplx)
+        PMXCvodesSystem<F, Tts, Ty0, Tpar, cvodes_def<CSDA, Lmm, ism>>(serv0, f, t0, ts, y0, theta, x_r, x_i, msgs),
+        nv_ys_(serv0.nv_ys),
+        serv(serv0),
+        yy_cplx_(serv0.yy_cplx),
+        theta_cplx_(serv0.theta_cplx),
+        fval_cplx_(serv0.fval_cplx)
       {}
 
       /**
@@ -90,7 +90,7 @@ namespace torsten {
       }
 
       void reset_sens_mem() {
-        serv_.reset_sens_mem();
+        serv.reset_sens_mem();
       }
 
       /**
@@ -148,9 +148,9 @@ namespace torsten {
     public:
       using Ode = PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, cvodes_def<AD, Lmm, ism>>;
       static constexpr bool need_fwd_sens = Ode::is_var_y0 || Ode::is_var_par;
+      PMXOdeService<Ode>& serv;
     private:
       N_Vector* nv_ys_;
-      PMXOdeService<Ode>& serv_;
     public:
       /**
        * Construct CVODES ODE system from initial condition and parameters
@@ -162,7 +162,7 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE
        * @param[in] msgs stream to which messages are printed
        */
-      PMXCvodesFwdSystem(PMXOdeService<Ode>& serv,
+      PMXCvodesFwdSystem(PMXOdeService<Ode>& serv0,
                            const F& f,
                            double t0,
                            const std::vector<Tts>& ts,
@@ -171,9 +171,9 @@ namespace torsten {
                            const std::vector<double>& x_r,
                            const std::vector<int>& x_i,
                            std::ostream* msgs) :
-        PMXCvodesSystem<F, Tts, Ty0, Tpar, cvodes_def<AD, Lmm, ism>>(serv, f, t0, ts, y0, theta, x_r, x_i, msgs),
-        serv_(serv),
-        nv_ys_(serv.nv_ys)
+        PMXCvodesSystem<F, Tts, Ty0, Tpar, cvodes_def<AD, Lmm, ism>>(serv0, f, t0, ts, y0, theta, x_r, x_i, msgs),
+        serv(serv0),
+        nv_ys_(serv0.nv_ys)
       {}
 
       /**
@@ -196,68 +196,68 @@ namespace torsten {
       }
 
       void reset_sens_mem() {
-        serv_.reset_sens_mem();
+        serv.reset_sens_mem();
       }
 
       /**
        * Calculate sensitivity rhs using CVODES vectors. The
        * internal workspace is allocated by @c PMXOdeService.
        */
-      void eval_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
-                         N_Vector* ys, N_Vector* ysdot,
-                         N_Vector temp1, N_Vector temp2) {
-        using stan::math::var;
-        using B = PMXCvodesSystem<F, Tts, Ty0, Tpar, cvodes_def<AD, Lmm, ism>>;
+      // void eval_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
+      //                    N_Vector* ys, N_Vector* ysdot,
+      //                    N_Vector temp1, N_Vector temp2) {
+      //   using stan::math::var;
+      //   using B = PMXCvodesSystem<F, Tts, Ty0, Tpar, cvodes_def<AD, Lmm, ism>>;
 
-        const int& n = B::N_;
-        const int& m = B::M_;
-        auto& f = B::f_;
-        const std::vector<double> & theta_dbl = B::theta_dbl_;
-        const std::vector<double> & x_r       = B::x_r_;
-        const std::vector<int>    & x_i       = B::x_i_;
-        std::ostream* msgs              = B::msgs_;
+      //   const int& n = B::N_;
+      //   const int& m = B::M_;
+      //   auto& f = B::f_;
+      //   const std::vector<double> & theta_dbl = B::theta_dbl_;
+      //   const std::vector<double> & x_r       = B::x_r_;
+      //   const std::vector<int>    & x_i       = B::x_i_;
+      //   std::ostream* msgs              = B::msgs_;
 
-        for (int i = 0; i < n; ++i) B::y_vec_[i] = NV_Ith_S(y, i);
+      //   for (int i = 0; i < n; ++i) B::y_vec_[i] = NV_Ith_S(y, i);
 
-        // initialize ysdot
-        for (int i = 0; i < ns; ++i) N_VConst(0.0, ysdot[i]);
+      //   // initialize ysdot
+      //   for (int i = 0; i < ns; ++i) N_VConst(0.0, ysdot[i]);
 
-        try {
-          stan::math::start_nested();
+      //   try {
+      //     stan::math::start_nested();
 
-          std::vector<var> yv_work(NV_DATA_S(y), NV_DATA_S(y) + n);
-          std::vector<var> theta_work(Ode::theta_dbl_.begin(), Ode::theta_dbl_.end()); // NOLINT
-          std::vector<var> fyv_work(B::is_var_par ?
-                                    f(t, yv_work, theta_work, x_r, x_i, msgs) :
-                                    f(t, yv_work, theta_dbl, x_r, x_i, msgs));
+      //     std::vector<var> yv_work(NV_DATA_S(y), NV_DATA_S(y) + n);
+      //     std::vector<var> theta_work(Ode::theta_dbl_.begin(), Ode::theta_dbl_.end()); // NOLINT
+      //     std::vector<var> fyv_work(B::is_var_par ?
+      //                               f(t, yv_work, theta_work, x_r, x_i, msgs) :
+      //                               f(t, yv_work, theta_dbl, x_r, x_i, msgs));
 
-          stan::math::check_size_match("PMXOdeintSystem", "dz_dt", fyv_work.size(), "states", n);
+      //     stan::math::check_size_match("PMXOdeintSystem", "dz_dt", fyv_work.size(), "states", n);
 
-          for (int j = 0; j < n; ++j) {
-            stan::math::set_zero_all_adjoints_nested();
-            fyv_work[j].grad();
+      //     for (int j = 0; j < n; ++j) {
+      //       stan::math::set_zero_all_adjoints_nested();
+      //       fyv_work[j].grad();
 
-            // df/dy*s_i term, for i = 1...ns
-            for (int i = 0; i < ns; ++i) {
-              auto ysp = N_VGetArrayPointer(ys[i]);
-              auto nvp = N_VGetArrayPointer(ysdot[i]);
-              for (int k = 0; k < n; ++k) nvp[j] += yv_work[k].adj() * ysp[k];
-            }
+      //       // df/dy*s_i term, for i = 1...ns
+      //       for (int i = 0; i < ns; ++i) {
+      //         auto ysp = N_VGetArrayPointer(ys[i]);
+      //         auto nvp = N_VGetArrayPointer(ysdot[i]);
+      //         for (int k = 0; k < n; ++k) nvp[j] += yv_work[k].adj() * ysp[k];
+      //       }
 
-            // df/dp_i term, for i = n...n+m-1
-            if (B::is_var_par) {
-              for (int i = 0; i < m; ++i) {
-                auto nvp = N_VGetArrayPointer(ysdot[ns - m + i]);
-                nvp[j] += theta_work[i].adj();
-              }
-            }
-          }
-        } catch (const std::exception& e) {
-          stan::math::recover_memory_nested();
-          throw;
-        }
-        stan::math::recover_memory_nested();
-      }
+      //       // df/dp_i term, for i = n...n+m-1
+      //       if (B::is_var_par) {
+      //         for (int i = 0; i < m; ++i) {
+      //           auto nvp = N_VGetArrayPointer(ysdot[ns - m + i]);
+      //           nvp[j] += theta_work[i].adj();
+      //         }
+      //       }
+      //     }
+      //   } catch (const std::exception& e) {
+      //     stan::math::recover_memory_nested();
+      //     throw;
+      //   }
+      //   stan::math::recover_memory_nested();
+      // }
     };
   }  // namespace dsolve
 }  // namespace torsten

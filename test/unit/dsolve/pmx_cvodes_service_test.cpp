@@ -50,28 +50,27 @@ struct Sho {
   static constexpr bool need_fwd_sens = false;
 };
 
-TEST_F(TorstenOdeTest_sho, service) {
-  using torsten::dsolve::PMXCvodesIntegrator;
-  using torsten::dsolve::PMXOdeService;
+// TEST_F(TorstenOdeTest_sho, service) {
+//   using torsten::dsolve::PMXCvodesIntegrator;
+//   using torsten::dsolve::PMXOdeService;
 
-  PMXOdeService<Sho<harm_osc_ode_fun> > serv(2, 1);
+//   PMXOdeService<Sho<harm_osc_ode_fun> > serv(2, 1);
 
-  size_t n = 2;
-  N_Vector& y = serv.nv_y;
-  double t1 = t0;
-  auto yy = stan::math::integrate_ode_adams(f, y0, t0,
-                                            ts, theta, x_r, x_i);
-  Sho<harm_osc_ode_fun> ode(theta, x_r, x_i, msgs);
-  void* user_data = static_cast<void*>(&ode);
-  for (int i = 0; i < 10; ++i) {
-    void* mem = serv.mem;
-    for (size_t i = 0; i < n; ++i) NV_Ith_S(y, i) = y0[i];
-    CHECK_SUNDIALS_CALL(CVodeReInit(mem, 0.0, y));
-    CHECK_SUNDIALS_CALL(CVodeSStolerances(mem, rtol, atol));
-    CHECK_SUNDIALS_CALL(CVodeSetUserData(mem, user_data));
-    CHECK_SUNDIALS_CALL(CVodeSetMaxNumSteps(mem, max_num_steps));
-    CHECK_SUNDIALS_CALL(CVode(mem, ts[0], y, &t1, CV_NORMAL));
+//   size_t n = 2;
+//   N_Vector& y = serv.nv_y;
+//   double t1 = t0;
+//   auto yy = stan::math::integrate_ode_adams(f, y0, t0, ts, theta, x_r, x_i);
+//   Sho<harm_osc_ode_fun> ode(theta, x_r, x_i, msgs);
+//   void* user_data = static_cast<void*>(&ode);
+//   for (int i = 0; i < 10; ++i) {
+//     void* mem = serv.mem;
+//     for (size_t i = 0; i < n; ++i) NV_Ith_S(y, i) = y0[i];
+//     CHECK_SUNDIALS_CALL(CVodeReInit(mem, 0.0, y));
+//     CHECK_SUNDIALS_CALL(CVodeSStolerances(mem, rtol, atol));
+//     CHECK_SUNDIALS_CALL(CVodeSetUserData(mem, user_data));
+//     CHECK_SUNDIALS_CALL(CVodeSetMaxNumSteps(mem, max_num_steps));
+//     CHECK_SUNDIALS_CALL(CVode(mem, ts[0], y, &t1, CV_NORMAL));
 
-    for (size_t i = 0; i < n; ++i) EXPECT_FLOAT_EQ(NV_Ith_S(y, i), yy[0][i]);
-  }
-}
+//     for (size_t i = 0; i < n; ++i) EXPECT_FLOAT_EQ(NV_Ith_S(y, i), yy[0][i]);
+//   }
+// }

@@ -75,14 +75,14 @@ namespace torsten {
        */
       template<typename ode_t>
       PMXCvodesSystem(PMXOdeService<ode_t>& serv,
-                       const F& f,
-                       double t0,
-                       const std::vector<Tts>& ts,
-                       const std::vector<Ty0>& y0,
-                       const std::vector<Tpar>& theta,
-                       const std::vector<double>& x_r,
-                       const std::vector<int>& x_i,
-                       std::ostream* msgs)
+                      const F& f,
+                      double t0,
+                      const std::vector<Tts>& ts,
+                      const std::vector<Ty0>& y0,
+                      const std::vector<Tpar>& theta,
+                      const std::vector<double>& x_r,
+                      const std::vector<int>& x_i,
+                      std::ostream* msgs)
         : f_(f),
           t0_(t0),
           ts_(ts),
@@ -285,8 +285,22 @@ namespace torsten {
       /**
        * return reference to ODE functor
        */
-      const F& f() { return f_; }
+      const F& f() const { return f_; }
+
+      const std::vector<double>& x_r() const {
+        return x_r_;
+      }
+
+      const std::vector<int>& x_i() const {
+        return x_i_;
+      }
+
+      std::ostream* msgs() const {
+        return msgs_;
+      }
     };
+
+
 
     // // TODO(yizhang): adjoint system construction
 
