@@ -477,7 +477,8 @@ namespace torsten {
         torsten::dsolve::pmx_ode_group_mpi_functor f(functor_id);
         switch(integ_id) {
         case 1 : {
-          using Ode = torsten::dsolve::PMXCvodesFwdSystem<torsten::dsolve::pmx_ode_group_mpi_functor, Tt, Ty, Tp, CV_ADAMS, AD>;
+          using Ode = torsten::dsolve::PMXCvodesFwdSystem<torsten::dsolve::pmx_ode_group_mpi_functor, Tt, Ty, Tp,
+                                                          torsten::dsolve::cvodes_def<TORSTEN_CV_SENS, CV_ADAMS, TORSTEN_CV_ISM>>;
           torsten::dsolve::PMXOdeService<Ode> serv(y0.size(), theta.size());
           Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, NULL};
           torsten::dsolve::PMXCvodesIntegrator solver(rtol, atol, max_num_step);
@@ -485,7 +486,8 @@ namespace torsten {
           break;
         }
         case 2 : {
-          using Ode = torsten::dsolve::PMXCvodesFwdSystem<torsten::dsolve::pmx_ode_group_mpi_functor, Tt, Ty, Tp, CV_BDF, AD>;
+          using Ode = torsten::dsolve::PMXCvodesFwdSystem<torsten::dsolve::pmx_ode_group_mpi_functor, Tt, Ty, Tp,
+                                                          torsten::dsolve::cvodes_def<TORSTEN_CV_SENS, CV_BDF, TORSTEN_CV_ISM>>;
           torsten::dsolve::PMXOdeService<Ode> serv(y0.size(), theta.size());
           Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, NULL};
           torsten::dsolve::PMXCvodesIntegrator solver(rtol, atol, max_num_step);

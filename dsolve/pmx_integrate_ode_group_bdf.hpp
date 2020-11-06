@@ -8,7 +8,7 @@
 namespace torsten {
   template <typename F, typename Tts, typename Ty0, typename Tpar>
   using PMXCvodesFwdSystem_bdf_ad =
-    dsolve::PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, dsolve::cvodes_def<AD, CV_BDF, CV_STAGGERED>>;
+    dsolve::PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, dsolve::cvodes_def<TORSTEN_CV_SENS, CV_BDF, TORSTEN_CV_ISM>>;
 
   /**
    * Solve population ODE model by delegating the population

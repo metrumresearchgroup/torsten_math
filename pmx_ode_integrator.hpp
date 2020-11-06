@@ -28,7 +28,7 @@ namespace torsten {
   using torsten::pmx_integrate_ode_bdf;
   using torsten::pmx_integrate_ode_rk45;
   using torsten::dsolve::PMXCvodesFwdSystem;
-  using torsten::dsolve::cvodes_def_staggered;
+  using torsten::dsolve::cvodes_def;
 
 #define DEF_STAN_INTEGRATOR(INT_NAME)                                                 \
   template <typename F, typename Tt, typename T_initial, typename T_param>            \
@@ -176,7 +176,7 @@ namespace torsten {
             const std::vector<T_param>& theta,
             const std::vector<double>& x_r,
             const std::vector<int>& x_i) const {
-      using Ode = PMXCvodesFwdSystem<F, Tt, T_initial, T_param, cvodes_def_staggered<AD, CV_BDF>>;
+      using Ode = PMXCvodesFwdSystem<F, Tt, T_initial, T_param, cvodes_def<TORSTEN_CV_SENS, CV_BDF, TORSTEN_CV_ISM>>;
       const int m = theta.size();
       const int n = y0.size();
 
@@ -215,7 +215,7 @@ namespace torsten {
             const std::vector<T_param>& theta,
             const std::vector<double>& x_r,
             const std::vector<int>& x_i) const {
-      using Ode = PMXCvodesFwdSystem<F, Tt, T_initial, T_param, cvodes_def_staggered<AD, CV_ADAMS>>;
+      using Ode = PMXCvodesFwdSystem<F, Tt, T_initial, T_param, cvodes_def<TORSTEN_CV_SENS, CV_ADAMS, TORSTEN_CV_ISM>>;
       const int m = theta.size();
       const int n = y0.size();
 

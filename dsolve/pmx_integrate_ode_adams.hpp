@@ -44,7 +44,7 @@ namespace torsten {
     dsolve::ode_check(y0, t0, ts, theta, x_r, x_i, caller);
 
     using Ode = dsolve::PMXCvodesFwdSystem<F, Tt, T_initial, T_param,
-                                           dsolve::cvodes_def<AD, CV_ADAMS, CV_STAGGERED>>;
+                                           dsolve::cvodes_def<TORSTEN_CV_SENS, CV_ADAMS, TORSTEN_CV_ISM>>;
     const int n = y0.size();
     const int m = theta.size();
 

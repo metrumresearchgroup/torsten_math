@@ -6,6 +6,14 @@
 #include <nvector/nvector_serial.h>
 #include <stan/math/torsten/cvodes_sens_method.hpp>
 
+#ifndef TORSTEN_CV_ISM
+#define TORSTEN_CV_ISM CV_STAGGERED
+#endif
+
+#ifndef TORSTEN_CV_SENS
+#define TORSTEN_CV_SENS AD
+#endif
+
 namespace torsten {
   namespace dsolve {
 
@@ -19,10 +27,6 @@ namespace torsten {
       static constexpr int cv_lmm = Lmm; 
       static constexpr int cv_ism = ism; 
     };
-
-    template<PMXCvodesSensMethod Sm, int Lmm>
-    using cvodes_def_staggered = cvodes_def<Sm, Lmm, CV_STAGGERED>;
-
   }
 }
 

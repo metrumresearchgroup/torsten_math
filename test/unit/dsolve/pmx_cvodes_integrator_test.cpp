@@ -115,7 +115,7 @@ TEST_F(TorstenOdeTest_lorenz, t0_var) {
 TEST_F(TorstenOdeTest_sho, cvodes_ivp_system_csda) {
   PMXCvodesIntegrator solver(rtol, atol, 1000);
 
-  using Ode1 = PMXCvodesFwdSystem<F, double, double, double, cvodes_def_staggered<CSDA, CV_BDF>>;
+  using Ode1 = PMXCvodesFwdSystem<F, double, double, double, cvodes_def<CSDA, CV_BDF, CV_STAGGERED>>;
   
   PMXOdeService<Ode1> s1(2, 1);
   Ode1 ode{s1, f, t0, ts, y0, theta, x_r, x_i, msgs};
@@ -129,7 +129,7 @@ TEST_F(TorstenOdeTest_sho, cvodes_ivp_system_csda) {
   y = torsten::pmx_integrate_ode_bdf(f, y0, t0, ts, theta , x_r, x_i);
   torsten::test::test_val(y, y1);
 
-  using Ode2 = PMXCvodesFwdSystem<F, double, double, double, cvodes_def_staggered<CSDA, CV_ADAMS>>;
+  using Ode2 = PMXCvodesFwdSystem<F, double, double, double, cvodes_def<CSDA, CV_ADAMS, CV_STAGGERED>>;
   PMXOdeService<Ode2> s2(2, 1);
   Ode2 ode2{s2, f, t0, ts, y0, theta, x_r, x_i, msgs};
   y = solver.integrate(ode2);
@@ -145,7 +145,7 @@ TEST_F(TorstenOdeTest_sho, cvodes_ivp_system_csda) {
 TEST_F(TorstenOdeTest_lorenz, cvodes_ivp_system) {
   PMXCvodesIntegrator solver(rtol, atol, max_num_steps);
 
-  using Ode1 = PMXCvodesFwdSystem<F, double, double, double, cvodes_def_staggered<AD, CV_BDF>>;
+  using Ode1 = PMXCvodesFwdSystem<F, double, double, double, cvodes_def<AD, CV_BDF, CV_STAGGERED>>;
   
   PMXOdeService<typename Ode1::Ode> s1(3, 3);
   Ode1 ode{s1, f, t0, ts, y0, theta, x_r, x_i, msgs};
@@ -159,7 +159,7 @@ TEST_F(TorstenOdeTest_lorenz, cvodes_ivp_system) {
   y = torsten::pmx_integrate_ode_bdf(f, y0, t0, ts, theta , x_r, x_i);
   torsten::test::test_val(y, y1);
 
-  using Ode2 = PMXCvodesFwdSystem<F, double, double, double, cvodes_def_staggered<AD, CV_ADAMS>>;
+  using Ode2 = PMXCvodesFwdSystem<F, double, double, double, cvodes_def<AD, CV_ADAMS, CV_STAGGERED>>;
   
   PMXOdeService<typename Ode2::Ode> s2(3, 3);
   Ode2 ode2{s2, f, t0, ts, y0, theta, x_r, x_i, msgs};
@@ -178,8 +178,8 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_CSDA) {
   std::vector<var> theta_var = stan::math::to_var(theta);
 
   std::vector<std::vector<var> > y_a, y_b, y1, y2;
-  using Ode1 = PMXCvodesFwdSystem<F, double, double, var, cvodes_def_staggered<CSDA, CV_ADAMS>>;
-  using Ode2 = PMXCvodesFwdSystem<F, double, double, var, cvodes_def_staggered<CSDA, CV_BDF>>;
+  using Ode1 = PMXCvodesFwdSystem<F, double, double, var, cvodes_def<CSDA, CV_ADAMS, CV_STAGGERED>>;
+  using Ode2 = PMXCvodesFwdSystem<F, double, double, var, cvodes_def<CSDA, CV_BDF, CV_STAGGERED>>;
   
   PMXOdeService<typename Ode1::Ode> s1(3, 3);
   PMXOdeService<typename Ode2::Ode> s2(3, 3);
@@ -205,8 +205,8 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_AD) {
   std::vector<var> theta_var = stan::math::to_var(theta);
 
   std::vector<std::vector<var> > y_a, y_b, y1, y2;
-  using Ode1 = PMXCvodesFwdSystem<F, double, double, var, cvodes_def_staggered<AD, CV_ADAMS>>;
-  using Ode2 = PMXCvodesFwdSystem<F, double, double, var, cvodes_def_staggered<AD, CV_BDF>>;
+  using Ode1 = PMXCvodesFwdSystem<F, double, double, var, cvodes_def<AD, CV_ADAMS, CV_STAGGERED>>;
+  using Ode2 = PMXCvodesFwdSystem<F, double, double, var, cvodes_def<AD, CV_BDF, CV_STAGGERED>>;
   
   PMXOdeService<Ode1> s1(3, 3);
   PMXOdeService<Ode2> s2(3, 3);
@@ -237,8 +237,8 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_y0_CSDA) {
   std::vector<var> y0_var = stan::math::to_var(y0);
 
   std::vector<std::vector<var> > y_a, y_b, y1, y2;
-  using Ode1 = PMXCvodesFwdSystem<F, double, var, double, cvodes_def_staggered<CSDA, CV_ADAMS>>;
-  using Ode2 = PMXCvodesFwdSystem<F, double, var, double, cvodes_def_staggered<CSDA, CV_BDF>>;
+  using Ode1 = PMXCvodesFwdSystem<F, double, var, double, cvodes_def<CSDA, CV_ADAMS, CV_STAGGERED>>;
+  using Ode2 = PMXCvodesFwdSystem<F, double, var, double, cvodes_def<CSDA, CV_BDF, CV_STAGGERED>>;
   
   PMXOdeService<typename Ode1::Ode> s1(3, 3);
   PMXOdeService<typename Ode2::Ode> s2(3, 3);
@@ -264,8 +264,8 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_y0_AD) {
   std::vector<var> y0_var = stan::math::to_var(y0);
 
   std::vector<std::vector<var> > y_a, y_b, y1, y2;
-  using Ode1 = PMXCvodesFwdSystem<F, double, var, double, cvodes_def_staggered<AD, CV_ADAMS>>;
-  using Ode2 = PMXCvodesFwdSystem<F, double, var, double, cvodes_def_staggered<AD, CV_BDF>>;
+  using Ode1 = PMXCvodesFwdSystem<F, double, var, double, cvodes_def<AD, CV_ADAMS, CV_STAGGERED>>;
+  using Ode2 = PMXCvodesFwdSystem<F, double, var, double, cvodes_def<AD, CV_BDF, CV_STAGGERED>>;
   
   PMXOdeService<Ode1> s1(3, 3);
   PMXOdeService<Ode2> s2(3, 3);
@@ -297,8 +297,8 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_y0) {
   std::vector<var> y0_var = stan::math::to_var(y0);
 
   std::vector<std::vector<var> > y_a, y_b, y1, y2;
-  using Ode1 = PMXCvodesFwdSystem<F, double, var, var, cvodes_def_staggered<AD, CV_ADAMS>>;
-  using Ode2 = PMXCvodesFwdSystem<F, double, var, var, cvodes_def_staggered<AD, CV_BDF>>;
+  using Ode1 = PMXCvodesFwdSystem<F, double, var, var, cvodes_def<AD, CV_ADAMS, CV_STAGGERED>>;
+  using Ode2 = PMXCvodesFwdSystem<F, double, var, var, cvodes_def<AD, CV_BDF, CV_STAGGERED>>;
   
   PMXOdeService<typename Ode1::Ode> s1(3, 3);
   PMXOdeService<typename Ode2::Ode> s2(3, 3);
@@ -335,8 +335,8 @@ TEST_F(TorstenOdeTest_sho, fwd_sensitivity_theta) {
   std::vector<var> theta_var = stan::math::to_var(theta);
 
   std::vector<std::vector<var> > y_a, y_b, y1, y2;
-  using Ode1 = PMXCvodesFwdSystem<F, double, double, var, cvodes_def_staggered<AD, CV_ADAMS>>;
-  using Ode2 = PMXCvodesFwdSystem<F, double, double, var, cvodes_def_staggered<AD, CV_BDF>>;
+  using Ode1 = PMXCvodesFwdSystem<F, double, double, var, cvodes_def<AD, CV_ADAMS, CV_STAGGERED>>;
+  using Ode2 = PMXCvodesFwdSystem<F, double, double, var, cvodes_def<AD, CV_BDF, CV_STAGGERED>>;
   
   PMXOdeService<typename Ode1::Ode> s1(2, 1);
   PMXOdeService<typename Ode2::Ode> s2(2, 1);
@@ -367,8 +367,8 @@ TEST_F(TorstenOdeTest_sho, fwd_sensitivity_y0) {
   std::vector<var> y0_var = stan::math::to_var(y0);
 
   std::vector<std::vector<var> > y_a, y_b, y1, y2;
-  using Ode1 = PMXCvodesFwdSystem<F, double, var, double, cvodes_def_staggered<AD, CV_ADAMS>>;
-  using Ode2 = PMXCvodesFwdSystem<F, double, var, double, cvodes_def_staggered<AD, CV_BDF>>;
+  using Ode1 = PMXCvodesFwdSystem<F, double, var, double, cvodes_def<AD, CV_ADAMS, CV_STAGGERED>>;
+  using Ode2 = PMXCvodesFwdSystem<F, double, var, double, cvodes_def<AD, CV_BDF, CV_STAGGERED>>;
   
   PMXOdeService<typename Ode1::Ode> s1(2, 1);
   PMXOdeService<typename Ode2::Ode> s2(2, 1);
@@ -400,7 +400,7 @@ TEST_F(TorstenOdeTest_sho, fwd_sensitivity_ts) {
   std::vector<var> ts_var = stan::math::to_var(ts);
 
   std::vector<std::vector<var> > y, y1, y2;
-  using Ode = PMXCvodesFwdSystem<F, var, double, double, cvodes_def_staggered<AD, CV_ADAMS>>;
+  using Ode = PMXCvodesFwdSystem<F, var, double, double, cvodes_def<AD, CV_ADAMS, CV_STAGGERED>>;
   PMXOdeService<typename Ode::Ode> s(2, 1);
   Ode ode(s, f, t0, ts_var, y0, theta, x_r, x_i, msgs);
   y = solver.integrate(ode);
@@ -429,7 +429,7 @@ TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_ts) {
   std::vector<var> ts_var = stan::math::to_var(ts);
 
   std::vector<std::vector<var> > y, y1, y2;
-  using Ode = PMXCvodesFwdSystem<F, var, double, double, cvodes_def_staggered<AD, CV_BDF>>;
+  using Ode = PMXCvodesFwdSystem<F, var, double, double, cvodes_def<AD, CV_BDF, CV_STAGGERED>>;
   PMXOdeService<typename Ode::Ode> s(3, 3);
   Ode ode(s, f, t0, ts_var, y0, theta, x_r, x_i, msgs);
   y = solver.integrate(ode);
@@ -457,8 +457,8 @@ TEST_F(TorstenOdeTest_sho, fwd_sensitivity_theta_y0) {
   std::vector<var> y0_var = stan::math::to_var(y0);
 
   std::vector<std::vector<var> > y_a, y_b, y1, y2;
-  using Ode1 = PMXCvodesFwdSystem<F, double, var, var, cvodes_def_staggered<AD, CV_ADAMS>>;
-  using Ode2 = PMXCvodesFwdSystem<F, double, var, var, cvodes_def_staggered<AD, CV_BDF>>;
+  using Ode1 = PMXCvodesFwdSystem<F, double, var, var, cvodes_def<AD, CV_ADAMS, CV_STAGGERED>>;
+  using Ode2 = PMXCvodesFwdSystem<F, double, var, var, cvodes_def<AD, CV_BDF, CV_STAGGERED>>;
   
   PMXOdeService<typename Ode1::Ode> s1(2, 1);
   PMXOdeService<typename Ode2::Ode> s2(2, 1);
@@ -499,7 +499,7 @@ TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_theta_y0_ts) {
   std::vector<var> ts_var = stan::math::to_var(ts);
 
   std::vector<std::vector<var> > y, y1, y2;
-  using Ode = PMXCvodesFwdSystem<F, var, var, var, cvodes_def_staggered<AD, CV_ADAMS>>;
+  using Ode = PMXCvodesFwdSystem<F, var, var, var, cvodes_def<AD, CV_ADAMS, CV_STAGGERED>>;
   PMXOdeService<typename Ode::Ode> s(3, 3);
   Ode ode(s, f, t0, ts_var, y0_var, theta_var, x_r, x_i, msgs);
   y = solver.integrate(ode);
@@ -534,7 +534,7 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_y0_ts) {
   std::vector<var> ts_var = stan::math::to_var(ts);
 
   std::vector<std::vector<var> > y, y1, y2;
-  using Ode = PMXCvodesFwdSystem<F, var, var, var, cvodes_def_staggered<AD, CV_BDF>>;
+  using Ode = PMXCvodesFwdSystem<F, var, var, var, cvodes_def<AD, CV_BDF, CV_STAGGERED>>;
   PMXOdeService<typename Ode::Ode> s(3, 3);
   Ode ode(s, f, t0, ts_var, y0_var, theta_var, x_r, x_i, msgs);
   y = solver.integrate(ode);
@@ -569,7 +569,7 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_y0_ts) {
   std::vector<var> ts_var = stan::math::to_var(ts);
 
   std::vector<std::vector<var> > y, y1, y2;
-  using Ode = PMXCvodesFwdSystem<F, var, var, double, cvodes_def_staggered<AD, CV_BDF>>;
+  using Ode = PMXCvodesFwdSystem<F, var, var, double, cvodes_def<AD, CV_BDF, CV_STAGGERED>>;
   PMXOdeService<typename Ode::Ode> s(3, 3);
   Ode ode(s, f, t0, ts_var, y0_var, theta, x_r, x_i, msgs);
   y = solver.integrate(ode);
@@ -602,7 +602,7 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_ts) {
   std::vector<var> ts_var = stan::math::to_var(ts);
 
   std::vector<std::vector<var> > y, y1, y2;
-  using Ode = PMXCvodesFwdSystem<F, var, double, var, cvodes_def_staggered<AD, CV_BDF>>;
+  using Ode = PMXCvodesFwdSystem<F, var, double, var, cvodes_def<AD, CV_BDF, CV_STAGGERED>>;
   PMXOdeService<typename Ode::Ode> s(3, 3);
   Ode ode(s, f, t0, ts_var, y0, theta_var, x_r, x_i, msgs);
   y = solver.integrate(ode);
@@ -635,7 +635,7 @@ TEST_F(TorstenOdeTest_sho, fwd_sensitivity_theta_ts) {
   std::vector<var> ts_var = stan::math::to_var(ts);
 
   std::vector<std::vector<var> > y, y1, y2;
-  using Ode = PMXCvodesFwdSystem<F, var, double, var, cvodes_def_staggered<AD, CV_BDF>>;
+  using Ode = PMXCvodesFwdSystem<F, var, double, var, cvodes_def<AD, CV_BDF, CV_STAGGERED>>;
   PMXOdeService<typename Ode::Ode> s(2, 1);
   Ode ode(s, f, t0, ts_var, y0, theta_var, x_r, x_i, msgs);
   y = solver.integrate(ode);
