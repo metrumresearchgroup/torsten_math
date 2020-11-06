@@ -165,12 +165,7 @@ namespace dsolve {
         N_VConst(RCONST(0.0), ys[is]);
       }
 
-      // setup user_data
-      ode.serv.user_data.f = &ode.f();
-      ode.serv.user_data.theta_d = stan::math::value_of(ode.theta());
-      ode.serv.user_data.px_r = &ode.x_r();
-      ode.serv.user_data.px_i = &ode.x_i();
-      ode.serv.user_data.msgs = ode.msgs();
+      ode.set_user_data(ode.serv);
 
       try {
         CHECK_SUNDIALS_CALL(CVodeReInit(mem, ode.t0(), y));
@@ -187,7 +182,7 @@ namespace dsolve {
          **/
         if (Ode::need_fwd_sens) {
           if (Ode::is_var_y0) for (size_t i = 0; i < n; ++i) NV_Ith_S(ys[i], i) = 1.0;
-          CHECK_SUNDIALS_CALL(CVodeSensReInit(mem, CV_STAGGERED, ys));
+          CHECK_SUNDIALS_CALL(CVodeSensReInit(mem, Ode::ism_type, ys));
           CHECK_SUNDIALS_CALL(CVodeSensEEtolerances(mem));
         }
 

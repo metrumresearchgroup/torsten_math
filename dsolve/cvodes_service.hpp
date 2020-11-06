@@ -62,8 +62,6 @@ namespace torsten {
         }
       }
 
-
-
       /**
        * Calculate sensitivity rhs using CVODES vectors. The
        * internal workspace is allocated by @c PMXOdeService.
@@ -219,14 +217,12 @@ namespace torsten {
         /*
          * initialize cvodes system and attach linear solver
          */ 
-        // CHECK_SUNDIALS_CALL(CVodeInit(mem, cvodes_rhs<Ode>(), t0, nv_y));
         CHECK_SUNDIALS_CALL(CVodeInit(mem, cvodes_rhs, t0, nv_y));
         CHECK_SUNDIALS_CALL(CVodeSetUserData(mem, static_cast<void*>(&user_data)));
         CHECK_SUNDIALS_CALL(CVDlsSetLinearSolver(mem, LS, A));
 
         if (Ode::need_fwd_sens) {
-          // std::cout << "taki test: " << "init" << "\n";
-          CHECK_SUNDIALS_CALL(CVodeSensInit(mem, user_data.ns, CV_STAGGERED, cvodes_sens_rhs, nv_ys)); 
+          CHECK_SUNDIALS_CALL(CVodeSensInit(mem, user_data.ns, Ode::ism_type, cvodes_sens_rhs, nv_ys)); 
         }
       }
 
@@ -279,18 +275,6 @@ namespace torsten {
                                  N_Vector* ys, N_Vector* ysdot, void* user_data,
                                  N_Vector temp1, N_Vector temp2) {
         return cvodes_sens_rhs_impl<Ode::need_fwd_sens>::f(ns, t, y, ydot, ys, ysdot, user_data, temp1, temp2);
-      }
-
-
-      void reset_sens_mem() {
-        // if (sens_inited) {
-        //   std::cout << "taki test: " << 2 << "\n";
-        //   CHECK_SUNDIALS_CALL(CVodeSensReInit(mem, CV_STAGGERED, nv_ys));
-        // } else {
-        //   std::cout << "taki test: " << 1 << "\n";
-        //   CHECK_SUNDIALS_CALL(CVodeSensInit(mem, ns, CV_STAGGERED, cvodes_sens_rhs<Ode>(), nv_ys));          
-        //   sens_inited = true;
-        // }
       }
     };
 

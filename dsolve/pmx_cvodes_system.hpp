@@ -43,6 +43,7 @@ namespace torsten {
       const size_t ns_;  // nb. of sensi params
       const size_t size_;  // nb. of sensi params
       N_Vector& nv_y_;
+      N_Vector* nv_ys_;
       std::vector<double>& y_vec_;
       std::vector<double>& fval_;
       void* mem_;
@@ -53,6 +54,7 @@ namespace torsten {
       static constexpr bool is_var_par = stan::is_var<Tpar>::value;
       static constexpr bool need_fwd_sens = is_var_y0 || is_var_par;
       static constexpr int lmm_type = cv_def::cv_lmm;
+      static constexpr int ism_type = cv_def::cv_ism;
 
       // when ts is param, we don't have to do fwd
       // sensitivity by solving extra ODEs, because in this
@@ -97,6 +99,7 @@ namespace torsten {
           ns_((is_var_y0 ? N_ : 0) + (is_var_par ? M_ : 0)),
           size_(serv.user_data.fwd_ode_dim),
           nv_y_(serv.nv_y),
+          nv_ys_(serv.nv_ys),
           y_vec_(serv.user_data.y),
           fval_(serv.user_data.fval),
           mem_(serv.mem),
@@ -248,11 +251,6 @@ namespace torsten {
       }
 
       /**
-       * return current @c y_vec(). We also use it for workspace.
-       */
-      std::vector<double>& y_vec() { return y_vec_; }
-
-      /**
        * return current RHS evaluation.
        */
       const std::vector<double>& fval() { return fval_; }
@@ -287,20 +285,26 @@ namespace torsten {
        */
       const F& f() const { return f_; }
 
-      const std::vector<double>& x_r() const {
-        return x_r_;
-      }
+      /**
+       * return N_Vector pointer array of sensitivity
+       */
+      N_Vector* nv_ys() { return nv_ys_; }
 
-      const std::vector<int>& x_i() const {
-        return x_i_;
-      }
-
-      std::ostream* msgs() const {
-        return msgs_;
+      /** 
+       * Set user_data items using runtime ODE info, so that when <code>user_data</code>
+       * is passed in runtime functions it provides correct context.
+       *
+       * @param serv <code>cvodes_serv</code> object that stores <code>user_data</code>
+       */
+      template<typename ode_t>
+      void set_user_data(PMXOdeService<ode_t>& serv) {
+        serv.user_data.f = &this -> f_;
+        serv.user_data.theta_d = stan::math::value_of(theta_);
+        serv.user_data.px_r = &this -> x_r_;
+        serv.user_data.px_i = &this -> x_i_;
+        serv.user_data.msgs = msgs_;
       }
     };
-
-
 
     // // TODO(yizhang): adjoint system construction
 
