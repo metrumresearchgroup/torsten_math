@@ -113,8 +113,7 @@ namespace torsten {
       using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<Ts...> >>;
       const ER events_rec(model_t<T4>::Ncmt, time, amt, rate, ii, evid, cmt, addl, ss);
 
-      Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
-        Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
+      Matrix<typename EM::T_scalar, -1, -1> pred(EM::nCmt(events_rec), events_rec.num_event_times());
 
       using model_type = model_t<typename EM::T_par>;
       EventSolver<model_type, EM> pr;

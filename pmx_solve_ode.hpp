@@ -127,8 +127,7 @@ bool constexpr last_is_ostream_ptr<> = false;
       using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6> >>;
       const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
 
-      Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
-        Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
+      Matrix<typename EM::T_scalar, -1, -1> pred(EM::nCmt(events_rec), events_rec.num_event_times());
 
       using model_type = torsten::PKODEModel<typename EM::T_par, F>;
 
@@ -244,8 +243,7 @@ bool constexpr last_is_ostream_ptr<> = false;
       using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<T5>>>;
       const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
 
-      Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
-        Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
+      Matrix<typename EM::T_scalar, -1, -1> pred(EM::nCmt(events_rec), events_rec.num_event_times());
 
       using model_type = torsten::PKODEModel<typename EM::T_par, F>;
 
@@ -357,8 +355,7 @@ bool constexpr last_is_ostream_ptr<> = false;
       using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<>>>;
       const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
 
-      Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
-        Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
+      Matrix<typename EM::T_scalar, -1, -1> pred(EM::nCmt(events_rec), events_rec.num_event_times());
 
       using model_type = torsten::PKODEModel<typename EM::T_par, F>;
 
@@ -473,8 +470,7 @@ bool constexpr last_is_ostream_ptr<> = false;
       using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6>, double>>;
       const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
 
-      Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
-        Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
+      Matrix<typename EM::T_scalar, -1, -1> pred(EM::nCmt(events_rec), events_rec.num_event_times());
 
       using model_type = torsten::PKODEModel<typename EM::T_par, F>;
 
@@ -599,8 +595,7 @@ bool constexpr last_is_ostream_ptr<> = false;
       using EM = EventsManager<ER, NonEventParameters<T0, T4, std::vector, std::tuple<T5, T6>, double, int>>;
       const ER events_rec(nCmt, time, amt, rate, ii, evid, cmt, addl, ss);
 
-      Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
-        Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
+      Matrix<typename EM::T_scalar, -1, -1> pred(EM::nCmt(events_rec), events_rec.num_event_times());
 
       using model_type = torsten::PKODEModel<typename EM::T_par, F>;
 

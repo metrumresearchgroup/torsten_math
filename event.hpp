@@ -8,15 +8,30 @@
 #include<vector>
 
 namespace torsten {
+  /** 
+   * An event that affects dynamical system defined by the ODEs,
+   * transplated from PKPD(NONMEM) inputs
+   * 
+   * @param id event id, translated from EVID and mrgsolve's def
+   *    0. observation
+   *    1. reset
+   *    2. reset + evolve
+   *    3. ovsteady state
+   *    4. reset + steady state
+   *    5. reset a single cmt
+   *    6. overwrite a single cmt
+   * @param t0 previous time
+   * @param t1 current time(event time/solution time)
+   * @param ii steady state solution interval
+   * @param jump impulsive/discontinuous forcing corresponding to bolus dosing
+   * @param force continous forcing corresponding to infusion dosing
+   * @param force0 continous forcing corresponding to infusion dosing
+   * @param cmt equation on which forcing is imposed, corresponding to dosing cmt
+   * 
+   */
   template<typename time_t, typename ii_t, typename jump_t, typename force_t, typename force0_t>
   struct Event {
     /// event id:
-    /// 0. observation
-    /// 1. reset
-    /// 2. reset + evolve
-    /// 3. ovsteady state
-    /// 4. reset + steady state
-    /// 5. reset a single cmt
     const int id;
     time_t t0;
     time_t t1;
@@ -43,31 +58,31 @@ namespace torsten {
       const double eps = 1.0E-12;
       const jump_t jp = force0 < eps ? jump(std::abs(cmt) - 1) : 0.0;
       switch(id) {
-      case 1:
+      case 1:                   // EVID=3: reset
         y.setZero();
         break;
-      case 2:
+      case 2:                   // EVID=4, transient
         y.setZero();
-        model.solve(y, t0, t1, force, integ);
+        // model.solve(y, t0, t1, force, integ);
         y(cmt - 1) += jp;
         break;
-      case 3:
+      case 3:                   // EVID=1, SS=2(overlay)
         y += T(1.0) * model.solve(value_of(t1), jump(cmt - 1), force0, ii, cmt, integ);
         y(cmt - 1) += jp;
         break;
-      case 4:
+      case 4:                   // EVID=1, SS=1(overwrite) or EVID=4, SS=1 or 2
         y = T(1.0) * model.solve(value_of(t1), jump(cmt - 1), force0, ii, cmt, integ);
         y(cmt - 1) += jp;
         break;
-      case 5:
+      case 5:                   // EVID=2, turn-off/reset a cmt
         model.solve(y, t0, t1, force, integ);
         y(-cmt - 1) = 0;        // NONMEN: negative "cmt" indicates turn-off/reset
         break;
-      case 6:
+      case 6:                   // mrgsolve's EVID=9, overwrite a cmt
         model.solve(y, t0, t1, force, integ);
         y(cmt - 1) = jp;
         break;
-      default:
+      default:                  // EVID=1, transient dosing
         model.solve(y, t0, t1, force, integ);
         y(cmt - 1) += jp;
       }
