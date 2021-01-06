@@ -48,7 +48,7 @@ TEST_F(TorstenTwoCptModelTest, linode_rate_var) {
   torsten::PKRec<var> y1(to_var(y0)), y2(to_var(y0));
   model1.solve_analytical(y1, t0, ts[0], rate_var);
   model2.solve(y2, t0, ts[0], rate_var);
-  torsten::test::test_grad(rate_var, y1, y2, 1e-12, 1e-10);
+  torsten::test::test_grad(rate_var, y1, y2, 1.5e-12, 1e-10);
 }
 
 TEST_F(TorstenTwoCptModelTest, linode_par_var) {
@@ -63,7 +63,7 @@ TEST_F(TorstenTwoCptModelTest, linode_par_var) {
   torsten::PKRec<var> y1(to_var(y0)), y2(to_var(y0));
   model1.solve_analytical(y1, t0, ts[0], rate);
   model2.solve(y2, t0, ts[0], rate);
-  torsten::test::test_grad(par_var, y1, y2, 1e-12, 1e-10);
+  torsten::test::test_grad(par_var, y1, y2, 1.5e-12, 1e-10);
 }
 
 TEST_F(TorstenTwoCptModelTest, linode_solver) {

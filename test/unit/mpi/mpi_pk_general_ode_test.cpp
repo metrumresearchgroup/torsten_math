@@ -701,7 +701,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, domain_error) {
                                               theta_m, biovar_m, tlag_m,
                                               rtol, atol, max_num_steps),
                    std::domain_error,
-                   "bioavailability[4] is -1, but must be >= 0");
+                   "bioavailability[4] is -1, but must be nonnegative!");
 #ifdef TORSTEN_MPI
   MPI_Barrier(comm);
 #endif

@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_CVODES_SERVICE_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_CVODES_SERVICE_HPP
 
+#include <stan/math/rev/core/recover_memory.hpp>
 #include <stan/math/rev/meta/is_var.hpp>
 #include <stan/math/torsten/dsolve/sundials_check.hpp>
 #include <stan/math/torsten/dsolve/cvodes_rhs.hpp>

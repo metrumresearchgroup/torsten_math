@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_PMX_ODEINT_SYSTEM_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_PMX_ODEINT_SYSTEM_HPP
 
+#include <stan/math/rev/core/recover_memory.hpp>
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
 #include <stan/math/torsten/dsolve/ode_forms.hpp>
 #include <stan/math/prim/meta/return_type.hpp>

@@ -1,6 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_MODEL_SOLVE_D_HPP
 #define STAN_MATH_TORSTEN_MODEL_SOLVE_D_HPP
 
+#include <stan/math/rev/core/recover_memory.hpp>
 #include <stan/math/torsten/torsten_def.hpp>
 #include <stan/math/torsten/val_and_grad_nested.hpp>
 #include <stan/math/torsten/pmx_ode_integrator.hpp>

@@ -1,10 +1,7 @@
 #ifndef STAN_MATH_TORSTEN_MPI_PRECOMPUTED_GRADIENTS_HPP
 #define STAN_MATH_TORSTEN_MPI_PRECOMPUTED_GRADIENTS_HPP
 
-#include <stan/math/rev/fun/typedefs.hpp>
-
 namespace torsten {
-
   /*
    * @tparam Ty @c vector type, can be either std::vector or eigen::vector
    */
