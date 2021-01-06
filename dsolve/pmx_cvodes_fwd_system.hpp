@@ -3,7 +3,6 @@
 
 #include <stan/math/prim/err/check_size_match.hpp>
 #include <stan/math/torsten/dsolve/pmx_cvodes_system.hpp>
-#include <stan/math/torsten/dsolve/cvodes_sens_rhs.hpp>
 #include <stan/math/torsten/pmx_csda.hpp>
 #include <stan/math/torsten/cvodes_sens_method.hpp>
 #include <stan/math/torsten/dsolve/cvodes_def.hpp>

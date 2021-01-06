@@ -5,7 +5,6 @@
 #include <stan/math/prim/fun/value_of.hpp>
 #include <stan/math/torsten/dsolve/pmx_cvodes_fwd_system.hpp>
 #include <stan/math/torsten/dsolve/sundials_check.hpp>
-#include <stan/math/torsten/dsolve/cvodes_jac.hpp>
 #include <type_traits>
 
 namespace torsten {
@@ -280,7 +279,7 @@ namespace dsolve {
 
     for (size_t i = 0; i < ts.size(); ++i) {
       CHECK_SUNDIALS_CALL(CVode(mem, ts[i].val(), y, &t1, CV_NORMAL));
-      ode.eval_rhs(t1, y);
+      ode.serv.user_data.eval_rhs(t1, y);
       for (size_t j = 0; j < ode.n(); ++j) {
         g[i] = ode.fval()[j];
         // FIXME: use ts[i] instead of ts
@@ -320,7 +319,7 @@ namespace dsolve {
       CHECK_SUNDIALS_CALL(CVode(mem, ts[i].val(), y, &t1, CV_NORMAL));
       res_y.block(0, i, n, 1) = Eigen::VectorXd::Map(NV_DATA_S(y), n);
 
-      ode.eval_rhs(t1, y);
+      ode.serv.user_data.eval_rhs(t1, y);
       res_y.block(n + i * n, i, n, 1) = Eigen::VectorXd::Map(ode.fval().data(), n);
     }
   }
@@ -504,7 +503,7 @@ namespace dsolve {
         CHECK_SUNDIALS_CALL(CVodeGetSens(mem, &t1, ys));
         for (size_t k = 0; k < n; ++k) {
           for (size_t j = 0; j < ns; ++j) g[j] = NV_Ith_S(ys[j], k);
-          ode.eval_rhs(time, y);
+          ode.serv.user_data.eval_rhs(t1, y);
           g[i + ns] = ode.fval()[k];
           res_y[i][k] = precomputed_gradients(NV_Ith_S(y, k), vars, g);
           g[i + ns] = 0.0;
@@ -543,7 +542,7 @@ namespace dsolve {
         res_y.block(n + j * n, i, n, 1) = Eigen::VectorXd::Map(NV_DATA_S(ys[j]), n);
       }
 
-      ode.eval_rhs(t1, y);
+      ode.serv.user_data.eval_rhs(t1, y);
       res_y.block(n + (i + ns) * n, i, n, 1) = Eigen::VectorXd::Map(ode.fval().data(), n);      
     }
   }

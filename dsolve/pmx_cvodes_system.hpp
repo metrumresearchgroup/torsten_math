@@ -168,59 +168,6 @@ namespace torsten {
       N_Vector& nv_y() { return nv_y_; }
 
       /**
-       * evaluate RHS function using current state, store
-       * the result in internal @c fval_
-       */
-      inline void eval_rhs(double t, N_Vector& y) {
-        for (size_t i = 0; i < N_; ++i) y_vec_[i] = NV_Ith_S(y, i);
-        fval_ = f_(t, y_vec_, theta_dbl_, x_r_, x_i_, msgs_);
-      }
-
-      /**
-       * evaluate RHS function using current state, store
-       * the result in @c N_Vector.
-       */
-      inline void eval_rhs(double t, N_Vector& y, N_Vector& ydot) {
-        for (size_t i = 0; i < N_; ++i) y_vec_[i] = NV_Ith_S(y, i);
-        fval_ = f_(t, y_vec_, theta_dbl_, x_r_, x_i_, msgs_);
-        for (size_t i = 0; i < N_; ++i) NV_Ith_S(ydot, i) = fval_[i];
-      }
-
-      /**
-       * evaluate Jacobian matrix using current state, store
-       * the result in @c SUNMatrix J.
-       *
-       * @param t current time
-       * @param y current y
-       * @param fy current f(y)
-       * @param J Jacobian matrix J(i,j) = df_i/dy_j
-       */
-      inline void eval_jac(double t, N_Vector& y, N_Vector& fy, SUNMatrix& J) {
-        using stan::math::var;
-
-        const int n = N_;
-
-        try {
-          stan::math::start_nested();
-
-          std::vector<var> yv_work(NV_DATA_S(y), NV_DATA_S(y) + n);
-          std::vector<var> fyv_work(f_(t, yv_work, theta_dbl_, x_r_, x_i_, msgs_));
-
-          for (int i = 0; i < n; ++i) {
-            stan::math::set_zero_all_adjoints_nested();
-            fyv_work[i].grad();
-            for (int j = 0; j < n; ++j) {
-              SM_ELEMENT_D(J, i, j) = yv_work[j].adj();
-            }
-          }
-        } catch (const std::exception& e) {
-          stan::math::recover_memory_nested();
-          throw;
-        }
-        stan::math::recover_memory_nested();
-      }
-
-      /**
        * return reference to initial condition
        *
        * @return reference to initial condition

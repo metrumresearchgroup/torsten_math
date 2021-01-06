@@ -3,7 +3,6 @@
 
 // #include <stan/math/rev/mat.hpp>
 #include <gtest/gtest.h>
-#include <stan/math/torsten/dsolve/cvodes_rhs.hpp>
 #include <stan/math/rev/fun/fmax.hpp>
 #include <boost/numeric/odeint.hpp>
 #include <stan/math/torsten/test/unit/test_macros.hpp>
@@ -100,18 +99,17 @@ struct TorstenOdeTest : public testing::Test {
                           const std::vector<double>& y0,
                           const std::vector<double>& theta,
                           const std::vector<double>& ts) {
-    auto user_data = ode.to_user_data();
-    Ode* odep = static_cast<Ode* >(user_data);
-
-    EXPECT_EQ(odep -> n(), y0.size());
-    EXPECT_EQ(odep -> n_par(), theta.size());
-    auto y = odep -> nv_y();
+    EXPECT_EQ(ode.n(), y0.size());
+    EXPECT_EQ(ode.n_par(), theta.size());
+    auto y = ode.nv_y();
     for (size_t i = 0; i < ode.n(); ++i) {
       EXPECT_EQ(NV_Ith_S(y, i), y0[i]);
     }
 
     N_Vector res = N_VNew_Serial(y0.size());
-    EXPECT_EQ(torsten::dsolve::cvodes_rhs<Ode>()(ts.back(), y, res, user_data), 0);
+    
+    ode.set_user_data(ode.serv);
+    EXPECT_EQ(ode.serv.cvodes_rhs(ts.back(), y, res, static_cast<void*>(&(ode.serv.user_data))), 0);
     auto fval = ode.f()(ts.back(), y0, theta, x_r, x_i, msgs);
     for (size_t i = 0; i < y0.size(); ++i)
       EXPECT_EQ(NV_Ith_S(res, i), fval[i]);

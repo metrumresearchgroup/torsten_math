@@ -4,11 +4,10 @@
 #include <stan/math/rev/core/recover_memory.hpp>
 #include <stan/math/rev/meta/is_var.hpp>
 #include <stan/math/torsten/dsolve/sundials_check.hpp>
-#include <stan/math/torsten/dsolve/cvodes_rhs.hpp>
-#include <stan/math/torsten/dsolve/cvodes_sens_rhs.hpp>
 #include <stan/math/torsten/dsolve/ode_func_type.hpp>
 #include <stan/math/torsten/dsolve/ode_forms.hpp>
 #include <cvodes/cvodes.h>
+#include <nvector/nvector_serial.h>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
 #include <ostream>
@@ -53,11 +52,19 @@ namespace torsten {
        * evaluate RHS function using current state, store
        * the result in @c N_Vector.
        */
-      inline void eval_rhs(double t, N_Vector& nv_y, N_Vector& ydot) {
+      inline void eval_rhs(double t, N_Vector& nv_y) {
         for (size_t i = 0; i < N; ++i) {
          y[i] = NV_Ith_S(nv_y, i); 
         }
         fval = (*f)(t, y, theta_d, *px_r, *px_i, msgs);
+      }
+
+      /**
+       * evaluate RHS function using current state, store
+       * the result in @c N_Vector.
+       */
+      inline void eval_rhs(double t, N_Vector& nv_y, N_Vector& ydot) {
+        eval_rhs(t, nv_y);
         for (size_t i = 0; i < N; ++i) {
           NV_Ith_S(ydot, i) = fval[i];
         }
@@ -121,7 +128,7 @@ namespace torsten {
        * @tparam Ode type of Ode
        * @return RHS function for Cvodes
        */
-      inline CVDlsJacFn cvodes_jac() {
+      inline CVLsJacFn cvodes_jac() {
         return [](realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void* user_data, // NOLINT
                   N_Vector tmp1, N_Vector tmp2, N_Vector tmp3) -> int {
           cvodes_user_data<Ode>* ode = static_cast<cvodes_user_data<Ode>*>(user_data);

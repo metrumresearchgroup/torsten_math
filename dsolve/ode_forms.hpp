@@ -10,7 +10,10 @@ namespace torsten {
     template <typename F, typename Tts, typename Ty0, typename Tpar, typename cv_def>
     class PMXCvodesSystem;
 
-    enum PMXOdeForms { Odeint, Cvodes };
+    template <typename F, typename Tts, typename Ty0, typename Tpar, typename ark_def>
+    class PMXArkodeSystem;
+
+    enum PMXOdeForms { Odeint, Cvodes, Arkode };
 
     template<typename T>
     struct OdeForm {
@@ -20,6 +23,11 @@ namespace torsten {
     template<typename... Ts>
     struct OdeForm<PMXOdeintSystem<Ts...>> {
       static const PMXOdeForms value = Odeint;
+    };
+
+    template<typename... Ts>
+    struct OdeForm<PMXArkodeSystem<Ts...>> {
+      static const PMXOdeForms value = Arkode;
     };
 
   }
