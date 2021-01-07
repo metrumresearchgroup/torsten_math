@@ -17,6 +17,7 @@ namespace dsolve {
 /**
  * ARKode integrator.
  */
+  template<int BUTCHER_ID>
   struct PMXArkodeIntegrator {
     const double rtol_;
     const double atol_;
@@ -139,13 +140,49 @@ namespace dsolve {
      */
     template<typename Ode>
     struct SolObserver<Ode, false> {
+      const Ode& ode_;
+      const size_t n;
+      const size_t m;
       Eigen::MatrixXd y;
+      int step_counter_;
 
       SolObserver(const Ode& ode) :
-        y(Eigen::MatrixXd::Zero(ode.fwd_system_size() +
-                                ode.n() * (Ode::is_var_ts ? ode.ts().size() : 0),
-                                ode.ts().size()))
+        ode_(ode), n(ode.N_), m(ode.M_),
+        y(Eigen::MatrixXd::Zero(ode_.size_ + ode_.N_*(Ode::is_var_ts ? ode_.ts_.size() : 0), ode_.ts_.size())),
+        step_counter_(0)
       {}
+
+      /*
+       * use observer to convert y value and gradient to var
+       * results, if necessary.
+       */
+      inline void operator()(const N_Vector& nv_y, double t) {
+        if(t > ode_.t0_) {
+          observer_impl(nv_y, ode_.ts_);
+          step_counter_++;
+        }
+      }
+
+    private:
+      /*
+       * <code>ts</code> is data.
+       */
+      inline void observer_impl(const N_Vector& nv_y,
+                                const std::vector<double>& ts) {
+        y.col(step_counter_) = Eigen::VectorXd::Map(N_VGetArrayPointer(nv_y), ode_.size_);
+      }
+
+      /*
+       * <code>ts</code> is parameter
+       */
+      inline void observer_impl(const N_Vector& nv_y,
+                                const std::vector<stan::math::var>& ts) {
+        for (size_t j = 0; j < ode_.size_; ++j) y(j, step_counter_) = NV_Ith_S(nv_y, j);
+        ode_.serv.user_data.eval_rhs(ts[step_counter_].val(), nv_y);
+        for (size_t j = 0; j < n; ++j) {
+          y(ode_.size_ + step_counter_ * n + j, step_counter_) = ode_.serv.user_data.fval[j];          
+        }
+      }
     };
 
   public:
@@ -174,20 +211,6 @@ namespace dsolve {
         invalid_argument("cvodes_integrator", "max_num_steps,",
                          max_num_steps_, "",
                          ", must be greater than 0");
-    }
-      
-    template<typename Ode>
-    void solve(Ode& ode, SolObserver<Ode, true>& obs) {
-      double t1 = ode.t0();
-
-      auto mem       = ode.mem();
-      auto y         = ode.nv_y();
-
-      for (size_t i = 0; i < ode.ts().size(); ++i) {
-        double t = stan::math::value_of(ode.ts()[i]);
-        CHECK_SUNDIALS_CALL(ERKStepEvolve(mem, t, y, &t1, ARK_NORMAL));
-        obs(ode.nv_y(), t1);
-      }
     }
 
     /**
@@ -235,13 +258,19 @@ namespace dsolve {
         CHECK_SUNDIALS_CALL(ERKStepReInit(mem, ode.serv.arkode_rhs, ode.t0(), y));
         CHECK_SUNDIALS_CALL(ERKStepSStolerances(mem, rtol_, atol_));
         CHECK_SUNDIALS_CALL(ERKStepSetMaxNumSteps(mem, max_num_steps_));
-        CHECK_SUNDIALS_CALL(ERKStepSetTableNum(mem, DORMAND_PRINCE_7_4_5));
+        CHECK_SUNDIALS_CALL(ERKStepSetTableNum(mem, BUTCHER_ID));
 
         // the return type for MPI version is based on @c double,
         // as the return consists of the ARKode solution
         // instead of the assembled @c var vector in the
         // sequential version.
-        solve(ode, observer);
+        double t1 = ode.t0();
+
+        for (size_t i = 0; i < ode.ts().size(); ++i) {
+          double t = stan::math::value_of(ode.ts()[i]);
+          CHECK_SUNDIALS_CALL(ERKStepEvolve(mem, t, y, &t1, ARK_NORMAL));
+          observer(y, t1);
+        }
       } catch (const std::exception& e) {
         throw;
       }

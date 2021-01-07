@@ -28,7 +28,6 @@ namespace torsten {
      * invalid value is filled into the data passed to the rest
      * ranks so they can detect the exception.
      */
-    // template <typename F, typename ode_t, typename service_t>
     template <typename F, typename solver_t, template<typename...> class ode_t, typename... ode_pars_t>
     struct PMXPopulationIntegrator {
 

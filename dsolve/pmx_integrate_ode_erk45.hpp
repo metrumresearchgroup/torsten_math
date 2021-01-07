@@ -5,6 +5,7 @@
 #include <stan/math/torsten/dsolve/pmx_arkode_system.hpp>
 #include <stan/math/torsten/dsolve/pmx_arkode_integrator.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
+#include <arkode/arkode_erkstep.h>
 #include <ostream>
 #include <vector>
 
@@ -52,7 +53,7 @@ namespace torsten {
     dsolve::PMXOdeService<Ode, dsolve::Arkode> serv(n, m);
 
     Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
-    dsolve::PMXArkodeIntegrator solver(rtol, atol, max_num_steps);
+    dsolve::PMXArkodeIntegrator<DORMAND_PRINCE_7_4_5> solver(rtol, atol, max_num_steps);
     return solver.integrate(ode);
 }
 

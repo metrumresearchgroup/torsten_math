@@ -1,15 +1,11 @@
-#ifndef STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_GROUP_BDF_HPP
-#define STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_GROUP_BDF_HPP
+#ifndef STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_GROUP_ERK45_HPP
+#define STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_GROUP_ERK45_HPP
 
 #include <stan/math/torsten/mpi/pmx_population_integrator.hpp>
-#include <stan/math/torsten/dsolve/pmx_integrate_ode_bdf.hpp>
+#include <stan/math/torsten/dsolve/pmx_integrate_ode_erk45.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 
 namespace torsten {
-  template <typename F, typename Tts, typename Ty0, typename Tpar>
-  using PMXCvodesFwdSystem_bdf_ad =
-    dsolve::PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, dsolve::cvodes_def<TORSTEN_CV_SENS, CV_BDF, TORSTEN_CV_ISM>>;
-
   /**
    * Solve population ODE model by delegating the population
    * ODE integration task to multiple processors through
@@ -38,24 +34,24 @@ namespace torsten {
   template <typename F, typename Tt, typename T_initial, typename T_param>
   Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param>,
                 Eigen::Dynamic, Eigen::Dynamic>
-  pmx_integrate_ode_group_bdf(const F& f,
-                              const std::vector<std::vector<T_initial> >& y0,
-                              double t0,
-                              const std::vector<int>& len,
-                              const std::vector<Tt>& ts,
-                              const std::vector<std::vector<T_param> >& theta,
-                              const std::vector<std::vector<double> >& x_r,
-                              const std::vector<std::vector<int> >& x_i,
-                              double rtol,
-                              double atol,
-                              long int max_num_step,
-                              std::ostream* msgs = nullptr) {
-    static const char* caller("pmx_integrate_ode_bdf");
+  pmx_integrate_ode_group_erk45(const F& f,
+                                const std::vector<std::vector<T_initial> >& y0,
+                                double t0,
+                                const std::vector<int>& len,
+                                const std::vector<Tt>& ts,
+                                const std::vector<std::vector<T_param> >& theta,
+                                const std::vector<std::vector<double> >& x_r,
+                                const std::vector<std::vector<int> >& x_i,
+                                double rtol,
+                                double atol,
+                                long int max_num_step,
+                                std::ostream* msgs = nullptr) {
+    static const char* caller("pmx_integrate_ode_erk45");
     dsolve::ode_group_check(y0, t0, len, ts, theta, x_r, x_i, caller);
 
     dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
     torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXCvodesIntegrator,
-                                          PMXCvodesFwdSystem_bdf_ad> solver(integrator);
+                                          PMXArkodeSystem> solver(integrator);
 
     return solver(f, y0, t0, len, ts, theta, x_r, x_i, msgs);
   }
@@ -66,7 +62,7 @@ namespace torsten {
   template <typename F, typename Tt, typename T_initial, typename T_param>
   Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param>,
                 Eigen::Dynamic, Eigen::Dynamic>
-  pmx_integrate_ode_group_bdf(const F& f,
+  pmx_integrate_ode_group_erk45(const F& f,
                               const std::vector<std::vector<T_initial> >& y0,
                               double t0,
                               const std::vector<int>& len,
@@ -75,8 +71,8 @@ namespace torsten {
                               const std::vector<std::vector<double> >& x_r,
                               const std::vector<std::vector<int> >& x_i,
                               std::ostream* msgs = nullptr) {
-    return pmx_integrate_ode_group_bdf(f, y0, t0, len, ts, theta, x_r, x_i,
-                                       1.e-10, 1.e-10, 1e6,
+    return pmx_integrate_ode_group_erk45(f, y0, t0, len, ts, theta, x_r, x_i,
+                                       1.e-6, 1.e-6, 1e6,
                                        msgs);
   }
 
@@ -109,7 +105,7 @@ namespace torsten {
   template <typename F, typename Tt, typename T_initial, typename T_param>
   Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param>,
                 Eigen::Dynamic, Eigen::Dynamic>
-  pmx_integrate_ode_group_bdf(const F& f,
+  pmx_integrate_ode_group_erk45(const F& f,
                                 const std::vector<std::vector<T_initial> >& y0,
                                 double t0,
                                 const std::vector<int>& len,
@@ -119,15 +115,15 @@ namespace torsten {
                                 const std::vector<std::vector<double> >& x_r,
                                 const std::vector<std::vector<int> >& x_i,
                                 std::ostream* msgs = nullptr,
-                                double rtol = 1e-10,
-                                double atol = 1e-10,
+                                double rtol = 1e-6,
+                                double atol = 1e-6,
                                 long int max_num_step = 1e6) {  // NOLINT(runtime/int)
-    static const char* caller("pmx_integrate_ode_bdf");
+    static const char* caller("pmx_integrate_ode_erk45");
     dsolve::ode_group_check(y0, t0, len, ts, theta, x_r, x_i, caller);
 
     dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
     torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXCvodesIntegrator,
-                                          PMXCvodesFwdSystem_bdf_ad> solver(integrator);
+                                          PMXArkodeSystem> solver(integrator);
 
     return solver(f, y0, t0, len, ts, group_theta, theta, x_r, x_i, msgs);
   }
