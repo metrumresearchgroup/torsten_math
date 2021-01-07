@@ -10,7 +10,7 @@ namespace torsten {
     template <typename F, typename Tts, typename Ty0, typename Tpar, typename cv_def>
     class PMXCvodesSystem;
 
-    template <typename F, typename Tts, typename Ty0, typename Tpar, typename ark_def>
+    template <typename F, typename Tts, typename Ty0, typename Tpar>
     class PMXArkodeSystem;
 
     enum PMXOdeForms { Odeint, Cvodes, Arkode };

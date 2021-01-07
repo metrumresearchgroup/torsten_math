@@ -212,14 +212,13 @@ namespace torsten {
         sens_inited(false)
       {
         const double t0 = 0.0;
-        for (int i = 0; i < n; ++i)  N_VConst(RCONST(0.0), nv_y);
+        N_VConst(RCONST(0.0), nv_y);
 
         /*
          * allocate sensitivity array if need fwd sens calculation
          */ 
         if (Ode::need_fwd_sens) {
           nv_ys = N_VCloneVectorArray(user_data.ns, nv_y);
-          for (size_t i = 0; i < user_data.ns; ++i) N_VConst(RCONST(0.0), nv_ys[i]);
         }
 
         /*
@@ -283,8 +282,13 @@ namespace torsten {
       const size_t size;
       std::vector<double> y;
 
-      /**
+
+      /** 
        * Construct Boost Odeint workspace
+       * 
+       * @param n original system dimension
+       * @param m nb. of parameters, i.e. size of <code>theta</code>.
+       * 
        */
       PMXOdeService(int n, int m) :
         N(n),
