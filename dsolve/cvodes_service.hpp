@@ -5,7 +5,6 @@
 #include <stan/math/rev/meta/is_var.hpp>
 #include <stan/math/torsten/dsolve/sundials_check.hpp>
 #include <stan/math/torsten/dsolve/ode_func_type.hpp>
-#include <stan/math/torsten/dsolve/ode_forms.hpp>
 #include <cvodes/cvodes.h>
 #include <nvector/nvector_serial.h>
 #include <sunmatrix/sunmatrix_dense.h>
@@ -176,11 +175,16 @@ namespace torsten {
      * allocation/deallocation, so ODE systems only request
      * service by injection.
      */
-    template <typename Ode, enum PMXOdeForms = OdeForm<Ode>::value>
+    template <typename Ode>
     struct PMXOdeService;
 
-    template <typename Ode>
-    struct PMXOdeService<Ode, Cvodes> {
+    template <typename F, typename Tts, typename Ty0, typename Tpar, typename cv_def>
+    class PMXCvodesFwdSystem;
+
+    template<typename... Ts>
+    struct PMXOdeService<PMXCvodesFwdSystem<Ts...>> {
+      using Ode = PMXCvodesFwdSystem<Ts...>;
+
       cvodes_user_data<Ode> user_data;
       N_Vector nv_y;
       N_Vector* nv_ys;
@@ -274,14 +278,18 @@ namespace torsten {
       }
     };
 
-    template <typename Ode>
-    struct PMXOdeService<Ode, Odeint> {
+    template <typename F, typename Tt, typename T_init, typename T_par>
+    struct PMXOdeintSystem;
+
+    template <typename... Ts>
+    struct PMXOdeService<PMXOdeintSystem<Ts...>> {
+      using Ode = PMXOdeintSystem<Ts...>;
+
       const size_t N;
       const size_t M;
       const size_t ns;
       const size_t size;
       std::vector<double> y;
-
 
       /** 
        * Construct Boost Odeint workspace

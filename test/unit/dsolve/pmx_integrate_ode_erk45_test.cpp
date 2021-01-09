@@ -1,7 +1,7 @@
 #include <stan/math/rev.hpp>
 #include <gtest/gtest.h>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_erk45.hpp>
-#include <stan/math/torsten/dsolve/pmx_integrate_ode_group_rk45.hpp>
+#include <stan/math/torsten/dsolve/pmx_integrate_ode_group_erk45.hpp>
 #include <stan/math.hpp>
 #include <stan/math/rev/core.hpp>
 #include <stan/math/torsten/mpi.hpp>
@@ -48,7 +48,7 @@ TEST_F(TorstenOdeTest_sho, arkode_erk45_ivp_system_matrix_result) {
   std::vector<std::vector<double> > y1(integrate_ode_rk45(f, y0, t0, ts, theta, x_r, x_i, msgs, atol, rtol, max_num_steps));
 
   using Ode = PMXArkodeSystem<harm_osc_ode_fun, double, double, double>;
-  PMXOdeService<Ode, Arkode> serv(y0.size(), theta.size());
+  PMXOdeService<Ode> serv(y0.size(), theta.size());
   Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
   PMXArkodeIntegrator<DORMAND_PRINCE_7_4_5> solver(rtol, atol, max_num_steps);
 
@@ -81,7 +81,7 @@ TEST_F(TorstenOdeTest_lorenz, arkode_erk45_ivp_system_matrix_result) {
   std::vector<std::vector<double> > y1(integrate_ode_rk45(f, y0, t0, ts, theta, x_r, x_i, msgs, atol, rtol, max_num_steps));
 
   using Ode = PMXArkodeSystem<lorenz_ode_fun, double, double, double>;
-  PMXOdeService<Ode, Arkode> serv(y0.size(), theta.size());
+  PMXOdeService<Ode> serv(y0.size(), theta.size());
   Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
   PMXArkodeIntegrator<DORMAND_PRINCE_7_4_5> solver(rtol, atol, max_num_steps);
 
@@ -138,7 +138,7 @@ TEST_F(TorstenOdeTest_sho, rk45_theta_var_matrix_result) {
   vector<vector<var> > y1(integrate_ode_rk45(f, y0, t0, ts, theta_var, x_r, x_i, msgs, atol, rtol, max_num_steps));
 
   using Ode = PMXArkodeSystem<harm_osc_ode_fun, double, double, var>;
-  PMXOdeService<Ode, Arkode> serv(y0.size(), theta.size());
+  PMXOdeService<Ode> serv(y0.size(), theta.size());
   Ode ode{serv, f, t0, ts, y0, theta_var, x_r, x_i, msgs};
   PMXArkodeIntegrator<DORMAND_PRINCE_7_4_5> solver(rtol, atol, max_num_steps);
   Eigen::MatrixXd y2 = solver.integrate<Ode, false>(ode);
@@ -218,6 +218,43 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_y0) {
   torsten::test::test_grad(theta_var1, theta_var2, y1, y2, 1.E-10, 2.E-6);
 }
 
+TEST_F(TorstenOdeTest_neutropenia, sequential_group_erk45_fwd_sensitivity_theta) {
+  // size of population
+  const int np = 2;
+
+  vector<var> theta_var = stan::math::to_var(theta);
+
+  vector<int> len(np, ts.size());
+  vector<double> ts_m;
+  ts_m.reserve(np * ts.size());
+  for (int i = 0; i < np; ++i) ts_m.insert(ts_m.end(), ts.begin(), ts.end());
+
+  vector<vector<double> > y0_m (np, y0);
+  vector<vector<var> > theta_var_m (np, stan::math::to_var(theta));
+  vector<vector<double> > x_r_m (np, x_r);
+  vector<vector<int> > x_i_m (np, x_i);
+
+  vector<vector<var> > y = pmx_integrate_ode_erk45(f, y0, t0, ts, theta_var, x_r, x_i);
+  Eigen::Matrix<var, -1, -1> y_m1 = pmx_integrate_ode_group_erk45(f, y0_m, t0, len, ts_m, theta_var_m , x_r_m, x_i_m);
+  Eigen::Matrix<var, -1, -1> y_m2 = pmx_integrate_ode_group_erk45(f, y0_m, t0, len, ts_m, theta_var_m , x_r_m, x_i_m);
+
+  EXPECT_EQ(y_m1.cols(), ts_m.size());
+  EXPECT_EQ(y_m2.cols(), ts_m.size());
+  int icol = 0;
+  for (int i = 0; i < np; ++i) {
+    stan::math::matrix_v y_i = y_m1.block(0, icol, y0.size(), len[i]);
+    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 1e-16, 1e-10);
+    icol += len[i];
+  }
+
+  icol = 0;
+  for (int i = 0; i < np; ++i) {
+    stan::math::matrix_v y_i = y_m2.block(0, icol, y0.size(), len[i]);
+    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 1e-16, 1e-10);
+    icol += len[i];
+  }
+}
+
 TEST_F(TorstenOdeTest_neutropenia, sequential_group_rk45_fwd_sensitivity_theta) {
   // size of population
   const int np = 2;
@@ -234,7 +271,7 @@ TEST_F(TorstenOdeTest_neutropenia, sequential_group_rk45_fwd_sensitivity_theta) 
   vector<vector<double> > x_r_m (np, x_r);
   vector<vector<int> > x_i_m (np, x_i);
 
-  vector<vector<var> > y = pmx_integrate_ode_rk45(f, y0, t0, ts, theta_var, x_r, x_i);
+  vector<vector<var> > y = integrate_ode_rk45(f, y0, t0, ts, theta_var, x_r, x_i);
   Eigen::Matrix<var, -1, -1> y_m1 = pmx_integrate_ode_group_erk45(f, y0_m, t0, len, ts_m, theta_var_m , x_r_m, x_i_m);
   Eigen::Matrix<var, -1, -1> y_m2 = pmx_integrate_ode_group_erk45(f, y0_m, t0, len, ts_m, theta_var_m , x_r_m, x_i_m);
 
@@ -243,14 +280,14 @@ TEST_F(TorstenOdeTest_neutropenia, sequential_group_rk45_fwd_sensitivity_theta) 
   int icol = 0;
   for (int i = 0; i < np; ++i) {
     stan::math::matrix_v y_i = y_m1.block(0, icol, y0.size(), len[i]);
-    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 1e-16, 1e-16);
+    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 5e-6, 1.5e-5);
     icol += len[i];
   }
 
   icol = 0;
   for (int i = 0; i < np; ++i) {
     stan::math::matrix_v y_i = y_m2.block(0, icol, y0.size(), len[i]);
-    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 1e-16, 1e-16);
+    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 5e-6, 1.5e-5);
     icol += len[i];
   }
 }

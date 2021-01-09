@@ -5,7 +5,6 @@
 #include <stan/math/rev/meta/is_var.hpp>
 #include <stan/math/torsten/dsolve/sundials_check.hpp>
 #include <stan/math/torsten/dsolve/ode_func_type.hpp>
-#include <stan/math/torsten/dsolve/ode_forms.hpp>
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
 #include <arkode/arkode.h>
 #include <arkode/arkode_erkstep.h>
@@ -138,13 +137,18 @@ namespace torsten {
       }
     };
 
+    template <typename F, typename Tts, typename Ty0, typename Tpar>
+    class PMXArkodeSystem;
+
     /** 
      * Specialization of <code>PMXOdeService</code> for ARKode.
      * 
      * @tparam Ode type of <code>PMXArkodeSystem</code> template
      */
-    template <typename Ode>
-    struct PMXOdeService<Ode, Arkode> {
+    template <typename... Ts>
+    struct PMXOdeService<PMXArkodeSystem<Ts...>> {
+      using Ode = PMXArkodeSystem<Ts...>;
+
       arkode_user_data<Ode> user_data;
       N_Vector nv_y;
       void* mem;

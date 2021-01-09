@@ -51,7 +51,6 @@ namespace torsten {
        * @param[in] x_i integer data vector for the ODE
        * @param[in] msgs stream to which messages are printed
        */
-      // template<typename PMXOdeService<Ode, Cvodes> >
       PMXCvodesFwdSystem(PMXOdeService<Ode>& serv0,
                          const F& f,
                          double t0,
@@ -178,6 +177,16 @@ namespace torsten {
        */
       ~PMXCvodesFwdSystem() {}
     };
+
+
+    template<typename F_type, typename t_type, typename initial_type, typename param_type>
+    using PMXCvodesFwdSystem_adams = PMXCvodesFwdSystem<F_type, t_type, initial_type, param_type,
+                                                        cvodes_def<TORSTEN_CV_SENS, CV_ADAMS, TORSTEN_CV_ISM>>;
+
+    template<typename F_type, typename t_type, typename initial_type, typename param_type>
+    using PMXCvodesFwdSystem_bdf = PMXCvodesFwdSystem<F_type, t_type, initial_type, param_type,
+                                                        cvodes_def<TORSTEN_CV_SENS, CV_BDF, TORSTEN_CV_ISM>>;
+
   }  // namespace dsolve
 }  // namespace torsten
 

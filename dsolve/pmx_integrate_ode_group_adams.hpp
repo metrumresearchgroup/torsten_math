@@ -6,10 +6,6 @@
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 
 namespace torsten {
-  template <typename F, typename Tts, typename Ty0, typename Tpar>
-  using PMXCvodesFwdSystem_adams_ad =
-    dsolve::PMXCvodesFwdSystem<F, Tts, Ty0, Tpar, dsolve::cvodes_def<TORSTEN_CV_SENS, CV_ADAMS, TORSTEN_CV_ISM>>;
-
   /**
    * Solve population ODE model by delegating the population
    * ODE integration task to multiple processors through
@@ -56,7 +52,7 @@ namespace torsten {
     dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
 
     torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXCvodesIntegrator,
-                                          PMXCvodesFwdSystem_adams_ad> solver(integrator);
+                                          dsolve::PMXCvodesFwdSystem_adams> solver(integrator);
 
     return solver(f, y0, t0, len, ts, theta, x_r, x_i, msgs);
   }
@@ -129,7 +125,7 @@ namespace torsten {
     dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
 
     torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXCvodesIntegrator,
-                                          PMXCvodesFwdSystem_adams_ad> solver(integrator);
+                                          dsolve::PMXCvodesFwdSystem_adams> solver(integrator);
 
     return solver(f, y0, t0, len, ts, group_theta, theta, x_r, x_i, msgs);
   }

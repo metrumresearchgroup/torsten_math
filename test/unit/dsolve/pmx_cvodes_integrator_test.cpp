@@ -21,6 +21,7 @@
 using torsten::dsolve::PMXCvodesFwdSystem;
 using torsten::dsolve::PMXCvodesIntegrator;
 using torsten::dsolve::PMXOdeService;
+using torsten::dsolve::cvodes_def;
 using torsten::PMXCvodesSensMethod;
 using torsten::AD;
 using torsten::CSDA;

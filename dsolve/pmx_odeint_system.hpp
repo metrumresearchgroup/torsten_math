@@ -3,7 +3,6 @@
 
 #include <stan/math/rev/core/recover_memory.hpp>
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
-#include <stan/math/torsten/dsolve/ode_forms.hpp>
 #include <stan/math/prim/meta/return_type.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
 #include <stan/math/prim/fun/get.hpp>

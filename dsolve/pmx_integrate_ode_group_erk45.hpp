@@ -3,6 +3,7 @@
 
 #include <stan/math/torsten/mpi/pmx_population_integrator.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_erk45.hpp>
+#include <stan/math/torsten/dsolve/pmx_arkode_integrator.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 
 namespace torsten {
@@ -49,9 +50,9 @@ namespace torsten {
     static const char* caller("pmx_integrate_ode_erk45");
     dsolve::ode_group_check(y0, t0, len, ts, theta, x_r, x_i, caller);
 
-    dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
-    torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXCvodesIntegrator,
-                                          PMXArkodeSystem> solver(integrator);
+    dsolve::PMXArkodeIntegrator<DORMAND_PRINCE_7_4_5> integrator(rtol, atol, max_num_step);
+    torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXArkodeIntegrator<DORMAND_PRINCE_7_4_5>,
+                                          dsolve::PMXArkodeSystem> solver(integrator);
 
     return solver(f, y0, t0, len, ts, theta, x_r, x_i, msgs);
   }
@@ -121,9 +122,9 @@ namespace torsten {
     static const char* caller("pmx_integrate_ode_erk45");
     dsolve::ode_group_check(y0, t0, len, ts, theta, x_r, x_i, caller);
 
-    dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
-    torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXCvodesIntegrator,
-                                          PMXArkodeSystem> solver(integrator);
+    dsolve::PMXArkodeIntegrator<DORMAND_PRINCE_7_4_5> integrator(rtol, atol, max_num_step);
+    torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXArkodeIntegrator<DORMAND_PRINCE_7_4_5>,
+                                          dsolve::PMXArkodeSystem> solver(integrator);
 
     return solver(f, y0, t0, len, ts, group_theta, theta, x_r, x_i, msgs);
   }

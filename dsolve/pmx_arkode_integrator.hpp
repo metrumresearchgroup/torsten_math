@@ -245,6 +245,7 @@ namespace dsolve {
        * if y0 is parameter, the first n sensitivity vector
        * are regarding y0, thus they form a unit matrix.
        **/
+      N_VConst(RCONST(0.0), y);
       for (size_t i = 0; i < n; ++i) {
         NV_Ith_S(y, i) = ode.y0_d()[i];
         if (Ode::is_var_y0) {

@@ -497,7 +497,7 @@ namespace torsten {
         default : {
           using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
           using Ode = dsolve::PMXOdeintSystem<torsten::dsolve::pmx_ode_group_mpi_functor, Tt, Ty, Tp>;
-          dsolve::PMXOdeService<Ode, dsolve::Odeint> serv(y0.size(), theta.size());
+          dsolve::PMXOdeService<Ode> serv(y0.size(), theta.size());
           Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, NULL};
           dsolve::PMXOdeintIntegrator<scheme_t> solver(rtol, atol, max_num_step);
           res = solver.template integrate<Ode, false>(ode);
