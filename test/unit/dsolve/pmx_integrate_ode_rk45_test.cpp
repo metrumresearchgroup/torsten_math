@@ -23,7 +23,6 @@ using stan::math::integrate_ode_rk45;
 using torsten::pmx_integrate_ode_rk45;
 using torsten::dsolve::PMXOdeintSystem;
 using torsten::dsolve::PMXOdeService;
-using torsten::dsolve::Odeint;
 using torsten::dsolve::PMXOdeintIntegrator;
 using torsten::pmx_integrate_ode_group_rk45;
 using stan::math::var;

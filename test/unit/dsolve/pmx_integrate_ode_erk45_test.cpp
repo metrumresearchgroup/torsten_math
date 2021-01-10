@@ -23,7 +23,6 @@
 using stan::math::integrate_ode_rk45;
 using torsten::pmx_integrate_ode_erk45;
 using torsten::dsolve::PMXArkodeSystem;
-using torsten::dsolve::Arkode;
 using torsten::dsolve::PMXOdeService;
 using torsten::dsolve::PMXArkodeIntegrator;
 using torsten::pmx_integrate_ode_group_rk45;

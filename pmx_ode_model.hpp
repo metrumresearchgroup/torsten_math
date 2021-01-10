@@ -26,12 +26,11 @@ namespace torsten {
    * 
    */
   template<typename T_theta, typename T_rate>
-  struct PMXOdeFunctorRateAdaptorInternal {
-    
+  struct PMXOdeFunctorRateAdaptorImpl {
     const std::vector<T_theta>& theta_;
     const std::vector<T_rate>& rate_;
 
-    PMXOdeFunctorRateAdaptorInternal(const std::vector<T_theta>& theta,
+    PMXOdeFunctorRateAdaptorImpl(const std::vector<T_theta>& theta,
                                      const std::vector<T_rate>& rate) :
       theta_(theta), rate_(rate) {}
 
@@ -49,7 +48,6 @@ namespace torsten {
 
     /** 
      * original ode param
-     * 
      * 
      * @return original ode param vector
      */
@@ -79,12 +77,12 @@ namespace torsten {
    * 
    */
   template<>
-  struct PMXOdeFunctorRateAdaptorInternal<double, stan::math::var> {
+  struct PMXOdeFunctorRateAdaptorImpl<double, stan::math::var> {
     
     const std::vector<double>& theta_;
     const std::vector<stan::math::var>& rate_;
 
-    PMXOdeFunctorRateAdaptorInternal(const std::vector<double>& theta,
+    PMXOdeFunctorRateAdaptorImpl(const std::vector<double>& theta,
                                      const std::vector<stan::math::var>& rate) :
       theta_(theta), rate_(rate) {}
 
@@ -129,13 +127,12 @@ namespace torsten {
    * 
    */
   template<typename T_theta>
-  struct PMXOdeFunctorRateAdaptorInternal<T_theta, double> {
-    
+  struct PMXOdeFunctorRateAdaptorImpl<T_theta, double> {
     const std::vector<T_theta>& theta_;
     const std::vector<double>& rate_;
 
-    PMXOdeFunctorRateAdaptorInternal(const std::vector<T_theta>& theta,
-                                     const std::vector<double>& rate) :
+    PMXOdeFunctorRateAdaptorImpl(const std::vector<T_theta>& theta,
+                                 const std::vector<double>& rate) :
       theta_(theta), rate_(rate) {}
 
     /** 
@@ -178,7 +175,7 @@ namespace torsten {
   template<typename F, typename T_theta, typename T_rate>
   struct PMXOdeFunctorRateAdaptor {
 
-    PMXOdeFunctorRateAdaptorInternal<T_theta, T_rate> adaptor;
+    PMXOdeFunctorRateAdaptorImpl<T_theta, T_rate> adaptor;
 
     PMXOdeFunctorRateAdaptor(const std::vector<T_theta>& theta,
                                 const std::vector<T_rate>& rate) :

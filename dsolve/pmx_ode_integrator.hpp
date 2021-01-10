@@ -20,22 +20,6 @@
 #include <vector>
 
 namespace torsten {
-  /** 
-   * List of Torsten's numerical integrators that can be used in PMX
-   * solvers.
-   * 
-   */
-  // enum PMXOdeIntegratorId {
-  //   Analytical,
-  //   StanRk45,
-  //   StanAdams,
-  //   StanBdf,
-  //   PkAdams,
-  //   PkBdf,
-  //   PkRk45,
-  //   PkErk45
-  // };
-
   namespace dsolve {
     template<template<typename...> class ode_type, typename integrator_t>
     struct PMXOdeIntegrator {

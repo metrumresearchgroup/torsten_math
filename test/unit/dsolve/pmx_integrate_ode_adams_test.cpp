@@ -26,7 +26,6 @@ using stan::math::integrate_ode_adams;
 using torsten::pmx_integrate_ode_adams;
 using torsten::dsolve::PMXOdeintSystem;
 using torsten::dsolve::PMXOdeService;
-using torsten::dsolve::Odeint;
 using torsten::dsolve::PMXOdeintIntegrator;
 using torsten::pmx_integrate_ode_group_adams;
 using stan::math::var;

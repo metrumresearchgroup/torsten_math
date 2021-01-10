@@ -29,7 +29,7 @@ using torsten::pmx_solve_bdf;
 using torsten::pmx_solve_adams;
 using torsten::NONMENEventsRecord;
 using torsten::PKODEModel;
-using torsten::PMXOdeIntegrator;
+using torsten::dsolve::PMXOdeIntegrator;
 using torsten::PkRk45;
 using torsten::PkAdams;
 using torsten::PkBdf;
@@ -48,7 +48,7 @@ TEST_F(TorstenTwoCptModelTest, algebra_solver_perf_bolus) {
   double ss_ii = 8.5;
   const int n_dose = 50;
 
-  const torsten::PMXOdeIntegrator<PMXCvodesFwdSystem_adams, PMXCvodesIntegrator> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 100000, 0);
+  const torsten::dsolve::PMXOdeIntegrator<PMXCvodesFwdSystem_adams, PMXCvodesIntegrator> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 100000, 0);
 
   for (int ss_cmt = 1; ss_cmt < ncmt + 1; ++ss_cmt) {
     // steady state solution
@@ -86,7 +86,7 @@ TEST_F(TorstenTwoCptModelTest, algebra_solver_perf_bolus_par_sens) {
   double ss_ii = 8.5;
   const int n_dose = 50;
 
-  const torsten::PMXOdeIntegrator<PMXCvodesFwdSystem_adams, PMXCvodesIntegrator> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 100000, 0);
+  const torsten::dsolve::PMXOdeIntegrator<PMXCvodesFwdSystem_adams, PMXCvodesIntegrator> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 100000, 0);
 
   for (int ss_cmt = 1; ss_cmt < ncmt + 1; ++ss_cmt) {
     // steady state solution
@@ -122,7 +122,7 @@ TEST_F(TorstenTwoCptModelTest, algebra_solver_perf_truncated_infusion) {
   double ss_ii = 4.5;
   const int n_dose = 50;
 
-  const torsten::PMXOdeIntegrator<torsten::PkRk45> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 100000, 0);
+  const torsten::dsolve::PMXOdeIntegrator<torsten::PkRk45> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 100000, 0);
 
   const int ss_cmt = 2;
   // steady state solution

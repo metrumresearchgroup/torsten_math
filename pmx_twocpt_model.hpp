@@ -15,10 +15,6 @@
 #include <stan/math/prim/err/check_nonnegative.hpp>
 
 namespace torsten {
-
-  using boost::math::tools::promote_args;
-  using torsten::PMXOdeIntegrator;
-
   /**
    * standard two compartment PK ODE functor.
    */

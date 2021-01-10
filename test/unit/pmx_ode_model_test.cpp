@@ -16,7 +16,7 @@ using torsten::pmx_integrate_ode_bdf;
 using stan::math::integrate_ode_bdf;
 using torsten::PMXTwoCptODE;
 using torsten::PKODEModel;
-using torsten::PMXOdeIntegrator;
+using torsten::dsolve::PMXOdeIntegrator;
 using torsten::dsolve::PMXOdeIntegrator;
 using torsten::dsolve::PMXCvodesFwdSystem_bdf;
 using torsten::dsolve::PMXCvodesFwdSystem_adams;

@@ -462,7 +462,7 @@ TEST_F(TorstenTwoCptTest, rk45_model_solve_d_init_var_ss) {
 TEST_F(TorstenTwoCptTest, rk45_model_solve_d_par_var_ss) {
   
   using torsten::PMXTwoCptODE;
-  using torsten::PMXOdeIntegrator;
+  using torsten::dsolve::PMXOdeIntegrator;
   using stan::math::var;
   using stan::math::vector_v;
 
@@ -575,7 +575,7 @@ TEST_F(TorstenTwoCptTest, PkBdf_model_solve_d_rate_var) {
 TEST_F(TorstenTwoCptTest, PkBdf_model_solve_d_par_var) {
   
   using torsten::PMXTwoCptODE;
-  using torsten::PMXOdeIntegrator;
+  using torsten::dsolve::PMXOdeIntegrator;
   using stan::math::var;
   using stan::math::vector_v;
 
@@ -608,7 +608,7 @@ TEST_F(TorstenTwoCptTest, PkBdf_model_solve_d_par_var) {
 TEST_F(TorstenTwoCptTest, PkBdf_model_solve_d_data_only_ss) {
   
   using torsten::PMXTwoCptODE;
-  using torsten::PMXOdeIntegrator;
+  using torsten::dsolve::PMXOdeIntegrator;
 
   const int ncmt = PMXTwoCptModel<double>::Ncmt;
   PMXTwoCptODE f;
@@ -636,7 +636,7 @@ TEST_F(TorstenTwoCptTest, PkBdf_model_solve_d_data_only_ss) {
 TEST_F(TorstenTwoCptTest, PkBdf_model_solve_d_init_var_ss) {
   
   using torsten::PMXTwoCptODE;
-  using torsten::PMXOdeIntegrator;
+  using torsten::dsolve::PMXOdeIntegrator;
   using stan::math::var;
   using stan::math::vector_v;
 
