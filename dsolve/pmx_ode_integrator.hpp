@@ -71,7 +71,7 @@ namespace torsten {
         const int m = theta.size();
         const int n = y0.size();
         using Ode = ode_type<F, Tt, T_initial, T_param>;
-        static dsolve::PMXOdeService<Ode> serv(n, m);
+        dsolve::PMXOdeService<Ode> serv(n, m);
         Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
         integrator_t solver(rtol, atol, max_num_step);
         return solver.integrate(ode);
@@ -106,7 +106,7 @@ namespace torsten {
         const int m = theta.size();
         const int n = y0.size();
         using Ode = ode_type<F, Tt, T_initial, T_param>;
-        static dsolve::PMXOdeService<Ode> serv(n, m);
+        dsolve::PMXOdeService<Ode> serv(n, m);
         Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
         integrator_t solver(rtol, atol, max_num_step);
         return solver. template integrate<Ode, false>(ode);
@@ -164,7 +164,7 @@ namespace torsten {
         const int m = theta.size();
         const int n = y0.size();
 
-        static dsolve::PMXOdeService<Ode> serv(n, m);
+        dsolve::PMXOdeService<Ode> serv(n, m);
         Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
         dsolve::PMXOdeintIntegrator<scheme_t> solver(rtol, atol, max_num_step);
         return solver.integrate(ode);
@@ -196,7 +196,7 @@ namespace torsten {
         const int m = theta.size();
         const int n = y0.size();
 
-        static dsolve::PMXOdeService<Ode> serv(n, m);
+        dsolve::PMXOdeService<Ode> serv(n, m);
         Ode ode{serv, f, t0, ts, y0, theta, x_r, x_i, msgs};
         dsolve::PMXOdeintIntegrator<scheme_t> solver(rtol, atol, max_num_step);
         return solver.template integrate<Ode, false>(ode);

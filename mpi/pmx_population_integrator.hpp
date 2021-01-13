@@ -499,7 +499,7 @@ namespace torsten {
           has_warning = true;
         }
 
-        static torsten::dsolve::PMXOdeService<Ode> serv(n, m);
+        torsten::dsolve::PMXOdeService<Ode> serv(n, m);
 
         using scalar_type = typename stan::return_type_t<Tt, T_initial, T_param>;
         Matrix<scalar_type, Dynamic, Dynamic> res(n, ts.size());
@@ -551,7 +551,7 @@ namespace torsten {
           has_warning = true;
         }
 
-        static torsten::dsolve::PMXOdeService<Ode> serv(n, m);
+        torsten::dsolve::PMXOdeService<Ode> serv(n, m);
 
         using scalar_type = typename stan::return_type_t<Tt, T_initial, T_param>;
         Matrix<scalar_type, Dynamic, Dynamic> res(n, ts.size());
