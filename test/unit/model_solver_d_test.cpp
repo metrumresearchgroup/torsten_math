@@ -1,4 +1,4 @@
-#include <stan/math/rev/core/typedefs.hpp>
+#include <stan/math/rev/fun/typedefs.hpp>
 #include <stan/math/torsten/ev_manager.hpp>
 #include <stan/math/torsten/torsten_def.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>

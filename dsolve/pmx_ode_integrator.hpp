@@ -9,11 +9,8 @@
 #include <stan/math/rev/functor/integrate_ode_adams.hpp>
 #include <stan/math/rev/functor/integrate_ode_bdf.hpp>
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
-#include <stan/math/torsten/dsolve/arkode_service.hpp>
 #include <stan/math/torsten/dsolve/pmx_cvodes_system.hpp>
-#include <stan/math/torsten/dsolve/pmx_arkode_system.hpp>
 #include <stan/math/torsten/dsolve/pmx_cvodes_integrator.hpp>
-#include <stan/math/torsten/dsolve/pmx_arkode_integrator.hpp>
 #include <stan/math/torsten/dsolve/pmx_odeint_integrator.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 #include <ostream>
@@ -217,11 +214,6 @@ namespace torsten {
 
   template<typename integrator_t>
   struct has_data_only_output<dsolve::PMXOdeIntegrator<dsolve::PMXOdeintSystem, integrator_t>> {
-    static const bool value = true;
-  };
-
-  template<typename integrator_t>
-  struct has_data_only_output<dsolve::PMXOdeIntegrator<dsolve::PMXArkodeSystem, integrator_t>> {
     static const bool value = true;
   };
 

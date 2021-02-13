@@ -19,8 +19,6 @@ using torsten::dsolve::PMXCvodesFwdSystem_adams;
 using torsten::dsolve::PMXCvodesIntegrator;
 using torsten::dsolve::PMXOdeintIntegrator;
 using torsten::dsolve::PMXOdeintSystem;
-using torsten::dsolve::PMXArkodeIntegrator;
-using torsten::dsolve::PMXArkodeSystem;
 
 PMXOdeIntegrator<PMXCvodesFwdSystem_adams, PMXCvodesIntegrator> integrator_adams;
 PMXOdeIntegrator<PMXCvodesFwdSystem_bdf, PMXCvodesIntegrator> integrator_bdf;
