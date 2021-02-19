@@ -107,7 +107,7 @@ namespace torsten {
         using Ode = ode_type<F, Tt, T_initial, T_param>;
         Ode ode{f, t0, ts, y0, theta, x_r, x_i, msgs};
         integrator_t solver(rtol, atol, max_num_step);
-        dsolve::OdeintObserver<Ode> observer(ode);
+        dsolve::OdeObserver<Ode> observer(ode);
         solver.integrate(ode, observer);
         return observer.y;
       }
@@ -141,7 +141,7 @@ namespace torsten {
         using Ode = ode_type<F, Tt, T_initial, T_param>;
         Ode ode{f, t0, ts, y0, theta, x_r, x_i, msgs};
         integrator_t solver(rtol, atol, max_num_step);
-        dsolve::OdeintDataObserver<Ode> observer(ode);
+        dsolve::OdeDataObserver<Ode> observer(ode);
         solver.integrate(ode, observer);
         return observer.y;
       }
@@ -184,7 +184,7 @@ namespace torsten {
 
         Ode ode{f, t0, ts, y0, theta, x_r, x_i, msgs};
         dsolve::PMXOdeintIntegrator<scheme_t> solver(rtol, atol, max_num_step);
-        dsolve::OdeintObserver<Ode> observer(ode);
+        dsolve::OdeObserver<Ode> observer(ode);
         solver.integrate(ode, observer);
         return observer.y;
       }
@@ -215,7 +215,7 @@ namespace torsten {
 
         Ode ode{f, t0, ts, y0, theta, x_r, x_i, msgs};
         dsolve::PMXOdeintIntegrator<scheme_t> solver(rtol, atol, max_num_step);
-        dsolve::OdeintDataObserver<Ode> observer(ode);
+        dsolve::OdeDataObserver<Ode> observer(ode);
         solver.integrate(ode, observer);
         return observer.y;
       }

@@ -145,7 +145,7 @@ namespace torsten {
           int my_worker_id = torsten::mpi::my_worker(i, np, size);
           try {
             Ode ode{f, t0, ts_i, y0[i], theta[i], x_r[i], x_i[i], msgs};
-            dsolve::OdeintDataObserver<Ode> observer(ode);
+            dsolve::OdeDataObserver<Ode> observer(ode);
             res_d[i].resize(ode.system_size, ode.ts_.size());
             res_d[i].setConstant(0.0);
 
@@ -273,7 +273,7 @@ namespace torsten {
           try {
             std::copy(theta[i].begin(), theta[i].end(), theta_i.begin() + group_theta.size());
             Ode ode{f, t0, ts_i, y0[i], theta_i, x_r[i], x_i[i], msgs};
-            dsolve::OdeintDataObserver<Ode> observer(ode);
+            dsolve::OdeDataObserver<Ode> observer(ode);
             res_d[i].resize(ode.system_size, ode.ts_.size());
             res_d[i].setConstant(0.0);
 
@@ -385,7 +385,7 @@ namespace torsten {
           int my_worker_id = torsten::mpi::my_worker(i, np, size);
           try {
             Ode ode{f, t0, ts_i, y0[i], theta[i], x_r[i], x_i[i], msgs};
-            dsolve::OdeintDataObserver<Ode> observer(ode);
+            dsolve::OdeDataObserver<Ode> observer(ode);
 
             // success in creating ODE, solve it
             if(rank == my_worker_id) {
@@ -509,7 +509,7 @@ namespace torsten {
           std::vector<Tt> ts_i(iter, iter + len[i]);
           iter += len[i];
           Ode ode{f, t0, ts_i, y0[i], theta[i], x_r[i], x_i[i], msgs};
-          dsolve::OdeintObserver<Ode> observer(ode);
+          dsolve::OdeObserver<Ode> observer(ode);
           solver.integrate(ode, observer);
           Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i])
             = stan::math::to_matrix(observer.y).transpose();
@@ -566,7 +566,7 @@ namespace torsten {
           std::vector<Tt> ts_i(iter, iter + len[i]);
           iter += len[i];
           Ode ode{f, t0, ts_i, y0[i], theta_i, x_r[i], x_i[i], msgs};
-          dsolve::OdeintObserver<Ode> observer(ode);
+          dsolve::OdeObserver<Ode> observer(ode);
           solver.integrate(ode, observer);
           Matrix<scalar_type, -1, -1>::Map(&res(begin_id), n, len[i])
             = stan::math::to_matrix(observer.y).transpose();

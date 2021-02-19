@@ -477,7 +477,7 @@ namespace torsten {
         torsten::dsolve::pmx_ode_group_mpi_functor f(functor_id);
         using Ode = torsten::dsolve::PMXOdeSystem<torsten::dsolve::pmx_ode_group_mpi_functor, Tt, Ty, Tp>;
         Ode ode{f, t0, ts, y0, theta, x_r, x_i, NULL};
-        torsten::dsolve::OdeintDataObserver<Ode> observer(ode);
+        torsten::dsolve::OdeDataObserver<Ode> observer(ode);
         switch(integ_id) {
         case 1 : {
           torsten::dsolve::PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> solver(rtol, atol, max_num_step);

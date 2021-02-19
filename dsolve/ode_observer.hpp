@@ -9,7 +9,7 @@ namespace torsten {
 namespace dsolve {
 
   template<typename Ode>
-  struct OdeintObserver {
+  struct OdeObserver {
     const Ode& ode;
     const size_t n;
     const size_t m;
@@ -18,7 +18,7 @@ namespace dsolve {
     int step_counter_;
     double curr_t_;
 
-    OdeintObserver(const Ode& ode0) :
+    OdeObserver(const Ode& ode0) :
       ode(ode0), n(ode.N), m(ode.M), ns(ode.ns),
       y(ode.ts_.size(), std::vector<typename Ode::scalar_t>(ode.N, 0.0)),
       step_counter_(0)
@@ -186,7 +186,7 @@ namespace dsolve {
   };
 
   template<typename Ode>
-  struct OdeintDataObserver {
+  struct OdeDataObserver {
     const Ode& ode;
     const size_t n;
     const size_t m;
@@ -196,7 +196,7 @@ namespace dsolve {
     int step_counter_;
     double curr_t_;
 
-    OdeintDataObserver(const Ode& ode0) :
+    OdeDataObserver(const Ode& ode0) :
       ode(ode0), n(ode.N), m(ode.M), ns(ode.ns), nt(ode.ts_.size()),
       y(Eigen::MatrixXd::Zero(ode.system_size + n*(Ode::is_var_ts ? nt : 0), nt)),
       step_counter_(0)

@@ -386,7 +386,7 @@ namespace torsten{
           finished++;
           if (is_invalid) continue;
           if (std::isnan(res_d[id](0))) {
-            assert(rank != torsten::mpi::my_worker(id, np, size));
+            // assert(rank != torsten::mpi::my_worker(id, np, size));
             is_invalid = true;
             rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
           } else {

@@ -27,8 +27,8 @@ using torsten::dsolve::PMXOdeintIntegrator;
 using torsten::pmx_integrate_ode_group_rk45;
 using stan::math::var;
 using std::vector;
-using dsolve::OdeintObserver;
-using dsolve::OdeintDataObserver;
+using dsolve::OdeObserver;
+using dsolve::OdeDataObserver;
 
 #if defined(STAN_LANG_MPI) || defined(TORSTEN_MPI)
 TORSTEN_MPI_SESSION_INIT;
@@ -47,7 +47,7 @@ TEST_F(TorstenOdeTest_sho, odeint_rk45_ivp_system_matrix_result) {
   Ode ode{f, t0, ts, y0, theta, x_r, x_i, msgs};
   using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
   PMXOdeintIntegrator<scheme_t> solver(rtol, atol, max_num_steps);
-  OdeintDataObserver<Ode> observer(ode);
+  OdeDataObserver<Ode> observer(ode);
   solver.integrate(ode, observer);
 
   torsten::test::test_val(y1, observer.y);
@@ -66,7 +66,7 @@ TEST_F(TorstenOdeTest_lorenz, odeint_rk45_ivp_system_matrix_result) {
   Ode ode{f, t0, ts, y0, theta, x_r, x_i, msgs};
   using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
   PMXOdeintIntegrator<scheme_t> solver(rtol, atol, max_num_steps);
-  OdeintDataObserver<Ode> observer(ode);
+  OdeDataObserver<Ode> observer(ode);
   solver.integrate(ode, observer);
 
   torsten::test::test_val(y1, observer.y);
@@ -119,7 +119,7 @@ TEST_F(TorstenOdeTest_sho, rk45_theta_var_matrix_result) {
   Ode ode{f, t0, ts, y0, theta_var, x_r, x_i, msgs};
   using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
   PMXOdeintIntegrator<scheme_t> solver(rtol, atol, max_num_steps);
-  OdeintDataObserver<Ode> observer(ode);
+  OdeDataObserver<Ode> observer(ode);
   solver.integrate(ode, observer);
 
   torsten::test::test_grad(theta_var, y1, observer.y, 1.e-8, 1.e-8);
