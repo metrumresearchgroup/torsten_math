@@ -3,7 +3,7 @@
 
 #include <stan/math/torsten/mpi/pmx_population_integrator.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_adams.hpp>
-#include <stan/math/torsten/dsolve/ode_check.hpp>
+#include <stan/math/torsten/dsolve/pmx_cvodes_integrator.hpp>
 
 namespace torsten {
   /**
@@ -49,10 +49,10 @@ namespace torsten {
     static const char* caller("pmx_integrate_ode_adams");
     dsolve::ode_group_check(y0, t0, len, ts, theta, x_r, x_i, caller);
 
-    dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
+    dsolve::PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> integrator(rtol, atol, max_num_step);
 
-    torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXCvodesIntegrator,
-                                          dsolve::PMXCvodesFwdSystem_adams> solver(integrator);
+    torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED>,
+                                          dsolve::PMXOdeSystem> solver(integrator);
 
     return solver(f, y0, t0, len, ts, theta, x_r, x_i, msgs);
   }
@@ -122,10 +122,10 @@ namespace torsten {
     static const char* caller("pmx_integrate_ode_adams");
     dsolve::ode_group_check(y0, t0, len, ts, theta, x_r, x_i, caller);
 
-    dsolve::PMXCvodesIntegrator integrator(rtol, atol, max_num_step);
+    dsolve::PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> integrator(rtol, atol, max_num_step);
 
-    torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXCvodesIntegrator,
-                                          dsolve::PMXCvodesFwdSystem_adams> solver(integrator);
+    torsten::mpi::PMXPopulationIntegrator<F, dsolve::PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED>,
+                                          dsolve::PMXOdeSystem> solver(integrator);
 
     return solver(f, y0, t0, len, ts, group_theta, theta, x_r, x_i, msgs);
   }

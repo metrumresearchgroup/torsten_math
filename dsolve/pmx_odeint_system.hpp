@@ -30,8 +30,8 @@ namespace dsolve {
    * @tparam T_par scalar type of parameters
    */
   template <typename F, typename Tt, typename T_init, typename T_par>
-  struct PMXOdeintSystem {
-    using Ode = PMXOdeintSystem<F, Tt, T_init, T_par>;
+  struct PMXOdeSystem {
+    using Ode = PMXOdeSystem<F, Tt, T_init, T_par>;
     using scalar_t = typename stan::return_type_t<Tt, T_init, T_par>;
     static constexpr bool is_var_ts  = stan::is_var<Tt>::value;
     static constexpr bool is_var_y0  = stan::is_var<T_init>::value;
@@ -56,7 +56,7 @@ namespace dsolve {
 
   public:
     template<typename ode_t>
-    PMXOdeintSystem(dsolve::PMXOdeService<ode_t>& serv,
+    PMXOdeSystem(dsolve::PMXOdeService<ode_t>& serv,
                     const F& f,
                     double t0,
                     const std::vector<Tt>& ts,
@@ -116,7 +116,7 @@ namespace dsolve {
      */
     void operator()(const std::vector<double>& y, std::vector<double>& dy_dt,
                     double t) const {
-      stan::math::check_size_match("PMXOdeintSystem", "y", y.size(), "dy_dt", dy_dt.size());
+      stan::math::check_size_match("PMXOdeSystem", "y", y.size(), "dy_dt", dy_dt.size());
       rhs_impl(y, dy_dt, t);
     }
 
@@ -125,7 +125,7 @@ namespace dsolve {
      */
     void dbl_rhs_impl(const std::vector<double>& y, std::vector<double>& dy_dt, double t) const
     {
-      stan::math::check_size_match("PMXOdeintSystem", "y", y.size(), "dy_dt", dy_dt.size());
+      stan::math::check_size_match("PMXOdeSystem", "y", y.size(), "dy_dt", dy_dt.size());
       dy_dt = f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
       return;      
     }
@@ -154,7 +154,7 @@ namespace dsolve {
                              f_(t, yv, theta_v, x_r_, x_i_, msgs_) :
                              f_(t, yv, theta_, x_r_, x_i_, msgs_));
 
-        stan::math::check_size_match("PMXOdeintSystem", "dz_dt", fyv.size(), "states", N_);
+        stan::math::check_size_match("PMXOdeSystem", "dz_dt", fyv.size(), "states", N_);
 
         for (size_t i = 0; i < N_; ++i) {
           stan::math::set_zero_all_adjoints_nested();

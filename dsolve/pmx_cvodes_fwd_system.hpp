@@ -180,11 +180,11 @@ namespace torsten {
 
 
     template<typename F_type, typename t_type, typename initial_type, typename param_type>
-    using PMXCvodesFwdSystem_adams = PMXCvodesFwdSystem<F_type, t_type, initial_type, param_type,
+    using PMXOdeSystem = PMXCvodesFwdSystem<F_type, t_type, initial_type, param_type,
                                                         cvodes_def<TORSTEN_CV_SENS, CV_ADAMS, TORSTEN_CV_ISM>>;
 
     template<typename F_type, typename t_type, typename initial_type, typename param_type>
-    using PMXCvodesFwdSystem_bdf = PMXCvodesFwdSystem<F_type, t_type, initial_type, param_type,
+    using PMXOdeSystem = PMXCvodesFwdSystem<F_type, t_type, initial_type, param_type,
                                                         cvodes_def<TORSTEN_CV_SENS, CV_BDF, TORSTEN_CV_ISM>>;
 
   }  // namespace dsolve

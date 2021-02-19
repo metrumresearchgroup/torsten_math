@@ -6,7 +6,6 @@
 #include <stan/math/prim/err/system_error.hpp>
 #include <stan/math/prim/meta/return_type.hpp>
 #include <stan/math/prim/fun/typedefs.hpp>
-#include <stan/math/torsten/dsolve/cvodes_service.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
 
 namespace torsten {

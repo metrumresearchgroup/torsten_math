@@ -96,23 +96,19 @@ struct TorstenOdeTest : public testing::Test {
 
   template <typename Ode>
   void test_cvodes_system(Ode& ode,
-                          const std::vector<double>& y0,
+                          std::vector<double>& y0,
                           const std::vector<double>& theta,
                           const std::vector<double>& ts) {
-    EXPECT_EQ(ode.n(), y0.size());
-    EXPECT_EQ(ode.n_par(), theta.size());
-    auto y = ode.nv_y();
-    for (size_t i = 0; i < ode.n(); ++i) {
-      EXPECT_EQ(NV_Ith_S(y, i), y0[i]);
-    }
+    EXPECT_EQ(ode.N, y0.size());
+    EXPECT_EQ(ode.M, theta.size());
 
-    N_Vector res = N_VNew_Serial(y0.size());
+    N_Vector ydot = N_VNew_Serial(ode.N);
+    N_Vector y = N_VMake_Serial(ode.N, y0.data());
     
-    ode.set_user_data(ode.serv);
-    EXPECT_EQ(ode.serv.cvodes_rhs(ts.back(), y, res, static_cast<void*>(&(ode.serv.user_data))), 0);
-    auto fval = ode.f()(ts.back(), y0, theta, x_r, x_i, msgs);
-    for (size_t i = 0; i < y0.size(); ++i)
-      EXPECT_EQ(NV_Ith_S(res, i), fval[i]);
+    EXPECT_EQ(ode.cvodes_rhs(ts.back(), y, ydot, static_cast<void*>(&ode)), 0);
+    auto dydt = ode.f_(ts.back(), y0, theta, x_r, x_i, msgs);
+    for (size_t i = 0; i < ode.N; ++i)
+      EXPECT_EQ(NV_Ith_S(ydot, i), dydt[i]);
   }
 };
 

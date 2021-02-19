@@ -18,17 +18,17 @@ using torsten::PMXTwoCptODE;
 using torsten::PKODEModel;
 using torsten::dsolve::PMXOdeIntegrator;
 using torsten::dsolve::PMXOdeIntegrator;
-using torsten::dsolve::PMXCvodesFwdSystem_bdf;
-using torsten::dsolve::PMXCvodesFwdSystem_adams;
-using torsten::dsolve::PMXOdeintSystem;
+using torsten::dsolve::PMXOdeSystem;
+using torsten::dsolve::PMXOdeSystem;
+using torsten::dsolve::PMXOdeSystem;
 using torsten::dsolve::PMXCvodesIntegrator;
 using torsten::dsolve::PMXOdeintIntegrator;
 
-PMXOdeIntegrator<PMXCvodesFwdSystem_adams, PMXCvodesIntegrator> integrator_adams;
-PMXOdeIntegrator<PMXCvodesFwdSystem_bdf, PMXCvodesIntegrator> integrator_bdf;
+PMXOdeIntegrator<PMXOdeSystem,  PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED>> integrator_adams;
+PMXOdeIntegrator<PMXOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integrator_bdf;
 
 using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-PMXOdeIntegrator<PMXOdeintSystem, PMXOdeintIntegrator<scheme_t>> integrator_rk45;
+PMXOdeIntegrator<PMXOdeSystem, PMXOdeintIntegrator<scheme_t>> integrator_rk45;
 
 TEST_F(TorstenTwoCptModelTest, ode_model_ss_bolus_vs_long_run_sd) {
   y0[0] = 150;
@@ -875,7 +875,7 @@ TEST_F(TorstenTwoCptModelTest, ode_model_const_infusion_theta_grad_vs_long_run_s
   PMXTwoCptODE f2cpt;
   std::vector<var> params{CL, Q, V2, V3, ka, 330.0};
   std::vector<var> theta(params.begin(), params.begin() + 5);
-  const PMXOdeIntegrator<PMXCvodesFwdSystem_bdf, PMXCvodesIntegrator> integrator;
+  const PMXOdeIntegrator<PMXOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integrator;
 
   auto f1 = [&]() {
     using model_t = PKODEModel<var, PMXTwoCptODE>;
@@ -1070,8 +1070,8 @@ TEST_F(TorstenTwoCptModelTest, ode_model_with_data_ss_theta_grad) {
 
   for (int i = 0; i < 3; ++i) {
     cmt = i + 1;
-    Eigen::Matrix<var, -1, 1> y1 = f1(PMXOdeIntegrator<PMXCvodesFwdSystem_adams, PMXCvodesIntegrator>());
-    Eigen::Matrix<var, -1, 1> y2 = f2(PMXOdeIntegrator<PMXCvodesFwdSystem_adams, PMXCvodesIntegrator>());
+    Eigen::Matrix<var, -1, 1> y1 = f1(PMXOdeIntegrator<PMXOdeSystem,  PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED>>());
+    Eigen::Matrix<var, -1, 1> y2 = f2(PMXOdeIntegrator<PMXOdeSystem,  PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED>>());
     torsten::test::test_grad(params, y1, y2, 2.e-7, 1.e-8);
   }
 }

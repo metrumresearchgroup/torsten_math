@@ -5,6 +5,7 @@
 #include <stan/math/rev/meta/is_var.hpp>
 #include <stan/math/torsten/dsolve/sundials_check.hpp>
 #include <stan/math/torsten/dsolve/ode_func_type.hpp>
+#include <stan/math/torsten/dsolve/pmx_ode_system.hpp>
 #include <cvodes/cvodes.h>
 #include <nvector/nvector_serial.h>
 #include <sunmatrix/sunmatrix_dense.h>
@@ -175,17 +176,14 @@ namespace torsten {
      * allocation/deallocation, so ODE systems only request
      * service by injection.
      */
-    template <typename Ode>
+    template <typename Ode, int lmm_type>
     struct PMXOdeService;
 
-    template <typename F, typename Tts, typename Ty0, typename Tpar, typename cv_def>
-    class PMXCvodesFwdSystem;
+    template<int lmm_type, typename... Ts>
+    struct PMXOdeService<PMXOdeSystem<Ts...>, lmm_type> {
+      using Ode = PMXOdeSystem<Ts...>;
 
-    template<typename... Ts>
-    struct PMXOdeService<PMXCvodesFwdSystem<Ts...>> {
-      using Ode = PMXCvodesFwdSystem<Ts...>;
-
-      cvodes_user_data<Ode> user_data;
+      int ns;
       N_Vector nv_y;
       N_Vector* nv_ys;
       void* mem;
@@ -203,11 +201,11 @@ namespace torsten {
        * @param[in] m length of parameter theta
        * @param[in] f ODE RHS function
        */
-      PMXOdeService(int n, int m) :
-        user_data(n, m),
+      PMXOdeService(int n, int m, int ns0, Ode& ode) :
+        ns(ns0),
         nv_y(N_VNew_Serial(n)),
         nv_ys(nullptr),
-        mem(CVodeCreate(Ode::lmm_type)),
+        mem(CVodeCreate(lmm_type)),
         A(SUNDenseMatrix(n, n)),
         LS(SUNLinSol_Dense(nv_y, A)),
         yy_cplx(n),
@@ -221,19 +219,20 @@ namespace torsten {
         /*
          * allocate sensitivity array if need fwd sens calculation
          */ 
-        if (Ode::need_fwd_sens) {
-          nv_ys = N_VCloneVectorArray(user_data.ns, nv_y);
+        if (Ode::use_fwd_sens) {
+          nv_ys = N_VCloneVectorArray(ns, nv_y);
         }
 
         /*
          * initialize cvodes system and attach linear solver
          */ 
-        CHECK_SUNDIALS_CALL(CVodeInit(mem, cvodes_rhs, t0, nv_y));
-        CHECK_SUNDIALS_CALL(CVodeSetUserData(mem, static_cast<void*>(&user_data)));
-        CHECK_SUNDIALS_CALL(CVDlsSetLinearSolver(mem, LS, A));
+        CHECK_SUNDIALS_CALL(CVodeInit(mem, Ode::cvodes_rhs, t0, nv_y));
+        CHECK_SUNDIALS_CALL(CVodeSetUserData(mem, static_cast<void*>(&ode)));
+        CHECK_SUNDIALS_CALL(CVodeSetLinearSolver(mem, LS, A));
 
-        if (Ode::need_fwd_sens) {
-          CHECK_SUNDIALS_CALL(CVodeSensInit(mem, user_data.ns, Ode::ism_type, cvodes_sens_rhs, nv_ys)); 
+        // default CV_STAGGERED will be overwritten later during reinit
+        if (Ode::use_fwd_sens) {
+          CHECK_SUNDIALS_CALL(CVodeSensInit(mem, ns, CV_STAGGERED, Ode::cvodes_sens_rhs, nv_ys)); 
         }
       }
 
@@ -241,74 +240,13 @@ namespace torsten {
         SUNLinSolFree(LS);
         SUNMatDestroy(A);
         CVodeFree(&mem);
-        if (Ode::need_fwd_sens) {
+        if (Ode::use_fwd_sens) {
           CVodeSensFree(mem);
         }
-        N_VDestroyVectorArray(nv_ys, user_data.ns);
+        N_VDestroyVectorArray(nv_ys, ns);
         N_VDestroy(nv_y);
       }
-
-      static int cvodes_rhs(double t, N_Vector y, N_Vector ydot, void* user_data) {
-          cvodes_user_data<Ode>* ode = static_cast<cvodes_user_data<Ode>*>(user_data);
-          ode -> eval_rhs(t, y, ydot);
-          return 0;
-      }
-
-      static int cvodes_sens_rhs_impl(int ns, double t, N_Vector y, N_Vector ydot,
-                                      N_Vector* ys, N_Vector* ysdot, void* user_data,
-                                      N_Vector temp1, N_Vector temp2) {
-        if (Ode::need_fwd_sens) {
-          cvodes_user_data<Ode>* ode = static_cast<cvodes_user_data<Ode>*>(user_data);
-          ode -> eval_sens_rhs(ns, t, y, ydot, ys, ysdot, temp1, temp2);            
-        }
-        return 0;
-      }
-
-      /**
-       * return a closure for CVODES sensitivity RHS callback using a
-       * non-capture lambda.
-       *
-       * @tparam Ode type of Ode
-       * @return RHS function for Cvodes
-       */
-      static int cvodes_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
-                                 N_Vector* ys, N_Vector* ysdot, void* user_data,
-                                 N_Vector temp1, N_Vector temp2) {
-        return cvodes_sens_rhs_impl(ns, t, y, ydot, ys, ysdot, user_data, temp1, temp2);
-      }
     };
-
-    template <typename F, typename Tt, typename T_init, typename T_par>
-    struct PMXOdeintSystem;
-
-    template <typename... Ts>
-    struct PMXOdeService<PMXOdeintSystem<Ts...>> {
-      using Ode = PMXOdeintSystem<Ts...>;
-
-      const size_t N;
-      const size_t M;
-      const size_t ns;
-      const size_t size;
-      std::vector<double> y;
-
-      /** 
-       * Construct Boost Odeint workspace
-       * 
-       * @param n original system dimension
-       * @param m nb. of parameters, i.e. size of <code>theta</code>.
-       * 
-       */
-      PMXOdeService(int n, int m) :
-        N(n),
-        M(m),
-        ns((Ode::is_var_y0 ? n : 0) + (Ode::is_var_par ? m : 0)),
-        size(n + n * ns),
-        y(size, 0.0)
-      {}
-
-      ~PMXOdeService() {}
-    };
-
   }
 }
 

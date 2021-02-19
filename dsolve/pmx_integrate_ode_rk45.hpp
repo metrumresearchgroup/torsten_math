@@ -2,9 +2,7 @@
 #define STAN_MATH_TORSTEN_DSOLVE_INTEGRATE_ODE_RK45_HPP
 
 #include <stan/math/torsten/dsolve/pmx_ode_integrator.hpp>
-#include <stan/math/torsten/dsolve/pmx_odeint_system.hpp>
 #include <stan/math/torsten/dsolve/pmx_odeint_integrator.hpp>
-#include <stan/math/torsten/dsolve/ode_check.hpp>
 #include <ostream>
 #include <vector>
 
@@ -44,10 +42,9 @@ namespace torsten {
                          std::ostream* msgs = nullptr) {
     using dsolve::PMXOdeIntegrator;
     using dsolve::PMXOdeintIntegrator;
-    using dsolve::PMXOdeintSystem;
     using boost::numeric::odeint::runge_kutta_dopri5;
     using scheme_t = runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-    PMXOdeIntegrator<PMXOdeintSystem, PMXOdeintIntegrator<scheme_t>> solver(rtol, atol, max_num_step, msgs);
+    PMXOdeIntegrator<dsolve::PMXOdeSystem, PMXOdeintIntegrator<scheme_t>> solver(rtol, atol, max_num_step, msgs);
     return solver(f, y0, t0, ts, theta, x_r, x_i);
   }
 

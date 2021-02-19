@@ -27,7 +27,7 @@
 #include <chrono>
 #include <ctime>
 
-using torsten::dsolve::PMXCvodesFwdSystem;
+using torsten::dsolve::PMXOdeSystem;
 using stan::math::integrate_ode_bdf;
 using stan::math::integrate_ode_adams;
 using stan::math::integrate_ode_rk45;

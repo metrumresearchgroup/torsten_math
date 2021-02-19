@@ -390,7 +390,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, exception_sync) {
                                                   biovar_m,
                                                   tlag_m,
                                                   1e-6, 1e-6, 1e4),
-                     std::runtime_error, "CVode(mem, ts[i], y, &t1, CV_NORMAL) failed with error flag -1");
+                     std::runtime_error, "failed with error flag -1");
   } else {
     EXPECT_THROW_MSG(pmx_solve_group_adams(model_t::f_, model_t::Ncmt,
                                                   len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m, // NOLINT
@@ -411,7 +411,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, exception_sync) {
                                                   biovar_m,
                                                   tlag_m,
                                                   1e-6, 1e-6, 1e4),
-                     std::runtime_error, "CVode(mem, ts[i], y, &t1, CV_NORMAL) failed with error flag -1");
+                     std::runtime_error, "failed with error flag -1");
   } else {
     EXPECT_THROW_MSG(pmx_solve_group_adams(model_t::f_, model_t::Ncmt,
                                                   len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m, // NOLINT

@@ -99,8 +99,8 @@ pmx_solve_onecpt_bdf(const F& f,
   
   using dsolve::PMXOdeIntegrator;
   using dsolve::PMXCvodesIntegrator;
-  using dsolve::PMXCvodesFwdSystem_bdf;
-  PMXOdeIntegrator<PMXCvodesFwdSystem_bdf, PMXCvodesIntegrator> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
+  using dsolve::PMXOdeSystem;
+  PMXOdeIntegrator<PMXOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
   const int nCmt = nPK + nOde;
 
   using ER = NONMENEventsRecord<T0, T1, T2, T3>;

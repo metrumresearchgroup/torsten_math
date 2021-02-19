@@ -31,8 +31,8 @@ using torsten::NONMENEventsRecord;
 using torsten::PKODEModel;
 using torsten::dsolve::PMXOdeIntegrator;
 using torsten::dsolve::PMXOdeintIntegrator;
-using torsten::dsolve::PMXOdeintSystem;
-using torsten::dsolve::PMXCvodesFwdSystem_adams;
+using torsten::dsolve::PMXOdeSystem;
+using torsten::dsolve::PMXOdeSystem;
 using torsten::dsolve::PMXCvodesIntegrator;
 using torsten::PKRec;
 
@@ -49,7 +49,7 @@ TEST_F(TorstenTwoCptModelTest, algebra_solver_perf_bolus) {
   double ss_ii = 8.5;
   const int n_dose = 50;
 
-  const torsten::dsolve::PMXOdeIntegrator<PMXCvodesFwdSystem_adams, PMXCvodesIntegrator> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 100000, 0);
+  const torsten::dsolve::PMXOdeIntegrator<PMXOdeSystem,  PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED>> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 100000, 0);
 
   for (int ss_cmt = 1; ss_cmt < ncmt + 1; ++ss_cmt) {
     // steady state solution
@@ -87,7 +87,7 @@ TEST_F(TorstenTwoCptModelTest, algebra_solver_perf_bolus_par_sens) {
   double ss_ii = 8.5;
   const int n_dose = 50;
 
-  const torsten::dsolve::PMXOdeIntegrator<PMXCvodesFwdSystem_adams, PMXCvodesIntegrator> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 100000, 0);
+  const torsten::dsolve::PMXOdeIntegrator<PMXOdeSystem,  PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED>> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 100000, 0);
 
   for (int ss_cmt = 1; ss_cmt < ncmt + 1; ++ss_cmt) {
     // steady state solution
@@ -124,7 +124,7 @@ TEST_F(TorstenTwoCptModelTest, algebra_solver_perf_truncated_infusion) {
   const int n_dose = 50;
 
   using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-  const torsten::dsolve::PMXOdeIntegrator<PMXOdeintSystem, PMXOdeintIntegrator<scheme_t>> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 100000, 0);
+  const torsten::dsolve::PMXOdeIntegrator<PMXOdeSystem, PMXOdeintIntegrator<scheme_t>> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 100000, 0);
 
   const int ss_cmt = 2;
   // steady state solution
@@ -134,7 +134,7 @@ TEST_F(TorstenTwoCptModelTest, algebra_solver_perf_truncated_infusion) {
 
 TEST_F(FribergKarlssonTest, algebra_solver_perf_bolus) {
   const int npar = 9;
-  const PMXOdeIntegrator<PMXCvodesFwdSystem_adams, PMXCvodesIntegrator> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 10000, 0); 
+  const PMXOdeIntegrator<PMXOdeSystem,  PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED>> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 10000, 0); 
   std::vector<double> par(npar);
   std::vector<double> y0(nCmt);
   par[0] = 7.25654;             // CL
@@ -176,7 +176,7 @@ TEST_F(FribergKarlssonTest, algebra_solver_perf_bolus) {
 
 TEST_F(FribergKarlssonTest, algebra_solver_perf_truncated_infusion) {
   const int npar = 9;
-  const PMXOdeIntegrator<PMXCvodesFwdSystem_adams, PMXCvodesIntegrator> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 10000, 0); 
+  const PMXOdeIntegrator<PMXOdeSystem,  PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED>> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 10000, 0); 
   std::vector<double> par(npar);
   std::vector<double> y0(nCmt);
   par[0] = 7.25654;             // CL
@@ -221,7 +221,7 @@ TEST_F(FribergKarlssonTest, algebra_solver_perf_truncated_infusion) {
 TEST_F(FribergKarlssonTest, algebra_solver_perf_stationary_solution) {
   const int npar = 9;
   using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-  const PMXOdeIntegrator<PMXOdeintSystem, PMXOdeintIntegrator<scheme_t>> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 10000, 0); 
+  const PMXOdeIntegrator<PMXOdeSystem, PMXOdeintIntegrator<scheme_t>> integ(1.e-8, 1.e-8, 100000, 5.e-8, 5.e-8, 10000, 0); 
   std::vector<double> par(npar);
   std::vector<double> y0(nCmt);
   par[0] = 7.25654;             // CL

@@ -16,7 +16,7 @@ using Eigen::Dynamic;
 using stan::math::matrix_exp;
 using stan::math::to_vector;
 using torsten::PKODEModel;
-using torsten::dsolve::PMXCvodesFwdSystem_bdf;
+using torsten::dsolve::PMXOdeSystem;
 using torsten::dsolve::PMXCvodesIntegrator;
 
 TEST_F(TorstenTwoCptModelTest, linode_dbl) {
@@ -189,7 +189,7 @@ TEST_F(TorstenTwoCptModelTest, linode_ss_vs_ode) {
   PKODEModel<var, PMXLinODE> model3(ode_par_var, model2.ncmt(), model2.f());
 
   const dsolve::PMXAnalyiticalIntegrator integ2;
-  const PMXOdeIntegrator<PMXCvodesFwdSystem_bdf, PMXCvodesIntegrator> integ3;
+  const PMXOdeIntegrator<PMXOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integ3;
   torsten::PKRec<var> y2 = model2.solve(ts[0], amt, r, ii, 1, integ2);
   torsten::PKRec<var> y3 = model3.solve(ts[0], amt, r, ii, 1, integ3);
   torsten::test::test_grad(par_var, y2, y3, 1e-7, 2e-7);
@@ -207,7 +207,7 @@ TEST_F(TorstenTwoCptModelTest, linode_long_ss_vs_ode) {
   PKODEModel<var, PMXLinODE> model3(ode_par_var, model2.ncmt(), model2.f());
 
   const dsolve::PMXAnalyiticalIntegrator integ2;
-  const PMXOdeIntegrator<PMXCvodesFwdSystem_bdf, PMXCvodesIntegrator> integ3;
+  const PMXOdeIntegrator<PMXOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integ3;
   torsten::PKRec<var> y2 = model2.solve(ts[0], amt, r, ii, 1, integ2);
   torsten::PKRec<var> y3 = model3.solve(ts[0], amt, r, ii, 1, integ3);
   torsten::test::test_grad(par_var, y2, y3, 5e-6, 1e-5);
@@ -225,7 +225,7 @@ TEST_F(TorstenTwoCptModelTest, linode_long_long_ss_infusion_vs_ode) {
   PKODEModel<var, PMXLinODE> model3(ode_par_var, model2.ncmt(), model2.f());
 
   const dsolve::PMXAnalyiticalIntegrator integ2;
-  const PMXOdeIntegrator<PMXCvodesFwdSystem_bdf, PMXCvodesIntegrator> integ3;
+  const PMXOdeIntegrator<PMXOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integ3;
   torsten::PKRec<var> y2 = model2.solve(ts[0], amt, r, ii, 1, integ2);
   torsten::PKRec<var> y3 = model3.solve(ts[0], amt, r, ii, 1, integ3);
   torsten::test::test_grad(par_var, y2, y3, 1e-6, 1e-5);

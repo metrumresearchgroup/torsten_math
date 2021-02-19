@@ -100,7 +100,7 @@ pmx_solve_onecpt_rk45(const F& f,
   const int &nPK = torsten::PMXOneCptModel<double>::Ncmt;
 
   using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-  dsolve::PMXOdeIntegrator<dsolve::PMXOdeintSystem, dsolve::PMXOdeintIntegrator<scheme_t>>
+  dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXOdeintIntegrator<scheme_t>>
     integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
   const int nCmt = nPK + nOde;
 

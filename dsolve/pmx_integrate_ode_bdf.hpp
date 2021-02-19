@@ -3,7 +3,6 @@
 
 #include <stan/math/torsten/dsolve/pmx_ode_integrator.hpp>
 #include <stan/math/torsten/dsolve/pmx_cvodes_integrator.hpp>
-#include <stan/math/torsten/dsolve/ode_check.hpp>
 #include <ostream>
 #include <vector>
 
@@ -44,8 +43,8 @@ namespace torsten {
                         std::ostream* msgs = nullptr) {
     using dsolve::PMXOdeIntegrator;
     using dsolve::PMXCvodesIntegrator;
-    using dsolve::PMXCvodesFwdSystem_bdf;
-    PMXOdeIntegrator<PMXCvodesFwdSystem_bdf, PMXCvodesIntegrator> solver(rtol, atol, max_num_step, msgs);
+    using dsolve::PMXOdeSystem;
+    PMXOdeIntegrator<PMXOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> solver(rtol, atol, max_num_step, msgs);
     return solver(f, y0, t0, ts, theta, x_r, x_i);
   }
 
