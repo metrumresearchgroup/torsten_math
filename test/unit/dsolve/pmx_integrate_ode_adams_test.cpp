@@ -1,6 +1,5 @@
 #include <stan/math/rev.hpp>
 #include <gtest/gtest.h>
-#include <stan/math/torsten/dsolve/pmx_integrate_ode_rk45.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_adams.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_group_adams.hpp>
 #include <stan/math.hpp>
@@ -20,8 +19,6 @@
 #include <vector>
 #include <limits>
 
-using stan::math::integrate_ode_rk45;
-using torsten::pmx_integrate_ode_rk45;
 using stan::math::integrate_ode_adams;
 using torsten::pmx_integrate_ode_adams;
 using torsten::dsolve::PMXOdeSystem;
@@ -37,7 +34,7 @@ TORSTEN_MPI_SESSION_INIT;
 #endif
 
 TEST_F(TorstenOdeTest_sho, cvodes_adams_ivp_system_matrix_result) {
-  std::vector<std::vector<double> > y1(integrate_ode_rk45(f, y0, t0, ts, theta, x_r, x_i, msgs, atol, rtol, max_num_steps));
+  std::vector<std::vector<double> > y1(integrate_ode_adams(f, y0, t0, ts, theta, x_r, x_i, msgs, atol, rtol, max_num_steps));
 
   using Ode = PMXOdeSystem<harm_osc_ode_fun, double, double, double>;
   Ode ode{f, t0, ts, y0, theta, x_r, x_i, msgs};
@@ -56,7 +53,7 @@ TEST_F(TorstenOdeTest_lorenz, cvodes_adams_ivp_system) {
 }
 
 TEST_F(TorstenOdeTest_lorenz, cvodes_adams_ivp_system_matrix_result) {
- std::vector<std::vector<double> > y1(integrate_ode_rk45(f, y0, t0, ts, theta, x_r, x_i, msgs, atol, rtol, max_num_steps));
+ std::vector<std::vector<double> > y1(integrate_ode_adams(f, y0, t0, ts, theta, x_r, x_i, msgs, atol, rtol, max_num_steps));
 
   using Ode = PMXOdeSystem<lorenz_ode_fun, double, double, double>;
   Ode ode{f, t0, ts, y0, theta, x_r, x_i, msgs};
@@ -103,7 +100,7 @@ TEST_F(TorstenOdeTest_sho, fwd_sensitivity_ts) {
 
 TEST_F(TorstenOdeTest_sho, adams_theta_var_matrix_result) {
   std::vector<var> theta_var = stan::math::to_var(theta);
-  vector<vector<var> > y1(integrate_ode_rk45(f, y0, t0, ts, theta_var, x_r, x_i, msgs, atol, rtol, max_num_steps));
+  vector<vector<var> > y1(integrate_ode_adams(f, y0, t0, ts, theta_var, x_r, x_i, msgs, atol, rtol, max_num_steps));
 
   using Ode = PMXOdeSystem<harm_osc_ode_fun, double, double, var>;
   Ode ode{f, t0, ts, y0, theta_var, x_r, x_i, msgs};
@@ -128,7 +125,7 @@ TEST_F(TorstenOdeTest_sho, cvodes_adams_fwd_sensitivity_theta) {
   std::vector<var> theta_var1 = stan::math::to_var(theta);
   std::vector<var> theta_var2 = stan::math::to_var(theta);
 
-  std::vector<std::vector<stan::math::var>> y1 = integrate_ode_rk45(f, y0, t0, ts, theta_var1, x_r, x_i);
+  std::vector<std::vector<stan::math::var>> y1 = integrate_ode_adams(f, y0, t0, ts, theta_var1, x_r, x_i);
   std::vector<std::vector<stan::math::var>> y2 = pmx_integrate_ode_adams(f, y0, t0, ts, theta_var2, x_r, x_i);
   torsten::test::test_grad(theta_var1, theta_var2, y1, y2, 1.E-6, 6.E-6);
 }
@@ -137,7 +134,7 @@ TEST_F(TorstenOdeTest_chem, cvodes_adams_fwd_sensitivity_y0) {
   std::vector<var> y0_var1 = stan::math::to_var(y0);
   std::vector<var> y0_var2 = stan::math::to_var(y0);
 
-  std::vector<std::vector<stan::math::var>> y1 = integrate_ode_rk45(f, y0_var1, t0, ts, theta, x_r, x_i);
+  std::vector<std::vector<stan::math::var>> y1 = integrate_ode_adams(f, y0_var1, t0, ts, theta, x_r, x_i);
   std::vector<std::vector<stan::math::var>> y2 = pmx_integrate_ode_adams(f, y0_var2, t0, ts, theta, x_r, x_i);
   torsten::test::test_grad(y0_var1, y0_var2, y1, y2, 5.E-6, 5.E-6);
 }
@@ -155,7 +152,7 @@ TEST_F(TorstenOdeTest_sho, cvodes_adams_fwd_sensitivity_y0) {
   std::vector<var> y0_var1 = stan::math::to_var(y0);
   std::vector<var> y0_var2 = stan::math::to_var(y0);
 
-  std::vector<std::vector<stan::math::var>> y1 = integrate_ode_rk45(f, y0_var1, t0, ts, theta, x_r, x_i);
+  std::vector<std::vector<stan::math::var>> y1 = integrate_ode_adams(f, y0_var1, t0, ts, theta, x_r, x_i);
   std::vector<std::vector<stan::math::var>> y2 = pmx_integrate_ode_adams(f, y0_var2, t0, ts, theta, x_r, x_i);
   torsten::test::test_grad(y0_var1, y0_var2, y1, y2, 5.E-6, 5.E-6);
 }
@@ -190,7 +187,7 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_y0) {
   std::vector<var> theta_var2 = stan::math::to_var(theta);
   std::vector<var> y0_var2 = stan::math::to_var(y0);
 
-  std::vector<std::vector<stan::math::var>> y1 = integrate_ode_rk45(f, y0_var1, t0, ts, theta_var1, x_r, x_i);
+  std::vector<std::vector<stan::math::var>> y1 = integrate_ode_adams(f, y0_var1, t0, ts, theta_var1, x_r, x_i);
   std::vector<std::vector<stan::math::var>> y2 = pmx_integrate_ode_adams(f, y0_var2, t0, ts, theta_var2, x_r, x_i);
   torsten::test::test_grad(y0_var1, y0_var2, y1, y2, 1.E-8, 3.E-6);
   torsten::test::test_grad(theta_var1, theta_var2, y1, y2, 1.E-8, 3.E-6);
