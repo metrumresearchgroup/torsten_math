@@ -7,7 +7,6 @@
 #include <stan/math/torsten/mpi/my_worker.hpp>
 #include <stan/math/torsten/mpi/dynamic_load.hpp>
 #include <stan/math/prim/meta/return_type.hpp>
-#include <stan/math/torsten/is_var.hpp>
 #include <algorithm>
 #include <vector>
 

@@ -5,6 +5,7 @@
 #include <stan/math/prim/meta/return_type.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
+#include <stan/math/torsten/meta/require_generics.hpp>
 #include <stan/math/prim/fun/get.hpp>
 #include <stan/math/prim/fun/value_of.hpp>
 #include <stan/math/prim/err/check_size_match.hpp>
@@ -32,7 +33,8 @@ namespace dsolve {
    * @tparam T_init scalar type of initial unknown values
    * @tparam T_par scalar type of parameters
    */
-  template <typename F, typename Tt, typename T_init, typename T_par>
+  template <typename F, typename Tt, typename T_init, typename T_par,
+            typename = require_std_ode_t<F>>
   struct  PMXOdeSystem {
     using Ode = PMXOdeSystem<F, Tt, T_init, T_par>;
     using scalar_t = typename stan::return_type_t<Tt, T_init, T_par>;

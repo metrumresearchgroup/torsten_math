@@ -32,22 +32,12 @@ namespace torsten {
  *         at each event. 
  *
  */
-  template <typename F, typename... Ts,
-            typename std::enable_if_t<last_is_ostream_ptr<Ts...>::value >* = nullptr>
-  auto pmx_solve_rk45(const F& f, const int nCmt,
-                      Ts... args) {
+  template <typename F, typename... Ts>
+  auto pmx_solve_rk45(const F& f, const int nCmt, Ts... args) {
     using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
     return PMXSolveODE<dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXOdeintIntegrator<scheme_t>>>::solve(f, nCmt, args...);
 }
 
-  template <typename F, typename... Ts,
-            typename std::enable_if_t<!last_is_ostream_ptr<Ts...>::value >* = nullptr>
-  auto pmx_solve_rk45(const F& f, const int nCmt,
-                      Ts... args) {
-    using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-    return PMXSolveODE<dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXOdeintIntegrator<scheme_t>>>::solve(f, nCmt, args..., nullptr);
-}
-  
   /*
    * For backward compatibility we keep old version of
    * return type using transpose. This is less efficient and
@@ -92,22 +82,12 @@ namespace torsten {
    * the length of each individual's data. The size of that
    * vector is the size of the population.
    */
-  template <typename F, typename... Ts,
-            typename std::enable_if_t<last_is_ostream_ptr<Ts...>::value >* = nullptr>
+  template <typename F, typename... Ts>
   auto pmx_solve_group_rk45(const F& f, const int nCmt,
                             const std::vector<int>& len, Ts... args) {
     using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
     return PMXSolveGroupODE<dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXOdeintIntegrator<scheme_t>>>::solve(f, nCmt, len, args...);
   }
-
-  template <typename F, typename... Ts,
-            typename std::enable_if_t<!last_is_ostream_ptr<Ts...>::value >* = nullptr>
-  auto pmx_solve_group_rk45(const F& f, const int nCmt,
-                            const std::vector<int>& len, Ts... args) {
-    using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-    return PMXSolveGroupODE<dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXOdeintIntegrator<scheme_t>>>::solve(f, nCmt, len, args..., nullptr);
-  }
-
 }
 
 #endif

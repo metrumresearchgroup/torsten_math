@@ -32,38 +32,12 @@ namespace torsten {
  *         at each event. 
  *
  */
-  template <typename F, typename... Ts,
-            typename std::enable_if_t<last_is_ostream_ptr<Ts...>::value >* = nullptr>
+  template <typename F, typename... Ts>
   auto pmx_solve_adams(const F& f, const int nCmt,
                       Ts... args) {
     return PMXSolveODE<dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED>>>::solve(f, nCmt, args...);
-}
+  }
 
-/**
- * Computes the predicted amounts in each compartment at each event
- * for a general compartment model, defined by a system of ordinary
- * differential equations. Uses the torsten::pmx_integrate_ode_adams 
- * function. The last type of <code>Ts...</code> is not
- * <code>ostream*</code>, so we add a <code>nullptr</code> to
- * the inner function call.
- *
- * @tparam Ts types of parameters, see <code>pmx_solve_ode</code> for
- *         details. 
- * @tparam F type of ODE system function.
- * @param[in] f functor for base ordinary differential equation that defines 
- *            compartment model.
- * @param[in] nCmt number of compartments in model
- * @return a matrix with predicted amount in each compartment 
- *         at each event. 
- *
- */
-  template <typename F, typename... Ts,
-            typename std::enable_if_t<!last_is_ostream_ptr<Ts...>::value >* = nullptr>
-  auto pmx_solve_adams(const F& f, const int nCmt,
-                      Ts... args) {
-    return PMXSolveODE<dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED>>>::solve(f, nCmt, args..., nullptr);
-}
-  
   /*
    * For backward compatibility we keep old version of
    * return type using transpose. This is less efficient and
@@ -108,20 +82,11 @@ namespace torsten {
    * the length of each individual's data. The size of that
    * vector is the size of the population.
    */
-  template <typename F, typename... Ts,
-            typename std::enable_if_t<last_is_ostream_ptr<Ts...>::value >* = nullptr>
+  template <typename F, typename... Ts>
   auto pmx_solve_group_adams(const F& f, const int nCmt,
                             const std::vector<int>& len, Ts... args) {
     return PMXSolveGroupODE<dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED>>>::solve(f, nCmt, len, args...);
   }
-
-  template <typename F, typename... Ts,
-            typename std::enable_if_t<!last_is_ostream_ptr<Ts...>::value >* = nullptr>
-  auto pmx_solve_group_adams(const F& f, const int nCmt,
-                            const std::vector<int>& len, Ts... args) {
-    return PMXSolveGroupODE<dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED>>>::solve(f, nCmt, len, args..., nullptr);
-  }
-
 }
 
 #endif

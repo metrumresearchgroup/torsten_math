@@ -8,7 +8,6 @@
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/pmx_ode_model.hpp>
 #include <stan/math/torsten/val_and_grad_nested.hpp>
-#include <stan/math/torsten/is_var.hpp>
 
 namespace torsten {
 
@@ -126,7 +125,7 @@ namespace torsten {
            typename Tt0, typename Tt1,
            typename T1, typename integrator_type,
            typename... Ts,
-           typename std::enable_if_t<torsten::is_var<typename T_model::par_type, Tt0, Tt1, T, T1>::value &&
+           typename std::enable_if_t<stan::math::disjunction<stan::is_var<typename T_model::par_type>, stan::is_var<Tt0>, stan::is_var<Tt1>, stan::is_var<T>, stan::is_var<T1>>::value &&
                                      !has_data_only_output<integrator_type>::value>* = nullptr>
   Eigen::VectorXd model_solve_d(const T_model& pkmodel,
                                 const PKRec<T>& y,
@@ -180,7 +179,7 @@ namespace torsten {
            typename Tt0, typename Tt1,
            typename T1, typename integrator_type,
            typename... Ts,
-           typename std::enable_if_t<torsten::is_var<typename T_model::par_type, Tt0, Tt1, T, T1>::value &&
+           typename std::enable_if_t<stan::math::disjunction<stan::is_var<typename T_model::par_type>, stan::is_var<Tt0>, stan::is_var<Tt1>, stan::is_var<T>, stan::is_var<T1>>::value &&
                                      has_data_only_output<integrator_type>::value>* = nullptr>
   Eigen::VectorXd model_solve_d(const T_model& pkmodel,
                                 const PKRec<T>& y,

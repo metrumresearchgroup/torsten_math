@@ -11,26 +11,6 @@
 #include <vector>
 
 namespace torsten {
-
-  /** 
-   * helper type trait used for actual ODE solver functions to
-   * detect if the last arg is <code>ostream*</code>
-   * 
-   * @tparam Ts all of the args for pmx solvers
-   */
-  template<typename... Ts>
-  struct last_is_ostream_ptr;
-
-  template<typename T>
-  struct last_is_ostream_ptr<T> {
-    static const bool value = std::is_same<T, std::ostream*>::value;
-  };
-
-  template<typename T, typename... Ts>
-  struct last_is_ostream_ptr<T, Ts...> {
-    static const bool value = last_is_ostream_ptr<Ts...>::value;
-  };
-
 /**
  * simpily pmx function declare
  * 

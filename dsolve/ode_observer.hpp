@@ -1,8 +1,8 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_ODE_OBSERVER_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_ODE_OBSERVER_HPP
 
+#include <stan/math/prim/meta.hpp>
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
-#include <stan/math/torsten/is_var.hpp>
 #include <type_traits>
 
 namespace torsten {
@@ -111,7 +111,7 @@ namespace dsolve {
      * Only @c theta is @c var
      */
     template<typename F, typename T_init, typename T_par,
-             std::enable_if_t<torsten::is_var<T_init, T_par>::value>* = nullptr>
+             typename = stan::require_any_var_t<T_init, T_par>>
     inline void observer_impl(std::vector<stan::math::var>& y_res,
                               const std::vector<double>& y,
                               const PMXOdeSystem<F, double, T_init, T_par>& system) const {
@@ -122,7 +122,7 @@ namespace dsolve {
      * Only @c theta is @c var
      */
     template<typename F, typename T_init, typename T_par,
-             std::enable_if_t<torsten::is_var<T_init, T_par>::value>* = nullptr>
+             typename = stan::require_any_var_t<T_init, T_par>>
     inline void observer_impl(std::vector<stan::math::var>& y_res,
                               const N_Vector& y,
                               const N_Vector* ys,
@@ -134,7 +134,7 @@ namespace dsolve {
      * @c theta and/or &c y0 are @c var, together with @c ts.
      */
     template<typename F, typename T_init, typename T_par,
-             std::enable_if_t<torsten::is_var<T_init, T_par>::value>* = nullptr>
+             typename = stan::require_any_var_t<T_init, T_par>>
     inline void observer_impl(std::vector<stan::math::var>& y_res,
                               const std::vector<double>& y,
                               const PMXOdeSystem<F, stan::math::var, T_init, T_par>& system) const {
@@ -166,7 +166,7 @@ namespace dsolve {
      * @c theta and/or &c y0 are @c var, together with @c ts.
      */
     template<typename F, typename T_init, typename T_par,
-             std::enable_if_t<torsten::is_var<T_init, T_par>::value>* = nullptr>
+             typename = stan::require_any_var_t<T_init, T_par>>
     inline void observer_impl(std::vector<stan::math::var>& y_res,
                               const N_Vector& y,
                               const N_Vector* ys,
