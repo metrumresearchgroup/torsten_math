@@ -16,6 +16,7 @@ namespace torsten {
 
   STAN_ADD_REQUIRE_UNARY(std_ode, torsten::is_std_ode, torsten_meta)
   STAN_ADD_REQUIRE_UNARY(eigen_ode, torsten::is_eigen_ode, torsten_meta)
+  STAN_ADD_REQUIRE_UNARY(std_vector, stan::is_std_vector, torsten_meta)
 }
 
 #endif

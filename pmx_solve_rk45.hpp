@@ -2,7 +2,6 @@
 #define STAN_MATH_TORSTEN_SOLVE_RK45_HPP
 
 #include <Eigen/Dense>
-#include <stan/math/torsten/is_std_vector.hpp>
 #include <stan/math/torsten/to_array_2d.hpp>
 #include <stan/math/torsten/ev_manager.hpp>
 #include <stan/math/torsten/pmx_population_check.hpp>
@@ -46,11 +45,7 @@ namespace torsten {
   template <typename T0, typename T1, typename T2, typename T3,
             typename T_par, typename T_biovar, typename T_tlag,
             typename F>
-  Eigen::Matrix <typename stan::return_type_t<T0, T1, T2, T3,
-                                            typename value_type<T_par>::type,
-                                            typename value_type<T_biovar>::type,
-                                            typename value_type<T_tlag>::type>,
-                 Eigen::Dynamic, Eigen::Dynamic>
+  stan::matrix_return_t<T0, T1, T2, T3, T_par, T_biovar, T_tlag>
   generalOdeModel_rk45(const F& f,
                        const int nCmt,
                        const std::vector<T0>& time,
