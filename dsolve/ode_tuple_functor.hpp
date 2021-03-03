@@ -77,7 +77,7 @@ namespace dsolve {
     auto operator()(const Tt& t,
                     const Eigen::Matrix<T_init, -1, 1>& y,
                     std::ostream* msgs,
-                    const Tuple& args) {
+                    const Tuple& args) const {
       VariadicOdeFunc<F, Tt, T_init> f(f_, t, y, msgs);
       UnpackTupleFunc<VariadicOdeFunc<F, Tt, T_init> > f1(f);
       return f1(args);
