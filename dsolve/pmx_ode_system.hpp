@@ -1,24 +1,20 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_PMX_ODE_SYSTEM_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_PMX_ODE_SYSTEM_HPP
 
-#include <stan/math/rev/core/recover_memory.hpp>
-#include <stan/math/rev/core/deep_copy_vars.hpp>
+#include <stan/math/rev/meta.hpp>
+#include <stan/math/rev/core.hpp>
+#include <stan/math/rev/fun/value_of.hpp>
+#include <stan/math/prim/err.hpp>
 #include <stan/math/prim/meta/return_type.hpp>
 #include <stan/math/torsten/dsolve/ode_tuple_functor.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
 #include <stan/math/torsten/meta/require_generics.hpp>
-#include <stan/math/prim/fun/get.hpp>
-#include <stan/math/prim/fun/value_of.hpp>
-#include <stan/math/prim/fun/value_of.hpp>
 #include <stan/math/prim/fun/typedefs.hpp>
-#include <stan/math/prim/err/check_size_match.hpp>
 #include <stan/math/rev/fun/typedefs.hpp>
 #include <stan/math/rev/fun/to_var.hpp>
 #include <stan/math/rev/fun/value_of.hpp>
 #include <stan/math/rev/fun/value_of_rec.hpp>
-#include <stan/math/rev/meta/is_var.hpp>
-#include <stan/math/rev/core.hpp>
 #include <cvodes/cvodes.h>
 #include <nvector/nvector_serial.h>
 #include <sunmatrix/sunmatrix_dense.h>
@@ -324,8 +320,6 @@ namespace dsolve {
     static constexpr bool is_var_ts  = stan::is_var<Tt>::value;
     static constexpr bool is_var_y0  = stan::is_var<T_init>::value;
 
-  //   static constexpr bool use_fwd_sens = is_var_y0 || is_var_par;
-
     const F& f_;
     const TupleOdeFunc<F> f_tuple_;
     const double t0_;
@@ -391,7 +385,7 @@ namespace dsolve {
      * @param t current indepedent value
      */
     inline void operator()(const Eigen::VectorXd& y, Eigen::VectorXd& dy_dt,
-                           double t) const {
+                           double t) {
       stan::math::check_size_match("PMXVariadicOdeSystem", "y", y.size(), "dy_dt", dy_dt.size());
       rhs_impl(y, dy_dt, t);
     }
@@ -399,16 +393,14 @@ namespace dsolve {
     /*
      * evaluate RHS with data only inputs.
      */
-    inline Eigen::VectorXd dbl_rhs_impl(double t, const Eigen::VectorXd& y) const
-    {
+    inline Eigen::VectorXd dbl_rhs_impl(double t, const Eigen::VectorXd& y) const {
       return f_tuple_(t, y, msgs_, theta_dbl_tuple_);
     }
 
     /*
      * evaluate RHS with data only inputs.
      */
-    inline Eigen::VectorXd dbl_rhs_impl(double t, const N_Vector& nv_y) const
-    {
+    inline Eigen::VectorXd dbl_rhs_impl(double t, const N_Vector& nv_y) const {
       return dbl_rhs_impl(t, Eigen::Map<Eigen::VectorXd>(NV_DATA_S(nv_y), N));
     }
 
@@ -429,8 +421,7 @@ namespace dsolve {
      * evalute RHS of the entire system, possibly including
      * the forward sensitivity equation components in @c y and @c dy_dt.
      */
-    void rhs_impl(const Eigen::VectorXd & y,
-                  Eigen::VectorXd & dydt, double t) const {
+    void rhs_impl(const Eigen::VectorXd & y, Eigen::VectorXd & dydt, double t) {
       using stan::math::var;
       using stan::math::vector_v;
       using stan::math::vector_d;
@@ -475,6 +466,8 @@ namespace dsolve {
             dydt(N + N * (ns - M + j) + i) += g[j];
           }
         }
+
+        stan::math::apply([&](auto&&... args) { stan::math::zero_adjoints(args...); }, theta_tuple_);
       }
     }
 
@@ -528,6 +521,8 @@ namespace dsolve {
             nvp[j] += g[i];
           }
         }
+
+        stan::math::apply([&](auto&&... args) { stan::math::zero_adjoints(args...); }, theta_tuple_);
       }
     }
 
@@ -539,45 +534,48 @@ namespace dsolve {
       return 0;
     }
 
-  //   /**
-  //    * return a closure for CVODES residual callback using a
-  //    * non-capture lambda.
-  //    *
-  //    * @tparam Ode type of Ode
-  //    * @return RHS function for Cvodes
-  //    */
-  //   inline CVLsJacFn cvodes_jac() {
-  //     return [](realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void* user_data, // NOLINT
-  //               N_Vector tmp1, N_Vector tmp2, N_Vector tmp3) -> int {
-  //       Ode* ode = static_cast<Ode*>(user_data);
-  //       ode -> jac(t, y, fy, J);
-  //       return 0;
-  //     };
-  //   }
+    /**
+     * return a closure for CVODES residual callback using a
+     * non-capture lambda.
+     *
+     * @tparam Ode type of Ode
+     * @return RHS function for Cvodes
+     */
+    inline CVLsJacFn cvodes_jac() {
+      return [](realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void* user_data, // NOLINT
+                N_Vector tmp1, N_Vector tmp2, N_Vector tmp3) -> int {
+        Ode* ode = static_cast<Ode*>(user_data);
+        ode -> jac(t, y, fy, J);
+        return 0;
+      };
+    }
 
-  //   /**
-  //    * evaluate Jacobian matrix using current state, store
-  //    * the result in @c SUNMatrix J.
-  //    *
-  //    * @param t current time
-  //    * @param y current y
-  //    * @param fy current f(y)
-  //    * @param J Jacobian matrix J(i,j) = df_i/dy_j
-  //    */
-  //   inline void jac(double t, N_Vector& nv_y, N_Vector& fy, SUNMatrix& J) {
-  //     stan::math::nested_rev_autodiff nested;
+    /**
+     * evaluate Jacobian matrix using current state, store
+     * the result in @c SUNMatrix J.
+     *
+     * @param t current time
+     * @param y current y
+     * @param fy current f(y)
+     * @param J Jacobian matrix J(i,j) = df_i/dy_j
+     */
+    inline void jac(double t, N_Vector& nv_y, N_Vector& fy, SUNMatrix& J) {
+      using stan::math::vector_v;
 
-  //     std::vector<stan::math::var> yv_work(NV_DATA_S(nv_y), NV_DATA_S(nv_y) + N);
-  //     std::vector<stan::math::var> fyv_work(f_(t, yv_work, theta_dbl_, x_r_, x_i_, msgs_));
+      stan::math::nested_rev_autodiff nested;
 
-  //     for (int i = 0; i < N; ++i) {
-  //       nested.set_zero_all_adjoints();
-  //       fyv_work[i].grad();
-  //       for (int j = 0; j < N; ++j) {
-  //         SM_ELEMENT_D(J, i, j) = yv_work[j].adj();
-  //       }
-  //     }
-  //   }
+      vector_v yv(N);
+      for (size_t i = 0; i < N; ++i) { yv[i] = NV_Ith_S(nv_y, i); }
+      vector_v dydt(f_tuple_(t, yv, msgs_, theta_dbl_tuple_));
+
+      for (int i = 0; i < N; ++i) {
+        nested.set_zero_all_adjoints();
+        dydt[i].grad();
+        for (int j = 0; j < N; ++j) {
+          SM_ELEMENT_D(J, i, j) = yv[j].adj();
+        }
+      }
+    }
   };
 
 }  // namespace dsolve
