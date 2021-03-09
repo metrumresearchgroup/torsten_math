@@ -84,6 +84,31 @@ namespace dsolve {
     }
   };
 
+  /** 
+   * functor wrapper of <code>count_vars</code>,
+   * 
+   * @return # of vars.
+   */
+  struct count_vars_impl {
+    template <typename... Pargs>
+    inline size_t operator()(Pargs&&... args) const {
+      return stan::math::count_vars(args...);
+    }
+  };
+
+  /** 
+   * count vars in a tuple that wraps around a parameter pack.
+   * 
+   * @param arg_tuple tuple containing parm pack
+   * 
+   * @return total # of vars in the param pack.
+   */
+  template <typename... Pargs>
+  inline size_t count_vars_in_tuple(const std::tuple<const Pargs&...>& arg_tuple) {
+    torsten::dsolve::count_vars_impl f;
+    torsten::dsolve::UnpackTupleFunc<count_vars_impl> c(f);
+    return c(arg_tuple);
+  }
 }
 }
 

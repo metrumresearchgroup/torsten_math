@@ -1,11 +1,15 @@
 #ifndef STAN_MATH_TORSTEN_MPI_PRECOMPUTED_GRADIENTS_HPP
 #define STAN_MATH_TORSTEN_MPI_PRECOMPUTED_GRADIENTS_HPP
 
+#include<stan/math/rev/core.hpp>
+#include<stan/math/prim/functor/apply.hpp>
 #include<stan/math/prim/meta/is_vector.hpp>
+#include<stan/math/torsten/dsolve/ode_tuple_functor.hpp>
 #include <nvector/nvector_serial.h>
 
 namespace torsten {
-  /*
+  /**
+   * 
    * @tparam Ty @c vector type, can be either std::vector or eigen::vector
    */
   template<typename Ty = std::vector<double>,
@@ -16,13 +20,66 @@ namespace torsten {
     const size_t n = sol.size()/(1 + theta.size());
     Ty_out y_res(n);
     std::vector<double> g(theta.size());
+
+    using stan::math::ChainableStack;
+    using stan::math::vari;  
+    vari** varis
+      = ChainableStack::instance_->memalloc_.alloc_array<vari*>(theta.size());
+    save_varis(varis, theta);
+
     for (size_t j = 0; j < n; j++) {
-      for (size_t k = 0; k < theta.size(); k++) g[k] = sol[n + n * k + j];
-      y_res[j] = precomputed_gradients(sol[j], theta, g);
+      double* g = ChainableStack::instance_->memalloc_.alloc_array<double>(theta.size());
+      for (size_t k = 0; k < theta.size(); k++) *(g + k) = sol[n + n * k + j];
+      y_res[j] = new stan::math::precomputed_gradients_vari(sol[j], theta.size(), varis, g);
     }
+
     return y_res;
   }
 
+  /** 
+   * Generate <code>var vector</code> that has specified ODE solution
+   * w.r.t. a tuple of args from variadic args.
+   * 
+   * @param sol data-only solution from ODE solvers
+   * @param arg_tuple tuple from variadic args.
+   * 
+   * @return a <code>var vector</code> as ODE soution.
+   */
+  template<typename Ty, typename... T_par>
+  Eigen::Matrix<stan::math::var, -1, 1>  
+  precomputed_gradients(const Ty& sol, const std::tuple<const T_par&...>& arg_tuple) {
+    using stan::math::ChainableStack;
+
+    // torsten::dsolve::count_vars_impl f_count;
+    // torsten::dsolve::UnpackTupleFunc<torsten::dsolve::count_vars_impl> c(f_count);
+    // const size_t m = c(arg_tuple);
+    const size_t m = torsten::dsolve::count_vars_in_tuple(arg_tuple);
+    const size_t n = sol.size()/(1 + m);
+    Eigen::Matrix<stan::math::var, -1, 1>  y_res(n);
+
+    stan::math::vari** varis
+      = ChainableStack::instance_->memalloc_.alloc_array<stan::math::vari*>(m);
+    stan::math::apply([&](auto&&... args) {stan::math::save_varis(varis, args...);}, arg_tuple);
+
+    for (size_t j = 0; j < n; j++) {
+      double* g = ChainableStack::instance_->memalloc_.alloc_array<double>(m);
+      for (size_t k = 0; k < m; k++) *(g + k) = sol[n + n * k + j];
+      y_res[j] = new stan::math::precomputed_gradients_vari(sol[j], m, varis, g);
+    }
+
+    return y_res;
+  }
+
+  /** 
+   * Generate <code>var array1d</code> that has specified CVODES ODE solution
+   * w.r.t. a tuple of args from variadic args.
+   * 
+   * @param y value solution from CVODES
+   * @param ys sensitiy solution from CVODES
+   * @param theta parameter
+   * 
+   * @return a <code>var array</code> of ODE solution
+   */
   inline std::vector<stan::math::var>
   precomputed_gradients(const N_Vector& y,
                         const N_Vector* ys,
@@ -39,6 +96,35 @@ namespace torsten {
     }
     return y_res;
   }
+
+  /** 
+   * Generate <code>var vector</code> that has specified CVODES ODE solution
+   * w.r.t. a tuple of args from variadic args.
+   * 
+   * @param y value solution from CVODES
+   * @param ys sensitiy solution from CVODES
+   * @param arg_tuple tuple of variadic parameters
+   * 
+   * @return a <code>var vector</code> of ODE solution
+   */
+  // inline Eigen::Matrix<stan::math::var, -1, 1>
+  // precomputed_gradients(const N_Vector& y,
+  //                       const N_Vector* ys,
+  //                       const std::tuple<stan::math::var>& arg_tuple) {
+  //   const int n = NV_LENGTH_S(y);
+  //   torsten::dsolve::count_vars_impl f_count;
+  //   torsten::dsolve::UnpackTupleFunc<torsten::dsolve::count_vars_impl> c(f_count);
+  //   const size_t ns = c(arg_tuple);
+  //   std::vector<double> g(ns);
+  //   std::vector<stan::math::var> y_res(n);
+  //   for (size_t k = 0; k < n; ++k) {
+  //     for (size_t j = 0; j < ns; ++j) {
+  //       g[j] = NV_Ith_S(ys[j], k);
+  //     }
+  //     y_res[k] = precomputed_gradients(NV_Ith_S(y, k), theta, g);
+  //   }
+  //   return y_res;
+  // }
 
   template<typename Ty_out>
   inline Ty_out

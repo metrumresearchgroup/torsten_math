@@ -474,7 +474,7 @@ namespace torsten {
                                          double rtol, double atol, int max_num_step) {
         Eigen::MatrixXd res;
         torsten::dsolve::pmx_ode_group_mpi_functor f(functor_id);
-        using Ode = torsten::dsolve::PMXOdeSystem<torsten::dsolve::pmx_ode_group_mpi_functor, Tt, Ty, Tp, void>;
+        using Ode = torsten::dsolve::PMXOdeSystem<torsten::dsolve::pmx_ode_group_mpi_functor, Tt, Ty, Tp>;
         Ode ode{f, t0, ts, y0, theta, x_r, x_i, NULL};
         torsten::dsolve::OdeDataObserver<Ode> observer(ode);
         switch(integ_id) {

@@ -42,6 +42,7 @@ namespace dsolve {
   struct  PMXOdeSystem : torsten::std_ode<F> {
     using Ode = PMXOdeSystem<F, Tt, T_init, T_par>;
     using scalar_t = typename stan::return_type_t<Tt, T_init, T_par>;
+    using state_t = std::vector<scalar_t>;
     static constexpr bool is_var_ts  = stan::is_var<Tt>::value;
     static constexpr bool is_var_y0  = stan::is_var<T_init>::value;
     static constexpr bool is_var_par = stan::is_var<T_par>::value;
@@ -99,6 +100,14 @@ namespace dsolve {
       }
     }
 
+    static std::vector<double> null_dbl_state(size_t n_size) {
+      return std::vector<double>(n_size, 0.0);
+    }
+
+    static state_t null_state(size_t n_size) {
+      return std::vector<scalar_t>(n_size, 0.0);
+    }
+
     /*
      * retrieving a vector of vars that will be used as parameters
      */
@@ -121,22 +130,18 @@ namespace dsolve {
     /*
      * evaluate RHS with data only inputs.
      */
-    inline void dbl_rhs_impl(double t, const std::vector<double>& y, std::vector<double>& dy_dt) const
+    inline std::vector<double> dbl_rhs_impl(double t, const std::vector<double>& y) const
     {
-      stan::math::check_size_match("PMXOdeSystem", "y", y.size(), "dy_dt", dy_dt.size());
-      dy_dt = f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
-      return;      
+      return f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
     }
 
     /*
      * evaluate RHS with data only inputs.
      */
-    inline void dbl_rhs_impl(double t, const N_Vector& nv_y, std::vector<double>& dy_dt) const
+    inline std::vector<double> dbl_rhs_impl(double t, const N_Vector& nv_y) const
     {
-      stan::math::check_size_match("PMXOdeSystem", "y", NV_LENGTH_S(nv_y), "dy_dt", dy_dt.size());
       std::vector<double> y(NV_DATA_S(nv_y), NV_DATA_S(nv_y) + N);
-      dy_dt = f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
-      return;      
+      return f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
     }
 
     /*
@@ -317,8 +322,11 @@ namespace dsolve {
   struct PMXVariadicOdeSystem : torsten::eigen_ode<F, T_par...> {
     using Ode = PMXVariadicOdeSystem<F, Tt, T_init, T_par...>;
     using scalar_t = typename stan::return_type_t<Tt, T_init, T_par...>;
+    using state_t = Eigen::Matrix<scalar_t, -1, 1>;
     static constexpr bool is_var_ts  = stan::is_var<Tt>::value;
     static constexpr bool is_var_y0  = stan::is_var<T_init>::value;
+    static constexpr bool is_var_par = stan::is_var<stan::return_type_t<T_par...>>::value;
+    static constexpr bool use_fwd_sens = is_var_y0 || is_var_par;
 
     const F& f_;
     const TupleOdeFunc<F> f_tuple_;
@@ -327,9 +335,9 @@ namespace dsolve {
     const Eigen::Matrix<T_init, -1, 1>& y0_;
     std::tuple<decltype(stan::math::deep_copy_vars(std::declval<const T_par&>()))...> theta_tuple_;
     std::tuple<decltype(stan::math::value_of(std::declval<const T_par&>()))...> theta_dbl_tuple_;
+    std::tuple<const Eigen::Matrix<T_init, -1, 1>&, const T_par&..., const std::vector<Tt>&> theta_ref_tuple_;
     const size_t N;
     const size_t M;
-    const bool is_var_par;
     const size_t ns;
     const size_t system_size;
     std::ostream* msgs_;
@@ -349,9 +357,9 @@ namespace dsolve {
         y0_(y0),
         theta_tuple_(stan::math::deep_copy_vars(args)...),
         theta_dbl_tuple_(stan::math::value_of(args)...),
+        theta_ref_tuple_(y0_, args..., ts_),
         N(y0.size()),
         M(stan::math::count_vars(args...)),
-        is_var_par(M > 0),
         ns((is_var_y0 ? N : 0) + M),
         system_size(N + N * ns),
         msgs_(msgs),
@@ -371,12 +379,20 @@ namespace dsolve {
       }
     }
 
+    static Eigen::VectorXd null_dbl_state(size_t n_size) {
+      return Eigen::VectorXd::Zero(n_size);
+    }
+
+    static state_t null_state(size_t n_size) {
+      return Eigen::Matrix<scalar_t, -1, 1>::Zero(n_size);
+    }
+
     /*
      * retrieving a vector of vars that will be used as parameters
      */
-    // inline auto vars() const {
-    //   return pmx_ode_vars(y0_, theta_, ts_);
-    // }
+    inline auto& vars() const {
+      return theta_ref_tuple_;
+    }
 
     /*
      * Evaluate RHS of the ODE(the combined system)
@@ -386,6 +402,7 @@ namespace dsolve {
      */
     inline void operator()(const Eigen::VectorXd& y, Eigen::VectorXd& dy_dt,
                            double t) {
+      dy_dt.resize(system_size); // boost::odeint vector_space_algebra doesn't do resize
       stan::math::check_size_match("PMXVariadicOdeSystem", "y", y.size(), "dy_dt", dy_dt.size());
       rhs_impl(y, dy_dt, t);
     }
@@ -425,6 +442,9 @@ namespace dsolve {
       using stan::math::var;
       using stan::math::vector_v;
       using stan::math::vector_d;
+      using stan::math::apply;
+      using stan::math::zero_adjoints;
+      using stan::math::accumulate_adjoints;
 
       if (!(is_var_y0 || is_var_par)) {
         dydt = f_tuple_(t, y, msgs_, theta_dbl_tuple_);
@@ -467,7 +487,7 @@ namespace dsolve {
           }
         }
 
-        stan::math::apply([&](auto&&... args) { stan::math::zero_adjoints(args...); }, theta_tuple_);
+        apply([&](auto&&... args) { zero_adjoints(args...); }, theta_tuple_);
       }
     }
 
@@ -514,7 +534,7 @@ namespace dsolve {
         // df/dp_i term, for i = n...n+m-1
         if (is_var_par) {
           g.fill(0);
-          apply([&](auto&&... args) {accumulate_adjoints(g.data(), args...);},
+          stan::math::apply([&](auto&&... args) {accumulate_adjoints(g.data(), args...);},
                 theta_tuple_);
           for (int i = 0; i < M; ++i) {
             auto nvp = N_VGetArrayPointer(ysdot[ns - M + i]);
@@ -529,9 +549,11 @@ namespace dsolve {
     static int cvodes_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
                                N_Vector* ys, N_Vector* ysdot, void* user_data,
                                N_Vector temp1, N_Vector temp2) {
-      Ode* ode = static_cast<Ode*>(user_data);
-      (*ode)(ns, t, y, ydot, ys, ysdot, temp1, temp2);
-      return 0;
+      if (use_fwd_sens) {
+        Ode* ode = static_cast<Ode*>(user_data);
+        (*ode)(ns, t, y, ydot, ys, ysdot, temp1, temp2);
+        return 0;
+      }
     }
 
     /**

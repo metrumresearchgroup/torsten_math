@@ -114,18 +114,26 @@ struct TorstenOdeTest : public testing::Test {
 
 struct TorstenOdeTest_sho : public TorstenOdeTest {
   const harm_osc_ode_fun f;
+  const harm_osc_ode_fun_eigen f_eigen;
   std::vector<double> ts;
   std::vector<double> theta;
   std::vector<double> y0;
+  Eigen::VectorXd y0_vec;
 
   using F = harm_osc_ode_fun;
+  using F_eigen = harm_osc_ode_fun_eigen;
 
   TorstenOdeTest_sho() :
     f(),
+    f_eigen(),
     ts           {0.1, 0.2, 0.3, 10},
     theta        {0.15},
-    y0           {1.0, 0.0}
-  {}
+    y0           {1.0, 0.0},
+    y0_vec(2)
+  {
+    y0_vec[0] = y0[0];
+    y0_vec[1] = y0[1];
+  }
 };
 
 struct TorstenOdeTest_chem : public TorstenOdeTest {
