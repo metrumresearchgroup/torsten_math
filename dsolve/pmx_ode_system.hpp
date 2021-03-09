@@ -534,7 +534,7 @@ namespace dsolve {
         // df/dp_i term, for i = n...n+m-1
         if (is_var_par) {
           g.fill(0);
-          stan::math::apply([&](auto&&... args) {accumulate_adjoints(g.data(), args...);},
+          stan::math::apply([&](auto&&... args) {stan::math::accumulate_adjoints(g.data(), args...);},
                 theta_tuple_);
           for (int i = 0; i < M; ++i) {
             auto nvp = N_VGetArrayPointer(ysdot[ns - M + i]);
@@ -549,11 +549,10 @@ namespace dsolve {
     static int cvodes_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
                                N_Vector* ys, N_Vector* ysdot, void* user_data,
                                N_Vector temp1, N_Vector temp2) {
-      if (use_fwd_sens) {
-        Ode* ode = static_cast<Ode*>(user_data);
-        (*ode)(ns, t, y, ydot, ys, ysdot, temp1, temp2);
-        return 0;
-      }
+      if (!use_fwd_sens) return 0;
+      Ode* ode = static_cast<Ode*>(user_data);
+      (*ode)(ns, t, y, ydot, ys, ysdot, temp1, temp2);
+      return 0;
     }
 
     /**

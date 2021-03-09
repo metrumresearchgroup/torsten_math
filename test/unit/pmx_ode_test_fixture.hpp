@@ -37,6 +37,41 @@ struct chemical_kinetics {
   }
 };
 
+struct chemical_kinetics_eigen {
+  template <typename T0, typename T1, typename T2>
+  inline Eigen::Matrix<typename stan::return_type<T1, T2>::type,-1,1>
+  operator()(const T0& t_in,
+             const Eigen::Matrix<T1, -1, 1>& y, std::ostream* msgs,
+             const std::vector<T2>& theta, const std::vector<double>& x_r,
+             const std::vector<int>& x_i) const {
+    if (y.size() != 3)
+      throw std::domain_error(
+          "the ODE RHS function was called with inconsistent state");
+
+    Eigen::Matrix<typename stan::return_type<T1, T2>::type, -1, 1> rhs(3);
+    rhs[0] = -theta[0] * y[0] + theta[1] * y[1] * y[2];
+    rhs[1] =  theta[0] * y[0] - theta[1] * y[1] * y[2] - theta[2] * y[1] * y[1];
+    rhs[2] =  theta[2] * y[1] * y[1];
+
+    return rhs;
+  }
+};
+
+struct lorenz_ode_eigen_fun {
+  template <typename T0, typename T1, typename T2>
+  inline Eigen::Matrix<stan::return_type_t<T1, T2>, -1,1>
+  operator()(const T0& t_in, const Eigen::Matrix<T1, -1, 1>& y,
+             std::ostream* msgs,
+             const std::vector<T2>& theta, const std::vector<double>& x,
+             const std::vector<int>& x_int) const {
+    Eigen::Matrix<stan::return_type_t<T1, T2>, -1, 1> res(3);
+    res[0] = (theta.at(0) * (y[1] - y[0]));
+    res[1] = (theta.at(1) * y[0] - y[1] - y[0] * y[2]);
+    res[2] = (-theta.at(2) * y[2] + y[0] * y[1]);
+    return res;
+  }
+};
+
 struct TorstenOdeTest : public testing::Test {
   // for events generation
   const int nt;
@@ -138,34 +173,48 @@ struct TorstenOdeTest_sho : public TorstenOdeTest {
 
 struct TorstenOdeTest_chem : public TorstenOdeTest {
   const chemical_kinetics f;
+  const chemical_kinetics_eigen f_eigen;
   std::vector<double> ts;
   std::vector<double> theta;
   std::vector<double> y0;
+  Eigen::VectorXd y0_vec;
 
   using F = chemical_kinetics;
+  using F_eigen = chemical_kinetics_eigen;
 
   TorstenOdeTest_chem() :
     f(),
-    ts          {0.4, 4.0, 40.0},
-    theta       {0.04, 1.E4, 3.E7},
-    y0          {1.0, 0.0, 0.0}
-  {}
+    f_eigen(),
+    ts    {0.4, 4.0, 40.0},
+    theta {0.04, 1.E4, 3.E7},
+    y0    {1.0, 0.0, 0.0},
+    y0_vec(3)
+  {
+    y0_vec << 1.0, 0.0, 0.0;
+  }
 };
 
 struct TorstenOdeTest_lorenz : public TorstenOdeTest {
   const lorenz_ode_fun f;
+  const lorenz_ode_eigen_fun f_eigen;
   std::vector<double> ts;
   std::vector<double> theta;
   std::vector<double> y0;
+  Eigen::VectorXd y0_vec;
 
   using F = lorenz_ode_fun;
+  using F_eigen = lorenz_ode_eigen_fun;
 
   TorstenOdeTest_lorenz() :
     f(),
+    f_eigen(),
     ts        {0.1, 1.0, 10.0},
     theta     {10.0, 28.0, 8.0/3.0},
-    y0        {10.0, 1.0, 1.0}
-  {}
+    y0        {10.0, 1.0, 1.0},
+    y0_vec    (3)
+  {
+    y0_vec << 10.0, 1.0, 1.0;
+  }
 };
 
 struct TwoCptNeutModelODE {

@@ -24,12 +24,7 @@ namespace torsten {
      * service by injection.
      */
     template <typename Ode, int lmm_type>
-    struct PMXOdeService;
-
-    template<int lmm_type, typename... Ts>
-    struct PMXOdeService<PMXOdeSystem<Ts...>, lmm_type> {
-      using Ode = PMXOdeSystem<Ts...>;
-
+    struct PMXOdeService {
       int ns;
       N_Vector nv_y;
       N_Vector* nv_ys;

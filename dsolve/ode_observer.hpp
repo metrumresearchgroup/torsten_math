@@ -117,7 +117,7 @@ namespace dsolve {
     template<typename ode_type = Ode>
     inline std::enable_if_t<has_var_ts<ode_type>::value && (!has_var_y0<ode_type>::value) && (!has_var_par<ode_type>::value)>
     observer_impl(state_t& y_res, const N_Vector & y, const N_Vector* ys) const {
-      auto g(ode_type::null_dbl_state(ode.ts_.size()));
+      std::vector<double> g(ode.ts_.size(), 0.0);
       dbl_state_t dydt = ode.dbl_rhs_impl(curr_t_, y);
       for (size_t j = 0; j < n; ++j) {
         g[step_counter_] = dydt[j];
@@ -165,18 +165,27 @@ namespace dsolve {
      */
     template<typename ode_type = Ode>
     inline std::enable_if_t<has_var_ts<ode_type>::value && (has_var_y0<ode_type>::value || has_var_par<ode_type>::value)>
-    observer_impl(state_t& y_res,
-                  const N_Vector& y,
-                  const N_Vector* ys) const {
-      auto g(ode_type::null_dbl_state(ns + ode.ts_.size()));
+    observer_impl(state_t& y_res, const N_Vector& y, const N_Vector* ys) const {
+      using stan::math::ChainableStack;
+
+      // auto g(ode_type::null_dbl_state(ns + ode.ts_.size()));
       dbl_state_t dydt = ode.dbl_rhs_impl(curr_t_, y);
+
+      const size_t n_tot = ns + ode.ts_.size();
+
+      // stan::math::vari** varis
+      //   = ChainableStack::instance_->memalloc_.alloc_array<stan::math::vari*>(n_tot);
+      // stan::math::apply([&](auto&&... args) {stan::math::save_varis(varis, args...);}, ode.vars());
+      stan::math::vari** varis = varis_from_ode_pars(ode.vars());
+
       for (size_t k = 0; k < n; ++k) {
+        double* g = ChainableStack::instance_->memalloc_.alloc_array<double>(n_tot);
+        Eigen::Map<Eigen::VectorXd>(g, n_tot) = Eigen::VectorXd::Zero(n_tot);
         for (size_t j = 0; j < ns; ++j) {
-          g[j] = NV_Ith_S(ys[j], k);
+          *(g + j) = NV_Ith_S(ys[j], k);
         }
-        g[step_counter_ + ns] = dydt[k];
-        y_res[k] = precomputed_gradients(NV_Ith_S(y, k), ode.vars(), g);
-        g[step_counter_ + ns] = 0.0;
+        *(g + step_counter_ + ns) = dydt[k];
+        y_res[k] = new stan::math::precomputed_gradients_vari(NV_Ith_S(y, k), n_tot, varis, g);
       }
     }
 
@@ -195,7 +204,6 @@ namespace dsolve {
     //   std::copy(dydt.begin(), dydt.end(), g.begin() + n + ns * n + i * n);
     //   y_res = torsten::precomputed_gradients(g, ode_.vars());
     // }
-
   };
 
   template<typename Ode>
