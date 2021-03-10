@@ -267,20 +267,77 @@ struct TwoCptNeutModelODE {
   }
 };
 
+struct TwoCptNeutModelODE_eigen {
+  template <typename T0, typename T1, typename T2>
+  inline Eigen::Matrix<typename stan::return_type<T1, T2>::type, -1, 1>
+  operator()(const T0& t_in,
+             const Eigen::Matrix<T1, -1, 1>& x,
+             std::ostream* msgs,
+             const std::vector<T2>& theta,
+             const std::vector<double>& x_r,
+             const std::vector<int>& x_i) const {
+    using scalar_type = typename stan::return_type<T1, T2>::type;
+
+    const T2& CL    = theta[0];
+    const T2& Q     = theta[1];
+    const T2& V1    = theta[2];
+    const T2& V2    = theta[3];
+    const T2& ka    = theta[4];
+    const T2& mtt   = theta[5];
+    const T2& circ0 = theta[6];
+    const T2& gamma = theta[7];
+    const T2& alpha = theta[8];
+
+    T2 k10 = CL / V1;
+    T2 k12 = Q / V1;
+    T2 k21 = Q / V2;
+    T2 ktr = 4 / mtt;
+    
+    Eigen::Matrix<scalar_type, -1, 1> dxdt(8);
+    dxdt[0] = -ka * x[0];
+    dxdt[1] = ka * x[0] - (k10 + k12) * x[1] + k21 * x[2];
+    dxdt[2] = k12 * x[1] - k21 * x[2];    
+    scalar_type conc = x[1]/V1;
+    scalar_type EDrug = alpha * conc;
+
+    // x[4], x[5], x[6], x[7] and x[8] are differences from circ0.
+    scalar_type prol = x[3] + circ0;
+    scalar_type transit1 = x[4] + circ0;
+    scalar_type transit2 = x[5] + circ0;
+    scalar_type transit3 = x[6] + circ0;
+    scalar_type circ = stan::math::fmax(stan::math::machine_precision(), x[7] + circ0);
+
+    dxdt[3] = ktr * prol * ((1 - EDrug) * (pow(circ0 / circ, gamma) - 1));
+    dxdt[4] = ktr * (prol - transit1);
+    dxdt[5] = ktr * (transit1 - transit2);
+    dxdt[6] = ktr * (transit2 - transit3);
+    dxdt[7] = ktr * (transit3 - circ);
+
+    return dxdt;
+  }
+};
+
 struct TorstenOdeTest_neutropenia : public TorstenOdeTest {
   const TwoCptNeutModelODE f;
+  const TwoCptNeutModelODE_eigen f_eigen;
   std::vector<double> ts;
   std::vector<double> theta;
   std::vector<double> y0;
+  Eigen::VectorXd y0_vec;
 
   using F = TwoCptNeutModelODE;
+  using F_eigen = TwoCptNeutModelODE_eigen;
 
   TorstenOdeTest_neutropenia() :
     f(),
+    f_eigen(),
     ts        {0.083, 0.167, 0.25, 0.5, 0.75, 1, 1.5, 2,3,4,6,8,12,24,36,48,60,72,200},
     theta     {10, 15, 35, 105, 2, 125, 5, 0.17, 2.0e-4},
-    y0        {100.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0}
-  {}
+    y0        {100.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0},
+    y0_vec(8)
+  {
+    y0_vec << 100.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0;
+  }
 };
 
 #endif

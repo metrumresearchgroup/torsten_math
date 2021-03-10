@@ -103,11 +103,11 @@ namespace dsolve {
     template<typename ode_type = Ode>
     inline std::enable_if_t<has_var_ts<ode_type>::value && (!has_var_y0<ode_type>::value) && (!has_var_par<ode_type>::value)>
     observer_impl(state_t& y_res, const dbl_state_t & y) const {
-      auto g(ode_type::null_dbl_state(n * (1 + ode.ts_.size())));
+      std::vector<double> g(n * (1 + ode.ts_.size()), 0.0);
       std::copy(y.data(), y.data() + n, g.data());
       dbl_state_t dydt = ode.dbl_rhs_impl(curr_t_, y);
       std::copy(dydt.data(), dydt.data() + n, g.data() + n + step_counter_ * n);
-      y_res = torsten::precomputed_gradients(g, ode.ts_);
+      y_res = torsten::precomputed_gradients(g, ode.vars());
     }
 
     /**

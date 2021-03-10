@@ -181,7 +181,7 @@ namespace torsten {
                                 const std::vector<T_rate>& rate) :
       adaptor(theta, rate) {}
 
-    /*
+    /**
      * Evaluate ODE functor, with @c theta contains original
      * parameter vector followed by @c rate params. So the
      * @c theta passed in must be modfified to reflect this
@@ -561,7 +561,6 @@ namespace torsten {
       double rate = value_of(rate_.rate_);
       double ii = value_of(ii_.ii_);
 
-
       double t0 = 0;            // FIXME: ODE explicitly depdends on time
 
       std::vector<var> x0 = stan::math::to_array_1d(x);
@@ -749,18 +748,18 @@ namespace torsten {
     /**
      * @return model parameters
      */
-    const std::vector<T_par>  & par()      const { return par_; }
+    const std::vector<T_par>  & par() const { return par_; }
     /**
      * @return RHS functor
      */
-    const F                   & f ()      const { return f_; }
+    const F                   & f () const { return f_; }
     /**
      * @return ODE size
      */
-    const int                 & ncmt ()    const { return ncmt_; }
+    const int                 & ncmt () const { return ncmt_; }
 
   private:
-    /*
+    /**
      * When time is param, the time step needs to
      * incorporate information of initial time.
      */
@@ -769,7 +768,7 @@ namespace torsten {
       return {stan::math::value_of(t0) + t1 - t0};
     }
 
-    /*
+    /**
      * When time is data, the time step is trivial
      */
     template<typename Tt0>
@@ -777,7 +776,7 @@ namespace torsten {
       return {t1};
     }
 
-    /*
+    /**
      * For steady-state with data rate. 
      * Same as the non-steady version but with given @c init.
      */
@@ -809,7 +808,7 @@ namespace torsten {
     }
 
   public:
-    /*
+    /**
      * solve ODE system. The different cases when @c rate is
      * @c var or data are handled by private methods @c integrate.
      *

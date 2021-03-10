@@ -42,11 +42,31 @@ namespace dsolve {
       }
 
       const double init_dt = 0.1;
-      integrate_times(make_dense_output(atol_, rtol_, scheme_t()),
+      // integrate_times(make_dense_output(atol_, rtol_, scheme_t()),
+      integrate_times(make_stepper(scheme_t()),
                       boost::ref(ode), ode.y0_fwd_system,
                       ts_vec.begin(), ts_vec.end(),
                       init_dt, boost::ref(observer),
                       boost::numeric::odeint::max_step_checker(max_num_steps_));
+
+      // integrate_times(make_controlled(absolute_tolerance, relative_tolerance,
+      //                                 runge_kutta_cash_karp54<std::vector<double>, double,
+      //                                 std::vector<double>, double>()),
+      //                 std::ref(coupled_system), initial_coupled_state, std::begin(ts_vec),
+      //                 std::end(ts_vec), step_size, filtered_observer,
+      //                 max_step_checker(max_num_steps));
+    }
+
+    template<typename... Ts>
+    auto make_stepper(boost::numeric::odeint::runge_kutta_dopri5<Ts...> const& stepper)
+    {
+      return make_dense_output(atol_, rtol_, stepper);
+    }
+
+    template<typename... Ts>
+    auto make_stepper(boost::numeric::odeint::runge_kutta_cash_karp54<Ts...> const& stepper)
+    {
+      return make_controlled(atol_, rtol_, stepper);
     }
   };
 

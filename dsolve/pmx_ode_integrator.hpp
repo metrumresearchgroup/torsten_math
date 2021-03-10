@@ -158,7 +158,6 @@ namespace torsten {
      * @param as_max_num_step0 
      * @param msgs0 
      * 
-     * @return 
      */
     template<typename integrator_t>
     struct PMXOdeIntegrator<PMXVariadicOdeSystem, integrator_t> : public PMXOdeIntegratorBase {
