@@ -706,3 +706,44 @@ TEST_F(TorstenPopulationNeutropeniaTest, domain_error) {
   MPI_Barrier(comm);
 #endif
 }
+
+TEST_F(TorstenPopulationPMXTwoCptTest, bdf_solver_multiple_bolus_doses_par_bioavailability_var) {
+  biovar = {{0.8, 0.7, 0.8}};
+
+  for (int i = 0; i < np; ++i) {
+    biovar_m[i] = biovar[0];
+  }
+
+  vector<vector<var> > pMatrix_m_v(np);
+  vector<vector<var> > pMatrix_v(torsten::to_var(pMatrix));
+  for (int i = 0; i < np; ++i) {
+    pMatrix_m_v[i] = stan::math::to_var(pMatrix[0]);
+  }
+
+  vector<vector<var> > biovar_v(torsten::to_var(biovar));  
+  vector<vector<var> > biovar_m_v(biovar_m.size());
+  for (auto i = 0; i < np; ++i) {
+    biovar_m_v[i] = torsten::to_var(biovar[0]);
+  }
+
+  using model_t = torsten::PMXTwoCptModel<double>;
+
+  Matrix<var, Dynamic, Dynamic> x =
+    torsten::pmx_solve_bdf(model_t::f_, model_t::Ncmt, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix_v, biovar_v, tlag, nullptr);
+
+  Matrix<var, Dynamic, Dynamic> x_m =
+    torsten::pmx_solve_group_bdf(model_t::f_, model_t::Ncmt,
+                                 len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m, // NOLINT
+                                 pMatrix_m_v, biovar_m_v, tlag_m, nullptr);
+
+  int begin_i = 0;
+  for (int i = 0; i < np; ++i) {
+    Matrix<var, Dynamic, Dynamic> x_i(model_t::Ncmt, len[i]);
+    for (int j = 0; j < len[i]; ++j) {
+      x_i.col(j) = x_m.col(begin_i + j);
+    }
+    torsten::test::test_grad(pMatrix_m_v[i], pMatrix_v[0], x_i, x);
+    torsten::test::test_grad(biovar_m_v[i], biovar_v[0], x_i, x);
+    begin_i += len[i];
+  }
+}
