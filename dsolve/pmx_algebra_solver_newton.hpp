@@ -13,6 +13,9 @@
 #include <stan/math/prim/fun/to_vector.hpp>
 #include <stan/math/prim/fun/value_of.hpp>
 #include <stan/math/torsten/dsolve/sundials_check.hpp>
+#include <stan/math/torsten/dsolve/ode_tuple_functor.hpp>
+#include <stan/math/torsten/mpi/precomputed_gradients.hpp>
+#include <stan/math/torsten/meta/is_nl_system.hpp>
 #include <kinsol/kinsol.h>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
@@ -23,33 +26,155 @@
 #include <vector>
 
 namespace torsten {
+  /** 
+   * Nonlinear system
+   * 
+   */
+  template <typename F, typename T_init, typename... T_par>
+  struct PMXNLSystem : torsten::is_nl_system<F, T_par...> {
+    using Nl = PMXNLSystem<F, T_init, T_par...>;
+    using scalar_t = typename stan::return_type_t<T_par...>;
+    using state_t = Eigen::Matrix<scalar_t, -1, 1>;
+    static constexpr bool is_var_x0  = stan::is_var<T_init>::value;
+    static constexpr bool is_var_par = stan::is_var<stan::return_type_t<T_par...>>::value;
+
+    const F& f_;
+    const dsolve::TupleNlFunc<F> f_tuple_;
+    const Eigen::Matrix<T_init, -1, 1>& x0_;
+    std::tuple<decltype(stan::math::deep_copy_vars(std::declval<const T_par&>()))...> theta_tuple_;
+    // std::tuple<decltype(stan::math::value_of(std::declval<const T_par&>()))...> theta_dbl_tuple_;
+    std::tuple<const T_par&...> theta_ref_tuple_;
+    const size_t N;
+    const size_t M;
+    const size_t ns;
+    std::ostream* msgs_;
+
+  public:
+    PMXNLSystem(const F& f,
+                const Eigen::Matrix<T_init, -1, 1>& x0,
+                std::ostream* msgs,
+                const T_par&... args)
+      : f_(f),
+        f_tuple_(f_),
+        x0_(x0),
+        theta_tuple_(stan::math::deep_copy_vars(args)...),
+        // theta_dbl_tuple_(stan::math::value_of(args)...),
+        theta_ref_tuple_(args...),
+        N(x0.size()),
+        M(stan::math::count_vars(args...)),
+        ns((is_var_x0 ? N : 0) + M),
+        msgs_(msgs)
+    {
+      const char* caller = "PMX nonlinear system";
+    }
+
+    /** 
+     * User-defined function passed to KINSOL
+     * 
+     * @param x independent variable
+     * @param f nonlinear functor evaluation
+     * @param user_data
+     * 
+     * @return error code
+     */
+    static int kinsol_nl_system(N_Vector x, N_Vector f, void* user_data) {
+      Nl* nl = static_cast<Nl*>(user_data);
+      int n = nl -> N;
+      Eigen::VectorXd x_eigen(Eigen::Map<Eigen::VectorXd>(NV_DATA_S(x), n));
+      Eigen::Map<Eigen::VectorXd>(N_VGetArrayPointer(f), n)
+        = stan::math::value_of(nl->f_tuple_(x_eigen, nl->msgs_, nl -> theta_tuple_));
+      return 0;
+    }
+
+    /** Implements the user-defined Jacobian calculation function passed to KINSOL. */
+    static int kinsol_jacobian(N_Vector x, N_Vector f, SUNMatrix Jfx, void *user_data,
+                               N_Vector tmp1, N_Vector tmp2) {
+      Nl* nl = static_cast<Nl*>(user_data);
+      int n = nl -> N;
+      Eigen::VectorXd x_eigen(Eigen::Map<Eigen::VectorXd>(NV_DATA_S(x), n));
+
+      stan::math::nested_rev_autodiff nested;
+      Eigen::Matrix<stan::math::var, -1, 1> x_var(x_eigen);
+      Eigen::Matrix<stan::math::var, -1, 1> f_var(nl->f_tuple_(x_var, nl -> msgs_, nl -> theta_tuple_));
+      Eigen::Map<Eigen::VectorXd>(N_VGetArrayPointer(f), n) = stan::math::value_of(f_var);
+      for (int i = 0; i < n; ++i) {
+        nested.set_zero_all_adjoints();
+        grad(f_var(i).vi_);
+        for (int j = 0; j < n; ++j) {
+          SM_ELEMENT_D(Jfx, i, j) = x_var.adj()[j];
+        }
+      }
+      return 0;
+    }
+
+    /**
+     * Calculate Jacobian Jxy(Jacobian of unknown x w.r.t. the param y)
+     * given the solution. Specifically, for
+     *
+     * f(x, y) = 0
+     *
+     * we have (Jpq = Jacobian matrix dq/dq)
+     *
+     * Jfx * Jxy + Jfy = 0
+     *
+     * therefore Jxy can be solved from system
+     *
+     * - Jfx * Jxy = Jfy
+     *
+     * Jfx and Jfy are obtained through one AD evaluation of f.
+     * dense Jacobian Jxy solved through QR decomposition.
+     *
+     * @param x current solution
+     * @return a vector with x's val and Jxy as gradient.
+     */
+    Eigen::Matrix<stan::math::var, -1, 1> jac_xy(const Eigen::VectorXd& x) {
+      stan::math::nested_rev_autodiff nested;
+      Eigen::Matrix<stan::math::var, -1, 1> x_var(x);
+      Eigen::Matrix<stan::math::var, -1, 1> f_var(f_tuple_(x_var, msgs_, theta_tuple_));
+      Eigen::MatrixXd jfx(N, N);
+      Eigen::MatrixXd jfy(N, M);
+      Eigen::VectorXd g(M);
+      for (auto i = 0; i < N; ++i) {
+        if (i > 0) {
+          nested.set_zero_all_adjoints();            
+        }      
+        f_var(i).grad();
+        for (auto k = 0; k < N; ++k) {
+          jfx(i, k) = x_var(k).adj();
+        }
+        if (is_var_par) {
+          g.fill(0);
+          apply([&](auto&&... args) {accumulate_adjoints(g.data(), args...);}, theta_tuple_);
+          for (auto k = 0; k < M; ++k) {
+            jfy(i, k) = g[k];
+          }
+        }
+        apply([&](auto&&... args) { zero_adjoints(args...); }, theta_tuple_);
+      }
+      Eigen::MatrixXd jxy = jfx.colPivHouseholderQr().solve(-jfy);
+
+      using stan::math::ChainableStack;
+      Eigen::Matrix<stan::math::var, -1, 1> x_sol(N);
+      stan::math::vari** varis = torsten::varis_from_ode_pars(theta_ref_tuple_);
+
+      for (size_t i = 0; i < N; i++) {
+        double* g = ChainableStack::instance_->memalloc_.alloc_array<double>(M);
+        for (size_t k = 0; k < M; k++) {
+          *(g + k) = jxy(i, k);        
+        }
+        x_sol[i] = new stan::math::precomputed_gradients_vari(x[i], M, varis, g);
+      }
+      return x_sol;
+    }
+  };
 
 /**
  * KINSOL algebraic system data holder that handles
  * construction & destruction of SUNDIALS data, as well as
  * auxiliary data that will be used for functor evaluation.
  *
- * @tparam F Nonlinear functor for system function.
  */
-template <typename F>
-struct KinsolNewtonEnv {
-  /** Nonlinear functor whose zero to be solved. */
-  const F& f_;
-  /** val of params for @c y_ to refer to when
-   params are @c var type */
-  const Eigen::VectorXd y_dummy;
-  /** ref to val of params */
-  const Eigen::VectorXd& y_;
-  /** system size */
-  const size_t N_;
-  /** nb. of params */
-  const size_t M_;
-  /** real data */
-  const std::vector<double>& x_r_;
-  /** integer data */
-  const std::vector<int>& x_i_;
-  /** message stream */
-  std::ostream* msgs_;
+struct KinsolNewtonService {
   /** KINSOL memory block */
   void* mem_;
   /** NVECTOR for unknowns */
@@ -65,164 +190,99 @@ struct KinsolNewtonEnv {
 
   /** Constructor when y is data */
   template <typename T, typename T_u, typename T_f>
-  KinsolNewtonEnv(const F& f, const Eigen::Matrix<T, -1, 1>& x,
-                  const Eigen::VectorXd& y, const std::vector<double>& x_r,
-                  const std::vector<int>& x_i, std::ostream* msgs,
-                  const std::vector<T_u>& u_scale,
-                  const std::vector<T_f>& f_scale)
-      : f_(f),
-        y_dummy(),
-        y_(y),
-        N_(x.size()),
-        M_(y.size()),
-        x_r_(x_r),
-        x_i_(x_i),
-        msgs_(msgs),
-        mem_(KINCreate()),
-        nv_x_(N_VNew_Serial(N_)),
-        J(SUNDenseMatrix(N_, N_)),
+  KinsolNewtonService(const Eigen::Matrix<T, -1, 1>& x,
+                      const std::vector<T_u>& u_scale,
+                      const std::vector<T_f>& f_scale)
+      : mem_(KINCreate()),
+        nv_x_(N_VNew_Serial(x.size())),
+        J(SUNDenseMatrix(x.size(), x.size())),
         LS(SUNLinSol_Dense(nv_x_, J)),
-        nv_u_scal_(N_VNew_Serial(N_)),
-        nv_f_scal_(N_VNew_Serial(N_))
+        nv_u_scal_(N_VNew_Serial(x.size())),
+        nv_f_scal_(N_VNew_Serial(x.size()))
   {
-    for (int i = 0; i < N_; ++i) {
+    for (int i = 0; i < x.size(); ++i) {
       NV_Ith_S(nv_x_, i) = stan::math::value_of(x(i));
       NV_Ith_S(nv_u_scal_, i) = stan::math::value_of(u_scale[i]);
       NV_Ith_S(nv_f_scal_, i) = stan::math::value_of(f_scale[i]);
     }
   }
 
-  /** Constructor when y is param */
-  template <typename T, typename T_u, typename T_f>
-  KinsolNewtonEnv(const F& f, const Eigen::Matrix<T, -1, 1>& x,
-                  const Eigen::Matrix<stan::math::var, -1, 1>& y,
-                  const std::vector<double>& x_r,
-                  const std::vector<int>& x_i, std::ostream* msgs,
-                  const std::vector<T_u>& u_scale,
-                  const std::vector<T_f>& f_scale)
-      : f_(f),
-        y_dummy(stan::math::value_of(y)),
-        y_(y_dummy),
-        N_(x.size()),
-        M_(y.size()),
-        x_r_(x_r),
-        x_i_(x_i),
-        msgs_(msgs),
-        mem_(KINCreate()),
-        nv_x_(N_VNew_Serial(N_)),
-        J(SUNDenseMatrix(N_, N_)),
-        LS(SUNLinSol_Dense(nv_x_, J)),
-        nv_u_scal_(N_VNew_Serial(N_)),
-        nv_f_scal_(N_VNew_Serial(N_)) {
-    for (int i = 0; i < N_; ++i) {
-      NV_Ith_S(nv_x_, i) = stan::math::value_of(x(i));
-      NV_Ith_S(nv_u_scal_, i) = stan::math::value_of(u_scale[i]);
-      NV_Ith_S(nv_f_scal_, i) = stan::math::value_of(f_scale[i]);
-    }
-  }
-
-  ~KinsolNewtonEnv() {
+  ~KinsolNewtonService() {
     SUNLinSolFree(LS);
     SUNMatDestroy(J);
     N_VDestroy_Serial(nv_x_);
+    N_VDestroy_Serial(nv_u_scal_);
+    N_VDestroy_Serial(nv_f_scal_);
     KINFree(&mem_);
   }
-
-  /** Implements the user-defined function passed to KINSOL. */
-  static int kinsol_f_system(N_Vector x, N_Vector f, void* user_data) {
-    auto g = static_cast<const KinsolNewtonEnv<F>*>(user_data);
-    Eigen::VectorXd x_eigen(Eigen::Map<Eigen::VectorXd>(NV_DATA_S(x), g->N_));
-    Eigen::Map<Eigen::VectorXd>(N_VGetArrayPointer(f), g->N_)
-        = g->f_(x_eigen, g->y_, g->x_r_, g->x_i_, g->msgs_);
-    return 0;
-  }
-
-  /** Implements the user-defined Jacobian calculation function passed to KINSOL. */
-  static int kinsol_jacobian(N_Vector x, N_Vector f, SUNMatrix Jfx, void *user_data,
-                             N_Vector tmp1, N_Vector tmp2) {
-    using stan::math::var;
-    auto g = static_cast<const KinsolNewtonEnv<F>*>(user_data);
-    Eigen::VectorXd x_eigen(Eigen::Map<Eigen::VectorXd>(NV_DATA_S(x), g->N_));
-
-    stan::math::nested_rev_autodiff nested;
-    Eigen::Matrix<var, -1, 1> x_var(x_eigen);
-    Eigen::Matrix<var, -1, 1> f_var(g->f_(x_var, g->y_, g->x_r_, g->x_i_, g->msgs_));
-    Eigen::Map<Eigen::VectorXd>(N_VGetArrayPointer(f), g->N_) = f_var.val();
-    for (int i = 0; i < g -> N_; ++i) {
-      nested.set_zero_all_adjoints();
-      grad(f_var(i).vi_);
-      for (int j = 0; j < g -> N_; ++j) {
-        SM_ELEMENT_D(Jfx, i, j) = x_var.adj()[j];
-      }
-    }
-    
-    return 0;
-  }
 };
 
-/**
- * Calculate Jacobian Jxy(Jacobian of unknown x w.r.t. the * param y)
- * given the solution. Specifically, for
- *
- * f(x, y) = 0
- *
- * we have (Jpq = Jacobian matrix dq/dq)
- *
- * Jfx * Jxy + Jfy = 0
- *
- * therefore Jxy can be solved from system
- *
- * - Jfx * Jxy = Jfy
- *
- * Jfx and Jfy are obtained through one AD evaluation of f
- * w.r.t combined vector [x, y].
- */
-struct NewtonADJac {
-  /**
-   * Calculate Jacobian Jxy.
-   *
-   * @tparam F RHS functor type
-   * @param x solution
-   * @param y parameters
-   * @param env KINSOL working environment, see doc for @c KinsolFixedPointEnv.
-   */
-  template <typename F>
-  inline Eigen::Matrix<stan::math::var, -1, 1> operator()(
-      const Eigen::VectorXd& x, const Eigen::Matrix<stan::math::var, -1, 1>& y,
-      KinsolNewtonEnv<F>& env) {
-    using stan::math::precomputed_gradients;
-    using stan::math::to_array_1d;
-    using stan::math::var;
+// /**
+//  * Calculate Jacobian Jxy(Jacobian of unknown x w.r.t. the param y)
+//  * given the solution. Specifically, for
+//  *
+//  * f(x, y) = 0
+//  *
+//  * we have (Jpq = Jacobian matrix dq/dq)
+//  *
+//  * Jfx * Jxy + Jfy = 0
+//  *
+//  * therefore Jxy can be solved from system
+//  *
+//  * - Jfx * Jxy = Jfy
+//  *
+//  * Jfx and Jfy are obtained through one AD evaluation of f
+//  * w.r.t combined vector [x, y].
+//  */
+// struct NewtonADJac {
+//   /**
+//    * Calculate Jacobian Jxy.
+//    *
+//    * @tparam F RHS functor type
+//    * @param x solution
+//    * @param y parameters
+//    * @param env KINSOL working environment, see doc for @c KinsolFixedPointEnv.
+//    */
+//   template <typename Nl_type>
+//   Eigen::Matrix<stan::math::var, -1, 1> operator()(
+//       const Eigen::VectorXd& x, const Eigen::Matrix<stan::math::var, -1, 1>& y, Nl_type& nl) {
+//     using stan::math::precomputed_gradients;
+//     using stan::math::to_array_1d;
+//     using stan::math::var;
 
-    auto g = [&env](const Eigen::Matrix<var, -1, 1>& par_) {
-      Eigen::Matrix<var, -1, 1> x_(par_.head(env.N_));
-      Eigen::Matrix<var, -1, 1> y_(par_.tail(env.M_));
-      return env.f_(x_, y_, env.x_r_, env.x_i_, env.msgs_);
-    };
+//     int n = nl.N;
+//     int m = nl.M;
 
-    Eigen::VectorXd theta(x.size() + y.size());
-    for (int i = 0; i < env.N_; ++i) {
-      theta(i) = x(i);
-    }
-    for (int i = 0; i < env.M_; ++i) {
-      theta(i + env.N_) = env.y_(i);
-    }
-    Eigen::Matrix<double, -1, 1> fx;
-    Eigen::Matrix<double, -1, -1> J_theta;
-    stan::math::jacobian(g, theta, fx, J_theta);
-    Eigen::MatrixXd A(J_theta.block(0, 0, env.N_, env.N_));
-    Eigen::MatrixXd b(J_theta.block(0, env.N_, env.N_, env.M_));
-    Eigen::MatrixXd Jxy = A.colPivHouseholderQr().solve(-b);
-    std::vector<double> gradients(env.M_);
-    Eigen::Matrix<var, -1, 1> x_sol(env.N_);
-    std::vector<stan::math::var> yv(to_array_1d(y));
-    for (int i = 0; i < env.N_; ++i) {
-      gradients = to_array_1d(Eigen::VectorXd(Jxy.row(i)));
-      x_sol[i] = precomputed_gradients(x(i), yv, gradients);
-    }
-    return x_sol;
-  }
-};
+//     auto g = [&nl](const Eigen::Matrix<var, -1, 1>& par_) {
+//       Eigen::Matrix<var, -1, 1> x_(par_.head(n));
+//       Eigen::Matrix<var, -1, 1> y_(par_.tail(m));
+//       return nl.f_(x_, y_, nl.x_r_, nl.x_i_, nl.msgs_);
+//     };
+
+//     Eigen::VectorXd theta(x.size() + y.size());
+//     for (int i = 0; i < n; ++i) {
+//       theta(i) = x(i);
+//     }
+//     for (int i = 0; i < m; ++i) {
+//       theta(i + n) = nl.y_(i);
+//     }
+//     Eigen::Matrix<double, -1, 1> fx;
+//     Eigen::Matrix<double, -1, -1> J_theta;
+//     stan::math::jacobian(g, theta, fx, J_theta);
+//     Eigen::MatrixXd A(J_theta.block(0, 0, n, n));
+//     Eigen::MatrixXd b(J_theta.block(0, n, n, m));
+//     Eigen::MatrixXd Jxy = A.colPivHouseholderQr().solve(-b);
+//     std::vector<double> gradients(m);
+//     Eigen::Matrix<var, -1, 1> x_sol(n);
+//     std::vector<stan::math::var> yv(to_array_1d(y));
+//     for (int i = 0; i < n; ++i) {
+//       gradients = to_array_1d(Eigen::VectorXd(Jxy.row(i)));
+//       x_sol[i] = precomputed_gradients(x(i), yv, gradients);
+//     }
+//     return x_sol;
+//   }
+// };
+
 
 /**
  * Newton solver for zero of form
@@ -237,20 +297,12 @@ struct NewtonADJac {
  *                     dense matrix.
  * @tparam newton_jac_type functor type for calculating the
  *                     jacobian. Currently only support @c
- *                     FixedPointADJac that obtain dense Jacobian
- *                     through QR decomposition.
- */
-template <typename newton_env_type, typename newton_jac_type>
-struct NewtonSolver;
-
-/**
- * Specialization for KINSOL.
- *
+ *                     FixedPointADJac that obtain .
  * @tparam F RHS functor for fixed point iteration.
  * @tparam fp_jac_type functor type for calculating the jacobian
  */
-template <typename F, typename newton_jac_type>
-struct NewtonSolver<KinsolNewtonEnv<F>, newton_jac_type> {
+
+struct NewtonSolver {
   /**
    * Solve nonlinear zero using KINSOL's Newton solvers
    *
@@ -259,71 +311,44 @@ struct NewtonSolver<KinsolNewtonEnv<F>, newton_jac_type> {
    * @param f_tol Function tolerance
    * @param max_num_steps max nb. of iterations.
    */
-  void kinsol_solve_newton(Eigen::VectorXd& x, KinsolNewtonEnv<F>& env,
-                           double step_tol, double f_tol, int max_num_steps) {
-    int N = env.N_;
+  template<typename Nl_type, typename T_u, typename T_f>
+  Eigen::Matrix<std::conditional_t<Nl_type::is_var_par, stan::math::var, double>, -1, 1>
+  solve(Nl_type& nl,
+        const std::vector<T_u>& u_scale,
+        const std::vector<T_f>& f_scale,
+        double step_tol, double f_tol, int max_num_steps) {
+    KinsolNewtonService env(nl.x0_, u_scale, f_scale);
+    int N = nl.N;
     void* mem = env.mem_;
 
-    CHECK_SUNDIALS_CALL(KINInit(mem, &env.kinsol_f_system, env.nv_x_));
+    CHECK_SUNDIALS_CALL(KINInit(mem, &nl.kinsol_nl_system, env.nv_x_));
     CHECK_SUNDIALS_CALL(KINSetLinearSolver(mem, env.LS, env.J));
     CHECK_SUNDIALS_CALL(KINSetNumMaxIters(mem, max_num_steps));
     CHECK_SUNDIALS_CALL(KINSetScaledStepTol(mem, step_tol));
     CHECK_SUNDIALS_CALL(KINSetFuncNormTol(mem, f_tol));
-    CHECK_SUNDIALS_CALL(KINSetJacFn(mem, &env.kinsol_jacobian));
-    CHECK_SUNDIALS_CALL(KINSetUserData(mem, static_cast<void*>(&env)));
+    CHECK_SUNDIALS_CALL(KINSetJacFn(mem, &nl.kinsol_jacobian));
+    CHECK_SUNDIALS_CALL(KINSetUserData(mem, static_cast<void*>(&nl)));
 
     CHECK_SUNDIALS_CALL(KINSol(mem, env.nv_x_,
                                KIN_LINESEARCH, env.nv_u_scal_, env.nv_f_scal_));
 
+    Eigen::VectorXd x(N);
     for (int i = 0; i < N; ++i) {
       x(i) = NV_Ith_S(env.nv_x_, i);
     }
+    return result(x, nl);
   }
 
-  /**
-   * Solve data-only problem so no need to calculate jacobian.
-   *
-   * @tparam T1 type of init point of iterations
-   *
-   * @param x initial point and final solution.
-   * @param y RHS functor parameters, dummy in this overloading.
-   * @param env KINSOL solution environment
-   * @param f_tol Function tolerance
-   * @param max_num_steps max nb. of iterations.
-   */
-  template <typename T1>
-  Eigen::Matrix<double, -1, 1> solve(const Eigen::Matrix<T1, -1, 1>& x,
-                                     const Eigen::Matrix<double, -1, 1>& y,
-                                     KinsolNewtonEnv<F>& env,
-                                     double step_tol, double f_tol,
-                                     int max_num_steps) {
-    Eigen::VectorXd xd(stan::math::value_of(x));
-    kinsol_solve_newton(xd, env, step_tol, f_tol, max_num_steps);
-    return xd;
+  template<typename Nl_type,
+           typename = stan::require_not_var_t<typename Nl_type::scalar_t>>
+  Eigen::VectorXd result(const Eigen::VectorXd& x, Nl_type& nl) {
+    return x;
   }
 
-  /**
-   * Solve newton iteration and calculate jacobian.
-   *
-   * @tparam T1 type of init point of iterations
-   *
-   * @param x initial point and final solution.
-   * @param y RHS functor parameters
-   * @param env KINSOL solution environment
-   * @param f_tol Function tolerance
-   * @param max_num_steps max nb. of iterations.
-   */
-  template <typename T1>
-  Eigen::Matrix<stan::math::var, -1, 1> solve(
-      const Eigen::Matrix<T1, -1, 1>& x,
-      const Eigen::Matrix<stan::math::var, -1, 1>& y,
-      KinsolNewtonEnv<F>& env, double step_tol, double f_tol, int max_num_steps) {
-    using stan::math::var;
-
-    Eigen::VectorXd xd(solve(x, Eigen::VectorXd(), env, step_tol, f_tol, max_num_steps));
-
-    newton_jac_type jac_sol;
-    return jac_sol(xd, y, env);
+  template<typename Nl_type,
+           typename = stan::require_var_t<typename Nl_type::scalar_t>>
+  Eigen::Matrix<stan::math::var, -1, 1> result(const Eigen::VectorXd& x, Nl_type& nl) {
+    return nl.jac_xy(x);
   }
 };
 
@@ -382,42 +407,31 @@ struct NewtonSolver<KinsolNewtonEnv<F>, newton_jac_type> {
  * @throw <code>boost::math::evaluation_error</code> (which is a subclass of
  * <code>std::runtime_error</code>) if solver exceeds max_num_steps.
  */
-template <typename F, typename T1, typename T2, typename T_u, typename T_f>
-Eigen::Matrix<T2, -1, 1> pmx_algebra_solver_newton (
+template <typename F, typename T1, typename T_u, typename T_f, typename... Args>
+Eigen::Matrix<typename PMXNLSystem<F, T1, Args...>::scalar_t, -1, 1> pmx_algebra_solver_newton_tol (
     const F& f, const Eigen::Matrix<T1, -1, 1>& x,
-    const Eigen::Matrix<T2, -1, 1>& y, const std::vector<double>& x_r,
-    const std::vector<int>& x_i, const std::vector<T_u>& u_scale,
-    const std::vector<T_f>& f_scale, std::ostream* msgs = nullptr,
-    double step_tol = 1e-3, double f_tol = 1e-6,
-    int max_num_steps = 200) {  // NOLINT(runtime/int)
-  using stan::math::value_of;
-
-  stan::math::algebra_solver_check(x, y, x_r, x_i, f_tol, max_num_steps);
-  check_nonnegative("pmx_algebra_solver", "u_scale", u_scale);
-  check_nonnegative("pmx_algebra_solver", "f_scale", f_scale);
-
-  KinsolNewtonEnv<F> env(f, x, y, x_r, x_i, msgs, u_scale, f_scale);
-  NewtonSolver<KinsolNewtonEnv<F>, NewtonADJac> newton;
-  return newton.solve(x, y, env, step_tol, f_tol, max_num_steps);
+    const std::vector<T_u>& u_scale,
+    const std::vector<T_f>& f_scale,
+    double step_tol, double f_tol, int max_num_steps,
+    std::ostream* msgs, const Args&... args) {
+    PMXNLSystem<F, T1, Args...> nl(f, x, msgs, args...);
+    NewtonSolver s;
+    return s.solve(nl, u_scale, f_scale, step_tol, f_tol, max_num_steps);
 }
 
-template <typename F, typename T1, typename T2>
-Eigen::Matrix<T2, -1, 1> pmx_algebra_solver_newton (
+//   const std::vector<double> scaling(x.size(), 1.0);
+template <typename F, typename T1, typename T_u, typename T_f, typename... Args>
+Eigen::Matrix<typename PMXNLSystem<F, T1, Args...>::scalar_t, -1, 1>
+pmx_algebra_solver_newton (
     const F& f, const Eigen::Matrix<T1, -1, 1>& x,
-    const Eigen::Matrix<T2, -1, 1>& y, const std::vector<double>& x_r,
-    const std::vector<int>& x_i, std::ostream* msgs = nullptr,
-    double step_tol = 1e-3, double f_tol = 1e-6,
-    int max_num_steps = 200) {  // NOLINT(runtime/int)
-  using stan::math::value_of;
-
-  stan::math::algebra_solver_check(x, y, x_r, x_i, f_tol, max_num_steps);
-  const std::vector<double> scaling(x.size(), 1.0);
-
-  KinsolNewtonEnv<F> env(f, x, y, x_r, x_i, msgs, scaling, scaling);
-  NewtonSolver<KinsolNewtonEnv<F>, NewtonADJac> newton;
-  return newton.solve(x, y, env, step_tol, f_tol, max_num_steps);
+    const std::vector<T_u>& u_scale,
+    const std::vector<T_f>& f_scale,
+    std::ostream* msgs, const Args&... args) {
+    PMXNLSystem<F, T1, Args...> nl(f, x, msgs, args...);
+    NewtonSolver s;
+    Eigen::Matrix<typename PMXNLSystem<F, T1, Args...>::scalar_t, -1, 1> res = s.solve(nl, u_scale, f_scale, 1e-3, 1e-6, 200);
+    return res;
 }
-
-}  // namespace torsten
+}
 
 #endif
