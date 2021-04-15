@@ -128,28 +128,33 @@ namespace torsten {
      * @return a vector with x's val and Jxy as gradient.
      */
     Eigen::Matrix<stan::math::var, -1, 1> jac_xy(const Eigen::VectorXd& x) {
-      stan::math::nested_rev_autodiff nested;
-      Eigen::Matrix<stan::math::var, -1, 1> x_var(x);
-      Eigen::Matrix<stan::math::var, -1, 1> f_var(f_tuple_(x_var, msgs_, theta_tuple_));
+      apply([&](auto&&... args) { zero_adjoints(args...); }, theta_tuple_);
+
       Eigen::MatrixXd jfx(N, N);
       Eigen::MatrixXd jfy(N, M);
-      Eigen::VectorXd g(M);
-      for (auto i = 0; i < N; ++i) {
-        if (i > 0) {
-          nested.set_zero_all_adjoints();            
-        }      
-        f_var(i).grad();
-        for (auto k = 0; k < N; ++k) {
-          jfx(i, k) = x_var(k).adj();
-        }
-        if (is_var_par) {
-          g.fill(0);
-          apply([&](auto&&... args) {accumulate_adjoints(g.data(), args...);}, theta_tuple_);
-          for (auto k = 0; k < M; ++k) {
-            jfy(i, k) = g[k];
+
+      {
+        stan::math::nested_rev_autodiff nested;
+        Eigen::Matrix<stan::math::var, -1, 1> x_var(x);
+        Eigen::Matrix<stan::math::var, -1, 1> f_var(f_tuple_(x_var, msgs_, theta_tuple_));
+        Eigen::VectorXd g(M);
+        for (auto i = 0; i < N; ++i) {
+          if (i > 0) {
+            nested.set_zero_all_adjoints();            
+          }      
+          f_var(i).grad();
+          for (auto k = 0; k < N; ++k) {
+            jfx(i, k) = x_var(k).adj();
           }
+          if (is_var_par) {
+            g.fill(0);
+            apply([&](auto&&... args) {accumulate_adjoints(g.data(), args...);}, theta_tuple_);
+            for (auto k = 0; k < M; ++k) {
+              jfy(i, k) = g[k];
+            }
+          }
+          apply([&](auto&&... args) { zero_adjoints(args...); }, theta_tuple_);
         }
-        apply([&](auto&&... args) { zero_adjoints(args...); }, theta_tuple_);
       }
       Eigen::MatrixXd jxy = jfx.colPivHouseholderQr().solve(-jfy);
 
@@ -217,73 +222,6 @@ struct KinsolNewtonService {
   }
 };
 
-// /**
-//  * Calculate Jacobian Jxy(Jacobian of unknown x w.r.t. the param y)
-//  * given the solution. Specifically, for
-//  *
-//  * f(x, y) = 0
-//  *
-//  * we have (Jpq = Jacobian matrix dq/dq)
-//  *
-//  * Jfx * Jxy + Jfy = 0
-//  *
-//  * therefore Jxy can be solved from system
-//  *
-//  * - Jfx * Jxy = Jfy
-//  *
-//  * Jfx and Jfy are obtained through one AD evaluation of f
-//  * w.r.t combined vector [x, y].
-//  */
-// struct NewtonADJac {
-//   /**
-//    * Calculate Jacobian Jxy.
-//    *
-//    * @tparam F RHS functor type
-//    * @param x solution
-//    * @param y parameters
-//    * @param env KINSOL working environment, see doc for @c KinsolFixedPointEnv.
-//    */
-//   template <typename Nl_type>
-//   Eigen::Matrix<stan::math::var, -1, 1> operator()(
-//       const Eigen::VectorXd& x, const Eigen::Matrix<stan::math::var, -1, 1>& y, Nl_type& nl) {
-//     using stan::math::precomputed_gradients;
-//     using stan::math::to_array_1d;
-//     using stan::math::var;
-
-//     int n = nl.N;
-//     int m = nl.M;
-
-//     auto g = [&nl](const Eigen::Matrix<var, -1, 1>& par_) {
-//       Eigen::Matrix<var, -1, 1> x_(par_.head(n));
-//       Eigen::Matrix<var, -1, 1> y_(par_.tail(m));
-//       return nl.f_(x_, y_, nl.x_r_, nl.x_i_, nl.msgs_);
-//     };
-
-//     Eigen::VectorXd theta(x.size() + y.size());
-//     for (int i = 0; i < n; ++i) {
-//       theta(i) = x(i);
-//     }
-//     for (int i = 0; i < m; ++i) {
-//       theta(i + n) = nl.y_(i);
-//     }
-//     Eigen::Matrix<double, -1, 1> fx;
-//     Eigen::Matrix<double, -1, -1> J_theta;
-//     stan::math::jacobian(g, theta, fx, J_theta);
-//     Eigen::MatrixXd A(J_theta.block(0, 0, n, n));
-//     Eigen::MatrixXd b(J_theta.block(0, n, n, m));
-//     Eigen::MatrixXd Jxy = A.colPivHouseholderQr().solve(-b);
-//     std::vector<double> gradients(m);
-//     Eigen::Matrix<var, -1, 1> x_sol(n);
-//     std::vector<stan::math::var> yv(to_array_1d(y));
-//     for (int i = 0; i < n; ++i) {
-//       gradients = to_array_1d(Eigen::VectorXd(Jxy.row(i)));
-//       x_sol[i] = precomputed_gradients(x(i), yv, gradients);
-//     }
-//     return x_sol;
-//   }
-// };
-
-
 /**
  * Newton solver for zero of form
  *
@@ -321,16 +259,16 @@ struct NewtonSolver {
     int N = nl.N;
     void* mem = env.mem_;
 
-    CHECK_SUNDIALS_CALL(KINInit(mem, &nl.kinsol_nl_system, env.nv_x_));
-    CHECK_SUNDIALS_CALL(KINSetLinearSolver(mem, env.LS, env.J));
-    CHECK_SUNDIALS_CALL(KINSetNumMaxIters(mem, max_num_steps));
-    CHECK_SUNDIALS_CALL(KINSetScaledStepTol(mem, step_tol));
-    CHECK_SUNDIALS_CALL(KINSetFuncNormTol(mem, f_tol));
-    CHECK_SUNDIALS_CALL(KINSetJacFn(mem, &nl.kinsol_jacobian));
-    CHECK_SUNDIALS_CALL(KINSetUserData(mem, static_cast<void*>(&nl)));
+    CHECK_KINSOL_CALL(KINInit(mem, &nl.kinsol_nl_system, env.nv_x_));
+    CHECK_KINSOL_CALL(KINSetLinearSolver(mem, env.LS, env.J));
+    CHECK_KINSOL_CALL(KINSetNumMaxIters(mem, max_num_steps));
+    CHECK_KINSOL_CALL(KINSetScaledStepTol(mem, step_tol));
+    CHECK_KINSOL_CALL(KINSetFuncNormTol(mem, f_tol));
+    CHECK_KINSOL_CALL(KINSetJacFn(mem, &nl.kinsol_jacobian));
+    CHECK_KINSOL_CALL(KINSetUserData(mem, static_cast<void*>(&nl)));
 
-    CHECK_SUNDIALS_CALL(KINSol(mem, env.nv_x_,
-                               KIN_LINESEARCH, env.nv_u_scal_, env.nv_f_scal_));
+    CHECK_KINSOL_CALL(KINSol(mem, env.nv_x_,
+                             KIN_LINESEARCH, env.nv_u_scal_, env.nv_f_scal_));
 
     Eigen::VectorXd x(N);
     for (int i = 0; i < N; ++i) {
@@ -429,7 +367,7 @@ pmx_algebra_solver_newton (
     std::ostream* msgs, const Args&... args) {
     PMXNLSystem<F, T1, Args...> nl(f, x, msgs, args...);
     NewtonSolver s;
-    Eigen::Matrix<typename PMXNLSystem<F, T1, Args...>::scalar_t, -1, 1> res = s.solve(nl, u_scale, f_scale, 1e-3, 1e-6, 200);
+    Eigen::Matrix<typename PMXNLSystem<F, T1, Args...>::scalar_t, -1, 1> res = s.solve(nl, u_scale, f_scale, 1e-3, 1e-6, 100);
     return res;
 }
 }
