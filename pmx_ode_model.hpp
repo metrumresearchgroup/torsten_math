@@ -350,9 +350,9 @@ namespace torsten {
     const integrator_type& integrator_;
     
     PMXOdeFunctorSSAdaptor(const std::vector<T_theta>& theta, 
-                              const T_amt& amt, const T_rate& rate,
-                              const T_ii& ii, int cmt, int ncmt,
-                              const integrator_type& integrator)
+                           const T_amt& amt, const T_rate& rate,
+                           const T_ii& ii, int cmt, int ncmt,
+                           const integrator_type& integrator)
       : theta_(theta),
         amt_(amt, theta.size()),
         rate_(rate, theta.size()),
@@ -936,8 +936,8 @@ namespace torsten {
       }
 
       const double init_dt = (rate == 0.0 || ii > 0) ? ii_dbl : 24.0;
-      PMXOdeFunctorSSAdaptor<integrator_type, T_par, T_amt, T_r, T_ii, F>
-        fss(par_, amt, rate, ii, cmt, ncmt_, integrator);
+      using fss_func_t = PMXOdeFunctorSSAdaptor<integrator_type, T_par, T_amt, T_r, T_ii, F>;
+      fss_func_t fss(par_, amt, rate, ii, cmt, ncmt_, integrator);
       try {
 #ifdef TORSTEN_AS_POWELL
       return algebra_solver_powell(fss, integrate(t0, rate_vec, init_dbl, init_dt, integrator),
@@ -953,10 +953,12 @@ namespace torsten {
                                u_scale, f_scale, 0,
                                integrator.as_atol, integrator.as_max_num_step);
 #else
-      return pmx_algebra_solver_newton(fss, integrate(t0, rate_vec, init_dbl, init_dt, integrator),
-                                       fss.adapted_param(),
-                                       x_r_, x_i_, 0,
-                                       integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step);
+      torsten::nl_system_adaptor<fss_func_t> fss_new(fss);
+      std::vector<double> scaling(ncmt_, 1.0);
+      return pmx_algebra_solver_newton_tol(fss_new, integrate(t0, rate_vec, init_dbl, init_dt, integrator),
+                                           scaling, scaling,
+                                           integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step,
+                                           nullptr, fss.adapted_param(), x_r_, x_i_);
 #endif
       } catch (const std::exception& e) {
         const char *text =

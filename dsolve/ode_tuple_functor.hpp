@@ -36,6 +36,51 @@ namespace dsolve {
   };
 
   /** 
+   * NL system functor that accepts parameter pack
+   * 
+   * @tparam F original ODE RHS functor
+   * @tparam T_init root type
+   */
+  template<typename F, typename T_init>
+  struct VariadicNlFunc {
+    F const& f_;
+    const Eigen::Matrix<T_init, -1, 1>& x_;
+    std::ostream* msgs_;
+    
+    VariadicNlFunc(F const& f, const Eigen::Matrix<T_init, -1, 1>& x,
+                   std::ostream* msgs) :
+      f_(f), x_(x), msgs_(msgs)
+    {}
+
+    template<typename... T_par>
+    auto operator()(const T_par&... args) const {
+      return f_(x_, msgs_, args...);
+    }
+  };
+
+  /** 
+   * NL system functor that accepts tuple in place of parameter pack
+   * 
+   * @tparam F original NL functor type
+   * 
+   */
+  template<typename F>
+  struct TupleNlFunc {
+    const F& f_;
+    
+    TupleNlFunc(F const& f) : f_(f) {}
+
+    template<typename T_init, typename Tuple>
+    auto operator()(const Eigen::Matrix<T_init, -1, 1>& x,
+                    std::ostream* msgs,
+                    const Tuple& args) const {
+      VariadicNlFunc<F, T_init> f(f_, x, msgs);
+      UnpackTupleFunc<VariadicNlFunc<F, T_init> > f1(f);
+      return f1(args);
+    }
+  };
+
+  /** 
    * ODE RHS Functor that accepts parameter pack
    * 
    * @tparam F original ODE RHS functor
