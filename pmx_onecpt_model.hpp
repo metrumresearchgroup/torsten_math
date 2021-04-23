@@ -144,13 +144,13 @@ namespace torsten {
       Eigen::Matrix<T, -1, 1> pred = torsten::PKRec<T>::Zero(Ncmt);
 
       if (ka_ > 0.0) {
-        Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt),
-          diag = Eigen::Matrix<T_par, -1, -1>::Zero(Ncmt, Ncmt);
+        Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt);
+        Eigen::Matrix<T_par, -1, 1> diag(Ncmt);
         p << -(ka_ - k10_)/ka_, 0, 1, 1;
         p_inv << -ka_ / (ka_ - k10_), 0, ka_ / (ka_ - k10_), 1;
-        diag(0, 0) = -ka_;
-        diag(1, 1) = -k10_;
-        PMXLinOdeEigenDecompModel<T_par> linode_model(p, diag, p_inv, Ncmt);
+        diag << -ka_, -k10_;
+        LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p, diag, p_inv);
+        PMXLinOdeEigenDecompModel<T_par> linode_model(pdp);
         linode_model.solve(y, t0, t1, rate, integ);
       } else {
         typename stan::return_type_t<T_par, Tt0, Tt1> exp1 = exp(-k10_ * dt);
@@ -249,13 +249,16 @@ namespace torsten {
       using ss_scalar_type = typename stan::return_type_t<T_par, T_amt, T_r, T_ii>;
       PKRec<ss_scalar_type> pred = PKRec<ss_scalar_type>::Zero(Ncmt);
 
-      Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt),
-        diag = Eigen::Matrix<T_par, -1, -1>::Zero(Ncmt, Ncmt);
+      Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt);
+      Eigen::Matrix<T_par, -1, 1> diag(Ncmt);
+      p.setZero();
+      p_inv.setZero();
+      diag.setZero();
       p << -(ka_ - k10_)/ka_, 0, 1, 1;
       p_inv << -ka_ / (ka_ - k10_), 0, ka_ / (ka_ - k10_), 1;
-      diag(0, 0) = -ka_;
-      diag(1, 1) = -k10_;
-      PMXLinOdeEigenDecompModel<T_par> linode_model(p, diag, p_inv, Ncmt);
+      diag << -ka_, -k10_;
+      LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p, diag, p_inv);
+      PMXLinOdeEigenDecompModel<T_par> linode_model(pdp);
       pred = linode_model.solve(t0, amt, rate, ii, cmt);
 
       return pred;

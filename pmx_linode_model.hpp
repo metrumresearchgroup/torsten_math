@@ -230,21 +230,31 @@ namespace torsten {
   template<typename T_par>
   constexpr PMXLinODE PMXLinODEModel<T_par>::f_;
 
+  template<typename T>
+  using LinOdeEigenDecomp = std::tuple<const Eigen::Matrix<T, -1, -1>&,
+                                       const Eigen::Matrix<T, -1, 1>&,
+                                       const Eigen::Matrix<T, -1, -1>& >;
+
   /**
    * linear ode with eigen decomposition
    * 
    */
   template<typename T_par>
-  class PMXLinOdeEigenDecompModel : public PMXLinODEModel<T_par> {
+  class PMXLinOdeEigenDecompModel {
     const Eigen::Matrix<T_par, -1, -1> & p_;
+    const Eigen::Matrix<T_par, -1, 1>& diag_;
     const Eigen::Matrix<T_par, -1, -1> & p_inv_;
+    const int ncmt_;
 
   public:
     PMXLinOdeEigenDecompModel(const Eigen::Matrix<T_par, -1, -1>& p,
-                              const Eigen::Matrix<T_par, -1, -1>& diag,
-                              const Eigen::Matrix<T_par, -1, -1>& p_inv,
-                              int ncmt) :
-      PMXLinODEModel<T_par>(diag, ncmt), p_(p), p_inv_(p_inv)
+                              const Eigen::Matrix<T_par, -1, 1>& diag,
+                              const Eigen::Matrix<T_par, -1, -1>& p_inv) :
+      p_(p), diag_(diag), p_inv_(p_inv), ncmt_(diag_.size())
+    {}
+
+    PMXLinOdeEigenDecompModel(const LinOdeEigenDecomp<T_par>& pdp) :
+      PMXLinOdeEigenDecompModel(std::get<0>(pdp), std::get<1>(pdp), std::get<2>(pdp))
     {}
 
     template<typename Tt0, typename Tt1, typename T, typename T1>
@@ -256,21 +266,20 @@ namespace torsten {
 
       typename stan::return_type_t<Tt0, Tt1> dt = t1 - t0;
 
-      const int ncmt = this -> ncmt_;
-      const Eigen::Matrix<T_par, -1, -1>& diag = this -> par_;
-
-      Eigen::Matrix<T_par, -1, -1> work(diag);
-      for (int i = 0; i < ncmt; ++i) {
-        work(i, i) = 1.0 / work(i, i);
+      Eigen::Matrix<T_par, -1, -1> work(ncmt_, ncmt_);
+      work.setZero();
+      for (int i = 0; i < ncmt_; ++i) {
+        work(i, i) = 1.0 / diag_(i);
       }
       work = multiply(work, p_inv_);
       PKRec<T1> r = stan::math::to_vector(rate);
       PKRec<stan::return_type_t<T1, T_par> > p_inv_r = multiply(work, r);
       PKRec<T> pred = multiply(p_inv_, y) + p_inv_r;
 
-      Eigen::Matrix<stan::return_type_t<T_par, Tt1, Tt0>, -1, -1> work1 = diag * dt;
-      for (int i = 0; i < ncmt; ++i) {
-        work1(i, i) = stan::math::exp(work1(i, i));
+      Eigen::Matrix<stan::return_type_t<T_par, Tt1, Tt0>, -1, -1> work1(ncmt_,ncmt_);
+      work1.setZero();
+      for (int i = 0; i < ncmt_; ++i) {
+        work1(i, i) = stan::math::exp(diag_(i) * dt);
       }
 
       y = multiply(multiply(p_, work1), pred) - multiply(p_, p_inv_r);
@@ -294,12 +303,9 @@ namespace torsten {
       using T0 = typename stan::return_type_t<T_ii, T_par>;
       using scalar = typename stan::return_type_t<T_amt, T_r, T_ii, T_par>; //NOLINT
 
-      const int ncmt = this -> ncmt_;
-      Matrix<T0, -1, -1> workMatrix = Matrix<T0, -1, -1>::Zero(ncmt, ncmt);
-      Matrix<T0, -1, -1> ii_system = multiply(ii, this -> par_);
-      Matrix<scalar, -1, 1> pred(ncmt);
+      Matrix<scalar, -1, 1> pred(ncmt_);
       pred.setZero();
-      Matrix<scalar, Dynamic, 1> amounts(ncmt);
+      Matrix<scalar, Dynamic, 1> amounts(ncmt_);
       amounts.setZero();
 
       if (rate == 0) {  // bolus dose
@@ -309,14 +315,14 @@ namespace torsten {
          * thus (I - exp(At))*u = exp(At)*bolus
          *
          */
-        Matrix<T0, -1, -1> diag = Matrix<T0, -1, -1>::Zero(ncmt, ncmt);
-        for (int i = 0; i < ncmt; ++i) {
-          diag(i, i) = stan::math::exp(ii * this -> par_(i, i));
+        Matrix<T0, -1, -1> diag = Matrix<T0, -1, -1>::Zero(ncmt_, ncmt_);
+        for (int i = 0; i < ncmt_; ++i) {
+          diag(i, i) = stan::math::exp(ii * diag_(i));
         }
-        PKRec<T_amt> bolus = PKRec<T_amt>::Zero(ncmt);
+        PKRec<T_amt> bolus = PKRec<T_amt>::Zero(ncmt_);
         bolus(cmt - 1) = amt;
         pred = multiply(multiply(diag, p_inv_), bolus);
-        for (int i = 0; i < ncmt; ++i) {
+        for (int i = 0; i < ncmt_; ++i) {
           pred(i) /= (1.0 - diag(i, i));
         }
         pred = multiply(p_, pred);
@@ -330,52 +336,51 @@ namespace torsten {
         typename stan::return_type_t<T_amt, T_r, T_ii> t1 = dt - n * ii;
         typename stan::return_type_t<T_amt, T_r, T_ii> t2 = (n + 1) * ii - dt;
 
-        const Eigen::Matrix<T_par, -1, -1>& diag = this -> par_;
-        Eigen::Matrix<T_par, -1, -1> a(diag);
-        for (int i = 0; i < ncmt; ++i) {
-          a(i, i) = 1.0 / a(i, i);
+        Eigen::Matrix<T_par, -1, -1> a(ncmt_, ncmt_);
+        a.setZero();
+        for (int i = 0; i < ncmt_; ++i) {
+          a(i, i) = 1.0 / diag_(i);
         }
         // a = multiply(multiply(multiply(p_, a), p_inv_), p_inv_);
-        a= multiply(a, p_inv_);
-        PKRec<stan::return_type_t<T_par, T_r>> y1(ncmt), y2(ncmt);
+        a = multiply(a, p_inv_);
+        PKRec<stan::return_type_t<T_par, T_r>> y1(ncmt_), y2(ncmt_);
         y1.setZero();
         y2.setZero();
         y1(cmt - 1) = (n + 1) * rate;
         y2(cmt - 1) = n * rate;
         y1 = multiply(a, y1);
         y2 = multiply(a, y2);
-        Eigen::Matrix<scalar, -1, -1> work = Eigen::Matrix<scalar, -1, -1>::Zero(ncmt, ncmt);
-        for (int i = 0; i < ncmt; ++i) {
-          work(i, i) = stan::math::exp(diag(i, i) * t2);
+        Eigen::Matrix<scalar, -1, -1> work = Eigen::Matrix<scalar, -1, -1>::Zero(ncmt_, ncmt_);
+        for (int i = 0; i < ncmt_; ++i) {
+          work(i, i) = stan::math::exp(diag_(i) * t2);
         }
         pred = y2;
         y2 = y1 - y2;
         pred += multiply(work, y2);
-        for (int i = 0; i < ncmt; ++i) {
-          work(i, i) = stan::math::exp(diag(i, i) * (t1 + t2));
+        for (int i = 0; i < ncmt_; ++i) {
+          work(i, i) = stan::math::exp(diag_(i) * (t1 + t2));
         }
         pred -= multiply(work, y1);
-        work -= Eigen::Matrix<scalar, -1, -1>::Identity(ncmt, ncmt);
-        for (int i = 0; i < ncmt; ++i) {
+        work -= Eigen::Matrix<scalar, -1, -1>::Identity(ncmt_, ncmt_);
+        for (int i = 0; i < ncmt_; ++i) {
           work(i, i) = 1.0 / work(i, i);
         }
         pred = multiply(p_, multiply(work, pred));
       } else {  // constant infusion
         amounts(cmt - 1) -= rate;
-        PKRec<T_r> rvec = PKRec<T_r>::Zero(ncmt);
+        PKRec<T_r> rvec = PKRec<T_r>::Zero(ncmt_);
         rvec(cmt - 1) -= rate;
         pred = multiply(p_inv_, rvec);
-        Eigen::Matrix<T_par, -1, -1> work(this -> par_);
-        for (int i = 0; i < ncmt; ++i) {
-          work(i, i) = 1.0 / work(i, i);
+        Eigen::Matrix<T_par, -1, -1> work(ncmt_, ncmt_);
+        work.setZero();
+        for (int i = 0; i < ncmt_; ++i) {
+          work(i, i) = 1.0 / diag_(i);
         }
         pred = multiply(p_, multiply(work, pred));
       }
       return pred;
     }
   };
-
-
 }
 
 #endif

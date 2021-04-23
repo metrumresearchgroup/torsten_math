@@ -176,28 +176,30 @@ namespace torsten {
       T_par q = ka_ * ka_ - ka_ * k10_ - ka_ * k12_ - ka_ * k21_ + k10_ * k21_;
       T_par w = k10_ + k12_ - k21_;
       if (ka_ > 0.0) {
-        Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt),
-          diag = Eigen::Matrix<T_par, -1, -1>::Zero(Ncmt, Ncmt);
+        Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt);
         p << q / (ka_ * k12_), 0, 0,
           -(ka_ - k21_)/k12_, -0.5 * (w + s) / k12_, -0.5 * (w - s) / k12_, 
           1, 1, 1;
         p_inv << ka_ * k12_/q, 0, 0,
           -ka_ * k12_ * ( 2.0 * ka_ - k10_ - k12_ - k21_ + s) / (2.0 * q * s), -k12_ / s, 0.5 * (s - w) / s,
           -ka_ * k12_ * (-2.0 * ka_ + k10_ + k12_ + k21_ + s) / (2.0 * q * s),  k12_ / s, 0.5 * (s + w) / s;
-        diag(0, 0) = -ka_;
-        diag(1, 1) = -0.5 * (k10_ + k12_ + k21_ + s);
-        diag(2, 2) = -0.5 * (k10_ + k12_ + k21_ - s);
-        PMXLinOdeEigenDecompModel<T_par> linode_model(p, diag, p_inv, Ncmt);
+        Eigen::Matrix<T_par, -1, 1> diag(Ncmt);
+        diag << -ka_,
+          -0.5 * (k10_ + k12_ + k21_ + s),
+          -0.5 * (k10_ + k12_ + k21_ - s);
+        LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p, diag, p_inv);
+        PMXLinOdeEigenDecompModel<T_par> linode_model(pdp);
         linode_model.solve(y, t0, t1, rate, integ);
       } else {
         y(0) += rate[0] * dt;
-        Eigen::Matrix<T_par, -1, -1> p(Ncmt-1, Ncmt-1), p_inv(Ncmt-1, Ncmt-1),
-          diag = Eigen::Matrix<T_par, -1, -1>::Zero(Ncmt-1, Ncmt-1);
+        Eigen::Matrix<T_par, -1, -1> p(Ncmt-1, Ncmt-1), p_inv(Ncmt-1, Ncmt-1);
+        Eigen::Matrix<T_par, -1, 1> diag(Ncmt-1);
         p << -0.5 * (w + s) / k12_, -0.5 * (w - s) / k12_, 1, 1;
         p_inv << -k12_/s,  0.5 * (s - w) / s, k12_/s, 0.5 * (s + w) / s;
-        diag(0, 0) = -0.5 * (k12_ + k10_ + k21_ + s);
-        diag(1, 1) = -0.5 * (k12_ + k10_ + k21_ - s);
-        PMXLinOdeEigenDecompModel<T_par> linode_model(p, diag, p_inv, Ncmt - 1);
+        diag << -0.5 * (k12_ + k10_ + k21_ + s),
+          -0.5 * (k12_ + k10_ + k21_ - s);
+        LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p, diag, p_inv);
+        PMXLinOdeEigenDecompModel<T_par> linode_model(pdp);
         PKRec<T> y2 = y.tail(Ncmt - 1);
         std::vector<T1> rate2(rate.begin() + 1, rate.end());
         linode_model.solve(y2, t0, t1, rate2, integ);
@@ -330,18 +332,19 @@ namespace torsten {
       T_par q = ka_ * ka_ - ka_ * k10_ - ka_ * k12_ - ka_ * k21_ + k10_ * k21_;
       T_par w = k10_ + k12_ - k21_;
       
-      Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt),
-        diag = Eigen::Matrix<T_par, -1, -1>::Zero(Ncmt, Ncmt);
+      Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt);
+      Eigen::Matrix<T_par, -1, 1> diag(Ncmt);
       p << q / (ka_ * k12_), 0, 0,
         -(ka_ - k21_)/k12_, -0.5 * (w + s) / k12_, -0.5 * (w - s) / k12_, 
         1, 1, 1;
       p_inv << ka_ * k12_/q, 0, 0,
         -ka_ * k12_ * ( 2.0 * ka_ - k10_ - k12_ - k21_ + s) / (2.0 * q * s), -k12_ / s, 0.5 * (s - w) / s,
         -ka_ * k12_ * (-2.0 * ka_ + k10_ + k12_ + k21_ + s) / (2.0 * q * s),  k12_ / s, 0.5 * (s + w) / s;
-      diag(0, 0) = -ka_;
-      diag(1, 1) = -0.5 * (k10_ + k12_ + k21_ + s);
-      diag(2, 2) = -0.5 * (k10_ + k12_ + k21_ - s);
-      PMXLinOdeEigenDecompModel<T_par> linode_model(p, diag, p_inv, Ncmt);
+      diag << -ka_,
+        -0.5 * (k10_ + k12_ + k21_ + s),
+        -0.5 * (k10_ + k12_ + k21_ - s);
+      LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p, diag, p_inv);
+      PMXLinOdeEigenDecompModel<T_par> linode_model(pdp);
       pred = linode_model.solve(t0, amt, rate, ii, cmt);
 
       return pred;
