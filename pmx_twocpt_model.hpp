@@ -84,6 +84,9 @@ namespace torsten {
     const T_par ksum_;
     std::vector<T_par> alpha_;
     const std::vector<T_par> par_;
+    Eigen::Matrix<T_par, -1, -1> p_;
+    Eigen::Matrix<T_par, -1, 1> diag_;
+    Eigen::Matrix<T_par, -1, -1> p_inv_;
 
   public:
     static constexpr int Ncmt = 3;
@@ -120,8 +123,10 @@ namespace torsten {
       alpha_{0.5 * (ksum_ + stan::math::sqrt(ksum_ * ksum_ - 4 * k10_ * k21_)),
         0.5 * (ksum_ - stan::math::sqrt(ksum_ * ksum_ - 4 * k10_ * k21_)),
         ka_},
-      par_{CL_, Q_, V2_, V3_, ka_}
-    {
+      par_{CL_, Q_, V2_, V3_, ka_},
+      p_{Ncmt, Ncmt},
+      diag_{Ncmt},
+      p_inv_{Ncmt, Ncmt} {
       const char* fun = "PMXTwoCptModel";
       stan::math::check_positive_finite(fun, "CL", CL_);
       stan::math::check_positive_finite(fun, "Q", Q_);
@@ -129,6 +134,29 @@ namespace torsten {
       stan::math::check_positive_finite(fun, "V3", V3_);
       stan::math::check_nonnegative(fun, "ka", ka_);
       stan::math::check_finite(fun, "ka", ka_);
+
+      T_par s = stan::math::sqrt(-4.0 * k10_ * k21_ + (k10_ + k12_ + k21_) * (k10_ + k12_ + k21_));
+      T_par q = ka_ * ka_ - ka_ * k10_ - ka_ * k12_ - ka_ * k21_ + k10_ * k21_;
+      T_par w = k10_ + k12_ - k21_;
+      if (ka_ > 0) {
+        p_ << q / (ka_ * k12_), 0, 0,
+          -(ka_ - k21_)/k12_, -0.5 * (w + s) / k12_, -0.5 * (w - s) / k12_, 
+          1, 1, 1;
+        p_inv_ << ka_ * k12_/q, 0, 0,
+          -ka_ * k12_ * ( 2.0 * ka_ - k10_ - k12_ - k21_ + s) / (2.0 * q * s), -k12_ / s, 0.5 * (s - w) / s,
+          -ka_ * k12_ * (-2.0 * ka_ + k10_ + k12_ + k21_ + s) / (2.0 * q * s),  k12_ / s, 0.5 * (s + w) / s;
+        diag_ << -ka_,
+          -0.5 * (k10_ + k12_ + k21_ + s),
+          -0.5 * (k10_ + k12_ + k21_ - s);
+      } else {
+        p_.resize(Ncmt-1, Ncmt-1);
+        p_inv_.resize(Ncmt-1, Ncmt-1);
+        diag_.resize(Ncmt-1);
+        p_ << -0.5 * (w + s) / k12_, -0.5 * (w - s) / k12_, 1, 1;
+        p_inv_ << -k12_/s,  0.5 * (s - w) / s, k12_/s, 0.5 * (s + w) / s;
+        diag_ << -0.5 * (k12_ + k10_ + k21_ + s),
+          -0.5 * (k12_ + k10_ + k21_ - s);
+      }
     }
 
   /**
@@ -169,36 +197,13 @@ namespace torsten {
 
       typename stan::return_type_t<Tt0, Tt1> dt = t1 - t0;
 
-      std::vector<T> a(Ncmt, 0);
-      Eigen::Matrix<T, -1, 1> pred = torsten::PKRec<T>::Zero(Ncmt);
-
-      T_par s = stan::math::sqrt(-4.0 * k10_ * k21_ + (k10_ + k12_ + k21_) * (k10_ + k12_ + k21_));
-      T_par q = ka_ * ka_ - ka_ * k10_ - ka_ * k12_ - ka_ * k21_ + k10_ * k21_;
-      T_par w = k10_ + k12_ - k21_;
       if (ka_ > 0.0) {
-        Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt);
-        p << q / (ka_ * k12_), 0, 0,
-          -(ka_ - k21_)/k12_, -0.5 * (w + s) / k12_, -0.5 * (w - s) / k12_, 
-          1, 1, 1;
-        p_inv << ka_ * k12_/q, 0, 0,
-          -ka_ * k12_ * ( 2.0 * ka_ - k10_ - k12_ - k21_ + s) / (2.0 * q * s), -k12_ / s, 0.5 * (s - w) / s,
-          -ka_ * k12_ * (-2.0 * ka_ + k10_ + k12_ + k21_ + s) / (2.0 * q * s),  k12_ / s, 0.5 * (s + w) / s;
-        Eigen::Matrix<T_par, -1, 1> diag(Ncmt);
-        diag << -ka_,
-          -0.5 * (k10_ + k12_ + k21_ + s),
-          -0.5 * (k10_ + k12_ + k21_ - s);
-        LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p, diag, p_inv);
+        LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p_, diag_, p_inv_);
         PMXLinOdeEigenDecompModel<T_par> linode_model(pdp);
         linode_model.solve(y, t0, t1, rate, integ);
       } else {
         y(0) += rate[0] * dt;
-        Eigen::Matrix<T_par, -1, -1> p(Ncmt-1, Ncmt-1), p_inv(Ncmt-1, Ncmt-1);
-        Eigen::Matrix<T_par, -1, 1> diag(Ncmt-1);
-        p << -0.5 * (w + s) / k12_, -0.5 * (w - s) / k12_, 1, 1;
-        p_inv << -k12_/s,  0.5 * (s - w) / s, k12_/s, 0.5 * (s + w) / s;
-        diag << -0.5 * (k12_ + k10_ + k21_ + s),
-          -0.5 * (k12_ + k10_ + k21_ - s);
-        LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p, diag, p_inv);
+        LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p_, diag_, p_inv_);
         PMXLinOdeEigenDecompModel<T_par> linode_model(pdp);
         PKRec<T> y2 = y.tail(Ncmt - 1);
         std::vector<T1> rate2(rate.begin() + 1, rate.end());
@@ -325,27 +330,9 @@ namespace torsten {
       stan::math::check_less("steady state two-cpt solver", "cmt", cmt, 4);
       stan::math::check_positive_finite("steady state two-cpt solver", "ka", ka_);
 
-      std::vector<ss_scalar_type> a(3, 0);
-      PKRec<ss_scalar_type> pred = PKRec<ss_scalar_type>::Zero(Ncmt);
-
-      T_par s = stan::math::sqrt(-4.0 * k10_ * k21_ + (k10_ + k12_ + k21_) * (k10_ + k12_ + k21_));
-      T_par q = ka_ * ka_ - ka_ * k10_ - ka_ * k12_ - ka_ * k21_ + k10_ * k21_;
-      T_par w = k10_ + k12_ - k21_;
-      
-      Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt);
-      Eigen::Matrix<T_par, -1, 1> diag(Ncmt);
-      p << q / (ka_ * k12_), 0, 0,
-        -(ka_ - k21_)/k12_, -0.5 * (w + s) / k12_, -0.5 * (w - s) / k12_, 
-        1, 1, 1;
-      p_inv << ka_ * k12_/q, 0, 0,
-        -ka_ * k12_ * ( 2.0 * ka_ - k10_ - k12_ - k21_ + s) / (2.0 * q * s), -k12_ / s, 0.5 * (s - w) / s,
-        -ka_ * k12_ * (-2.0 * ka_ + k10_ + k12_ + k21_ + s) / (2.0 * q * s),  k12_ / s, 0.5 * (s + w) / s;
-      diag << -ka_,
-        -0.5 * (k10_ + k12_ + k21_ + s),
-        -0.5 * (k10_ + k12_ + k21_ - s);
-      LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p, diag, p_inv);
+      LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p_, diag_, p_inv_);
       PMXLinOdeEigenDecompModel<T_par> linode_model(pdp);
-      pred = linode_model.solve(t0, amt, rate, ii, cmt);
+      PKRec<ss_scalar_type> pred = linode_model.solve(t0, amt, rate, ii, cmt);
 
       return pred;
     }

@@ -78,6 +78,10 @@ namespace torsten {
       par_(par), ncmt_(ncmt)
     {}
 
+    PMXLinODEModel(const Eigen::Matrix<T_par, -1, -1>& par) :
+      par_(par), ncmt_(par.rows())
+    {}
+
     /*
      * return @c vars that will be steady-state
      * solution. For SS solution @c rate_ or @ y0_ will not
