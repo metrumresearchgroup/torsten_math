@@ -5,6 +5,7 @@
 #include <stan/math/torsten/pmx_solve_rk45.hpp>
 #include <stan/math/torsten/pmx_solve_adams.hpp>
 #include <stan/math/torsten/pmx_solve_linode.hpp>
+#include <stan/math/torsten/pmx_solve_onecpt_effcpt.hpp>
 #include <stan/math/torsten/pmx_solve_onecpt_rk45.hpp>
 #include <stan/math/torsten/pmx_solve_onecpt_bdf.hpp>
 #include <stan/math/torsten/pmx_solve_twocpt_rk45.hpp>

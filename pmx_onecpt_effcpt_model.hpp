@@ -144,10 +144,14 @@ namespace torsten {
                const dsolve::PMXAnalyiticalIntegrator& integ) const {
       using stan::math::exp;
 
+      PKRec<T> y_bak(y);
+
       typename stan::return_type_t<Tt0, Tt1> dt = t1 - t0;
 
       std::vector<T> a(Ncmt, 0);
       Eigen::Matrix<T, -1, 1> pred = torsten::PKRec<T>::Zero(Ncmt);
+
+      if (dt < 1.e-12) return;
 
       if (ka_ > 0.0) {
         Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt);
@@ -176,6 +180,14 @@ namespace torsten {
         linode_model.solve(y2, t0, t1, rate2, integ);
         y.tail(Ncmt - 1) = y2;
       }
+
+      if (y[1] < 0) {
+      std::cout << "taki test pars: " << CL_ << " " << V_ << " " << ka_ << " " << ke_ << "\n";
+      std::cout << "taki test y_init: " << y_bak[0] << " " << y_bak[1] << " " << y_bak[2] << "\n";
+      std::cout << "taki test y: " << y[0] << " " << y[1] << " " << y[2] << "\n";
+      std::cout << "taki test t: " << t0 << " " << t1 << "\n";
+      }
+
     }
 
   /**
@@ -233,6 +245,16 @@ namespace torsten {
       pred = linode_model.solve(t0, amt, rate, ii, cmt);
 
       return pred;
+    }
+
+    /**
+     * wrapper to fit @c PrepWrapper's call signature
+     */
+    template<typename T_amt, typename T_r, typename T_ii>
+    Eigen::Matrix<typename stan::return_type<T_par, T_amt, T_r, T_ii>::type, -1, 1>
+    solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
+          const dsolve::PMXAnalyiticalIntegrator& integrator) const {
+      return solve(t0, amt, rate, ii, cmt);
     }
   };
 

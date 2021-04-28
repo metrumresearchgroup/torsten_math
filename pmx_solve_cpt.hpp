@@ -18,7 +18,10 @@
 namespace torsten {
 
   template<template<class> class model_t>
-  struct PMXCheckCPTModelParam;
+  struct PMXCheckCPTModelParam {
+    template<typename T>
+    void operator()(const std::vector<std::vector<T> >& pMatrix) {}
+  };
 
   /** 
    * check validity of one-cpt model param 2d array

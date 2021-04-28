@@ -16,6 +16,118 @@
 #include <vector>
 #include <string>
 
+
+/**
+ * Tests if any elementwise difference of the input matrices
+ * of doubles is greater than DELTA. This uses the
+ * EXPECT_NEAR macro from GTest.
+ *
+ * @param A first input matrix to compare
+ * @param B second input matrix to compare
+ * @param DELTA the maximum allowed difference
+ */
+#define EXPECT_MAT_VAL_NEAR(A, B, DELTA)                     \
+  {                                                             \
+    EXPECT_EQ(A.rows(), B.rows());                              \
+    EXPECT_EQ(A.cols(), B.cols());                              \
+    for (int i = 0; i < A.rows(); ++i) {                        \
+      for (int j = 0; j < A.cols(); ++j) {                      \
+        double a = stan::math::value_of(A(i, j));               \
+        double b = stan::math::value_of(B(i, j));               \
+        EXPECT_NEAR(a, b, DELTA) << "as entry (" << i << "," << j << ")";\
+      }                                                         \
+    }                                                           \
+  }
+
+/**
+ * Tests if any elementwise difference of the input matrices
+ * of doubles is greater than DELTA. This uses the
+ * EXPECT_NEAR macro from GTest.
+ *
+ * @param A first input matrix to compare
+ * @param B second input matrix to compare
+ * @param DELTA the maximum allowed difference
+ */
+#define EXPECT_MAT_VAL_FLOAT_EQ(A, B)                           \
+  {                                                             \
+    EXPECT_EQ(A.rows(), B.rows());                              \
+    EXPECT_EQ(A.cols(), B.cols());                              \
+    for (int i = 0; i < A.rows(); ++i) {                        \
+      for (int j = 0; j < A.cols(); ++j) {                      \
+        double a = stan::math::value_of(A(i, j));               \
+        double b = stan::math::value_of(B(i, j));               \
+        EXPECT_FLOAT_EQ(a, b) << "as entry (" << i << "," << j << ")";\
+      }                                                         \
+    }                                                           \
+  }
+
+/**
+ * Tests if any elementwise difference of the input vectors
+ * is greater than DELTA. This uses the
+ * EXPECT_NEAR macro from GTest.
+ *
+ * @param A first input matrix to compare
+ * @param B second input matrix to compare
+ * @param DELTA the maximum allowed difference
+ */
+#define EXPECT_VEC_VAL_NEAR(A, B, DELTA)                        \
+  {                                                             \
+    EXPECT_EQ(A.size(), B.size());                              \
+    for (int i = 0; i < A.size(); ++i) {                        \
+      double a = stan::math::value_of(A[i]);                    \
+      double b = stan::math::value_of(B[i]);                    \
+      EXPECT_NEAR(a, b, DELTA) << "as entry " << i; \
+    }                                                           \
+  }
+
+/**
+ * Tests if any elementwise difference of the input vectors
+ * is greater than DELTA. This uses the
+ * EXPECT_NEAR macro from GTest.
+ *
+ * @param A first input matrix to compare
+ * @param B second input matrix to compare
+ * @param DELTA the maximum allowed difference
+ */
+#define EXPECT_VEC_VAL_FLOAT_EQ(A, B)                   \
+  {                                                     \
+    EXPECT_EQ(A.size(), B.size());                      \
+    for (int i = 0; i < A.size(); ++i) {                \
+      double a = stan::math::value_of(A[i]);            \
+      double b = stan::math::value_of(B[i]);            \
+      EXPECT_FLOAT_EQ(a, b) << "as entry " << i;        \
+    }                                                   \
+  }
+
+/**
+ * Tests if any elementwise difference of the input matrices'
+ * element adjoint is greater than DELTA. This uses the
+ * EXPECT_NEAR macro from GTest.
+ *
+ * @param A first input matrix to compare
+ * @param B second input matrix to compare
+ * @param P parameter array of which grad is checked
+ * @param NESTED nested_rev_autodiff where A, B and P live
+ * @param DELTA the maximum allowed difference
+ */
+#define EXPECT_MAT_ADJ_NEAR(A, B, P, NESTED, DELTA, MSG)                    \
+  {                                                                     \
+    EXPECT_EQ(A.rows(), B.rows());                                      \
+    EXPECT_EQ(A.cols(), B.cols());                                      \
+    std::vector<double> ga(P.size()), gb(P.size());                     \
+    for (int i = 0; i < A.rows(); ++i) {                                \
+      for (int j = 0; j < A.cols(); ++j) {                              \
+        NESTED.set_zero_all_adjoints();                                 \
+        A(i, j).grad(P, ga);                                            \
+        NESTED.set_zero_all_adjoints();                                 \
+        B(i, j).grad(P, gb);                                            \
+        for (auto k = 0; k < P.size(); ++k) {                           \
+          EXPECT_NEAR(ga[k], gb[k], DELTA) << "k th grad at (i, j) of A and B: " << MSG; \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+  }
+
 namespace torsten {
   namespace test {
     /*

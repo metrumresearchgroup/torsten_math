@@ -280,14 +280,14 @@ TEST_F(TorstenTwoCptModelTest, ss_bolus_by_long_run_sd_vs_bdf_result) {
     cmt = 1;
     Eigen::Matrix<double, -1, 1> y1 = f1(amt_vec);
     Eigen::Matrix<double, -1, 1> y2 = f2(amt_vec);
-    torsten::test::test_val(y1, y2);
+    EXPECT_VEC_VAL_FLOAT_EQ(y1, y2);
   }
 
   {
     cmt = 2;
     Eigen::Matrix<double, -1, 1> y1 = f1(amt_vec);
     Eigen::Matrix<double, -1, 1> y2 = f2(amt_vec);
-    torsten::test::test_val(y1, y2);    
+    EXPECT_VEC_VAL_FLOAT_EQ(y1, y2);    
   }
 
   {
@@ -296,7 +296,7 @@ TEST_F(TorstenTwoCptModelTest, ss_bolus_by_long_run_sd_vs_bdf_result) {
     cmt = 3;
     Eigen::Matrix<double, -1, 1> y1 = f1(amt_vec);
     Eigen::Matrix<double, -1, 1> y2 = f2(amt_vec);
-    torsten::test::test_val(y1, y2);    
+    EXPECT_VEC_VAL_FLOAT_EQ(y1, y2);    
   }
 }
 
@@ -398,7 +398,7 @@ TEST_F(TorstenTwoCptModelTest, ss_infusion_by_long_run_sd_vs_bdf_result) {
     rate_vec[cmt - 1] = 300.0;
     Eigen::Matrix<double, -1, 1> y1 = f1(rate_vec);
     Eigen::Matrix<double, -1, 1> y2 = f2(rate_vec);
-    torsten::test::test_val(y1, y2);
+    EXPECT_VEC_VAL_FLOAT_EQ(y1, y2);
     rate_vec[cmt - 1] = 0.0;
   }
 
@@ -407,7 +407,7 @@ TEST_F(TorstenTwoCptModelTest, ss_infusion_by_long_run_sd_vs_bdf_result) {
     rate_vec[cmt - 1] = 300.0;
     Eigen::Matrix<double, -1, 1> y1 = f1(rate_vec);
     Eigen::Matrix<double, -1, 1> y2 = f2(rate_vec);
-    torsten::test::test_val(y1, y2);
+    EXPECT_VEC_VAL_FLOAT_EQ(y1, y2);
   }
 
   {
@@ -415,7 +415,7 @@ TEST_F(TorstenTwoCptModelTest, ss_infusion_by_long_run_sd_vs_bdf_result) {
     rate_vec[cmt - 1] = 300.0;
     Eigen::Matrix<double, -1, 1> y1 = f1(rate_vec);
     Eigen::Matrix<double, -1, 1> y2 = f2(rate_vec);
-    torsten::test::test_val(y1, y2);
+    EXPECT_VEC_VAL_FLOAT_EQ(y1, y2);
   }
 }
 
