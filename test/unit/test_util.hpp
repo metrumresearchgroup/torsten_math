@@ -122,7 +122,76 @@
         NESTED.set_zero_all_adjoints();                                 \
         B(i, j).grad(P, gb);                                            \
         for (auto k = 0; k < P.size(); ++k) {                           \
-          EXPECT_NEAR(ga[k], gb[k], DELTA) << "k th grad at (i, j) of A and B: " << MSG; \
+          EXPECT_NEAR(ga[k], gb[k], DELTA) << k << "'th grad at (" << i << ", " << j<< ") of A and B: " << MSG; \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+  }
+
+/**
+ * Tests if a function's autodiff gradient is near finite diff gradient
+ * w.r.t given vector, only check positive compnents of the vector.
+ *
+ * @param FUNC function
+ * @param P parameter vector
+ * @param NESTED nested_rev_autodiff where P lives
+ * @param H finite diff step size
+ * @param TOL tolerance
+ * @param MSG diagnostic message
+ */
+#define EXPECT_MAT_FUNC_POSITIVE_PARAM_NEAR_FD(FUN, P, NESTED, H, TOL, MSG) \
+  {                                                                     \
+    std::vector<stan::math::var> xvar = stan::math::to_var(P);          \
+    std::vector<double> x_d = stan::math::value_of(P);                  \
+    auto res1 = FUN(xvar);                                              \
+    for (auto i = 0; i < x_d.size(); ++i) {                             \
+      if (x_d[i] < h) continue;                                         \
+      double x_i = x_d[i];                                              \
+      x_d[i] += h;                                                      \
+      auto res_ud = FUN(x_d);                                           \
+      x_d[i] -= 2 * h;                                                  \
+      auto res_ld = FUN(x_d);                                           \
+      x_d[i] = x_i;                                                     \
+      for (auto j = 0; j < res1.rows(); ++j) {                          \
+        for (auto k = 0; k < res1.cols(); ++k) {                        \
+          nested.set_zero_all_adjoints();                               \
+          res1(j, k).grad();                                            \
+          double res_fd = 0.5 * (stan::math::value_of(res_ud(j, k)) - stan::math::value_of(res_ld(j, k))) / h; \
+          EXPECT_NEAR(xvar[i].adj(), res_fd, tol) << i << "'th param at (" << j << ", " << k << "):" << MSG; \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+  }
+   
+/**
+ * Tests if a function's autodiff gradient is near finite diff gradient
+ * w.r.t given vector.
+ *
+ * @param FUNC function
+ * @param P parameter vector
+ * @param NESTED nested_rev_autodiff where P lives
+ * @param H finite diff step size
+ * @param TOL tolerance
+ * @param MSG diagnostic message
+ */
+#define EXPECT_MAT_FUNC_PARAM_NEAR_FD(FUN, P, NESTED, H, TOL, MSG) \
+  {                                                                     \
+    std::vector<stan::math::var> xvar = stan::math::to_var(P);          \
+    std::vector<double> x_d = stan::math::value_of(P);                  \
+    auto res1 = FUN(xvar);                                              \
+    for (auto i = 0; i < x_d.size(); ++i) {                             \
+      double x_i = x_d[i];                                              \
+      x_d[i] += h;                                                      \
+      auto res_ud = FUN(x_d);                                           \
+      x_d[i] -= 2 * h;                                                  \
+      auto res_ld = FUN(x_d);                                           \
+      x_d[i] = x_i;                                                     \
+      for (auto j = 0; j < res1.rows(); ++j) {                          \
+        for (auto k = 0; k < res1.cols(); ++k) {                        \
+          nested.set_zero_all_adjoints();                               \
+          res1(j, k).grad();                                            \
+          double res_fd = 0.5 * (stan::math::value_of(res_ud(j, k)) - stan::math::value_of(res_ld(j, k))) / h; \
+          EXPECT_NEAR(xvar[i].adj(), res_fd, tol) << i << "'th param at (" << j << ", " << k << "):" << MSG; \
         }                                                               \
       }                                                                 \
     }                                                                   \

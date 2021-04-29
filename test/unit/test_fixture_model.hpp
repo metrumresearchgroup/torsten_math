@@ -130,6 +130,59 @@ struct TorstenPMXTestBase<child_type<T> > : public testing::Test {
     auto res2 = fixture.solver2_solution();
     EXPECT_MAT_ADJ_NEAR(res1, res2, p, this -> nested, tol, diagnostic_msg);
   }
+
+  template<typename x_type>
+  auto test_func_time(std::vector<x_type> const& x) {
+    return sol1(x, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  }
+
+  template<typename x_type>
+  auto test_func_amt(std::vector<x_type> const& x) {
+    return sol1(time, x, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  }
+
+  template<typename x_type>
+  auto test_func_rate(std::vector<x_type> const& x) {
+    return sol1(time, amt, x, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  }
+
+  template<typename x_type>
+  auto test_func_ii(std::vector<x_type> const& x) {
+    return sol1(time, amt, rate, x, evid, cmt, addl, ss, theta, biovar, tlag);
+  }
+
+  template<typename x_type>
+  auto test_func_theta(std::vector<x_type> const& x) {
+    std::vector<std::vector<x_type> > x_{x};
+    return sol1(time, amt, rate, ii, evid, cmt, addl, ss, x_, biovar, tlag);
+  }
+
+  template<typename x_type>
+  auto test_func_biovar(std::vector<x_type> const& x) {
+    std::vector<std::vector<x_type> > x_{x};
+    return sol1(time, amt, rate, ii, evid, cmt, addl, ss, theta, x_, tlag);
+  }
+
+  template<typename x_type>
+  auto test_func_tlag(std::vector<x_type> const& x) {
+    std::vector<std::vector<x_type> > x_{x};
+    return sol1(time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, x_);
+  }
+
+#define ADD_FD_TEST(NAME) \
+  void test_finite_diff_##NAME(double h, double tol) {\
+    EXPECT_MAT_FUNC_POSITIVE_PARAM_NEAR_FD(test_func_##NAME, NAME, nested, h, tol, #NAME); \
+  }
+
+  ADD_FD_TEST(amt);
+  ADD_FD_TEST(time);
+  ADD_FD_TEST(rate);
+  ADD_FD_TEST(ii);
+  ADD_FD_TEST(theta);
+  ADD_FD_TEST(biovar);
+  ADD_FD_TEST(tlag);
+
+#undef ADD_FD_TEST
 };
 
 /** 
