@@ -15,7 +15,20 @@ TYPED_TEST_P(test_onecpt, multiple_bolus) {
   this -> compare_solvers_adj(this -> tlag[0], 1.e-8, "lag time");
 }
 
-REGISTER_TYPED_TEST_SUITE_P(test_onecpt, multiple_bolus);
+TYPED_TEST_P(test_onecpt, multiple_bolus_addl) {
+  this -> ii[0] = 1.3;          // ensure test II + ADDL by end of time
+  this -> compare_solvers_val();
+  this -> compare_solvers_adj(this -> amt, 1.e-8, "AMT");
+  this -> compare_solvers_adj(this -> rate, 1.e-8, "RATE");
+  this -> compare_solvers_adj(this -> ii, 5.e-6, "II");
+  this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
+  this -> compare_solvers_adj(this -> biovar[0], 1.e-6, "bioavailability");
+  this -> compare_solvers_adj(this -> tlag[0], 1.e-8, "lag time");
+}
+
+REGISTER_TYPED_TEST_SUITE_P(test_onecpt,
+                            multiple_bolus,
+                            multiple_bolus_addl);
 
 using onecpt_test_types = boost::mp11::mp_product<
   std::tuple,
