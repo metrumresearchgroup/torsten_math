@@ -129,7 +129,7 @@ struct SS_system_dd {
 
       ts[0] = ii_ - delta;
       dat_ode[cmt_ - 1] = 0;
-      pred = integrator_(f_, x0, t0, ts, to_array_1d(y2), dat_ode, dat_int)[0];
+      pred = integrator_(f_, x0, t0, ts, to_array_1d(y2), dat_ode, dat_int);
 
       for (int i = 0; i < result.size(); i++)
         result(i) = x(i) - pred[i];

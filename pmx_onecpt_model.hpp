@@ -50,6 +50,30 @@ namespace torsten {
 
       return y;
     }
+
+    /** 
+     * Eigen::Matrix version
+     * 
+     */
+    template <typename T0, typename T1, typename T2>
+    inline
+    Eigen::Matrix<typename stan::return_type_t<T0, T1, T2>, -1, 1>
+    operator()(const T0& t,
+               const Eigen::Matrix<T1, -1, 1>& x,
+               std::ostream* pstream__,
+               const std::vector<T2>& parms,
+               const std::vector<double>& x_r,
+               const std::vector<int>& x_i) const {
+      typedef typename stan::return_type<T0, T1, T2>::type scalar;
+
+      T2 CL = parms.at(0), V1 = parms.at(1), ka = parms.at(2), k10 = CL / V1;
+      Eigen::Matrix<scalar, -1, 1> y(2);
+
+      y(0) = -ka * x(0);
+      y(1) = ka * x(0) - k10 * x(1);
+
+      return y;
+    }
   };
 
   /**

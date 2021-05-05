@@ -34,7 +34,7 @@ namespace torsten {
  */
   template <typename F, typename... Ts>
   auto pmx_solve_bdf(const F& f, const int nCmt, Ts... args) {
-    return PMXSolveODE<dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>>>::solve(f, nCmt, args...);
+    return PMXSolveODE<dsolve::PMXOdeIntegrator<dsolve::PMXVariadicOdeSystem, dsolve::PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>>>::solve(f, nCmt, args...);
   }
 
   /*

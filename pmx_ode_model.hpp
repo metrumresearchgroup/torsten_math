@@ -19,596 +19,109 @@ namespace torsten {
   using torsten::dsolve::PMXOdeIntegrator;
 
   /** 
-   * Rate adapter for ODE
-   * 
-   * @tparam T_theta type of original ODE param
-   * @tparam T_rate  type of rate
-   * 
-   */
-  template<typename T_theta, typename T_rate>
-  struct PMXOdeFunctorRateAdaptorImpl {
-    const std::vector<T_theta>& theta_;
-    const std::vector<T_rate>& rate_;
-
-    PMXOdeFunctorRateAdaptorImpl(const std::vector<T_theta>& theta,
-                                     const std::vector<T_rate>& rate) :
-      theta_(theta), rate_(rate) {}
-
-    /** 
-     * generate adapted ODE parameter vector for adatepd ODE
-     * 
-     * @return adapted parameter: theta_ & rate_
-     */
-    const std::vector<typename stan::return_type_t<T_theta, T_rate>>
-    adapted_param() const {
-      std::vector<typename stan::return_type_t<T_theta, T_rate>> res(theta_);
-      res.insert(res.end(), rate_.begin(), rate_.end());
-      return res;
-    }
-
-    /** 
-     * original ode param
-     * 
-     * @return original ode param vector
-     */
-    template<typename t2>
-    const std::vector<t2> ode_par(const std::vector<t2>& theta) const {
-      return {theta.begin(), theta.begin() + theta_.size()};
-    }
-    
-    /** 
-     * add rate to original ode result
-     * 
-     * @param res original ode result
-     * @param theta adapted ode param that contains theta & rate
-     */
-    template<typename t, typename t2>
-    void apply_rate(std::vector<t>& res, const std::vector<t2>& theta) const {
-      for (size_t i = 0; i < res.size(); i++) {
-        res.at(i) += theta.at(i + theta.size() - res.size()); 
-      }
-    }
-  };
-
-  /** 
-   * rate adapter specification when original ode param is data
-   * 
-   * @tparam t_rate  type of rate, must be <code>var</code>
-   * 
-   */
-  template<>
-  struct PMXOdeFunctorRateAdaptorImpl<double, stan::math::var> {
-    
-    const std::vector<double>& theta_;
-    const std::vector<stan::math::var>& rate_;
-
-    PMXOdeFunctorRateAdaptorImpl(const std::vector<double>& theta,
-                                     const std::vector<stan::math::var>& rate) :
-      theta_(theta), rate_(rate) {}
-
-    /** 
-     * generate adapted ode parameter vector for adatepd ode
-     * 
-     * @return adapted parameter: rate_
-     */
-    const std::vector<stan::math::var>& adapted_param() const {
-      return rate_;
-    }
-
-    /** 
-     * original ode param
-     * 
-     * 
-     * @return rate vector
-     */
-    template<typename T2>
-    const std::vector<double>& ode_par(const std::vector<T2>& theta) const {
-      return theta_;
-    }
-    
-    /** 
-     * add rate to original ode result
-     * 
-     * @param res original ode result
-     * @param theta adapted ode param that equals to rate
-     */
-    template<typename T, typename T2>
-    void apply_rate(std::vector<T>& res, const std::vector<T2>& theta) const {
-      for (size_t i = 0; i < res.size(); i++) {
-        res.at(i) += theta.at(i + theta.size() - res.size());
-      }
-    }
-  };
-
-  /** 
-   * rate adapter specification when rate is data
-   * 
-   * @tparam t_theta  type of original ode param
-   * 
-   */
-  template<typename T_theta>
-  struct PMXOdeFunctorRateAdaptorImpl<T_theta, double> {
-    const std::vector<T_theta>& theta_;
-    const std::vector<double>& rate_;
-
-    PMXOdeFunctorRateAdaptorImpl(const std::vector<T_theta>& theta,
-                                 const std::vector<double>& rate) :
-      theta_(theta), rate_(rate) {}
-
-    /** 
-     * generate adapted ode parameter vector for adatepd ode
-     * 
-     * @return adapted parameter: rate_
-     */
-    const std::vector<T_theta>& adapted_param() const {
-      return theta_;
-    }
-
-    /** 
-     * original ode param
-     * 
-     * 
-     * @return rate vector
-     */
-    template<typename T2>
-    const std::vector<T2>& ode_par(const std::vector<T2>& theta)const {
-      return theta;
-    }
-    
-    /** 
-     * add rate to original ODE result
-     * 
-     * @param res original ODE result
-     * @param theta adapted ODE param that equals to rate
-     */
-    template<typename T, typename T2>
-    void apply_rate(std::vector<T>& res, const std::vector<T2>& theta) const {
-      for (size_t i = 0; i < res.size(); i++) {
-        res.at(i) += rate_[i];
-      }
-    }
-  };
-
-  /** 
    * Functor class that solves ODE & apply infusion dosing.
    */
-  template<typename F, typename T_theta, typename T_rate>
+  template<typename F>
   struct PMXOdeFunctorRateAdaptor {
-
-    PMXOdeFunctorRateAdaptorImpl<T_theta, T_rate> adaptor;
-
-    PMXOdeFunctorRateAdaptor(const std::vector<T_theta>& theta,
-                                const std::vector<T_rate>& rate) :
-      adaptor(theta, rate) {}
-
     /**
-     * Evaluate ODE functor, with @c theta contains original
-     * parameter vector followed by @c rate params. So the
-     * @c theta passed in must be modfified to reflect this
-     * data arrangement.
+     * Evaluate ODE functor, and add rate.
      */
-    template <typename T0, typename T1, typename T2>
-    inline std::vector<typename stan::return_type<T1, T2>::type>
+    template <typename T0, typename T1, typename T2, typename T3>
+    Eigen::Matrix<typename stan::return_type<T0, T1, T2, T3>::type, -1, 1>
     operator()(const T0& t,
-               const std::vector<T1>& y,
+               const Eigen::Matrix<T1, -1, 1>& y,
+               std::ostream* msgs,
                const std::vector<T2>& theta,
+               const std::vector<T3>& rate,
                const std::vector<double>& x_r,
-               const std::vector<int>& x_i,
-               std::ostream* msgs) const {
-      auto fy = F()(t, y, adaptor.ode_par(theta), x_r, x_i, msgs);
-      std::vector<typename stan::return_type<T1, T2>::type>
-        res(fy.begin(), fy.end());
-      adaptor.apply_rate(res, theta);
-
-      return res;
-    }
-  };
-
-  template<typename T_theta>
-  struct PMXOdeFunctorSSAdaptorComponentTheta {
-    const std::vector<T_theta>& theta_;    
-    
-    PMXOdeFunctorSSAdaptorComponentTheta(const std::vector<T_theta>& theta)
-      : theta_(theta)
-    {}
-
-    template<typename T>
-    inline std::vector<T> operator()(const std::vector<T>& theta) const {
-      return {theta.begin(), theta.begin() + theta_.size()};
-    }
-  };
-
-  template<>
-  struct PMXOdeFunctorSSAdaptorComponentTheta<double> {
-    const std::vector<double>& theta_;    
-    
-    PMXOdeFunctorSSAdaptorComponentTheta(const std::vector<double>& theta)
-      : theta_(theta)
-    {}
-
-    template<typename T>
-    inline const std::vector<double>& operator()(const std::vector<T>& theta) const {
-      return theta_;
-    }
-  };
-
-  template<typename T_theta, typename T_amt>
-  struct PMXOdeFunctorSSAdaptorComponentAmt {
-    const T_amt& amt_;    
-    const int npar_;
-    
-    PMXOdeFunctorSSAdaptorComponentAmt(const T_amt& amt, int npar)
-      : amt_(amt), npar_(npar)
-    {}
-
-    template<typename T>
-    inline const T& operator()(const std::vector<T>& theta) const {
-      if (stan::is_var<T_theta>::value) {
-        return theta[npar_];
-      } else {
-        return theta[0];
+               const std::vector<int>& x_i) const {
+      const F f_;
+      Eigen::Matrix<stan::return_type_t<T0, T1, T2, T3>, -1, 1> fy = f_(t, y, msgs, theta, x_r, x_i);
+      for (auto i = 0; i < fy.size(); ++i) {
+        fy(i) += rate[i];
       }
+      return fy;
     }
   };
 
-  template<typename T_theta>
-  struct PMXOdeFunctorSSAdaptorComponentAmt<T_theta, double> {
-    const double amt_;    
-    const int npar_;
-    
-    PMXOdeFunctorSSAdaptorComponentAmt(const double amt, int npar)
-      : amt_(amt), npar_(npar)
-    {}
-
-    template<typename T>
-    inline const double operator()(const std::vector<T>& theta) const {
-      return amt_;
-    }
-  };
-
-  template<typename T_theta, typename T_amt, typename T_rate>
-  struct PMXOdeFunctorSSAdaptorComponentRate {
-    const T_rate& rate_;    
-    const int npar_;
-    
-    PMXOdeFunctorSSAdaptorComponentRate(const T_rate& rate, int npar)
-      : rate_(rate), npar_(npar)
-    {}
-
-    template<typename T>
-    inline const T& operator()(const std::vector<T>& theta) const {
-      if (stan::is_var<T_theta>::value) {
-        return (stan::is_var<T_amt>::value) ? theta[npar_ + 1] : theta[npar_];
-      } else {
-        return (stan::is_var<T_amt>::value) ? theta[1] : theta[0];
-      }
-    }
-  };
-
-  template<typename T_theta, typename T_amt>
-  struct PMXOdeFunctorSSAdaptorComponentRate<T_theta, T_amt, double> {
-    const double rate_;
-    const int npar_;
-    
-    PMXOdeFunctorSSAdaptorComponentRate(const double rate, int npar)
-      : rate_(rate), npar_(npar)
-    {}
-
-    template<typename T>
-    inline const double operator()(const std::vector<T>& theta) const {
-      return rate_;
-    }
-  };
-
-  template<typename T_theta, typename T_amt, typename T_rate, typename T_ii>
-  struct PMXOdeFunctorSSAdaptorComponentII {
-    const T_ii& ii_;
-    const int npar_;
-    
-    PMXOdeFunctorSSAdaptorComponentII(const T_ii& ii, int npar)
-      : ii_(ii), npar_(npar)
-    {}
-
-    template<typename T>
-    inline const T& operator()(const std::vector<T>& theta) const {
-      if (stan::is_var<T_theta>::value) {
-        return (stan::is_var<T_amt>::value) ?
-          ((stan::is_var<T_rate>::value) ? theta[npar_ + 2] : theta[npar_ + 1]) :
-          ((stan::is_var<T_rate>::value) ? theta[npar_ + 1] : theta[npar_]);
-      } else {
-        return (stan::is_var<T_amt>::value) ?
-          ((stan::is_var<T_rate>::value) ? theta[2] : theta[1]) :
-          ((stan::is_var<T_rate>::value) ? theta[1] : theta[0]);
-      }
-    }
-  };
-
-  template<typename T_theta, typename T_amt, typename T_rate>
-  struct PMXOdeFunctorSSAdaptorComponentII<T_theta, T_amt, T_rate, double> {
-    const double ii_;
-    const int npar_;
-    
-    PMXOdeFunctorSSAdaptorComponentII(const double ii, int npar)
-      : ii_(ii), npar_(npar)
-    {}
-
-    template<typename T>
-    inline const double operator()(const std::vector<T>& theta) const {
-      return ii_;
-    }
-  };
-
-  template <typename integrator_type, typename T_theta,
-            typename T_amt, typename T_rate, typename T_ii, typename F>
+  template <typename F, typename integrator_type>
   struct PMXOdeFunctorSSAdaptor {
-    PMXOdeFunctorSSAdaptorComponentTheta<T_theta> theta_;
-    PMXOdeFunctorSSAdaptorComponentAmt<T_theta, T_amt> amt_;
-    PMXOdeFunctorSSAdaptorComponentRate<T_theta, T_amt, T_rate> rate_;
-    PMXOdeFunctorSSAdaptorComponentII<T_theta, T_amt, T_rate, T_ii> ii_;
-    const int cmt_;
-    const int ncmt_;    
-    const integrator_type& integrator_;
+    F const& f_;
+    integrator_type const& integrator_;
     
-    PMXOdeFunctorSSAdaptor(const std::vector<T_theta>& theta, 
-                           const T_amt& amt, const T_rate& rate,
-                           const T_ii& ii, int cmt, int ncmt,
-                           const integrator_type& integrator)
-      : theta_(theta),
-        amt_(amt, theta.size()),
-        rate_(rate, theta.size()),
-        ii_(ii, theta.size()),
-        cmt_(cmt), ncmt_(ncmt),
-        integrator_(integrator)
+    PMXOdeFunctorSSAdaptor(F const& f, integrator_type const& integrator)
+      : f_(f), integrator_(integrator)
     {}
-
-    inline Eigen::Matrix<typename stan::return_type_t<T_theta, T_amt, T_rate, T_ii>, -1, 1>
-    adapted_param() const {
-      using scalar_t = typename stan::return_type_t<T_theta, T_amt, T_rate, T_ii>;
-      std::vector<scalar_t> vec;
-      vec.reserve(theta_.theta_.size() + 3);
-      if (stan::is_var<T_theta>::value) {
-        vec.insert(vec.end(), theta_.theta_.begin(), theta_.theta_.end());
-      }
-      if (stan::is_var<T_amt>::value) {
-        vec.push_back(amt_.amt_);
-      }
-      if (stan::is_var<T_rate>::value) {
-        vec.push_back(rate_.rate_);
-      }
-      if (stan::is_var<T_ii>::value) {
-        vec.push_back(ii_.ii_);
-      }
-      return stan::math::to_vector(vec);
-    }
 
     /**
      * When rate is RV, it's attached to parameters vector.
      * IN this case parameter @c y consists of {theta, rate}
      * This is used AFTER newton iteration to calculate <code>Jxy</code>.
      */
-    template <typename T0>
-    inline Eigen::Matrix<stan::math::var, -1, 1>
+    template <typename T0, typename T1, typename T_amt, typename T_r, typename T_ii>
+    Eigen::Matrix<typename stan::return_type_t<T0, T1, T_amt, T_r, T_ii>, -1, 1>
     operator()(const Eigen::Matrix<T0, -1, 1>& x,
-               const Eigen::Matrix<stan::math::var, -1, 1>& y,
+               std::ostream* msgs,
+               const std::vector<T1>& y,
+               const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
                const std::vector<double>& x_r,
-               const std::vector<int>& x_i,
-               std::ostream* msgs) const {
-      using stan::math::to_array_1d;
+               const std::vector<int>& x_i) const {
       using stan::math::to_vector;
       using stan::math::value_of;
 
       static const char* func("Steady State Event");
-      using scalar_t = stan::math::var;
-      auto y_vec(stan::math::to_array_1d(y));
+      using scalar_t = typename stan::return_type_t<T0, T1, T_amt, T_r, T_ii>;
 
       double t0 = 0;            // FIXME: ODE explicitly depdends on time
 
-      std::vector<scalar_t> x0(x.data(), x.data() + x.size());
-      Eigen::Matrix<scalar_t, -1, 1> result(x.size());
+      const int ncmt = x.size();
+      Eigen::Matrix<scalar_t, -1, 1> x0(ncmt);
+      Eigen::Matrix<scalar_t, -1, 1> result(ncmt);
 
-      if (rate_(y_vec) == 0) {  // bolus dose
-        x0[cmt_ - 1] += amt_(y_vec);
-        std::vector<scalar_t> pred = integrator_(F(), x0, t0, ii_(y_vec),
-                                                 theta_(y_vec), x_r, x_i)[0];
-        for (int i = 0; i < result.size(); ++i) {
-#ifdef TORSTEN_AS_FP
-          result(i) = pred[i];
-#else
-          result(i) = x(i) - pred[i];
-#endif
-        }
-      } else if (ii_(y_vec) > 0) {  // multiple truncated infusions
-        auto dt = amt_(y_vec) / rate_(y_vec);
-        // consider dosing internal > ii
-        int n = int(std::floor(value_of(dt) / value_of(ii_(y_vec))) + 0.1);
-
-        std::vector<T_rate> rate_vec(ncmt_, 0.0);
-
-        auto dt1 = dt - n * ii_(y_vec);
-        rate_vec[cmt_ - 1] = (n + 1) * rate_(y_vec);
-        auto ode_par = theta_(y_vec);
-        const PMXOdeFunctorRateAdaptor<F, T_theta, T_rate> f1(ode_par, rate_vec);
-        x0 = integrator_(f1, to_array_1d(x), t0, dt1, f1.adaptor.adapted_param(), x_r, x_i)[0];
-
-        auto dt2 = (n + 1) * ii_(y_vec) - dt;
-        rate_vec[cmt_ - 1] = n * rate_(y_vec);
-        const PMXOdeFunctorRateAdaptor<F, T_theta, T_rate> f2(ode_par, rate_vec);
-        std::vector<scalar_t> pred = integrator_(f2, x0, t0, dt2, f2.adaptor.adapted_param(), x_r, x_i)[0];
-        for (int i = 0; i < result.size(); ++i) {
-#ifdef TORSTEN_AS_FP
-          result(i) = pred[i];
-#else
-          result(i) = x(i) - pred[i];
-#endif
-        }
-      } else {  // constant infusion
-        stan::math::check_less_or_equal(func, "AMT", amt_(y_vec), 0); 
-        std::vector<T_rate> rate_vec(ncmt_, 0.0);
-        rate_vec[cmt_ - 1] = rate_(y_vec);
-
-        auto ode_par = theta_(y_vec);
-        const PMXOdeFunctorRateAdaptor<F, T_theta, T_rate> f(ode_par, rate_vec);
-#ifdef TORSTEN_AS_FP
-        stan::math::throw_domain_error(func, "algebra_solver_fp used for ", 1, "constant infusion");
-#else
-        result = to_vector(f(0, to_array_1d(x), f.adaptor.adapted_param(), x_r, x_i, 0));
-#endif
+      for (auto i = 0; i < ncmt; ++i) {
+        x0(i) = x(i);
       }
 
-      return result;
-    }
-
-    /** 
-     * All-data version of the functor, used in KINSOL newton solver
-     * 
-     * 
-     * @return functor evaluation
-     */
-    inline Eigen::VectorXd
-    operator()(const Eigen::VectorXd& x,
-               const Eigen::VectorXd& y,
-               const std::vector<double>& x_r,
-               const std::vector<int>& x_i,
-               std::ostream* msgs) const {
-      using stan::math::to_array_1d;
-      using stan::math::to_vector;
-      using stan::math::value_of;
-
-      static const char* func("Steady State Event");
-      auto y_vec(stan::math::to_array_1d(y));
-      std::vector<double> theta = value_of(theta_.theta_);
-
-      double amt = value_of(amt_.amt_);
-      double rate = value_of(rate_.rate_);
-      double ii = value_of(ii_.ii_);
-
-      double t0 = 0;            // FIXME: ODE explicitly depdends on time
-
-      std::vector<double> x0 = stan::math::to_array_1d(x);
-      const int n = x.size();
-      Eigen::Matrix<double, -1, 1> result(n);
-
       if (rate == 0) {  // bolus dose
-        x0[cmt_ - 1] += amt;
-        std::vector<double> pred = integrator_(F(), x0, t0, ii, theta, x_r, x_i)[0];
-        for (int i = 0; i < n; ++i) {
+        x0[cmt - 1] += amt;
+        auto pred = integrator_(F(), x0, t0, ii, y, x_r, x_i);
+        for (int i = 0; i < ncmt; ++i) {
 #ifdef TORSTEN_AS_FP
-          result(i) = pred[i];
+          result(i) = pred(i);
 #else
-          result(i) = x(i) - pred[i];
+          result(i) = x(i) - pred(i);
 #endif
         }
       } else if (ii > 0) {  // multiple truncated infusions
-        double dt = amt/rate;
+        auto dt = amt / rate;
         // consider dosing internal > ii
-        int n = int(std::floor(dt / ii) + 0.1);
+        int n = int(std::floor(value_of(dt) / value_of(ii)) + 0.1);
+        auto dt1 = dt - n * ii;
+        std::vector<T_r> rate_vec(ncmt, 0.0);
+        rate_vec[cmt - 1] = (n + 1) * rate;
+        const PMXOdeFunctorRateAdaptor<F> f1;
+        x0 = integrator_(f1, x, t0, dt1, y, rate_vec, x_r, x_i);
 
-        std::vector<double> rate_vec(ncmt_, 0.0);
-
-        double dt1 = dt - n * ii;
-        rate_vec[cmt_ - 1] = (n + 1) * rate_(y_vec);
-        const PMXOdeFunctorRateAdaptor<F, double, double> f1(theta, rate_vec);
-        x0 = integrator_(f1, to_array_1d(x), t0, dt1, f1.adaptor.adapted_param(), x_r, x_i)[0];
-
-        double dt2 = (n + 1) * ii_(y_vec) - dt;
-        rate_vec[cmt_ - 1] = n * rate_(y_vec);
-        const PMXOdeFunctorRateAdaptor<F, double, double> f2(theta, rate_vec);
-        std::vector<double> pred = integrator_(f2, x0, t0, dt2, f2.adaptor.adapted_param(), x_r, x_i)[0];
-        for (int i = 0; i < result.size(); ++i) {
+        auto dt2 = (n + 1) * ii - dt;
+        rate_vec[cmt - 1] = n * rate;
+        const PMXOdeFunctorRateAdaptor<F> f2;
+        auto pred = integrator_(f2, x0, t0, dt2, y, rate_vec, x_r, x_i);
+        for (int i = 0; i < ncmt; ++i) {
 #ifdef TORSTEN_AS_FP
-          result(i) = pred[i];
+          result(i) = pred(i);
 #else
-          result(i) = x(i) - pred[i];
-#endif
-        }
-      } else {  // constant infusion
-        stan::math::check_less_or_equal(func, "AMT", amt, 0.0);
-        std::vector<double> rate_vec(ncmt_, 0.0);
-        rate_vec[cmt_ - 1] = rate_(y_vec);
-        const PMXOdeFunctorRateAdaptor<F, double, double> f(theta, rate_vec);
-#ifdef TORSTEN_AS_FP
-        stan::math::throw_domain_error(func, "algebra_solver_fp used for ", 1, "constant infusion");
-#else
-        result = to_vector(f(0, to_array_1d(x), f.adaptor.adapted_param(), x_r, x_i, 0));
-#endif
-      }
-
-      return result;
-    }
-
-    /** 
-     * With indepedent variable being <code>var</code>, this version
-     * of the functor is used in KINSOL newton solver's Jacobian calculation
-     * 
-     * 
-     * @return functor evaluation
-     */
-    inline Eigen::Matrix<stan::math::var, -1, 1>
-    operator()(const Eigen::Matrix<stan::math::var, -1, 1>& x,
-               const Eigen::VectorXd& y,
-               const std::vector<double>& x_r,
-               const std::vector<int>& x_i,
-               std::ostream* msgs) const {
-      using stan::math::to_array_1d;
-      using stan::math::to_vector;
-      using stan::math::value_of;
-      using stan::math::var;
-
-      static const char* func("Steady State Event");
-      auto y_vec(stan::math::to_array_1d(y));
-      std::vector<double> theta = value_of(theta_.theta_);
-      double amt = value_of(amt_.amt_);
-      double rate = value_of(rate_.rate_);
-      double ii = value_of(ii_.ii_);
-
-      double t0 = 0;            // FIXME: ODE explicitly depdends on time
-
-      std::vector<var> x0 = stan::math::to_array_1d(x);
-      const int n = x.size();
-      Eigen::Matrix<var, -1, 1> result(n);
-
-      if (rate == 0) {  // bolus dose
-        x0[cmt_ - 1] += amt;
-        std::vector<var> pred = integrator_(F(), x0, t0, ii, theta, x_r, x_i)[0];
-        for (int i = 0; i < n; ++i) {
-#ifdef TORSTEN_AS_FP
-          result(i) = pred[i];
-#else
-          result(i) = x(i) - pred[i];
-#endif
-        }
-      } else if (ii > 0) {  // multiple truncated infusions
-        double dt = amt/rate;
-        // consider dosing internal > ii
-        int n = int(std::floor(dt / ii) + 0.1);
-
-        std::vector<double> rate_vec(ncmt_, 0.0);
-
-        double dt1 = dt - n * ii;
-        rate_vec[cmt_ - 1] = (n + 1) * rate_(y_vec);
-        const PMXOdeFunctorRateAdaptor<F, double, double> f1(theta, rate_vec);
-        x0 = integrator_(f1, to_array_1d(x), t0, dt1, f1.adaptor.adapted_param(), x_r, x_i)[0];
-
-        double dt2 = (n + 1) * ii_(y_vec) - dt;
-        rate_vec[cmt_ - 1] = n * rate_(y_vec);
-        const PMXOdeFunctorRateAdaptor<F, double, double> f2(theta, rate_vec);
-        std::vector<var> pred = integrator_(f2, x0, t0, dt2, f2.adaptor.adapted_param(), x_r, x_i)[0];
-        for (int i = 0; i < result.size(); ++i) {
-#ifdef TORSTEN_AS_FP
-          result(i) = pred[i];
-#else
-          result(i) = x(i) - pred[i];
+          result(i) = x(i) - pred(i);
 #endif
         }
       } else {  // constant infusion
         stan::math::check_less_or_equal(func, "AMT", amt, 0); 
-        std::vector<double> rate_vec(ncmt_, 0.0);
-        rate_vec[cmt_ - 1] = rate_(y_vec);
-        const PMXOdeFunctorRateAdaptor<F, double, double> f(theta, rate_vec);
+        std::vector<T_r> rate_vec(ncmt, 0.0);
+        rate_vec[cmt - 1] = rate;
 #ifdef TORSTEN_AS_FP
         stan::math::throw_domain_error(func, "algebra_solver_fp used for ", 1, "constant infusion");
 #else
-        result = to_vector(f(0, to_array_1d(x), f.adaptor.adapted_param(), x_r, x_i, 0));
+        const PMXOdeFunctorRateAdaptor<F> f;
+        result = f(0, x, nullptr, y, rate_vec, x_r, x_i);
 #endif
       }
 
@@ -693,12 +206,12 @@ namespace torsten {
     {}
     
     template<typename T0, typename T1, typename T2, typename T3>
-    static int nvars(const T0& t0,
-                     const PKRec<T1>& y0,
-                     const std::vector<T2> &rate,
-                     const std::vector<T3> &par) {
+    static size_t nvars(const T0& t0,
+                        const PKRec<T1>& y0,
+                        const std::vector<T2> &rate,
+                        const std::vector<T3> &par) {
       using stan::is_var;
-      int res = 0;
+      size_t res = 0;
       if (is_var<T0>::value) res += 1;
       if (is_var<T1>::value) res += y0.size();
       if (is_var<T2>::value) res += rate.size();
@@ -720,6 +233,8 @@ namespace torsten {
       using stan::is_var;      
       using stan::math::var;
       std::vector<stan::math::var> res(nvars(t1, y0, rate, par));
+      int n = nvars(t1, y0, rate, par);
+
       int i = 0;
       if (is_var<T1>::value) {
         for (int j = 0; j < y0.size(); ++j) {
@@ -728,10 +243,15 @@ namespace torsten {
         }
       }
       if (is_var<T2>::value) {
-        PMXOdeFunctorRateAdaptor<F, T3, T2> f_rate(par, rate);
-        std::vector<stan::math::var> theta(stan::math::to_var(f_rate.adaptor.adapted_param()));
-        for (size_t j = 0; j < theta.size(); ++j) {
-          res[i] = theta[j];
+        // FIXME: don't prepend par if it's not var
+        if (is_var<T3>::value) {
+          for (size_t j = 0; j < par.size(); ++j) {
+            res[i] = par[j];
+            i++;
+          }
+        }
+        for (size_t j = 0; j < rate.size(); ++j) {
+          res[i] = rate[j];
           i++;
         }
       } else if (is_var<T3>::value) {
@@ -793,18 +313,14 @@ namespace torsten {
 
       const double t0 = t1 - dt;
       std::vector<double> ts{t1};
-      // const double t0 = value_of(t0_) - dt;
-      // std::vector<double> ts{value_of(t0_)};
       Eigen::Matrix<double, Eigen::Dynamic, 1> res;
+      Eigen::Matrix<double, -1, 1> y0_(y0);
       if (ts[0] == t0) {
         res = y0;
       } else {
-        auto y = stan::math::to_array_1d(y0);
         const std::vector<double> pars{value_of(par_)};
-        PMXOdeFunctorRateAdaptor<F, double, double> f(pars, rate);
-        std::vector<std::vector<double> > res_v =
-          integrator(f, y, t0, ts, f.adaptor.adapted_param(), x_r_, x_i_);
-        res = stan::math::to_vector(res_v[0]);
+        PMXOdeFunctorRateAdaptor<F> f;
+        res = integrator(f, y0_, t0, ts[0], pars, rate, x_r_, x_i_);
       }
       return res;
     }
@@ -831,14 +347,9 @@ namespace torsten {
                const integrator_type& integrator) const {
       const double t0_d = stan::math::value_of(t0);
       std::vector<Tt1> ts(time_step(t0, t1));
-      PMXOdeFunctorRateAdaptor<F, T_par, T1> f_rate(par_, rate);
-
+      PMXOdeFunctorRateAdaptor<F> f_rate;
       if (t1 - t0 > dt_min) {
-        auto y_vec = stan::math::to_array_1d(y);
-        std::vector<std::vector<T> > res_v =
-          integrator(f_rate, y_vec, t0_d, ts,
-                     f_rate.adaptor.adapted_param(), x_r_, x_i_);
-        y = stan::math::to_vector(res_v[0]);
+        y = integrator(f_rate, y, t0_d, ts[0], par_, rate, x_r_, x_i_);
       }
     }
 
@@ -866,12 +377,10 @@ namespace torsten {
 
       const double t0_d = value_of(t0);
       std::vector<T0> ts(time_step(t0, t1));
-      PMXOdeFunctorRateAdaptor<F, T_par, T1> f_rate(par_, rate);
+      PMXOdeFunctorRateAdaptor<F> f_rate;
 
       if (t1 - t0 > dt_min) {
-        auto y1d = stan::math::to_array_1d(y);
-        yd = integrator.solve_d(f_rate, y1d, t0_d, ts,
-                                f_rate.adaptor.adapted_param(), x_r_, x_i_).col(0);
+        yd = integrator.solve_d(f_rate, y, t0_d, ts, par_, rate, x_r_, x_i_).col(0);
       }
     }
 
@@ -936,8 +445,9 @@ namespace torsten {
       }
 
       const double init_dt = (rate == 0.0 || ii > 0) ? ii_dbl : 24.0;
-      using fss_func_t = PMXOdeFunctorSSAdaptor<integrator_type, T_par, T_amt, T_r, T_ii, F>;
-      fss_func_t fss(par_, amt, rate, ii, cmt, ncmt_, integrator);
+      using fss_func_t = PMXOdeFunctorSSAdaptor<F, integrator_type>;
+      // fss_func_t fss(f_, par_, amt, rate, ii, cmt, ncmt_, integrator);
+      fss_func_t fss(f_, integrator);
       try {
 #ifdef TORSTEN_AS_POWELL
       return algebra_solver_powell(fss, integrate(t0, rate_vec, init_dbl, init_dt, integrator),
@@ -953,12 +463,11 @@ namespace torsten {
                                u_scale, f_scale, 0,
                                integrator.as_atol, integrator.as_max_num_step);
 #else
-      torsten::nl_system_adaptor<fss_func_t> fss_new(fss);
       std::vector<double> scaling(ncmt_, 1.0);
-      return pmx_algebra_solver_newton_tol(fss_new, integrate(t0, rate_vec, init_dbl, init_dt, integrator),
+      return pmx_algebra_solver_newton_tol(fss, integrate(t0, rate_vec, init_dbl, init_dt, integrator),
                                            scaling, scaling,
                                            integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step,
-                                           nullptr, fss.adapted_param(), x_r_, x_i_);
+                                           nullptr, par_, amt, rate, ii, cmt, x_r_, x_i_);
 #endif
       } catch (const std::exception& e) {
         const char *text =

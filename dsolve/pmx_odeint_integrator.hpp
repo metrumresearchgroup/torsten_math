@@ -5,10 +5,14 @@
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
 #include <stan/math/torsten/dsolve/ode_observer.hpp>
 #include <boost/numeric/odeint.hpp>
+#include <boost/numeric/odeint/external/eigen/eigen.hpp>
 #include <type_traits>
 
 namespace torsten {
 namespace dsolve {
+
+  using odeint_scheme_rk45 = boost::numeric::odeint::runge_kutta_dopri5<Eigen::VectorXd, double, Eigen::VectorXd, double, boost::numeric::odeint::vector_space_algebra>;
+  using odeint_scheme_ckrk = boost::numeric::odeint::runge_kutta_cash_karp54<Eigen::VectorXd, double, Eigen::VectorXd, double, boost::numeric::odeint::vector_space_algebra>;
 
 /**
  * @c boost::odeint ODE integrator.
@@ -69,7 +73,6 @@ namespace dsolve {
       return make_controlled(atol_, rtol_, stepper);
     }
   };
-
 }
 }
 #endif

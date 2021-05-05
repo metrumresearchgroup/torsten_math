@@ -30,12 +30,12 @@ namespace torsten {
   template <typename F, typename Tt, typename T_initial, typename... T_param>
   std::vector<Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param...>,-1,1> >
   pmx_ode_adams_ctrl(const F& f,
-                   const Eigen::Matrix<T_initial, -1, 1>& y0,
-                   double t0,
-                   const std::vector<Tt>& ts,
-                   double rtol, double atol, int max_num_step,
-                   std::ostream* msgs,
-                   const T_param&... args) {
+                     const Eigen::Matrix<T_initial, -1, 1>& y0,
+                     double t0,
+                     const std::vector<Tt>& ts,
+                     double rtol, double atol, int max_num_step,
+                     std::ostream* msgs,
+                     const T_param&... args) {
     using dsolve::PMXOdeIntegrator;
     using dsolve::PMXCvodesIntegrator;
     using dsolve::PMXVariadicOdeSystem;

@@ -16,7 +16,7 @@ using Eigen::Dynamic;
 using stan::math::matrix_exp;
 using stan::math::to_vector;
 using torsten::PKODEModel;
-using torsten::dsolve::PMXOdeSystem;
+using torsten::dsolve::PMXVariadicOdeSystem;
 using torsten::dsolve::PMXCvodesIntegrator;
 
 TEST_F(TorstenTwoCptModelTest, linode_dbl) {
@@ -81,12 +81,11 @@ TEST_F(TorstenTwoCptModelTest, linode_solver) {
   std::vector<stan::math::var> rate_var{to_var(rate)};
   using model_t = PMXLinODEModel<var>;
   model_t model(theta, y0.size());
-  std::vector<double> yvec(y0.data(), y0.data() + y0.size());
   std::vector<var> theta_vec(theta.data(), theta.data() + theta.size());
   theta_vec.insert(theta_vec.end(), rate_var.begin(), rate_var.end());
 
-  PMXOdeFunctorRateAdaptor<PMXLinODE, var, var> f1(theta_vec, rate_var);
-  auto y1 = pmx_integrate_ode_bdf(f1, yvec, t0, ts, theta_vec, x_r, x_i, msgs);
+  PMXOdeFunctorRateAdaptor<PMXLinODE> f1;
+  auto y1 = pmx_ode_bdf(f1, y0, t0, ts, msgs, theta_vec, rate_var, x_r, x_i);
   torsten::PKRec<var> y2(to_var(y0));
   model.solve(y2, t0, ts[0], rate_var);
   EXPECT_FLOAT_EQ(y1[0][0].val(), y2(0).val());
@@ -123,11 +122,10 @@ TEST_F(TorstenTwoCptModelTest, linode_solver_zero_rate) {
  Eigen:Matrix<var,-1,-1> theta{to_var(linode_par)};  
   using model_t = PMXLinODEModel<var>;
   model_t model(theta, y0.size());
-  std::vector<double> yvec(y0.data(), y0.data() + y0.size());
   std::vector<var> theta_vec(theta.data(), theta.data() + theta.size());
 
-  PMXOdeFunctorRateAdaptor<PMXLinODE, var, double> f1(theta_vec, rate);
-  auto y1 = pmx_integrate_ode_bdf(f1, yvec, t0, ts, theta_vec, {}, x_i, msgs);
+  PMXOdeFunctorRateAdaptor<PMXLinODE> f1;
+  auto y1 = pmx_ode_bdf(f1, y0, t0, ts, msgs, theta_vec, rate, x_r, x_i);
   torsten::PKRec<var> y2(to_var(y0));
   model.solve(y2, t0, ts[0], rate);
   EXPECT_NEAR(y1[0][0].val(), y2(0).val(), 1.E-7);
@@ -189,7 +187,7 @@ TEST_F(TorstenTwoCptModelTest, linode_ss_vs_ode) {
   PKODEModel<var, PMXLinODE> model3(ode_par_var, model2.ncmt(), model2.f());
 
   const dsolve::PMXAnalyiticalIntegrator integ2;
-  const PMXOdeIntegrator<PMXOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integ3;
+  const PMXOdeIntegrator<PMXVariadicOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integ3;
   torsten::PKRec<var> y2 = model2.solve(ts[0], amt, r, ii, 1, integ2);
   torsten::PKRec<var> y3 = model3.solve(ts[0], amt, r, ii, 1, integ3);
   torsten::test::test_grad(par_var, y2, y3, 1e-7, 2e-7);
@@ -207,7 +205,7 @@ TEST_F(TorstenTwoCptModelTest, linode_long_ss_vs_ode) {
   PKODEModel<var, PMXLinODE> model3(ode_par_var, model2.ncmt(), model2.f());
 
   const dsolve::PMXAnalyiticalIntegrator integ2;
-  const PMXOdeIntegrator<PMXOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integ3;
+  const PMXOdeIntegrator<PMXVariadicOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integ3;
   torsten::PKRec<var> y2 = model2.solve(ts[0], amt, r, ii, 1, integ2);
   torsten::PKRec<var> y3 = model3.solve(ts[0], amt, r, ii, 1, integ3);
   torsten::test::test_grad(par_var, y2, y3, 5e-6, 1e-5);
@@ -225,7 +223,7 @@ TEST_F(TorstenTwoCptModelTest, linode_long_long_ss_infusion_vs_ode) {
   PKODEModel<var, PMXLinODE> model3(ode_par_var, model2.ncmt(), model2.f());
 
   const dsolve::PMXAnalyiticalIntegrator integ2;
-  const PMXOdeIntegrator<PMXOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integ3;
+  const PMXOdeIntegrator<PMXVariadicOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integ3;
   torsten::PKRec<var> y2 = model2.solve(ts[0], amt, r, ii, 1, integ2);
   torsten::PKRec<var> y3 = model3.solve(ts[0], amt, r, ii, 1, integ3);
   torsten::test::test_grad(par_var, y2, y3, 1e-6, 1e-5);

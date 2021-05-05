@@ -85,7 +85,9 @@ namespace torsten {
         if (Ode::use_fwd_sens) {
           CVodeSensFree(mem);
         }
-        N_VDestroyVectorArray(nv_ys, ns);
+        if (Ode::use_fwd_sens) {
+          N_VDestroyVectorArray(nv_ys, ns);
+        }
         N_VDestroy(nv_y);
       }
     };

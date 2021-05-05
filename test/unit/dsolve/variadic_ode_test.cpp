@@ -267,13 +267,13 @@ TEST_F(TorstenOdeTest_neutropenia, eigen_vector_ckrk) {
 
     auto y = torsten::pmx_ode_ckrk_ctrl(f_eigen, y0_vec_var, t0, ts, rtol, atol, max_num_steps, msgs,
                                         theta_var, x_r, x_i);
-    // auto y_sol = stan::math::ode_ckrk_tol(f_eigen, y0_vec_var, t0, ts, rtol, atol, max_num_steps, msgs,
-    //                                       theta_var, x_r, x_i);
+    auto y_sol = stan::math::ode_rk45_tol(f_eigen, y0_vec_var, t0, ts, rtol, atol, max_num_steps, msgs,
+                                          theta_var, x_r, x_i);
 
-    // for (size_t j = 0; j < ts.size(); ++j) {
-    //   torsten::test::test_grad(theta_var, y_sol[j], y[j], 1e-8, 1e-8);
-    //   torsten::test::test_grad(y0_var, y_sol[j], y[j], 1e-8, 1e-8);
-    // }
+    for (size_t j = 0; j < ts.size(); ++j) {
+      torsten::test::test_grad(theta_var, y_sol[j], y[j], 1e-8, 1e-8);
+      torsten::test::test_grad(y0_var, y_sol[j], y[j], 1e-8, 1e-8);
+    }
   }
 
   {                             // y0 & ts var
@@ -283,24 +283,24 @@ TEST_F(TorstenOdeTest_neutropenia, eigen_vector_ckrk) {
 
     auto y = torsten::pmx_ode_ckrk_ctrl(f_eigen, y0_vec_var, t0, ts_var, rtol, atol, max_num_steps, msgs,
                                         theta, x_r, x_i);
-    // auto y_sol = stan::math::ode_ckrk_tol(f_eigen, y0_vec_var, t0, ts_var, rtol, atol, max_num_steps, msgs,
-    //                                       theta, x_r, x_i);
+    auto y_sol = stan::math::ode_rk45_tol(f_eigen, y0_vec_var, t0, ts_var, rtol, atol, max_num_steps, msgs,
+                                          theta, x_r, x_i);
 
-    // for (size_t j = 0; j < ts.size(); ++j) {
-    //   torsten::test::test_grad(ts_var, y_sol[j], y[j], 1e-8, 1e-8);
-    //   torsten::test::test_grad(y0_var, y_sol[j], y[j], 1e-8, 1e-8);
-    // }
+    for (size_t j = 0; j < ts.size(); ++j) {
+      torsten::test::test_grad(ts_var, y_sol[j], y[j], 1e-8, 1e-8);
+      torsten::test::test_grad(y0_var, y_sol[j], y[j], 1e-8, 1e-8);
+    }
   }
 
   {                             // ts var
     std::vector<stan::math::var> ts_var(stan::math::to_var(ts));
     auto y = torsten::pmx_ode_ckrk_ctrl(f_eigen, y0_vec, t0, ts_var, rtol, atol, max_num_steps, msgs,
                                         theta, x_r, x_i);
-    // auto y_sol = stan::math::ode_ckrk_tol(f_eigen, y0_vec, t0, ts_var, rtol, atol, max_num_steps, msgs,
-    //                                       theta, x_r, x_i);
+    auto y_sol = stan::math::ode_rk45_tol(f_eigen, y0_vec, t0, ts_var, rtol, atol, max_num_steps, msgs,
+                                          theta, x_r, x_i);
 
-    // for (size_t j = 0; j < ts.size(); ++j) {
-    //   torsten::test::test_grad(ts_var, y_sol[j], y[j], 1e-8, 1e-8);
-    // }
+    for (size_t j = 0; j < ts.size(); ++j) {
+      torsten::test::test_grad(ts_var, y_sol[j], y[j], 1e-8, 1e-8);
+    }
   }
 }

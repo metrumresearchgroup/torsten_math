@@ -149,13 +149,15 @@ namespace torsten {
       using stan::math::value_of;
       EXPECT_EQ(y1.rows(), y2.rows());
       EXPECT_EQ(y1.cols(), y2.cols());
-      for (int i = 0; i < y1.size(); ++i) {
-        double y1_i = value_of(y1(i));
-        double y2_i = value_of(y2(i));
-        if (abs(y1_i) < 1e-5 && abs(y2_i) < 1e-5) {
-          EXPECT_NEAR(y1_i, y2_i, atol);
-        } else {
-          EXPECT_NEAR(y1_i, y2_i, std::max(abs(y1_i), abs(y2_i)) * rtol);
+      for (int i = 0; i < y1.rows(); ++i) {
+        for (int j = 0; j < y1.cols(); ++j) {
+          double y1_i = value_of(y1(i, j));
+          double y2_i = value_of(y2(i, j));
+          if (abs(y1_i) < 1e-5 && abs(y2_i) < 1e-5) {
+            EXPECT_NEAR(y1_i, y2_i, atol);
+          } else {
+            EXPECT_NEAR(y1_i, y2_i, std::max(abs(y1_i), abs(y2_i)) * rtol);
+          }
         }
       }
     }

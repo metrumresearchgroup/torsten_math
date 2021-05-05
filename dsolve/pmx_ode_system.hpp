@@ -334,7 +334,6 @@ namespace dsolve {
     const std::vector<Tt>& ts_;
     const Eigen::Matrix<T_init, -1, 1>& y0_;
     std::tuple<decltype(stan::math::deep_copy_vars(std::declval<const T_par&>()))...> theta_tuple_;
-    std::tuple<decltype(stan::math::value_of(std::declval<const T_par&>()))...> theta_dbl_tuple_;
     std::tuple<const Eigen::Matrix<T_init, -1, 1>&, const T_par&..., const std::vector<Tt>&> theta_ref_tuple_;
     const size_t N;
     const size_t M;
@@ -356,7 +355,6 @@ namespace dsolve {
         ts_(ts),
         y0_(y0),
         theta_tuple_(stan::math::deep_copy_vars(args)...),
-        theta_dbl_tuple_(stan::math::value_of(args)...),
         theta_ref_tuple_(y0_, args..., ts_),
         N(y0.size()),
         M(stan::math::count_vars(args...)),
@@ -411,7 +409,7 @@ namespace dsolve {
      * evaluate RHS with data only inputs.
      */
     inline Eigen::VectorXd dbl_rhs_impl(double t, const Eigen::VectorXd& y) const {
-      return f_tuple_(t, y, msgs_, theta_dbl_tuple_);
+      return stan::math::value_of(f_tuple_(t, y, msgs_, theta_tuple_));
     }
 
     /*
@@ -447,7 +445,7 @@ namespace dsolve {
       using stan::math::accumulate_adjoints;
 
       if (!(is_var_y0 || is_var_par)) {
-        dydt = f_tuple_(t, y, msgs_, theta_dbl_tuple_);
+        dydt = stan::math::value_of(f_tuple_(t, y, msgs_, theta_tuple_));
         return;
       }
 
@@ -456,9 +454,7 @@ namespace dsolve {
 
       vector_v yv(N);
       for (size_t i = 0; i < N; ++i) { yv[i] = y[i]; }
-      vector_v fyv(is_var_par ?
-                   f_tuple_(t, yv, msgs_, theta_tuple_) :
-                   f_tuple_(t, yv, msgs_, theta_dbl_tuple_));
+      vector_v fyv(f_tuple_(t, yv, msgs_, theta_tuple_));
 
       stan::math::check_size_match("PMXOdeSystem", "dydt", fyv.size(), "states", N);
 
@@ -509,9 +505,10 @@ namespace dsolve {
 
       vector_v yv(N);
       for (size_t i = 0; i < N; ++i) { yv[i] = NV_Ith_S(nv_y, i); }
-      vector_v dydt(is_var_par ?
-                    f_tuple_(t, yv, msgs_, theta_tuple_) :
-                    f_tuple_(t, yv, msgs_, theta_dbl_tuple_));
+      vector_v dydt(f_tuple_(t, yv, msgs_, theta_tuple_));
+      // vector_v dydt(is_var_par ?
+      //               f_tuple_(t, yv, msgs_, theta_tuple_) :
+                    // f_tuple_(t, yv, msgs_, theta_dbl_tuple_));
 
       stan::math::check_size_match("PMXOdeSystem", "dydt", dydt.size(), "states", N);
 
@@ -587,7 +584,7 @@ namespace dsolve {
 
       vector_v yv(N);
       for (size_t i = 0; i < N; ++i) { yv[i] = NV_Ith_S(nv_y, i); }
-      vector_v dydt(f_tuple_(t, yv, msgs_, theta_dbl_tuple_));
+      vector_v dydt(f_tuple_(t, yv, msgs_, theta_tuple_));
 
       for (int i = 0; i < N; ++i) {
         nested.set_zero_all_adjoints();

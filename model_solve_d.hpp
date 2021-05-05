@@ -87,7 +87,7 @@ namespace torsten {
     }
   };
 
-  /*
+  /**
    * Solve PK models and return the results in form of data,
    * arrange as
    *
@@ -110,7 +110,7 @@ namespace torsten {
     return yd;
   }
 
-  /*
+  /**
    * Solve PK models and return the results in form of data,
    * arrange as
    *

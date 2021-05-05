@@ -1,7 +1,8 @@
-#ifndef STAN_MATH_TORSTEN_META_IS_NONLINEAR_SYSTEM_HPP
-#define STAN_MATH_TORSTEN_META_IS_NONLINEAR_SYSTEM_HPP
+#ifndef STAN_MATH_TORSTEN_META_IS_NL_SYSTEM_HPP
+#define STAN_MATH_TORSTEN_META_IS_NL_SYSTEM_HPP
 
 #include <stan/math/prim/fun/Eigen.hpp>
+#include <stan/math/prim/meta/return_type.hpp>
 #include <stdexcept>
 #include <vector>
 

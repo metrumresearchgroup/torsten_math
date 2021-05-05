@@ -2,7 +2,7 @@
 #define TEST_UNIT_TORSTEN_PK_CPT_MODEL_TEST_FIXTURE
 
 //
-#include <gtest/gtest.h>
+// #include <gtest/gtest.h>
 #include <boost/numeric/odeint.hpp>
 #include <stan/math/torsten/pmx_onecpt_model.hpp>
 #include <stan/math/torsten/pmx_twocpt_model.hpp>
@@ -20,10 +20,10 @@ struct CoupledOneCptODE {
    */
   template <typename T0, typename T1, typename T2, typename T3>
   inline
-  std::vector<typename boost::math::tools::promote_args<T0, T1, T2, T3>::type>
+  Eigen::Matrix<typename stan::return_type_t<T0, T1, T2, T3>, -1, 1>
   operator()(const T0& t,
-             const std::vector<T1>& x,
-             const std::vector<T2>& x_pk,
+             const Eigen::Matrix<T1, -1, 1>& x,
+             const Eigen::Matrix<T2, -1, 1>& x_pk,
              const std::vector<T3>& theta,
              const std::vector<double>& x_r,
              const std::vector<int>& x_i,
@@ -44,10 +44,10 @@ struct CoupledOneCptODE {
       conc = x_pk[1] / VC,
       Edrug = alpha * conc;
 
-    std::vector<scalar> dxdt(3);
-    dxdt[0] = ktr * prol * ((1 - Edrug) * pow(circ0 / circ, gamma) - 1);
-    dxdt[1] = ktr * (prol - transit);
-    dxdt[2] = ktr * (transit - circ);
+    Eigen::Matrix<scalar, -1, 1> dxdt(3);
+    dxdt << ktr * prol * ((1 - Edrug) * pow(circ0 / circ, gamma) - 1),
+      ktr * (prol - transit),
+      ktr * (transit - circ);
 
     return dxdt;
   }
@@ -100,11 +100,10 @@ struct CoupledTwoCptODE {
    * Coupled model functor
    */
   template <typename T0, typename T1, typename T2, typename T3>
-  inline
-  std::vector<typename boost::math::tools::promote_args<T0, T1, T2, T3>::type>
+  Eigen::Matrix<typename stan::return_type_t<T0, T1, T2, T3>, -1, 1>
   operator()(const T0& t,
-             const std::vector<T1>& y,
-             const std::vector<T2>& y_pk,
+             const Eigen::Matrix<T1, -1, 1>& y,
+             const Eigen::Matrix<T2, -1, 1>& y_pk,
              const std::vector<T3>& theta,
              const std::vector<double>& x_r,
              const std::vector<int>& x_i,
@@ -124,10 +123,10 @@ struct CoupledTwoCptODE {
       conc = y_pk[1] / VC,
       Edrug = alpha * conc;
 
-    std::vector<scalar> dxdt(3);
-    dxdt[0] = ktr * prol * ((1 - Edrug) * pow(circ0 / circ, gamma) - 1);
-    dxdt[1] = ktr * (prol - transit);
-    dxdt[2] = ktr * (transit - circ);
+    Eigen::Matrix<scalar, -1, 1> dxdt(3);
+    dxdt << ktr * prol * ((1 - Edrug) * pow(circ0 / circ, gamma) - 1),
+      ktr * (prol - transit),
+      ktr * (transit - circ);
 
     return dxdt;
   }
@@ -136,14 +135,13 @@ struct CoupledTwoCptODE {
    * full ODE model functor
    */
   template <typename T0, typename T1, typename T2>
-  inline
-    std::vector<typename boost::math::tools::promote_args<T0, T1, T2>::type>
+  Eigen::Matrix<typename stan::return_type_t<T0, T1, T2>, -1, 1>
   operator()(const T0& t,
-           const std::vector<T1>& x,
-           const std::vector<T2>& theta,
-           const std::vector<double>& x_r,
-           const std::vector<int>& x_i,
-           std::ostream* pstream_) const {
+             const Eigen::Matrix<T1, -1, 1> & x,
+             std::ostream* pstream_,
+             const std::vector<T2>& theta,
+             const std::vector<double>& x_r,
+             const std::vector<int>& x_i) const {
     typedef typename boost::math::tools::promote_args<T0, T1, T2>::type
     scalar;
 
@@ -166,7 +164,7 @@ struct CoupledTwoCptODE {
       circ = x[5] + circ0,
       Edrug;
 
-    std::vector<scalar> dxdt(6);
+    Eigen::Matrix<scalar, -1, 1> dxdt(6);
     dxdt[0] = -ka * x[0];
     dxdt[1] = ka * x[0] - (k10 + k12) * x[1] + k21 * x[2];
     dxdt[2] = k12 * x[1] - k21 * x[2];

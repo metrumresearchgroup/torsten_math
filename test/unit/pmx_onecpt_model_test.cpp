@@ -16,9 +16,7 @@ using torsten::PMXOneCptODE;
 using torsten::PKODEModel;
 using torsten::PMXOdeFunctorRateAdaptor;
 using torsten::dsolve::PMXOdeIntegrator;
-using torsten::dsolve::PMXOdeSystem;
-using torsten::dsolve::PMXOdeSystem;
-using torsten::dsolve::PMXOdeSystem;
+using torsten::dsolve::PMXVariadicOdeSystem;
 using torsten::dsolve::PMXCvodesIntegrator;
 using torsten::dsolve::PMXOdeintIntegrator;
 
@@ -41,10 +39,9 @@ TEST_F(TorstenOneCptModelTest, rate_dbl) {
   rate[1] = 200;
   using model_t = PMXOneCptModel<double>;
   model_t model(CL, V2, ka);
-  std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE, double, double> f1(model.par(), rate);
+  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE> f1;
 
-  std::vector<double> y = f1(t0, yvec, f1.adaptor.adapted_param(), {}, {}, msgs);
+  Eigen::VectorXd y = f1(t0, y0, msgs, model.par(), rate, x_r, x_i);
   EXPECT_DOUBLE_EQ(y[0], rate[0]);
   EXPECT_DOUBLE_EQ(y[1], rate[1]);
 }
@@ -58,11 +55,10 @@ TEST_F(TorstenOneCptModelTest, rate_var) {
   std::vector<stan::math::var> rate_var{to_var(rate)};
   using model_t = PMXOneCptModel<var>;
   model_t model(CLv, V2v, kav);
-  std::vector<double> yvec(y0.data(), y0.data() + y0.size());
   std::vector<stan::math::var> theta(model.par());
-  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE, var, var> f1(theta, rate_var);
+  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE> f1;
 
-  std::vector<var> y = f1(t0, yvec, f1.adaptor.adapted_param(), x_r, x_i, msgs);
+  Eigen::Matrix<var, -1, 1> y = f1(t0, y0, msgs, theta, rate_var, x_r, x_i);
   EXPECT_FLOAT_EQ(y[0].val(), rate[0]);
   EXPECT_FLOAT_EQ(y[1].val(), rate[1]);
 }
@@ -79,10 +75,9 @@ TEST_F(TorstenOneCptModelTest, rate_var_y0) {
   using model_t = PMXOneCptModel<var>;
   model_t model(CLv, V2v, kav);
   std::vector<stan::math::var> theta(model.par());
-  std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE, var, var> f1(theta, rate_var);
+  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE> f1;
 
-  std::vector<var> y = f1(t0, yvec, f1.adaptor.adapted_param(), x_r, x_i, msgs);
+  Eigen::Matrix<var, -1, 1> y = f1(t0, y0, msgs, theta, rate_var, x_r, x_i);
 
   EXPECT_TRUE((std::is_same<torsten::f_t<model_t>, torsten::PMXOneCptODE>::value));
 }
@@ -101,10 +96,9 @@ TEST_F(TorstenOneCptModelTest, sd_solver) {
   using model_t = PMXOneCptModel<var>;
   model_t model(CLv, V2v, kav);
   std::vector<stan::math::var> theta(model.par());
-  std::vector<double> yvec(y0.data(), y0.data() + y0.size());
-  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE, var, var> f1(theta, rate_var);
+  torsten::PMXOdeFunctorRateAdaptor<PMXOneCptODE> f1;
 
-  auto y1 = pmx_integrate_ode_bdf(f1, yvec, t0, ts, f1.adaptor.adapted_param(), x_r, x_i, msgs);
+  auto y1 = pmx_ode_bdf(f1, y0, t0, ts, msgs, theta, rate_var, x_r, x_i);
   torsten::PKRec<var> y2(to_var(y0));
   model.solve(y2, t0, ts[0], rate_var);
 
@@ -349,7 +343,7 @@ TEST_F(TorstenOneCptModelTest, ss_infusion_by_long_run_sd_vs_bdf_result) {
 
   PMXOneCptODE f2cpt;
   const std::vector<double> theta{CL, V2, ka};
-  const PMXOdeIntegrator<PMXOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integrator;
+  const PMXOdeIntegrator<PMXVariadicOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integrator;
   using ode_model_t = torsten::PKODEModel<double, PMXOneCptODE>;
   auto f2 = [&](std::vector<double>& rate_vec) {
     double t = t0;
@@ -416,7 +410,7 @@ TEST_F(TorstenOneCptModelTest, ss_infusion_grad_by_long_run_sd_vs_bdf_result) {
 
   PMXOneCptODE f2cpt;
   const std::vector<double> theta{CL, V2, ka};
-  const PMXOdeIntegrator<PMXOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integrator;
+  const PMXOdeIntegrator<PMXVariadicOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integrator;
   using ode_model_t = torsten::PKODEModel<double, PMXOneCptODE>;
   auto f2 = [&](std::vector<var>& rate_vec) {
     var t = t0;
@@ -484,7 +478,7 @@ TEST_F(TorstenOneCptModelTest, ss_bolus_grad_by_long_run_sd_vs_bdf_result) {
 
   PMXOneCptODE f1cpt;
   const std::vector<double> theta{CL, V2, ka};
-  const PMXOdeIntegrator<PMXOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integrator;
+  const PMXOdeIntegrator<PMXVariadicOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integrator;
   using ode_model_t = torsten::PKODEModel<double, PMXOneCptODE>;
   auto f2 = [&](std::vector<var>& amt_vec) {
     double t = t0;
@@ -681,7 +675,7 @@ TEST_F(TorstenOneCptModelTest, ss_const_infusion) {
   EXPECT_FLOAT_EQ(g1[2], 0.0);
 }
 
-TEST_F(TorstenOneCptModelTest, long_long_ss_infusion_vs_ode) {
+TEST_F(TorstenOneCptModelTest, long_ss_infusion_vs_ode) {
   double amt = 1300;
   double r = 500;
   double ii = 1.2;
@@ -691,7 +685,7 @@ TEST_F(TorstenOneCptModelTest, long_long_ss_infusion_vs_ode) {
   PKODEModel<var, PMXOneCptODE> model2(par_var, model1.ncmt(), model1.f());
 
   const dsolve::PMXAnalyiticalIntegrator integ1;
-  const PMXOdeIntegrator<PMXOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integ2;
+  const PMXOdeIntegrator<PMXVariadicOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integ2;
   torsten::PKRec<var> y1 = model1.solve(ts[0], amt, r, ii, 1, integ1);
   torsten::PKRec<var> y2 = model2.solve(ts[0], amt, r, ii, 1, integ2);
   torsten::test::test_grad(par_var, y1, y2, 2e-6, 6e-6);

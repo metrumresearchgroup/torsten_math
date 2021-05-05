@@ -70,7 +70,10 @@ namespace torsten {
     };
 
     template<template<typename...> class ode_type, typename integrator_t>
-    struct PMXOdeIntegrator : public PMXOdeIntegratorBase {
+    struct PMXOdeIntegrator;
+
+    template<typename integrator_t>
+    struct PMXOdeIntegrator<PMXOdeSystem, integrator_t> : public PMXOdeIntegratorBase {
       PMXOdeIntegrator(double rtol0,
                        double atol0,
                        long int max_num_step0,
@@ -107,7 +110,7 @@ namespace torsten {
                  const std::vector<T_param>& theta,
                  const std::vector<double>& x_r,
                  const std::vector<int>& x_i) const {
-        using Ode = ode_type<F, Tt, T_initial, T_param>;
+        using Ode = PMXOdeSystem<F, Tt, T_initial, T_param>;
         Ode ode{f, t0, ts, y0, theta, x_r, x_i, msgs};
         integrator_t solver(rtol, atol, max_num_step);
         dsolve::OdeObserver<Ode> observer(ode);
@@ -138,7 +141,7 @@ namespace torsten {
               const std::vector<double>& x_r,
               const std::vector<int>& x_i) const {
         std::vector<Tt> ts{t1};
-        using Ode = ode_type<F, Tt, T_initial, T_param>;
+        using Ode = PMXOdeSystem<F, Tt, T_initial, T_param>;
         Ode ode{f, t0, ts, y0, theta, x_r, x_i, msgs};
         integrator_t solver(rtol, atol, max_num_step);
         dsolve::OdeDataObserver<Ode> observer(ode);
@@ -199,33 +202,30 @@ namespace torsten {
       }
 
       template <typename F, typename Tt, typename T_initial, typename... T_par>
-      std::vector<Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_par...>, -1, 1>>
+      Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_par...>, -1, 1>
       operator()(const F& f,
                  const Eigen::Matrix<T_initial, -1, 1>& y0,
                  double t0,
                  const Tt& t1,
                  const T_par&... args) const {
         std::vector<Tt> ts{t1};
-        return (*this)(f, y0, t0, ts, args...);
+        return (*this)(f, y0, t0, ts, args...)[0];
       }
 
-      // template <typename F, typename Tt, typename T_initial, typename T_param>
-      // Eigen::MatrixXd
-      // solve_d(const F& f,
-      //         const std::vector<T_initial>& y0,
-      //         double t0,
-      //         const std::vector<Tt>& t1,
-      //         const std::vector<T_param>& theta,
-      //         const std::vector<double>& x_r,
-      //         const std::vector<int>& x_i) const {
-      //   std::vector<Tt> ts{t1};
-      //   using Ode = ode_type<F, Tt, T_initial, T_param>;
-      //   Ode ode{f, t0, ts, y0, theta, x_r, x_i, msgs};
-      //   integrator_t solver(rtol, atol, max_num_step);
-      //   dsolve::OdeDataObserver<Ode> observer(ode);
-      //   solver.integrate(ode, observer);
-      //   return observer.y;
-      // }
+      template <typename F, typename Tt, typename T_initial, typename... T_par>
+      Eigen::MatrixXd
+      solve_d(const F& f,
+              const Eigen::Matrix<T_initial, -1, 1>& y0,
+              double t0,
+              const std::vector<Tt>& ts,
+              const T_par&... args) const {
+        using Ode = PMXVariadicOdeSystem<F, Tt, T_initial, T_par...>;
+        Ode ode{f, t0, ts, y0, msgs, args...};
+        integrator_t solver(rtol, atol, max_num_step);
+        dsolve::OdeDataObserver<Ode> observer(ode);
+        solver.integrate(ode, observer);
+        return observer.y;
+      }
     };
 
     /**
@@ -241,13 +241,13 @@ namespace torsten {
   };
 
   template<typename scheme_t>
-  struct has_data_only_output<dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXOdeintIntegrator<scheme_t>>> {
+  struct has_data_only_output<dsolve::PMXOdeIntegrator<dsolve::PMXVariadicOdeSystem, dsolve::PMXOdeintIntegrator<scheme_t>>> {
     static const bool value = true;
   };
 
   template<int lmm_type, int ism_type>
   struct
-  has_data_only_output<dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXCvodesIntegrator<lmm_type, ism_type>>> {
+  has_data_only_output<dsolve::PMXOdeIntegrator<dsolve::PMXVariadicOdeSystem, dsolve::PMXCvodesIntegrator<lmm_type, ism_type>>> {
     static const bool value = true;
   };
 }

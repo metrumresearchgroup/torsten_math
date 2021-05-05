@@ -8,12 +8,17 @@
 #include <test/unit/math/prim/functor/harmonic_oscillator.hpp>
 
 TEST(Torsten, ode_signature) {
-  EXPECT_TRUE((torsten::is_std_ode<harm_osc_ode_fun>::value));
-  EXPECT_FALSE((torsten::is_std_ode<harm_osc_ode_fun_eigen>::value));
-  EXPECT_TRUE((torsten::is_eigen_ode<harm_osc_ode_fun_eigen,
-               std::vector<double>, std::vector<double>, std::vector<int>>::value));
-  EXPECT_FALSE((torsten::is_eigen_ode<harm_osc_ode_fun,
-                std::vector<double>, std::vector<double>, std::vector<int>>::value));
+  static_assert(torsten::is_std_ode<harm_osc_ode_fun>::value, "Wrong ODE signature");
+  static_assert(!torsten::is_std_ode<harm_osc_ode_fun_eigen>::value, "Wrong ODE signature");
+  static_assert(torsten::is_eigen_ode<harm_osc_ode_fun_eigen,
+                std::vector<double>, std::vector<double>, std::vector<int>>::value,
+                "Wrong ODE signature");
+  static_assert(torsten::is_eigen_ode<harm_osc_ode_fun_eigen,
+                std::vector<stan::math::var>, std::vector<double>, std::vector<int>>::value,
+                "Wrong ODE signature");
+  static_assert(!torsten::is_eigen_ode<harm_osc_ode_fun,
+                std::vector<double>, std::vector<double>, std::vector<int>>::value,
+                "Wrong ODE signature");
   torsten::std_ode<harm_osc_ode_fun> ode1;
   torsten::eigen_ode<harm_osc_ode_fun_eigen,
                      std::vector<double>, std::vector<double>, std::vector<int>> ode2;

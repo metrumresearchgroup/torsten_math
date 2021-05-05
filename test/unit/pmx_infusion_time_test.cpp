@@ -37,11 +37,11 @@ using namespace stan::math;
 using stan::math::pow; 
 
 template <typename T0__, typename T1__, typename T2__, typename T3__>
-std::vector<stan::promote_args_t<T0__, T1__, T2__,
-T3__>>
-memBODE(const T0__& t, const std::vector<T1__>& x,
+Eigen::Matrix<stan::promote_args_t<T0__, T1__, T2__, T3__>, -1, 1>
+memBODE(const T0__& t, const Eigen::Matrix<T1__, -1, 1>& x,
+        std::ostream* pstream__,
         const std::vector<T2__>& parms, const std::vector<T3__>& rdummy,
-        const std::vector<int>& idummy, std::ostream* pstream__) {
+        const std::vector<int>& idummy) {
   using local_scalar_t__ = stan::promote_args_t<T0__, T1__, T2__, T3__>;
   const static bool propto__ = true;
   (void) propto__;
@@ -194,9 +194,7 @@ memBODE(const T0__& t, const std::vector<T1__>& x,
     
     
     STP = (1 + ((EmaxP * Cp) / (EC50P + Cp)));
-    std::vector<local_scalar_t__> dxdt;
-    dxdt = std::vector<local_scalar_t__>(5, DUMMY_VAR__);
-    
+    Eigen::Matrix<local_scalar_t__, -1, 1> dxdt(5);
     
     dxdt[0] = (-ka * x[(1 - 1)]);
     dxdt[1] = (((ka * x[(1 - 1)]) - (((CL / Vcen) + (Q / Vcen)) * x[(2 - 1)])) +
@@ -209,18 +207,17 @@ memBODE(const T0__& t, const std::vector<T1__>& x,
   } catch (const std::exception& e) {
     throw;
   }
-  
 }
 
 struct memBODE_functor__ {
 template <typename T0__, typename T1__, typename T2__, typename T3__>
-std::vector<stan::promote_args_t<T0__, T1__, T2__,
-T3__>>
-operator()(const T0__& t, const std::vector<T1__>& x,
+Eigen::Matrix<stan::promote_args_t<T0__, T1__, T2__, T3__>, -1, 1>
+operator()(const T0__& t, const Eigen::Matrix<T1__, -1, 1>& x,
+           std::ostream* pstream__,
            const std::vector<T2__>& parms, const std::vector<T3__>& rdummy,
-           const std::vector<int>& idummy, std::ostream* pstream__)  const 
+           const std::vector<int>& idummy)  const 
 {
-return memBODE(t, x, parms, rdummy, idummy, pstream__);
+  return memBODE(t, x, pstream__, parms, rdummy, idummy);
 }
 };
 

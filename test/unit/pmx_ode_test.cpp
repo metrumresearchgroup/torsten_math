@@ -563,14 +563,14 @@ TEST_F(TorstenOneCptTest, multiple_bolus_tlag_overload) {
 }
 
 template <typename T0, typename T1, typename T2, typename T3>
-inline
-std::vector<typename boost::math::tools::promote_args<T0, T1, T2, T3>::type>
+Eigen::Matrix<typename stan::return_type_t<T0, T1, T2, T3>, -1, 1>
 oneCptModelODE_abstime(const T0& t,
-                       const std::vector<T1>& x,
-	                   const std::vector<T2>& parms,
-	                   const std::vector<T3>& rate,
-	                   const std::vector<int>& dummy, std::ostream* pstream__) {
-  typedef typename boost::math::tools::promote_args<T0, T1, T2, T3>::type scalar;
+                       const Eigen::Matrix<T1, -1, 1>& x,
+                       std::ostream* pstream__,
+                       const std::vector<T2>& parms,
+                       const std::vector<T3>& x_r,
+                       const std::vector<int>& x_i) {
+  typedef typename stan::return_type_t<T0, T1, T2, T3> scalar;
 
   scalar CL0 = parms[0], V1 = parms[1], ka = parms[2], CLSS = parms[3],
     K = parms[4];
@@ -578,7 +578,7 @@ oneCptModelODE_abstime(const T0& t,
   scalar CL = CL0 + (CLSS - CL0) * (1 - stan::math::exp(-K * t));
   scalar k10 = CL / V1;
 
-  std::vector<scalar> y(2, 0);
+  Eigen::Matrix<scalar, -1, 1> y(2);
 
   y[0] = -ka * x[0];
   y[1] = ka * x[0] - k10 * x[1];
@@ -588,15 +588,15 @@ oneCptModelODE_abstime(const T0& t,
 
 struct oneCptModelODE_abstime_functor {
   template <typename T0, typename T1, typename T2, typename T3>
-  inline
-  std::vector<typename boost::math::tools::promote_args<T0, T1, T2, T3>::type>
+  Eigen::Matrix<typename stan::return_type_t<T0, T1, T2, T3>, -1, 1>
   operator()(const T0& t,
-             const std::vector<T1>& x,
+             const Eigen::Matrix<T1, -1, 1>& x,
+             std::ostream* pstream__,
              const std::vector<T2>& parms,
-             const std::vector<T3>& rate,
-             const std::vector<int>& dummy, std::ostream* pstream__) const {
-        return oneCptModelODE_abstime(t, x, parms, rate, dummy, pstream__);
-    }
+             const std::vector<T3>& x_r,
+             const std::vector<int>& x_i) const {
+    return oneCptModelODE_abstime(t, x, pstream__, parms, x_r, x_i);
+  }
 };
 
 TEST(Torsten, genCpt_One_abstime_SingleDose) {

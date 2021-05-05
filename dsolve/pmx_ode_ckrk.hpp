@@ -38,10 +38,7 @@ namespace torsten {
                     const T_param&... args) {
     using dsolve::PMXOdeIntegrator;
     using dsolve::PMXOdeintIntegrator;
-    using boost::numeric::odeint::runge_kutta_cash_karp54;
-    using boost::numeric::odeint::vector_space_algebra;
-    using scheme_t = runge_kutta_cash_karp54<Eigen::VectorXd, double, Eigen::VectorXd, double, vector_space_algebra>;
-    PMXOdeIntegrator<dsolve::PMXVariadicOdeSystem, PMXOdeintIntegrator<scheme_t>> solver(rtol, atol, max_num_step, msgs);
+    PMXOdeIntegrator<dsolve::PMXVariadicOdeSystem, PMXOdeintIntegrator<dsolve::odeint_scheme_ckrk>> solver(rtol, atol, max_num_step, msgs);
     return solver(f, y0, t0, ts, args...);
   }
 
