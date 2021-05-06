@@ -10,6 +10,7 @@
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
 #include <stan/math/torsten/meta/require_generics.hpp>
+#include <stan/math/torsten/value_of.hpp>
 #include <stan/math/prim/fun/typedefs.hpp>
 #include <stan/math/rev/fun/typedefs.hpp>
 #include <stan/math/rev/fun/to_var.hpp>
@@ -319,8 +320,16 @@ namespace dsolve {
    * @tparam T_par variadic parameters
    */
   template <typename F, typename Tt, typename T_init, typename... T_par>
-  struct PMXVariadicOdeSystem : torsten::eigen_ode<F, T_par...> {
+  class PMXVariadicOdeSystem : torsten::eigen_ode<F, T_par...> {
     using Ode = PMXVariadicOdeSystem<F, Tt, T_init, T_par...>;
+
+    const F& f_;
+    const TupleOdeFunc<F> f_tuple_;
+    std::tuple<decltype(stan::math::deep_copy_vars(std::declval<const T_par&>()))...> theta_tuple_;
+    std::tuple<decltype(torsten::value_of(std::declval<const T_par&>()))...> theta_dbl_tuple_;
+    std::ostream* msgs_;
+
+  public:
     using scalar_t = typename stan::return_type_t<Tt, T_init, T_par...>;
     using state_t = Eigen::Matrix<scalar_t, -1, 1>;
     static constexpr bool is_var_ts  = stan::is_var<Tt>::value;
@@ -328,21 +337,16 @@ namespace dsolve {
     static constexpr bool is_var_par = stan::is_var<stan::return_type_t<T_par...>>::value;
     static constexpr bool use_fwd_sens = is_var_y0 || is_var_par;
 
-    const F& f_;
-    const TupleOdeFunc<F> f_tuple_;
     const double t0_;
     const std::vector<Tt>& ts_;
     const Eigen::Matrix<T_init, -1, 1>& y0_;
-    std::tuple<decltype(stan::math::deep_copy_vars(std::declval<const T_par&>()))...> theta_tuple_;
     std::tuple<const Eigen::Matrix<T_init, -1, 1>&, const T_par&..., const std::vector<Tt>&> theta_ref_tuple_;
     const size_t N;
     const size_t M;
     const size_t ns;
     const size_t system_size;
-    std::ostream* msgs_;
     Eigen::VectorXd y0_fwd_system;
 
-  public:
     PMXVariadicOdeSystem(const F& f,
                          double t0,
                          const std::vector<Tt>& ts,
@@ -355,7 +359,8 @@ namespace dsolve {
         ts_(ts),
         y0_(y0),
         theta_tuple_(stan::math::deep_copy_vars(args)...),
-        theta_ref_tuple_(y0_, args..., ts_),
+        theta_dbl_tuple_(stan::math::value_of(args)...),
+        theta_ref_tuple_(std::forward_as_tuple(y0_, args..., ts_)),
         N(y0.size()),
         M(stan::math::count_vars(args...)),
         ns((is_var_y0 ? N : 0) + M),
@@ -409,7 +414,7 @@ namespace dsolve {
      * evaluate RHS with data only inputs.
      */
     inline Eigen::VectorXd dbl_rhs_impl(double t, const Eigen::VectorXd& y) const {
-      return stan::math::value_of(f_tuple_(t, y, msgs_, theta_tuple_));
+      return f_tuple_(t, y, msgs_, theta_dbl_tuple_);
     }
 
     /*
@@ -419,7 +424,7 @@ namespace dsolve {
       return dbl_rhs_impl(t, Eigen::Map<Eigen::VectorXd>(NV_DATA_S(nv_y), N));
     }
 
-    /*
+    /**
      * evaluate RHS with data only inputs for N_Vector data
      */    
     inline void operator()(double t, N_Vector& nv_y, N_Vector& ydot) const {
@@ -432,7 +437,7 @@ namespace dsolve {
       return 0;
     }
 
-    /*
+    /**
      * evalute RHS of the entire system, possibly including
      * the forward sensitivity equation components in @c y and @c dy_dt.
      */
@@ -445,7 +450,7 @@ namespace dsolve {
       using stan::math::accumulate_adjoints;
 
       if (!(is_var_y0 || is_var_par)) {
-        dydt = stan::math::value_of(f_tuple_(t, y, msgs_, theta_tuple_));
+        dydt = f_tuple_(t, y, msgs_, theta_dbl_tuple_);
         return;
       }
 
