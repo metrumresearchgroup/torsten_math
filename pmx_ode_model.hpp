@@ -471,9 +471,9 @@ namespace torsten {
 #endif
       } catch (const std::exception& e) {
         const char *text =
-          "Torsten failed to find steady state, due to "
+          "Failed to find steady state, due to "
           "either system's intrinsic lack of such a state "
-          "or improper algebra solver controls. Details: ";
+          "or improper algebra solver controls. \nDetails: ";
         throw std::runtime_error(std::string(text) + e.what());
       }
     }

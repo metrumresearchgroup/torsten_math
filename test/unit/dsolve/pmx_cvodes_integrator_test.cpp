@@ -18,12 +18,13 @@
 #include <chrono>
 #include <ctime>
 
-using torsten::dsolve::PMXOdeSystem;
+using torsten::dsolve::PMXVariadicOdeSystem;
 using torsten::dsolve::PMXCvodesIntegrator;
 using torsten::dsolve::PMXOdeService;
 using torsten::dsolve::OdeObserver;
 using torsten::dsolve::OdeDataObserver;
 using torsten::PMXCvodesSensMethod;
+using stan::math::nested_rev_autodiff;
 using torsten::AD;
 using torsten::CSDA;
 using torsten::DQ;
@@ -109,8 +110,8 @@ TEST_F(TorstenOdeTest_lorenz, t0_var) {
 }
 
 TEST_F(TorstenOdeTest_sho, cvodes_ivp_system) {
-  using Ode = PMXOdeSystem<F, double, double, double>;
-  Ode ode{f, t0, ts, y0, theta, x_r, x_i, msgs};
+  using Ode = PMXVariadicOdeSystem<F_eigen, double, double, std::vector<double>, std::vector<double>, std::vector<int> >;
+  Ode ode{f_eigen, t0, ts, y0_vec, msgs, theta, x_r, x_i};
 
   {
     PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1000);
@@ -118,13 +119,12 @@ TEST_F(TorstenOdeTest_sho, cvodes_ivp_system) {
     OdeDataObserver<Ode> observer_mat(ode);
     solver.integrate(ode, observer);
     solver.integrate(ode, observer_mat);
-    std::vector<std::vector<double> > y1 =
-      stan::math::integrate_ode_bdf(f, y0, t0, ts, theta , x_r, x_i);
-    torsten::test::test_val(observer.y, y1);
-    torsten::test::test_val(observer_mat.y, y1);
+    auto y1 = stan::math::ode_bdf(f_eigen, y0_vec, t0, ts, nullptr, theta , x_r, x_i);
+    EXPECT_ARRAY2D_FLOAT_EQ(observer.y, y1);
+    EXPECT_MAT_ARRAY2D_FLOAT_EQ(observer_mat.y, y1);
 
     auto y = torsten::pmx_integrate_ode_bdf(f, y0, t0, ts, theta , x_r, x_i);
-    torsten::test::test_val(observer.y, y1);
+    EXPECT_ARRAY2D_FLOAT_EQ(observer.y, y1);
   }
 
   {
@@ -133,19 +133,18 @@ TEST_F(TorstenOdeTest_sho, cvodes_ivp_system) {
     OdeDataObserver<Ode> observer_mat(ode);
     solver.integrate(ode, observer);
     solver.integrate(ode, observer_mat);
-    std::vector<std::vector<double> > y1 =
-      stan::math::integrate_ode_adams(f, y0, t0, ts, theta , x_r, x_i);
-    torsten::test::test_val(observer.y, y1);
-    torsten::test::test_val(observer_mat.y, y1);
+    auto y1 = stan::math::ode_adams(f_eigen, y0_vec, t0, ts, nullptr, theta , x_r, x_i);
+    EXPECT_ARRAY2D_FLOAT_EQ(observer.y, y1);
+    EXPECT_MAT_ARRAY2D_FLOAT_EQ(observer_mat.y, y1);
 
     auto y = torsten::pmx_integrate_ode_adams(f, y0, t0, ts, theta , x_r, x_i);
-    torsten::test::test_val(observer.y, y1);
+    EXPECT_ARRAY2D_FLOAT_EQ(observer.y, y1);
   }
 }
 
 TEST_F(TorstenOdeTest_lorenz, cvodes_ivp_system) {
-  using Ode = PMXOdeSystem<F, double, double, double>;
-  Ode ode{f, t0, ts, y0, theta, x_r, x_i, msgs};
+  using Ode = PMXVariadicOdeSystem<F_eigen, double, double, std::vector<double>, std::vector<double>, std::vector<int> >;
+  Ode ode{f_eigen, t0, ts, y0_vec, msgs, theta, x_r, x_i};
 
   {
     PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 10000);
@@ -153,13 +152,12 @@ TEST_F(TorstenOdeTest_lorenz, cvodes_ivp_system) {
     OdeDataObserver<Ode> observer_mat(ode);
     solver.integrate(ode, observer);
     solver.integrate(ode, observer_mat);
-    std::vector<std::vector<double> > y1 =
-      stan::math::integrate_ode_bdf(f, y0, t0, ts, theta , x_r, x_i);
-    torsten::test::test_val(observer.y, y1);
-    torsten::test::test_val(observer_mat.y, y1);
+    auto y1 = stan::math::ode_bdf(f_eigen, y0_vec, t0, ts, nullptr, theta , x_r, x_i);
+    EXPECT_ARRAY2D_FLOAT_EQ(observer.y, y1);
+    EXPECT_MAT_ARRAY2D_FLOAT_EQ(observer_mat.y, y1);
 
     auto y = torsten::pmx_integrate_ode_bdf(f, y0, t0, ts, theta , x_r, x_i);
-    torsten::test::test_val(observer.y, y1);
+    EXPECT_ARRAY2D_FLOAT_EQ(observer.y, y1);
   }
 
   {
@@ -168,180 +166,225 @@ TEST_F(TorstenOdeTest_lorenz, cvodes_ivp_system) {
     OdeDataObserver<Ode> observer_mat(ode);
     solver.integrate(ode, observer);
     solver.integrate(ode, observer_mat);
-    std::vector<std::vector<double> > y1 =
-      stan::math::integrate_ode_adams(f, y0, t0, ts, theta , x_r, x_i);
-    torsten::test::test_val(observer.y, y1);
-    torsten::test::test_val(observer_mat.y, y1);
+    auto y1 = stan::math::ode_adams(f_eigen, y0_vec, t0, ts, nullptr, theta , x_r, x_i);
+    EXPECT_ARRAY2D_FLOAT_EQ(observer.y, y1);
+    EXPECT_MAT_ARRAY2D_FLOAT_EQ(observer_mat.y, y1);
 
     auto y = torsten::pmx_integrate_ode_adams(f, y0, t0, ts, theta , x_r, x_i);
-    torsten::test::test_val(observer.y, y1);
+    EXPECT_ARRAY2D_FLOAT_EQ(observer.y, y1);
   }
 }
 
 TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta) {
-  using Ode = PMXOdeSystem<F, double, double, var>;
+  using Ode = PMXVariadicOdeSystem<F_eigen, double, double, std::vector<var>, std::vector<double>, std::vector<int> >;
+
+  nested_rev_autodiff nested;
+
   std::vector<var> theta_var = stan::math::to_var(theta);
-  Ode ode(f, t0, ts, y0, theta_var, x_r, x_i, msgs);
+  Ode ode(f_eigen, t0, ts, y0_vec, msgs, theta_var, x_r, x_i);
 
   {
     PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> solver(rtol, atol, 1e8);
-    auto y1 = stan::math::integrate_ode_adams(f, y0, t0, ts, theta_var, x_r, x_i);
+    auto y1 = stan::math::ode_adams(f_eigen, y0_vec, t0, ts, nullptr, theta_var, x_r, x_i);
     OdeObserver<Ode> observer(ode);
     OdeDataObserver<Ode> observer_mat(ode);
     solver.integrate(ode, observer);
     solver.integrate(ode, observer_mat);
-    torsten::test::test_grad(theta_var, y1, observer.y, 1.E-8, 1.E-5);
-    torsten::test::test_grad(theta_var, y1, observer_mat.y, 1.E-8, 1.E-5);
+    EXPECT_ARRAY2D_ADJ_NEAR(y1, observer.y, theta_var, nested, 1.E-5, "THETA");
+
+    auto y2 = torsten::precomputed_gradients(observer_mat.y, theta_var);
+    EXPECT_ARRAY2D_MAT_ADJ_NEAR(y1, y2, theta_var, nested, 1.E-5, "THETA");
   }
 
   {
     PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1e8);
-    auto y1 = stan::math::integrate_ode_bdf(f, y0, t0, ts, theta_var, x_r, x_i);
+    auto y1 = stan::math::ode_bdf(f_eigen, y0_vec, t0, ts, nullptr, theta_var, x_r, x_i);
     OdeObserver<Ode> observer(ode);
     OdeDataObserver<Ode> observer_mat(ode);
     solver.integrate(ode, observer);
     solver.integrate(ode, observer_mat);
-    torsten::test::test_grad(theta_var, y1, observer.y, 1.E-8, 1.E-5);
-    torsten::test::test_grad(theta_var, y1, observer_mat.y, 1.E-8, 1.E-5);
+    EXPECT_ARRAY2D_ADJ_NEAR(y1, observer.y, theta_var, nested, 1.E-5, "THETA");
+
+    auto y2 = torsten::precomputed_gradients(observer_mat.y, theta_var);
+    EXPECT_ARRAY2D_MAT_ADJ_NEAR(y1, y2, theta_var, nested, 1.E-5, "THETA");
   }
 }
 
 TEST_F(TorstenOdeTest_chem, fwd_sensitivity_y0) {
-  using Ode = PMXOdeSystem<F, double, var, double>;
-  std::vector<var> y0_var = stan::math::to_var(y0);
-  Ode ode(f, t0, ts, y0_var, theta, x_r, x_i, msgs);
+  using Ode = PMXVariadicOdeSystem<F_eigen, double, var, std::vector<double>, std::vector<double>, std::vector<int> >;
+
+  nested_rev_autodiff nested;
+
+  Eigen::Matrix<var, -1, 1> y0_vec_var = stan::math::to_var(y0_vec);
+  Ode ode(f_eigen, t0, ts, y0_vec_var, msgs, theta, x_r, x_i);
 
   {
     PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> solver(rtol, atol, 1e8);
-    auto y1 = stan::math::integrate_ode_adams(f, y0_var, t0, ts, theta, x_r, x_i);
+    auto y1 = stan::math::ode_adams(f_eigen, y0_vec_var, t0, ts, nullptr, theta, x_r, x_i);
     OdeObserver<Ode> observer(ode);
     OdeDataObserver<Ode> observer_mat(ode);
     solver.integrate(ode, observer);
     solver.integrate(ode, observer_mat);
-    torsten::test::test_grad(y0_var, y1, observer.y, 1.E-8, 1.E-5);
-    torsten::test::test_grad(y0_var, y1, observer_mat.y, 1.E-8, 1.E-5);
+
+    auto y0_var = stan::math::to_array_1d(y0_vec_var);
+    EXPECT_ARRAY2D_ADJ_NEAR(y1, observer.y, y0_vec_var, nested, 1.E-5, "y0");
+    auto y2 = torsten::precomputed_gradients(observer_mat.y, y0_vec_var);
+    EXPECT_ARRAY2D_MAT_ADJ_NEAR(y1, y2, y0_vec_var, nested, 1.E-5, "y0");
   }
 
   {
     PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1e8);
-    auto y1 = stan::math::integrate_ode_bdf(f, y0_var, t0, ts, theta, x_r, x_i);
+    auto y1 = stan::math::ode_bdf(f_eigen, y0_vec_var, t0, ts, nullptr, theta, x_r, x_i);
     OdeObserver<Ode> observer(ode);
     OdeDataObserver<Ode> observer_mat(ode);
     solver.integrate(ode, observer);
     solver.integrate(ode, observer_mat);
-    torsten::test::test_grad(y0_var, y1, observer.y, 1.E-8, 1.E-5);
-    torsten::test::test_grad(y0_var, y1, observer_mat.y, 1.E-8, 1.E-5);
+
+    auto y0_var = stan::math::to_array_1d(y0_vec_var);
+    EXPECT_ARRAY2D_ADJ_NEAR(y1, observer.y, y0_vec_var, nested, 1.E-5, "y0");
+
+    auto y2 = torsten::precomputed_gradients(observer_mat.y, y0_vec_var);
+    EXPECT_ARRAY2D_MAT_ADJ_NEAR(y1, y2, y0_vec_var, nested, 1.E-5, "y0");
   }
 }
 
-TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_y0) {
-  using Ode = PMXOdeSystem<F, double, var, var>;
-  std::vector<var> theta_var = stan::math::to_var(theta);
-  std::vector<var> y0_var = stan::math::to_var(y0);
-  Ode ode(f, t0, ts, y0_var, theta_var, x_r, x_i, msgs);
+// TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_y0) {
+//   using Ode = PMXVariadicOdeSystem<F_eigen, double, var, std::vector<var>, std::vector<double>, std::vector<int> >;
 
-  {
-    PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> solver(rtol, atol, 1e8);
-    auto y1 = stan::math::integrate_ode_adams(f, y0_var, t0, ts, theta_var, x_r, x_i);
-    OdeObserver<Ode> observer(ode);
-    OdeDataObserver<Ode> observer_mat(ode);
-    solver.integrate(ode, observer);
-    solver.integrate(ode, observer_mat);    
-    torsten::test::test_grad(y0_var, observer.y, y1, 1.E-8, 1.E-5);
-    torsten::test::test_grad(theta_var, observer.y, y1, 1.E-8, 1.E-5);
+//   nested_rev_autodiff nested;
 
-    std::vector<stan::math::var> vars(y0_var);
-    vars.insert(vars.end(), theta_var.begin(), theta_var.end());
-    torsten::test::test_grad(vars, y1, observer_mat.y, 1.E-8, 1.E-5);
-  }
+//   std::vector<var> theta_var = stan::math::to_var(theta);
+//   Eigen::Matrix<var, -1, 1> y0_vec_var = stan::math::to_var(y0_vec);
+//   Ode ode(f_eigen, t0, ts, y0_vec_var, msgs, theta_var, x_r, x_i);
 
-  {
-    PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1e8);
-    auto y1 = stan::math::integrate_ode_bdf(f, y0_var, t0, ts, theta_var, x_r, x_i);
-    OdeObserver<Ode> observer(ode);
-    OdeDataObserver<Ode> observer_mat(ode);
-    solver.integrate(ode, observer);
-    solver.integrate(ode, observer_mat);    
-    torsten::test::test_grad(y0_var, observer.y, y1, 1.E-8, 1.E-5);
-    torsten::test::test_grad(theta_var, observer.y, y1, 1.E-8, 1.E-5);
+//   {
+//     PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> solver(rtol, atol, 1e8);
+//     auto y1 = stan::math::ode_adams(f_eigen, y0_vec_var, t0, ts, nullptr, theta_var, x_r, x_i);
+//     OdeObserver<Ode> observer(ode);
+//     OdeDataObserver<Ode> observer_mat(ode);
+//     solver.integrate(ode, observer);
+//     solver.integrate(ode, observer_mat);    
+//     auto y0_var = stan::math::to_array_1d(y0_vec_var);
+//     EXPECT_ARRAY2D_ADJ_NEAR(observer.y, y1, y0_vec_var, nested, 1.E-5, "y0");
+//     EXPECT_ARRAY2D_ADJ_NEAR(observer.y, y1, theta_var, nested, 1.E-5, "THETA");
 
-    std::vector<stan::math::var> vars(y0_var);
-    vars.insert(vars.end(), theta_var.begin(), theta_var.end());
-    torsten::test::test_grad(vars, y1, observer_mat.y, 1.E-8, 1.E-5);
-  }
-}
+//     std::vector<stan::math::var> vars(stan::math::to_array_1d(y0_vec_var));
+//     vars.insert(vars.end(), theta_var.begin(), theta_var.end());
 
-TEST_F(TorstenOdeTest_sho, fwd_sensitivity_theta) {
-  using Ode = PMXOdeSystem<F, double, double, var>;
-  std::vector<var> theta_var = stan::math::to_var(theta);
-  Ode ode(f, t0, ts, y0, theta_var, x_r, x_i, msgs);
+//     auto y2 = torsten::precomputed_gradients(observer_mat.y, vars);
+//     EXPECT_ARRAY2D_MAT_ADJ_NEAR(y1, y2, vars, nested, 1.E-5, "y0");
+//   }
 
-  {
-    PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> solver(rtol, atol, 1e8);
-    auto y1 = stan::math::integrate_ode_adams(f, y0, t0, ts, theta_var, x_r, x_i);
-    OdeObserver<Ode> observer(ode);
-    OdeDataObserver<Ode> observer_mat(ode);
-    solver.integrate(ode, observer);
-    solver.integrate(ode, observer_mat);
-    torsten::test::test_grad(theta_var, y1, observer.y, 1.E-8, 1.E-5);
-    torsten::test::test_grad(theta_var, y1, observer_mat.y, 1.E-8, 1.E-5);
-  }
+//   {
+//     PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1e8);
+//     auto y1 = stan::math::ode_bdf(f_eigen, y0_vec_var, t0, ts, nullptr, theta_var, x_r, x_i);
+//     OdeObserver<Ode> observer(ode);
+//     OdeDataObserver<Ode> observer_mat(ode);
+//     solver.integrate(ode, observer);
+//     solver.integrate(ode, observer_mat);    
+//     auto y0_var = stan::math::to_array_1d(y0_vec_var);
+//     EXPECT_ARRAY2D_ADJ_NEAR(observer.y, y1, y0_vec_var, nested, 1.E-5, "y0");
+//     EXPECT_ARRAY2D_ADJ_NEAR(observer.y, y1, theta_var, nested, 1.E-5, "THETA");
 
-  {
-    PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1e8);
-    auto y1 = stan::math::integrate_ode_bdf(f, y0, t0, ts, theta_var, x_r, x_i);
-    OdeObserver<Ode> observer(ode);
-    OdeDataObserver<Ode> observer_mat(ode);
-    solver.integrate(ode, observer);
-    solver.integrate(ode, observer_mat);
-    torsten::test::test_grad(theta_var, y1, observer.y, 1.E-8, 1.E-5);
-    torsten::test::test_grad(theta_var, y1, observer_mat.y, 1.E-8, 1.E-5);
-  }
-}
+//     std::vector<stan::math::var> vars(stan::math::to_array_1d(y0_vec_var));
+//     vars.insert(vars.end(), theta_var.begin(), theta_var.end());
 
-TEST_F(TorstenOdeTest_sho, fwd_sensitivity_y0) {
-  using Ode = PMXOdeSystem<F, double, var, double>;
-  std::vector<var> y0_var = stan::math::to_var(y0);
-  Ode ode(f, t0, ts, y0_var, theta, x_r, x_i, msgs);
+//     auto y2 = torsten::precomputed_gradients(observer_mat.y, vars);
+//     EXPECT_ARRAY2D_MAT_ADJ_NEAR(y1, y2, vars, nested, 1.E-5, "y0");
+//   }
+// }
 
-  {
-    PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> solver(rtol, atol, 1e8);
-    auto y1 = stan::math::integrate_ode_adams(f, y0_var, t0, ts, theta, x_r, x_i);
-    OdeObserver<Ode> observer(ode);
-    OdeDataObserver<Ode> observer_mat(ode);
-    solver.integrate(ode, observer);
-    solver.integrate(ode, observer_mat);
-    torsten::test::test_grad(y0_var, y1, observer.y, 1.E-8, 1.E-5);
-    torsten::test::test_grad(y0_var, y1, observer_mat.y, 1.E-8, 1.E-5);
-  }
+// TEST_F(TorstenOdeTest_sho, fwd_sensitivity_theta) {
+//   using Ode = PMXVariadicOdeSystem<F_eigen, double, double, std::vector<var>, std::vector<double>, std::vector<int> >;
 
-  {
-    PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1e8);
-    auto y1 = stan::math::integrate_ode_bdf(f, y0_var, t0, ts, theta, x_r, x_i);
-    OdeObserver<Ode> observer(ode);
-    OdeDataObserver<Ode> observer_mat(ode);
-    solver.integrate(ode, observer);
-    solver.integrate(ode, observer_mat);
-    torsten::test::test_grad(y0_var, y1, observer.y, 1.E-8, 1.E-5);
-    torsten::test::test_grad(y0_var, y1, observer_mat.y, 1.E-8, 1.E-5);
-  }
-}
+//   nested_rev_autodiff nested;
+
+//   std::vector<var> theta_var = stan::math::to_var(theta);
+//   Ode ode(f_eigen, t0, ts, y0_vec, msgs, theta_var, x_r, x_i);
+
+//   {
+//     PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> solver(rtol, atol, 1e8);
+//     auto y1 = stan::math::ode_adams(f_eigen, y0_vec, t0, ts, nullptr, theta_var, x_r, x_i);
+//     OdeObserver<Ode> observer(ode);
+//     OdeDataObserver<Ode> observer_mat(ode);
+//     solver.integrate(ode, observer);
+//     solver.integrate(ode, observer_mat);
+//     EXPECT_ARRAY2D_ADJ_NEAR(y1, observer.y, theta_var, nested, 1.E-5, "THETA");
+
+//     auto y2 = torsten::precomputed_gradients(observer_mat.y, theta_var);
+//     EXPECT_ARRAY2D_MAT_ADJ_NEAR(y1, y2, theta_var, nested, 1.E-5, "y0");
+//   }
+
+//   {
+//     PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1e8);
+//     auto y1 = stan::math::ode_bdf(f_eigen, y0_vec, t0, ts, nullptr, theta_var, x_r, x_i);
+//     OdeObserver<Ode> observer(ode);
+//     OdeDataObserver<Ode> observer_mat(ode);
+//     solver.integrate(ode, observer);
+//     solver.integrate(ode, observer_mat);
+//     EXPECT_ARRAY2D_ADJ_NEAR(y1, observer.y, theta_var, nested, 1.E-5, "THETA");
+
+//     auto y2 = torsten::precomputed_gradients(observer_mat.y, theta_var);
+//     EXPECT_ARRAY2D_MAT_ADJ_NEAR(y1, y2, theta_var, nested, 1.E-5, "y0");
+//   }
+// }
+
+// TEST_F(TorstenOdeTest_sho, fwd_sensitivity_y0) {
+//   using Ode = PMXVariadicOdeSystem<F_eigen, double, var, std::vector<double>, std::vector<double>, std::vector<int> >;
+
+//   nested_rev_autodiff nested;
+
+//   Eigen::Matrix<var, -1, 1> y0_vec_var = stan::math::to_var(y0_vec);
+//   Ode ode(f_eigen, t0, ts, y0_vec_var, msgs, theta, x_r, x_i);
+
+//   {
+//     PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> solver(rtol, atol, 1e8);
+//     auto y1 = stan::math::ode_adams(f_eigen, y0_vec_var, t0, ts, nullptr, theta, x_r, x_i);
+//     OdeObserver<Ode> observer(ode);
+//     OdeDataObserver<Ode> observer_mat(ode);
+//     solver.integrate(ode, observer);
+//     solver.integrate(ode, observer_mat);
+//     auto y0_var = stan::math::to_array_1d(y0_vec_var);
+//     EXPECT_ARRAY2D_ADJ_NEAR(y1, observer.y, y0_vec_var, nested, 1.E-5, "y0");
+
+//     auto y2 = torsten::precomputed_gradients(observer_mat.y, y0_vec_var);
+//     EXPECT_ARRAY2D_MAT_ADJ_NEAR(y1, y2, y0_vec_var, nested, 1.E-5, "y0");
+//   }
+
+//   {
+//     PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1e8);
+//     auto y1 = stan::math::ode_bdf(f_eigen, y0_vec_var, t0, ts, nullptr, theta, x_r, x_i);
+//     OdeObserver<Ode> observer(ode);
+//     OdeDataObserver<Ode> observer_mat(ode);
+//     solver.integrate(ode, observer);
+//     solver.integrate(ode, observer_mat);
+//     auto y0_var = stan::math::to_array_1d(y0_vec_var);
+//     EXPECT_ARRAY2D_ADJ_NEAR(y1, observer.y, y0_vec_var, nested, 1.E-5, "y0");
+
+//     auto y2 = torsten::precomputed_gradients(observer_mat.y, y0_vec_var);
+//     EXPECT_ARRAY2D_MAT_ADJ_NEAR(y1, y2, y0_vec_var, nested, 1.E-5, "y0");
+//   }
+// }
 
 TEST_F(TorstenOdeTest_sho, fwd_sensitivity_ts) {
   using stan::math::value_of;
-  using Ode = PMXOdeSystem<F, var, double, double>;
+  using Ode = PMXVariadicOdeSystem<F_eigen, var, double, std::vector<double>, std::vector<double>, std::vector<int> >;
   PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> solver(rtol, atol, 1e8);
   std::vector<var> ts_var = stan::math::to_var(ts);
-  Ode ode(f, t0, ts_var, y0, theta, x_r, x_i, msgs);
+  Ode ode(f_eigen, t0, ts_var, y0_vec, msgs, theta, x_r, x_i);
   OdeObserver<Ode> observer(ode);
   OdeDataObserver<Ode> observer_mat(ode);
   solver.integrate(ode, observer);
 
-  std::vector<std::vector<var>>& y = observer.y;
+  auto& y = observer.y;
+  std::vector<double> y_i(y[0].size());
 
   std::vector<double> g(ts.size()), fval(y0.size());
   for (size_t i = 0; i < ts.size(); ++i) {
-    fval = f(value_of(ts[i]), value_of(y[i]), theta, x_r, x_i, msgs);
+    for (size_t m = 0; m < y_i.size(); ++m) {
+      y_i[m] = y[i](m).val();
+    }
+    fval = f(value_of(ts[i]), y_i, theta, x_r, x_i, msgs);
     for (size_t j = 0; j < y0.size(); ++j) {
       stan::math::set_zero_all_adjoints();
       y[i][j].grad(ts_var, g);
@@ -358,19 +401,23 @@ TEST_F(TorstenOdeTest_sho, fwd_sensitivity_ts) {
 
 TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_ts) {
   using stan::math::value_of;
-  using Ode = PMXOdeSystem<F, var, double, double>;
+  using Ode = PMXVariadicOdeSystem<F_eigen, var, double, std::vector<double>, std::vector<double>, std::vector<int> >;
   PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> solver(rtol, atol, 1e8);
   std::vector<var> ts_var = stan::math::to_var(ts);
-  Ode ode(f, t0, ts_var, y0, theta, x_r, x_i, msgs);
+  Ode ode(f_eigen, t0, ts_var, y0_vec, msgs, theta, x_r, x_i);
   OdeObserver<Ode> observer(ode);
   OdeDataObserver<Ode> observer_mat(ode);
   solver.integrate(ode, observer);
 
-  std::vector<std::vector<var>>& y = observer.y;
+  auto& y = observer.y;
+  std::vector<double> y_i(y[0].size());
 
   std::vector<double> g(ts.size()), fval(y0.size());
   for (size_t i = 0; i < ts.size(); ++i) {
-    fval = f(value_of(ts[i]), value_of(y[i]), theta, x_r, x_i, msgs);
+    for (size_t m = 0; m < y_i.size(); ++m) {
+      y_i[m] = y[i](m).val();
+    }
+    fval = f(value_of(ts[i]), y_i, theta, x_r, x_i, msgs);
     for (size_t j = 0; j < y0.size(); ++j) {
       stan::math::set_zero_all_adjoints();
       y[i][j].grad(ts_var, g);
@@ -386,187 +433,236 @@ TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_ts) {
 }
 
 TEST_F(TorstenOdeTest_sho, fwd_sensitivity_theta_y0) {
-  using Ode = PMXOdeSystem<F, double, var, var>;
+  using Ode = PMXVariadicOdeSystem<F_eigen, double, var, std::vector<var>, std::vector<double>, std::vector<int> >;
+
+  nested_rev_autodiff nested;
+
   std::vector<var> theta_var = stan::math::to_var(theta);
-  std::vector<var> y0_var = stan::math::to_var(y0);
-  Ode ode(f, t0, ts, y0_var, theta_var, x_r, x_i, msgs);
+  Eigen::Matrix<var, -1, 1> y0_vec_var = stan::math::to_var(y0_vec);
+  Ode ode(f_eigen, t0, ts, y0_vec_var, msgs, theta_var, x_r, x_i);
 
   {
     PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> solver(rtol, atol, 1e8);
-    auto y1 = stan::math::integrate_ode_adams(f, y0_var, t0, ts, theta_var, x_r, x_i);
+    auto y1 = stan::math::ode_adams(f_eigen, y0_vec_var, t0, ts, nullptr, theta_var, x_r, x_i);
     OdeObserver<Ode> observer(ode);
     OdeDataObserver<Ode> observer_mat(ode);
     solver.integrate(ode, observer);
     solver.integrate(ode, observer_mat);    
-    torsten::test::test_grad(y0_var, observer.y, y1, 1.E-8, 1.E-5);
-    torsten::test::test_grad(theta_var, observer.y, y1, 1.E-8, 1.E-5);
+    auto y0_var = stan::math::to_array_1d(y0_vec_var);
+    EXPECT_ARRAY2D_ADJ_NEAR(observer.y, y1, y0_vec_var, nested, 1.E-5, "y0");
+    EXPECT_ARRAY2D_ADJ_NEAR(observer.y, y1, theta_var, nested, 1.E-5, "THETA");
 
-    std::vector<stan::math::var> vars(y0_var);
+    std::vector<stan::math::var> vars(stan::math::to_array_1d(y0_vec_var));
     vars.insert(vars.end(), theta_var.begin(), theta_var.end());
-    torsten::test::test_grad(vars, y1, observer_mat.y, 1.E-8, 1.E-5);
+
+    auto y2 = torsten::precomputed_gradients(observer_mat.y, vars);
+    EXPECT_ARRAY2D_MAT_ADJ_NEAR(y1, y2, vars, nested, 1.E-5, "vars");
   }
 
   {
     PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1e8);
-    auto y1 = stan::math::integrate_ode_bdf(f, y0_var, t0, ts, theta_var, x_r, x_i);
+    auto y1 = stan::math::ode_bdf(f_eigen, y0_vec_var, t0, ts, nullptr, theta_var, x_r, x_i);
     OdeObserver<Ode> observer(ode);
     OdeDataObserver<Ode> observer_mat(ode);
     solver.integrate(ode, observer);
     solver.integrate(ode, observer_mat);    
-    torsten::test::test_grad(y0_var, observer.y, y1, 1.E-8, 1.E-5);
-    torsten::test::test_grad(theta_var, observer.y, y1, 1.E-8, 1.E-5);
+    auto y0_var = stan::math::to_array_1d(y0_vec_var);
+    EXPECT_ARRAY2D_ADJ_NEAR(observer.y, y1, y0_vec_var, nested, 1.E-5, "y0");
+    EXPECT_ARRAY2D_ADJ_NEAR(observer.y, y1, theta_var, nested, 1.E-5, "THETA");
 
-    std::vector<stan::math::var> vars(y0_var);
+    std::vector<stan::math::var> vars(stan::math::to_array_1d(y0_vec_var));
     vars.insert(vars.end(), theta_var.begin(), theta_var.end());
-    torsten::test::test_grad(vars, y1, observer_mat.y, 1.E-8, 1.E-5);
+
+    auto y2 = torsten::precomputed_gradients(observer_mat.y, vars);
+    EXPECT_ARRAY2D_MAT_ADJ_NEAR(y1, y2, vars, nested, 1.E-5, "vars");
   }
 }
 
-TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_theta_y0_ts) {
-  using stan::math::value_of;
-  using Ode = PMXOdeSystem<F, var, var, var>;
-  PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> solver(rtol, atol, 1e8);
-  std::vector<var> theta_var = stan::math::to_var(theta);
-  std::vector<var> y0_var = stan::math::to_var(y0);
-  std::vector<var> ts_var = stan::math::to_var(ts);
-  Ode ode(f, t0, ts_var, y0_var, theta_var, x_r, x_i, msgs);
-  OdeObserver<Ode> observer(ode);
-  solver.integrate(ode, observer);
-  std::vector<std::vector<var> >& y = observer.y;
-  std::vector<std::vector<var> > y1 = stan::math::integrate_ode_adams(f, y0_var, t0, ts, theta_var, x_r, x_i);
+// TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_theta_y0_ts) {
+//   using stan::math::value_of;
 
-  torsten::test::test_grad(y0_var, y, y1, 1.E-6, 1.E-5);
-  torsten::test::test_grad(theta_var, y, y1, 1.E-6, 1.E-4);
+//   nested_rev_autodiff nested;
 
-  std::vector<double> g(ts.size()), fval(y0.size());
-  for (size_t i = 0; i < ts.size(); ++i) {
-    fval = f(value_of(ts[i]), value_of(y[i]), theta, x_r, x_i, msgs);
-    for (size_t j = 0; j < y0.size(); ++j) {
-      stan::math::set_zero_all_adjoints();
-      y[i][j].grad(ts_var, g);
-      for (size_t k = 0; k < ts.size(); ++k) {
-        if (k == i) {
-          EXPECT_FLOAT_EQ(g[k], fval[j]);
-        } else {
-          EXPECT_FLOAT_EQ(g[k], 0.0);
-        }
-      }
-    }
-  }
-}
+//   using Ode = PMXVariadicOdeSystem<F_eigen, var, var, std::vector<var>, std::vector<double>, std::vector<int> >;
+//   PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> solver(rtol, atol, 1e8);
+//   std::vector<var> theta_var = stan::math::to_var(theta);
+//   Eigen::Matrix<var, -1, 1> y0_vec_var = stan::math::to_var(y0_vec);
+//   std::vector<var> ts_var = stan::math::to_var(ts);
+//   Ode ode(f_eigen, t0, ts_var, y0_vec_var, msgs, theta_var, x_r, x_i);
+//   OdeObserver<Ode> observer(ode);
+//   solver.integrate(ode, observer);
+//   auto& y = observer.y;
+//   auto y1 = stan::math::ode_adams(f_eigen, y0_vec_var, t0, ts, nullptr, theta_var, x_r, x_i);
 
-TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_y0_ts) {
-  using stan::math::value_of;
-  using Ode = PMXOdeSystem<F, var, var, var>;
-  PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1e8);
-  std::vector<var> theta_var = stan::math::to_var(theta);
-  std::vector<var> y0_var = stan::math::to_var(y0);
-  std::vector<var> ts_var = stan::math::to_var(ts);
-  Ode ode(f, t0, ts_var, y0_var, theta_var, x_r, x_i, msgs);
-  OdeObserver<Ode> observer(ode);
-  solver.integrate(ode, observer);
-  std::vector<std::vector<var> >& y = observer.y;
-  std::vector<std::vector<var> > y1 = stan::math::integrate_ode_bdf(f, y0_var, t0, ts, theta_var, x_r, x_i);
+//   EXPECT_ARRAY2D_ADJ_NEAR(y , y1, y0_vec_var   , nested, 1.E-5, "y0");
+//   EXPECT_ARRAY2D_ADJ_NEAR(y , y1, theta_var, nested, 1.E-4, "THETA");
 
-  torsten::test::test_grad(y0_var, y, y1, 1.E-6, 1.E-5);
-  torsten::test::test_grad(theta_var, y, y1, 1.E-6, 1.E-4);
+//   std::vector<double> y_i(y[0].size());
 
-  std::vector<double> g(ts.size()), fval(y0.size());
-  for (size_t i = 0; i < ts.size(); ++i) {
-    fval = f(value_of(ts[i]), value_of(y[i]), theta, x_r, x_i, msgs);
-    for (size_t j = 0; j < y0.size(); ++j) {
-      stan::math::set_zero_all_adjoints();
-      y[i][j].grad(ts_var, g);
-      for (size_t k = 0; k < ts.size(); ++k) {
-        if (k == i) {
-          EXPECT_FLOAT_EQ(g[k], fval[j]);
-        } else {
-          EXPECT_FLOAT_EQ(g[k], 0.0);
-        }
-      }
-    }
-  }
-}
+//   std::vector<double> g(ts.size()), fval(y0.size());
+//   for (size_t i = 0; i < ts.size(); ++i) {
+//     for (size_t m = 0; m < y_i.size(); ++m) {
+//       y_i[m] = y[i](m).val();
+//     }
+//     fval = f(value_of(ts[i]), y_i, theta, x_r, x_i, msgs);
+//     for (size_t j = 0; j < y0.size(); ++j) {
+//       stan::math::set_zero_all_adjoints();
+//       y[i][j].grad(ts_var, g);
+//       for (size_t k = 0; k < ts.size(); ++k) {
+//         if (k == i) {
+//           EXPECT_FLOAT_EQ(g[k], fval[j]);
+//         } else {
+//           EXPECT_FLOAT_EQ(g[k], 0.0);
+//         }
+//       }
+//     }
+//   }
+// }
 
-TEST_F(TorstenOdeTest_chem, fwd_sensitivity_y0_ts) {
-  using stan::math::value_of;
-  using Ode = PMXOdeSystem<F, var, var, double>;
-  PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1e8);
-  std::vector<var> y0_var = stan::math::to_var(y0);
-  std::vector<var> ts_var = stan::math::to_var(ts);
-  Ode ode(f, t0, ts_var, y0_var, theta, x_r, x_i, msgs);
-  OdeObserver<Ode> observer(ode);
-  solver.integrate(ode, observer);
-  std::vector<std::vector<var> >& y = observer.y;
-  std::vector<std::vector<var> > y1 = stan::math::integrate_ode_bdf(f, y0_var, t0, ts_var, theta, x_r, x_i);
+// TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_y0_ts) {
+//   using stan::math::value_of;
+//   using Ode = PMXVariadicOdeSystem<F_eigen, var, var, std::vector<var>, std::vector<double>, std::vector<int> >;
 
-  torsten::test::test_grad(y0_var, y, y1, 1.E-6, 1.E-5);
+//   nested_rev_autodiff nested;
 
-  std::vector<double> g(ts.size()), fval(y0.size());
-  for (size_t i = 0; i < ts.size(); ++i) {
-    fval = f(value_of(ts[i]), value_of(y[i]), theta, x_r, x_i, msgs);
-    for (size_t j = 0; j < y0.size(); ++j) {
-      stan::math::set_zero_all_adjoints();
-      y[i][j].grad(ts_var, g);
-      for (size_t k = 0; k < ts.size(); ++k) {
-        if (k == i) {
-          EXPECT_FLOAT_EQ(g[k], fval[j]);
-        } else {
-          EXPECT_FLOAT_EQ(g[k], 0.0);
-        }
-      }
-    }
-  }
-}
+//   PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1e8);
+//   std::vector<var> theta_var = stan::math::to_var(theta);
+//   Eigen::Matrix<var, -1, 1> y0_vec_var = stan::math::to_var(y0_vec);
+//   std::vector<var> ts_var = stan::math::to_var(ts);
+//   Ode ode(f_eigen, t0, ts_var, y0_vec_var, msgs, theta_var, x_r, x_i);
+//   OdeObserver<Ode> observer(ode);
+//   solver.integrate(ode, observer);
+//   auto& y = observer.y;
+//   auto y1 = stan::math::ode_bdf(f_eigen, y0_vec_var, t0, ts, nullptr, theta_var, x_r, x_i);
 
-TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_ts) {
-  using stan::math::value_of;
-  using Ode = PMXOdeSystem<F, var, double, var>;
-  PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1e8);
-  std::vector<var> theta_var = stan::math::to_var(theta);
-  std::vector<var> ts_var = stan::math::to_var(ts);
-  Ode ode(f, t0, ts_var, y0, theta_var, x_r, x_i, msgs);
-  OdeObserver<Ode> observer(ode);
-  solver.integrate(ode, observer);
-  std::vector<std::vector<var> >& y = observer.y;
-  std::vector<std::vector<var> > y1 = stan::math::integrate_ode_bdf(f, y0, t0, ts_var, theta_var, x_r, x_i);
+//   EXPECT_ARRAY2D_ADJ_NEAR(y , y1, y0_vec_var   , nested, 1.E-5, "y0");
+//   EXPECT_ARRAY2D_ADJ_NEAR(y , y1, theta_var, nested, 1.E-4, "THETA");
 
-  torsten::test::test_grad(theta_var, y, y1, 1.E-6, 1.E-5);
+//   std::vector<double> y_i(y[0].size());
 
-  std::vector<double> g(ts.size()), fval(y0.size());
-  for (size_t i = 0; i < ts.size(); ++i) {
-    fval = f(value_of(ts[i]), value_of(y[i]), theta, x_r, x_i, msgs);
-    for (size_t j = 0; j < y0.size(); ++j) {
-      stan::math::set_zero_all_adjoints();
-      y[i][j].grad(ts_var, g);
-      for (size_t k = 0; k < ts.size(); ++k) {
-        if (k == i) {
-          EXPECT_FLOAT_EQ(g[k], fval[j]);
-        } else {
-          EXPECT_FLOAT_EQ(g[k], 0.0);
-        }
-      }
-    }
-  }
-}
+//   std::vector<double> g(ts.size()), fval(y0.size());
+//   for (size_t i = 0; i < ts.size(); ++i) {
+//     for (size_t m = 0; m < y_i.size(); ++m) {
+//       y_i[m] = y[i](m).val();
+//     }
+//     fval = f(value_of(ts[i]), y_i, theta, x_r, x_i, msgs);
+//     for (size_t j = 0; j < y0.size(); ++j) {
+//       stan::math::set_zero_all_adjoints();
+//       y[i][j].grad(ts_var, g);
+//       for (size_t k = 0; k < ts.size(); ++k) {
+//         if (k == i) {
+//           EXPECT_FLOAT_EQ(g[k], fval[j]);
+//         } else {
+//           EXPECT_FLOAT_EQ(g[k], 0.0);
+//         }
+//       }
+//     }
+//   }
+// }
+
+// TEST_F(TorstenOdeTest_chem, fwd_sensitivity_y0_ts) {
+//   using stan::math::value_of;
+//   using Ode = PMXVariadicOdeSystem<F_eigen, var, var, std::vector<double>, std::vector<double>, std::vector<int> >;
+
+//   nested_rev_autodiff nested;
+
+//   PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1e8);
+//   Eigen::Matrix<var, -1, 1> y0_vec_var = stan::math::to_var(y0_vec);
+//   std::vector<var> ts_var = stan::math::to_var(ts);
+//   Ode ode(f_eigen, t0, ts_var, y0_vec_var, msgs, theta, x_r, x_i);
+//   OdeObserver<Ode> observer(ode);
+//   solver.integrate(ode, observer);
+//   auto& y = observer.y;
+//   auto y1 = stan::math::ode_bdf(f_eigen, y0_vec_var, t0, ts_var, nullptr, theta, x_r, x_i);
+
+//   EXPECT_ARRAY2D_ADJ_NEAR(y , y1, y0_vec_var   , nested, 1.E-5, "y0");
+
+//   std::vector<double> y_i(y[0].size());
+
+//   std::vector<double> g(ts.size()), fval(y0.size());
+//   for (size_t i = 0; i < ts.size(); ++i) {
+//     for (size_t m = 0; m < y_i.size(); ++m) {
+//       y_i[m] = y[i](m).val();
+//     }
+//     fval = f(value_of(ts[i]), y_i, theta, x_r, x_i, msgs);
+//     for (size_t j = 0; j < y0.size(); ++j) {
+//       stan::math::set_zero_all_adjoints();
+//       y[i][j].grad(ts_var, g);
+//       for (size_t k = 0; k < ts.size(); ++k) {
+//         if (k == i) {
+//           EXPECT_FLOAT_EQ(g[k], fval[j]);
+//         } else {
+//           EXPECT_FLOAT_EQ(g[k], 0.0);
+//         }
+//       }
+//     }
+//   }
+// }
+
+// TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_ts) {
+//   using stan::math::value_of;
+//   using Ode = PMXVariadicOdeSystem<F_eigen, var, double, std::vector<var>, std::vector<double>, std::vector<int> >;
+
+//   nested_rev_autodiff nested;
+
+//   PMXCvodesIntegrator<CV_BDF, CV_STAGGERED> solver(rtol, atol, 1e8);
+//   std::vector<var> theta_var = stan::math::to_var(theta);
+//   std::vector<var> ts_var = stan::math::to_var(ts);
+//   Ode ode(f_eigen, t0, ts_var, y0_vec, msgs, theta_var, x_r, x_i);
+//   OdeObserver<Ode> observer(ode);
+//   solver.integrate(ode, observer);
+//   auto& y = observer.y;
+//   auto y1 = stan::math::ode_bdf(f_eigen, y0_vec, t0, ts_var, nullptr, theta_var, x_r, x_i);
+
+//   EXPECT_ARRAY2D_ADJ_NEAR(y , y1, theta_var, nested, 1.E-5, "THETA");
+
+//   std::vector<double> y_i(y[0].size());
+
+//   std::vector<double> g(ts.size()), fval(y0.size());
+//   for (size_t i = 0; i < ts.size(); ++i) {
+//     for (size_t m = 0; m < y_i.size(); ++m) {
+//       y_i[m] = y[i](m).val();
+//     }
+//     fval = f(value_of(ts[i]), y_i, theta, x_r, x_i, msgs);
+//     for (size_t j = 0; j < y0.size(); ++j) {
+//       stan::math::set_zero_all_adjoints();
+//       y[i][j].grad(ts_var, g);
+//       for (size_t k = 0; k < ts.size(); ++k) {
+//         if (k == i) {
+//           EXPECT_FLOAT_EQ(g[k], fval[j]);
+//         } else {
+//           EXPECT_FLOAT_EQ(g[k], 0.0);
+//         }
+//       }
+//     }
+//   }
+// }
 
 TEST_F(TorstenOdeTest_sho, fwd_sensitivity_theta_ts) {
   using stan::math::value_of;
-  using Ode = PMXOdeSystem<F, var, double, var>;
+  using Ode = PMXVariadicOdeSystem<F_eigen, var, double, std::vector<var>, std::vector<double>, std::vector<int> >;
+
+  nested_rev_autodiff nested;
+
   PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED> solver(rtol, atol, 1e8);
   std::vector<var> theta_var = stan::math::to_var(theta);
   std::vector<var> ts_var = stan::math::to_var(ts);
-  Ode ode(f, t0, ts_var, y0, theta_var, x_r, x_i, msgs);
+  Ode ode(f_eigen, t0, ts_var, y0_vec, msgs, theta_var, x_r, x_i);
   OdeObserver<Ode> observer(ode);
   solver.integrate(ode, observer);
-  std::vector<std::vector<var> >& y = observer.y;
-  std::vector<std::vector<var> > y1 = stan::math::integrate_ode_adams(f, y0, t0, ts_var, theta_var, x_r, x_i);
+  auto& y = observer.y;
+  auto y1 = stan::math::ode_adams(f_eigen, y0_vec, t0, ts_var, nullptr,theta_var, x_r, x_i);
 
-  torsten::test::test_grad(theta_var, y, y1, 1.E-6, 1.E-5);
+  EXPECT_ARRAY2D_ADJ_NEAR(y , y1, theta_var, nested, 1.E-5, "THETA");
+
+  std::vector<double> y_i(y[0].size());
 
   std::vector<double> g(ts.size()), fval(y0.size());
   for (size_t i = 0; i < ts.size(); ++i) {
-    fval = f(value_of(ts[i]), value_of(y[i]), theta, x_r, x_i, msgs);
+    for (size_t m = 0; m < y_i.size(); ++m) {
+      y_i[m] = y[i](m).val();
+    }
+    fval = f(value_of(ts[i]), y_i, theta, x_r, x_i, msgs);
     for (size_t j = 0; j < y0.size(); ++j) {
       stan::math::set_zero_all_adjoints();
       y[i][j].grad(ts_var, g);
@@ -581,144 +677,166 @@ TEST_F(TorstenOdeTest_sho, fwd_sensitivity_theta_ts) {
   }
 }
 
-TEST_F(TorstenOdeTest_lorenz, fwd_sens_theta_performance_adams) {
-  using torsten::pmx_integrate_ode_adams;
-  using torsten::pmx_integrate_ode_bdf;
+// TEST_F(TorstenOdeTest_lorenz, fwd_sens_theta_performance_adams) {
+//   using torsten::pmx_integrate_ode_adams;
+//   using torsten::pmx_integrate_ode_bdf;
 
-  std::vector<var> theta_var = stan::math::to_var(theta);
-  std::vector<std::vector<var> > y1, y2;
+//   nested_rev_autodiff nested;
 
-  std::chrono::time_point<std::chrono::system_clock> start, end;
-  std::chrono::duration<double> y1_elapsed, y2_elapsed;
+//   std::vector<var> theta_var = stan::math::to_var(theta);
+//   std::vector<std::vector<var> > y1;
+//   std::vector<Eigen::Matrix<stan::math::var, -1, 1> > y2;
+
+//   std::chrono::time_point<std::chrono::system_clock> start, end;
+//   std::chrono::duration<double> y1_elapsed, y2_elapsed;
  
-  start = std::chrono::system_clock::now();
-  for (int i = 0; i < 100; ++i) {
-    y1 = pmx_integrate_ode_adams(f, y0, t0, ts, theta_var, x_r, x_i);
-  }
-  end = std::chrono::system_clock::now();
-  y1_elapsed = end - start;
-  std::cout << "torsten solver elapsed time: " << y1_elapsed.count() << "s\n";
+//   start = std::chrono::system_clock::now();
+//   for (int i = 0; i < 100; ++i) {
+//     y1 = pmx_integrate_ode_adams(f, y0, t0, ts, theta_var, x_r, x_i);
+//   }
+//   end = std::chrono::system_clock::now();
+//   y1_elapsed = end - start;
+//   std::cout << "torsten solver elapsed time: " << y1_elapsed.count() << "s\n";
 
-  start = std::chrono::system_clock::now();
-  for (int i = 0; i < 100; ++i) {
-    y2 = stan::math::integrate_ode_adams(f, y0, t0, ts, theta_var, x_r, x_i);
-  }
-  end = std::chrono::system_clock::now();
-  y2_elapsed = end - start;
-  std::cout << "stan    solver elapsed time: " << y2_elapsed.count() << "s\n";
+//   start = std::chrono::system_clock::now();
+//   for (int i = 0; i < 100; ++i) {
+//     y2 = stan::math::ode_adams(f_eigen, y0_vec, t0, ts, nullptr, theta_var, x_r, x_i);
+//   }
+//   end = std::chrono::system_clock::now();
+//   y2_elapsed = end - start;
+//   std::cout << "stan    solver elapsed time: " << y2_elapsed.count() << "s\n";
 
-  torsten::test::test_grad(theta_var, y1, y2, 1.E-6, 4.E-5);  
-}
+//   EXPECT_ARRAY2D_ADJ_NEAR(y1, y2, theta_var, nested, 4.E-5, "THETA");  
+// }
 
-TEST_F(TorstenOdeTest_chem, fwd_sens_theta_performance_bdf) {
-  using torsten::pmx_integrate_ode_adams;
-  using torsten::pmx_integrate_ode_bdf;
+// TEST_F(TorstenOdeTest_chem, fwd_sens_theta_performance_bdf) {
+//   using torsten::pmx_integrate_ode_adams;
+//   using torsten::pmx_integrate_ode_bdf;
 
-  std::vector<var> theta_var = stan::math::to_var(theta);
-  std::vector<std::vector<var> > y1, y2;
+//   nested_rev_autodiff nested;
 
-  std::chrono::time_point<std::chrono::system_clock> start, end;
-  std::chrono::duration<double> y1_elapsed, y2_elapsed;
+//   std::vector<var> theta_var = stan::math::to_var(theta);
+//   std::vector<std::vector<var> > y1;
+//   std::vector<Eigen::Matrix<stan::math::var, -1, 1> > y2;
+
+//   std::chrono::time_point<std::chrono::system_clock> start, end;
+//   std::chrono::duration<double> y1_elapsed, y2_elapsed;
  
-  start = std::chrono::system_clock::now();
-  y1 = pmx_integrate_ode_bdf(f, y0, t0, ts, theta_var, x_r, x_i);
-  end = std::chrono::system_clock::now();
-  y1_elapsed = end - start;
-  std::cout << "torsten solver elapsed time: " << y1_elapsed.count() << "s\n";
+//   start = std::chrono::system_clock::now();
+//   y1 = pmx_integrate_ode_bdf(f, y0, t0, ts, theta_var, x_r, x_i);
+//   end = std::chrono::system_clock::now();
+//   y1_elapsed = end - start;
+//   std::cout << "torsten solver elapsed time: " << y1_elapsed.count() << "s\n";
 
-  start = std::chrono::system_clock::now();
-  y2 = stan::math::integrate_ode_bdf(f, y0, t0, ts, theta_var, x_r, x_i);
-  end = std::chrono::system_clock::now();
-  y2_elapsed = end - start;
-  std::cout << "stan    solver elapsed time: " << y2_elapsed.count() << "s\n";
+//   start = std::chrono::system_clock::now();
+//   y2 = stan::math::ode_bdf(f_eigen, y0_vec, t0, ts, nullptr, theta_var, x_r, x_i);
+//   end = std::chrono::system_clock::now();
+//   y2_elapsed = end - start;
+//   std::cout << "stan    solver elapsed time: " << y2_elapsed.count() << "s\n";
 
-  torsten::test::test_grad(theta_var, y1, y2, 1.E-6, 4.E-5);  
-}
+//   EXPECT_ARRAY2D_ADJ_NEAR(y1, y2, theta_var, nested, 4.E-5, "THETA");  
+// }
 
-TEST_F(TorstenOdeTest_chem, fwd_sens_theta_performance_repeated) {
-  using torsten::pmx_integrate_ode_adams;
-  using torsten::pmx_integrate_ode_bdf;
-  using stan::math::var;
+// TEST_F(TorstenOdeTest_chem, fwd_sens_theta_performance_repeated) {
+//   using torsten::pmx_integrate_ode_adams;
+//   using torsten::pmx_integrate_ode_bdf;
+//   using stan::math::var;
 
-  std::vector<var> theta_var = stan::math::to_var(theta);
-  std::vector<std::vector<var> > y1, y2;
+//   nested_rev_autodiff nested;
 
-  std::chrono::time_point<std::chrono::system_clock> start, end;
-  std::chrono::duration<double> y1_elapsed, y2_elapsed;
+//   std::vector<var> theta_var = stan::math::to_var(theta);
+//   std::vector<std::vector<var> > y1;
+//   std::vector<Eigen::Matrix<stan::math::var, -1, 1> > y2;
+
+//   std::chrono::time_point<std::chrono::system_clock> start, end;
+//   std::chrono::duration<double> y1_elapsed, y2_elapsed;
  
-  const int nloop = 100;
+//   const int nloop = 100;
 
-  start = std::chrono::system_clock::now();
-  for (int i = 0; i < nloop; ++i) {
-    y1 = pmx_integrate_ode_bdf(f, y0, t0, ts, theta_var, x_r, x_i);    
-  }
-  end = std::chrono::system_clock::now();
-  y1_elapsed = end - start;
-  std::cout << "torsten solver elapsed time: " << y1_elapsed.count() << "s\n";
+//   start = std::chrono::system_clock::now();
+//   for (int i = 0; i < nloop; ++i) {
+//     y1 = pmx_integrate_ode_bdf(f, y0, t0, ts, theta_var, x_r, x_i);    
+//   }
+//   end = std::chrono::system_clock::now();
+//   y1_elapsed = end - start;
+//   std::cout << "torsten solver elapsed time: " << y1_elapsed.count() << "s\n";
 
-  start = std::chrono::system_clock::now();
-  for (int i = 0; i < nloop; ++i) {
-    y2 = stan::math::integrate_ode_bdf(f, y0, t0, ts, theta_var, x_r, x_i);
-  }
-  end = std::chrono::system_clock::now();
-  y2_elapsed = end - start;
-  std::cout << "stan    solver elapsed time: " << y2_elapsed.count() << "s\n";
+//   start = std::chrono::system_clock::now();
+//   for (int i = 0; i < nloop; ++i) {
+//     y2 = stan::math::ode_bdf(f_eigen, y0_vec, t0, ts, nullptr, theta_var, x_r, x_i);
+//   }
+//   end = std::chrono::system_clock::now();
+//   y2_elapsed = end - start;
+//   std::cout << "stan    solver elapsed time: " << y2_elapsed.count() << "s\n";
 
-  torsten::test::test_grad(theta_var, y1, y2, 1.E-6, 4.E-5);  
-}
+//   EXPECT_ARRAY2D_ADJ_NEAR(y1, y2, theta_var, nested, 4.E-5, "THETA");  
+// }
 
-TEST_F(TorstenOdeTest_chem, fwd_sens_y0_theta_performance_repeated) {
-  using torsten::pmx_integrate_ode_adams;
-  using torsten::pmx_integrate_ode_bdf;
-  using stan::math::var;
+// TEST_F(TorstenOdeTest_chem, fwd_sens_y0_theta_performance_repeated) {
+//   using torsten::pmx_integrate_ode_adams;
+//   using torsten::pmx_integrate_ode_bdf;
+//   using stan::math::var;
 
-  std::vector<var> y0_var = stan::math::to_var(y0);
-  std::vector<var> theta_var = stan::math::to_var(theta);
-  std::vector<std::vector<var> > y1, y2;
+//   nested_rev_autodiff nested;
 
-  std::chrono::time_point<std::chrono::system_clock> start, end;
-  std::chrono::duration<double> y1_elapsed, y2_elapsed;
+//   Eigen::Matrix<var, -1, 1> y0_vec_var = stan::math::to_var(y0_vec);
+//   auto y0_var = stan::math::to_array_1d(y0_vec_var);
+//   std::vector<var> theta_var = stan::math::to_var(theta);
+//   std::vector<std::vector<var> > y1;
+//   std::vector<Eigen::Matrix<stan::math::var, -1, 1> > y2;
+
+//   std::chrono::time_point<std::chrono::system_clock> start, end;
+//   std::chrono::duration<double> y1_elapsed, y2_elapsed;
  
-  const int nloop = 100;
+//   const int nloop = 100;
 
-  start = std::chrono::system_clock::now();
-  for (int i = 0; i < nloop; ++i) {
-    y1 = pmx_integrate_ode_bdf(f, y0_var, t0, ts, theta_var, x_r, x_i);
-  }
-  end = std::chrono::system_clock::now();
-  y1_elapsed = end - start;
-  std::cout << "torsten solver elapsed time: " << y1_elapsed.count() << "s\n";
+//   start = std::chrono::system_clock::now();
+//   for (int i = 0; i < nloop; ++i) {
+//     y1 = pmx_integrate_ode_bdf(f, y0_var, t0, ts, theta_var, x_r, x_i);
+//   }
+//   end = std::chrono::system_clock::now();
+//   y1_elapsed = end - start;
+//   std::cout << "torsten solver elapsed time: " << y1_elapsed.count() << "s\n";
 
-  start = std::chrono::system_clock::now();
-  for (int i = 0; i < nloop; ++i) {
-    y2 = stan::math::integrate_ode_bdf(f, y0_var, t0, ts, theta_var, x_r, x_i);
-  }
-  end = std::chrono::system_clock::now();
-  y2_elapsed = end - start;
-  std::cout << "stan    solver elapsed time: " << y2_elapsed.count() << "s\n";
+//   start = std::chrono::system_clock::now();
+//   for (int i = 0; i < nloop; ++i) {
+//     y2 = stan::math::ode_bdf(f_eigen, y0_vec_var, t0, ts, nullptr, theta_var, x_r, x_i);
+//   }
+//   end = std::chrono::system_clock::now();
+//   y2_elapsed = end - start;
+//   std::cout << "stan    solver elapsed time: " << y2_elapsed.count() << "s\n";
 
-  torsten::test::test_grad(theta_var, y1, y2, 1.E-6, 4.E-5);  
-}
+//   EXPECT_ARRAY2D_ADJ_NEAR(y1, y2, theta_var, nested, 4.E-5, "THETA");  
+// }
 
 TEST_F(TorstenOdeTest_sho, integrate_ode_adams_theta_ts) {
   using torsten::pmx_integrate_ode_adams;
   using torsten::pmx_integrate_ode_bdf;
   using stan::math::value_of;
 
+  nested_rev_autodiff nested;
+
   std::vector<var> theta_var = stan::math::to_var(theta);
   std::vector<var> ts_var = stan::math::to_var(ts);
 
-  std::vector<std::vector<var> > y, y1, y2;
+  std::vector<std::vector<var> > y, y2;
+  std::vector<Eigen::Matrix<stan::math::var, -1, 1> > y1;
+
   for (int i = 0; i < 3; ++i) {
     y = pmx_integrate_ode_adams(f, y0, t0, ts_var, theta_var, x_r, x_i);
   }
-  y1 = stan::math::integrate_ode_adams(f, y0, t0, ts, theta_var, x_r, x_i);
+  y1 = stan::math::ode_adams(f_eigen, y0_vec, t0, ts, nullptr, theta_var, x_r, x_i);
 
-  torsten::test::test_grad(theta_var, y, y1, 1.E-6, 1.E-5);
+  EXPECT_ARRAY2D_ADJ_NEAR(y , y1, theta_var, nested, 1.E-5, "THETA");
+
+  std::vector<double> y_i(y1[0].size());
 
   std::vector<double> g(ts.size()), fval(y0.size());
   for (size_t i = 0; i < ts.size(); ++i) {
-    fval = f(value_of(ts[i]), value_of(y[i]), theta, x_r, x_i, msgs);
+    for (size_t m = 0; m < y_i.size(); ++m) {
+      y_i[m] = y[i][m].val();
+    }
+    fval = f(value_of(ts[i]), y_i, theta, x_r, x_i, msgs);
     for (size_t j = 0; j < y0.size(); ++j) {
       stan::math::set_zero_all_adjoints();
       y[i][j].grad(ts_var, g);
@@ -733,89 +851,108 @@ TEST_F(TorstenOdeTest_sho, integrate_ode_adams_theta_ts) {
   }
 }
 
-TEST_F(TorstenOdeTest_lorenz, integrate_ode_bdf_y0_ts) {
-  using torsten::pmx_integrate_ode_bdf;
-  using stan::math::value_of;
-  using stan::math::var;
+// TEST_F(TorstenOdeTest_lorenz, integrate_ode_bdf_y0_ts) {
+//   using torsten::pmx_integrate_ode_bdf;
+//   using stan::math::value_of;
+//   using stan::math::var;
 
-  std::vector<var> y0_var = stan::math::to_var(y0);
-  std::vector<var> ts_var = stan::math::to_var(ts);
+//   nested_rev_autodiff nested;
 
-  std::vector<std::vector<var> > y, y1, y2;
-  for (int i = 0; i < 3; ++i) {
-    y = pmx_integrate_ode_bdf(f, y0_var, t0, ts_var, theta, x_r, x_i);
-  }
-  y1 = stan::math::integrate_ode_bdf(f, y0_var, t0, ts, theta, x_r, x_i);
+//   Eigen::Matrix<var, -1, 1> y0_vec_var = stan::math::to_var(y0_vec);
+//   auto y0_var = stan::math::to_array_1d(y0_vec_var);
+//   std::vector<var> ts_var = stan::math::to_var(ts);
 
-  torsten::test::test_grad(y0_var, y, y1, 1.E-6, 1.E-5);
+//   std::vector<std::vector<var> > y, y2;
+//   std::vector<Eigen::Matrix<stan::math::var, -1, 1> > y1;
 
-  std::vector<double> g(ts.size()), fval(y0.size());
-  for (size_t i = 0; i < ts.size(); ++i) {
-    fval = f(value_of(ts[i]), value_of(y1[i]), theta, x_r, x_i, msgs);
-    for (size_t j = 0; j < y0.size(); ++j) {
-      stan::math::set_zero_all_adjoints();
-      y[i][j].grad(ts_var, g);
-      for (size_t k = 0; k < ts.size(); ++k) {
-        if (k == i) {
-          EXPECT_FLOAT_EQ(g[k], fval[j]);
-        } else {
-          EXPECT_FLOAT_EQ(g[k], 0.0);
-        }
-      }
-    }
-  }
-}
+//   for (int i = 0; i < 3; ++i) {
+//     y = pmx_integrate_ode_bdf(f, y0_var, t0, ts_var, theta, x_r, x_i);
+//   }
+//   y1 = stan::math::ode_bdf(f_eigen, y0_vec_var, t0, ts, nullptr, theta, x_r, x_i);
 
-TEST_F(TorstenOdeTest_lorenz, integrate_ode_bdf_theta_ts) {
-  using torsten::pmx_integrate_ode_bdf;
-  using stan::math::value_of;
-  using stan::math::var;
+//   EXPECT_ARRAY2D_ADJ_NEAR(y , y1, y0_var   , nested, 1.E-5, "y0");
 
-  std::vector<var> theta_var = stan::math::to_var(theta);
-  std::vector<var> ts_var = stan::math::to_var(ts);
+//   std::vector<double> y_i(y1[0].size());
 
-  std::vector<std::vector<var> > y, y1, y2;
-  for (int i = 0; i < 3; ++i) {
-    y = pmx_integrate_ode_bdf(f, y0, t0, ts_var, theta_var, x_r, x_i);
-  }
-  y1 = stan::math::integrate_ode_bdf(f, y0, t0, ts, theta_var, x_r, x_i);
+//   std::vector<double> g(ts.size()), fval(y0.size());
+//   for (size_t i = 0; i < ts.size(); ++i) {
+//     for (size_t m = 0; m < y_i.size(); ++m) {
+//       y_i[m] = y[i][m].val();
+//     }
+//     fval = f(value_of(ts[i]), y_i, theta, x_r, x_i, msgs);
+//     for (size_t j = 0; j < y0.size(); ++j) {
+//       stan::math::set_zero_all_adjoints();
+//       y[i][j].grad(ts_var, g);
+//       for (size_t k = 0; k < ts.size(); ++k) {
+//         if (k == i) {
+//           EXPECT_FLOAT_EQ(g[k], fval[j]);
+//         } else {
+//           EXPECT_FLOAT_EQ(g[k], 0.0);
+//         }
+//       }
+//     }
+//   }
+// }
 
-  torsten::test::test_grad(theta_var, y, y1, 1.E-6, 1.E-5);
+// TEST_F(TorstenOdeTest_lorenz, integrate_ode_bdf_theta_ts) {
+//   using torsten::pmx_integrate_ode_bdf;
+//   using stan::math::value_of;
+//   using stan::math::var;
 
-  std::vector<double> g(ts.size()), fval(y0.size());
-  for (size_t i = 0; i < ts.size(); ++i) {
-    fval = f(value_of(ts[i]), value_of(y1[i]), theta, x_r, x_i, msgs);
-    for (size_t j = 0; j < y0.size(); ++j) {
-      stan::math::set_zero_all_adjoints();
-      y[i][j].grad(ts_var, g);
-      for (size_t k = 0; k < ts.size(); ++k) {
-        if (k == i) {
-          EXPECT_FLOAT_EQ(g[k], fval[j]);
-        } else {
-          EXPECT_FLOAT_EQ(g[k], 0.0);
-        }
-      }
-    }
-  }
-}
+//   nested_rev_autodiff nested;
 
-TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_theta_AD_stan_bdf) {
-  using torsten::dsolve::PMXOdeSystem;
-  using torsten::pmx_integrate_ode_bdf;
-  using stan::math::var;
-  using std::vector;
+//   std::vector<var> theta_var = stan::math::to_var(theta);
+//   std::vector<var> ts_var = stan::math::to_var(ts);
 
-  // Lorenz system is chaotic in long term.
-  std::vector<double> ts0 {ts};
+//   std::vector<std::vector<var> > y, y2;
+//   std::vector<Eigen::Matrix<stan::math::var, -1, 1> > y1;
 
-  vector<var> theta_var1 = stan::math::to_var(theta);
-  vector<var> theta_var2 = stan::math::to_var(theta);
+//   for (int i = 0; i < 3; ++i) {
+//     y = pmx_integrate_ode_bdf(f, y0, t0, ts_var, theta_var, x_r, x_i);
+//   }
+//   y1 = stan::math::ode_bdf(f_eigen, y0_vec, t0, ts, nullptr, theta_var, x_r, x_i);
 
-  vector<vector<var> > y1 = torsten::pmx_integrate_ode_bdf(f, y0, t0, ts0, theta_var1, x_r, x_i);
-  vector<vector<var> > y2 = stan::math::integrate_ode_bdf(f, y0, t0, ts0, theta_var2, x_r, x_i);
+//   EXPECT_ARRAY2D_ADJ_NEAR(y , y1, theta_var, nested, 1.E-5, "THETA");
 
-  torsten::test::test_grad(theta_var1, theta_var2, y1, y2, 1e-7, 1e-6);
-}
+//   std::vector<double> y_i(y1[0].size());
+
+//   std::vector<double> g(ts.size()), fval(y0.size());
+//   for (size_t i = 0; i < ts.size(); ++i) {
+//     for (size_t m = 0; m < y_i.size(); ++m) {
+//       y_i[m] = y[i][m].val();
+//     }
+//     fval = f(value_of(ts[i]), y_i, theta, x_r, x_i, msgs);
+//     for (size_t j = 0; j < y0.size(); ++j) {
+//       stan::math::set_zero_all_adjoints();
+//       y[i][j].grad(ts_var, g);
+//       for (size_t k = 0; k < ts.size(); ++k) {
+//         if (k == i) {
+//           EXPECT_FLOAT_EQ(g[k], fval[j]);
+//         } else {
+//           EXPECT_FLOAT_EQ(g[k], 0.0);
+//         }
+//       }
+//     }
+//   }
+// }
+
+// TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_theta_AD_stan_bdf) {
+//   using torsten::dsolve::PMXOdeSystem;
+//   using torsten::pmx_integrate_ode_bdf;
+//   using stan::math::var;
+//   using std::vector;
+
+//   // Lorenz system is chaotic in long term.
+//   std::vector<double> ts0 {ts};
+
+//   vector<var> theta_var1 = stan::math::to_var(theta);
+//   vector<var> theta_var2 = stan::math::to_var(theta);
+
+//   vector<vector<var> > y1 = torsten::pmx_integrate_ode_bdf(f, y0, t0, ts0, theta_var1, x_r, x_i);
+//   auto y2 = stan::math::ode_bdf(f_eigen, y0_vec, t0, ts0, nullptr, theta_var2, x_r, x_i);
+
+//   torsten::test::test_grad(theta_var1, theta_var2, y1, y2, 1e-7, 1e-6);
+// }
 
 // TEST_F(CVODESIntegratorTest, error_handling) {
 //   using torsten::dsolve::PMXOdeSystem;

@@ -141,7 +141,7 @@ public:
     np = length.size();
   }
 
-  const TwoCptNeutModelODE f;
+  const TwoCptNeutModelODE_eigen f;
   const int nCmt;
   const int nt;
   std::vector<double> time;

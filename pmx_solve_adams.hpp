@@ -80,7 +80,7 @@ namespace torsten {
   template <typename F, typename... Ts>
   auto pmx_solve_group_adams(const F& f, const int nCmt,
                             const std::vector<int>& len, Ts... args) {
-    return PMXSolveGroupODE<dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED>>>::solve(f, nCmt, len, args...);
+    return PMXSolveGroupODE<dsolve::PMXOdeIntegrator<dsolve::PMXVariadicOdeSystem, dsolve::PMXCvodesIntegrator<CV_ADAMS, CV_STAGGERED>>>::solve(f, nCmt, len, args...);
   }
 }
 

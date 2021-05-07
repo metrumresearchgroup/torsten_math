@@ -21,7 +21,7 @@
 
 using stan::math::integrate_ode_adams;
 using torsten::pmx_integrate_ode_adams;
-using torsten::dsolve::PMXOdeSystem;
+using torsten::dsolve::PMXVariadicOdeSystem;
 using torsten::dsolve::PMXOdeintIntegrator;
 using torsten::pmx_integrate_ode_group_adams;
 using dsolve::OdeObserver;
@@ -36,9 +36,9 @@ TORSTEN_MPI_SESSION_INIT;
 TEST_F(TorstenOdeTest_sho, cvodes_adams_ivp_system_matrix_result) {
   std::vector<std::vector<double> > y1(integrate_ode_adams(f, y0, t0, ts, theta, x_r, x_i, msgs, atol, rtol, max_num_steps));
 
-  using Ode = PMXOdeSystem<harm_osc_ode_fun, double, double, double>;
-  Ode ode{f, t0, ts, y0, theta, x_r, x_i, msgs};
-  using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
+  using Ode = PMXVariadicOdeSystem<harm_osc_ode_fun_eigen, double, double, std::vector<double>,std::vector<double>,std::vector<int> >;
+  Ode ode{f_eigen, t0, ts, y0_vec, msgs, theta, x_r, x_i};
+  using scheme_t = torsten::dsolve::odeint_scheme_rk45;
   PMXOdeintIntegrator<scheme_t> solver(rtol, atol, max_num_steps);
   OdeDataObserver<Ode> observer(ode);
   solver.integrate(ode, observer);
@@ -55,9 +55,9 @@ TEST_F(TorstenOdeTest_lorenz, cvodes_adams_ivp_system) {
 TEST_F(TorstenOdeTest_lorenz, cvodes_adams_ivp_system_matrix_result) {
  std::vector<std::vector<double> > y1(integrate_ode_adams(f, y0, t0, ts, theta, x_r, x_i, msgs, atol, rtol, max_num_steps));
 
-  using Ode = PMXOdeSystem<lorenz_ode_fun, double, double, double>;
-  Ode ode{f, t0, ts, y0, theta, x_r, x_i, msgs};
-  using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
+  using Ode = PMXVariadicOdeSystem<lorenz_ode_eigen_fun, double, double, std::vector<double>,std::vector<double>,std::vector<int> >;
+  Ode ode{f_eigen, t0, ts, y0_vec, msgs, theta, x_r, x_i};
+  using scheme_t = torsten::dsolve::odeint_scheme_rk45;
   PMXOdeintIntegrator<scheme_t> solver(rtol, atol, max_num_steps);
   OdeDataObserver<Ode> observer(ode);
   solver.integrate(ode, observer);
@@ -102,9 +102,9 @@ TEST_F(TorstenOdeTest_sho, adams_theta_var_matrix_result) {
   std::vector<var> theta_var = stan::math::to_var(theta);
   vector<vector<var> > y1(integrate_ode_adams(f, y0, t0, ts, theta_var, x_r, x_i, msgs, atol, rtol, max_num_steps));
 
-  using Ode = PMXOdeSystem<harm_osc_ode_fun, double, double, var>;
-  Ode ode{f, t0, ts, y0, theta_var, x_r, x_i, msgs};
-  using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
+  using Ode = PMXVariadicOdeSystem<harm_osc_ode_fun_eigen, double, double, std::vector<var>,std::vector<double>,std::vector<int> >;
+  Ode ode{f_eigen, t0, ts,y0_vec, msgs, theta_var, x_r, x_i};
+  using scheme_t = torsten::dsolve::odeint_scheme_rk45;
   PMXOdeintIntegrator<scheme_t> solver(rtol, atol, max_num_steps);
   OdeDataObserver<Ode> observer(ode);
   solver.integrate(ode, observer);

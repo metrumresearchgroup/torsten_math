@@ -209,10 +209,10 @@ TEST_F(TorstenTwoCptTest, variadic_real_and_int_data) {
   twocpt_ode_with_real_data f1;
   auto y1 = pmx_solve_bdf(f_twocpt, nCmt, time, amt, rate,
                           ii, evid, cmt, addl, ss, theta_1, biovar, tlag,
-                          rtol, atol, max_num_steps, rtol, atol, max_num_steps, nullptr);
+                          rtol, atol, max_num_steps, 1.e-8, 1.e-8, 200, nullptr);
   auto y2 = pmx_solve_bdf(f1, nCmt, time, amt, rate,
                           ii, evid, cmt, addl, ss, pMatrix_var, biovar, tlag, x_r,
-                          rtol, atol, max_num_steps, rtol, atol, max_num_steps, nullptr);
+                          rtol, atol, max_num_steps, 1.e-8, 1.e-8, 200, nullptr);
   torsten::test::test_grad(theta_1[0], pMatrix_var[0], y1, y2, 1e-5, 1e-6);
 
   int cl_add_int = 1;
@@ -222,10 +222,10 @@ TEST_F(TorstenTwoCptTest, variadic_real_and_int_data) {
   twocpt_ode_with_data f2;
   auto y3 = pmx_solve_bdf(f_twocpt, nCmt, time, amt, rate,
                           ii, evid, cmt, addl, ss, theta_2, biovar, tlag,
-                          rtol, atol, max_num_steps, rtol, atol, max_num_steps, nullptr);
+                          rtol, atol, max_num_steps, 1.e-8, 1.e-8, 200, nullptr);
   auto y4 = pmx_solve_bdf(f2, nCmt, time, amt, rate,
                           ii, evid, cmt, addl, ss, pMatrix_var, biovar, tlag, x_r, x_i,
-                          rtol, atol, max_num_steps, rtol, atol, max_num_steps, nullptr);
+                          rtol, atol, max_num_steps, 1.e-8, 1.e-8, 200, nullptr);
   torsten::test::test_grad(theta_2[0], pMatrix_var[0], y3, y4, 1e-5, 1e-6);
 }
 

@@ -3,6 +3,7 @@
 
 #include<stan/math/rev/core.hpp>
 #include<stan/math/prim/functor/apply.hpp>
+#include<stan/math/prim/fun/to_array_1d.hpp>
 #include<stan/math/prim/meta/is_vector.hpp>
 #include<stan/math/torsten/dsolve/ode_tuple_functor.hpp>
 #include <nvector/nvector_serial.h>
@@ -155,6 +156,17 @@ namespace torsten {
     stan::math::matrix_v y_res(n, sol.cols());
     for (int i = 0; i < sol.cols(); i++) {
       y_res.col(i) = precomputed_gradients<stan::math::vector_v>(sol, i, theta);
+    }
+    return y_res;
+  }
+
+  inline stan::math::matrix_v
+  precomputed_gradients (const Eigen::MatrixXd& sol, const Eigen::Matrix<stan::math::var,-1,1>& theta) {
+    const size_t n = sol.rows()/(1 + theta.size());
+    stan::math::matrix_v y_res(n, sol.cols());
+    std::vector<stan::math::var> theta_ = stan::math::to_array_1d(theta);
+    for (int i = 0; i < sol.cols(); i++) {
+      y_res.col(i) = precomputed_gradients<stan::math::vector_v>(sol, i, theta_);
     }
     return y_res;
   }
