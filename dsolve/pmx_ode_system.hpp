@@ -25,6 +25,22 @@
 
 namespace torsten {
 namespace dsolve {
+  struct deep_copy_tuple {
+    template<typename Tuple>
+    auto operator()(Tuple const& t) {
+      static constexpr auto size = std::tuple_size<Tuple>::value;
+      return copy_impl(t, std::make_index_sequence<size>{});
+    }
+
+  private:
+    template<typename Tuple, size_t ... I>
+    auto copy_impl(Tuple const& t, std::index_sequence<I ...>) {
+      using stan::math::deep_copy_vars;
+      std::tuple<decltype(deep_copy_vars(std::get<I>(t)))...>
+        new_tuple(deep_copy_vars(std::get<I>(t))...);
+      return new_tuple;
+    }
+  };
 
   /**
    * ODE system that contains informtion on residual
@@ -325,7 +341,6 @@ namespace dsolve {
 
     const F& f_;
     const TupleOdeFunc<F> f_tuple_;
-    std::tuple<decltype(stan::math::deep_copy_vars(std::declval<const T_par&>()))...> theta_tuple_;
     std::tuple<decltype(torsten::value_of(std::declval<const T_par&>()))...> theta_dbl_tuple_;
     std::ostream* msgs_;
 
@@ -340,7 +355,8 @@ namespace dsolve {
     const double t0_;
     const std::vector<Tt>& ts_;
     const Eigen::Matrix<T_init, -1, 1>& y0_;
-    std::tuple<const Eigen::Matrix<T_init, -1, 1>&, const T_par&..., const std::vector<Tt>&> theta_ref_tuple_;
+    std::tuple<const T_par&...> theta_ref_tuple_;
+    std::tuple<const Eigen::Matrix<T_init, -1, 1>&, const T_par&..., const std::vector<Tt>&> ode_arg_tuple_;
     const size_t N;
     const size_t M;
     const size_t ns;
@@ -358,9 +374,9 @@ namespace dsolve {
         t0_(t0),
         ts_(ts),
         y0_(y0),
-        theta_tuple_(stan::math::deep_copy_vars(args)...),
         theta_dbl_tuple_(stan::math::value_of(args)...),
-        theta_ref_tuple_(std::forward_as_tuple(y0_, args..., ts_)),
+        theta_ref_tuple_(std::forward_as_tuple(args...)),
+        ode_arg_tuple_(std::forward_as_tuple(y0_, args..., ts_)),
         N(y0.size()),
         M(stan::math::count_vars(args...)),
         ns((is_var_y0 ? N : 0) + M),
@@ -394,7 +410,7 @@ namespace dsolve {
      * retrieving a vector of vars that will be used as parameters
      */
     inline auto& vars() const {
-      return theta_ref_tuple_;
+      return ode_arg_tuple_;
     }
 
     /*
@@ -457,9 +473,11 @@ namespace dsolve {
       dydt.fill(0.0);
       stan::math::nested_rev_autodiff nested;
 
+      auto local_theta_tuple_ = deep_copy_tuple()(theta_ref_tuple_);
+
       vector_v yv(N);
       for (size_t i = 0; i < N; ++i) { yv[i] = y[i]; }
-      vector_v fyv(f_tuple_(t, yv, msgs_, theta_tuple_));
+      vector_v fyv(f_tuple_(t, yv, msgs_, local_theta_tuple_));
 
       stan::math::check_size_match("PMXOdeSystem", "dydt", fyv.size(), "states", N);
 
@@ -482,13 +500,13 @@ namespace dsolve {
         if (is_var_par) {
           g.fill(0);
           apply([&](auto&&... args) {accumulate_adjoints(g.data(), args...);},
-                theta_tuple_);
+                local_theta_tuple_);
           for (size_t j = 0; j < M; ++j) {
             dydt(N + N * (ns - M + j) + i) += g[j];
           }
         }
 
-        apply([&](auto&&... args) { zero_adjoints(args...); }, theta_tuple_);
+        apply([&](auto&&... args) { zero_adjoints(args...); }, local_theta_tuple_);
       }
     }
 
@@ -508,11 +526,13 @@ namespace dsolve {
 
       stan::math::nested_rev_autodiff nested;
 
+      auto local_theta_tuple_ = deep_copy_tuple()(theta_ref_tuple_);
+
       vector_v yv(N);
       for (size_t i = 0; i < N; ++i) { yv[i] = NV_Ith_S(nv_y, i); }
-      vector_v dydt(f_tuple_(t, yv, msgs_, theta_tuple_));
+      vector_v dydt(f_tuple_(t, yv, msgs_, local_theta_tuple_));
       // vector_v dydt(is_var_par ?
-      //               f_tuple_(t, yv, msgs_, theta_tuple_) :
+      //               f_tuple_(t, yv, msgs_, local_theta_tuple_) :
                     // f_tuple_(t, yv, msgs_, theta_dbl_tuple_));
 
       stan::math::check_size_match("PMXOdeSystem", "dydt", dydt.size(), "states", N);
@@ -537,14 +557,14 @@ namespace dsolve {
         if (is_var_par) {
           g.fill(0);
           stan::math::apply([&](auto&&... args) {stan::math::accumulate_adjoints(g.data(), args...);},
-                theta_tuple_);
+                local_theta_tuple_);
           for (int i = 0; i < M; ++i) {
             auto nvp = N_VGetArrayPointer(ysdot[ns - M + i]);
             nvp[j] += g[i];
           }
         }
 
-        stan::math::apply([&](auto&&... args) { stan::math::zero_adjoints(args...); }, theta_tuple_);
+        stan::math::apply([&](auto&&... args) { stan::math::zero_adjoints(args...); }, local_theta_tuple_);
       }
     }
 
@@ -587,9 +607,11 @@ namespace dsolve {
 
       stan::math::nested_rev_autodiff nested;
 
+      auto local_theta_tuple_ = deep_copy_tuple()(theta_ref_tuple_);
+
       vector_v yv(N);
       for (size_t i = 0; i < N; ++i) { yv[i] = NV_Ith_S(nv_y, i); }
-      vector_v dydt(f_tuple_(t, yv, msgs_, theta_tuple_));
+      vector_v dydt(f_tuple_(t, yv, msgs_, local_theta_tuple_));
 
       for (int i = 0; i < N; ++i) {
         nested.set_zero_all_adjoints();
