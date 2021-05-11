@@ -1,16 +1,21 @@
 #ifndef STAN_MATH_TORSTEN_DSOLVE_PMX_ODE_SYSTEM_HPP
 #define STAN_MATH_TORSTEN_DSOLVE_PMX_ODE_SYSTEM_HPP
 
-#include <stan/math/rev/core/recover_memory.hpp>
+#include <stan/math/rev/meta.hpp>
+#include <stan/math/rev/core.hpp>
+#include <stan/math/rev/fun/value_of.hpp>
+#include <stan/math/prim/err.hpp>
 #include <stan/math/prim/meta/return_type.hpp>
+#include <stan/math/torsten/dsolve/ode_tuple_functor.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
 #include <stan/math/torsten/meta/require_generics.hpp>
-#include <stan/math/prim/fun/get.hpp>
-#include <stan/math/prim/fun/value_of.hpp>
-#include <stan/math/prim/err/check_size_match.hpp>
+#include <stan/math/torsten/value_of.hpp>
+#include <stan/math/prim/fun/typedefs.hpp>
+#include <stan/math/rev/fun/typedefs.hpp>
+#include <stan/math/rev/fun/to_var.hpp>
+#include <stan/math/rev/fun/value_of.hpp>
 #include <stan/math/rev/fun/value_of_rec.hpp>
-#include <stan/math/rev/core.hpp>
 #include <cvodes/cvodes.h>
 #include <nvector/nvector_serial.h>
 #include <sunmatrix/sunmatrix_dense.h>
@@ -20,6 +25,22 @@
 
 namespace torsten {
 namespace dsolve {
+  struct deep_copy_tuple {
+    template<typename Tuple>
+    auto operator()(Tuple const& t) {
+      static constexpr auto size = std::tuple_size<Tuple>::value;
+      return copy_impl(t, std::make_index_sequence<size>{});
+    }
+
+  private:
+    template<typename Tuple, size_t ... I>
+    auto copy_impl(Tuple const& t, std::index_sequence<I ...>) {
+      using stan::math::deep_copy_vars;
+      std::tuple<decltype(deep_copy_vars(std::get<I>(t)))...>
+        new_tuple(deep_copy_vars(std::get<I>(t))...);
+      return new_tuple;
+    }
+  };
 
   /**
    * ODE system that contains informtion on residual
@@ -30,14 +51,15 @@ namespace dsolve {
    *
    * @tparam F type of functor for ODE residual
    * @tparam Tt scalar type of time steps
-   * @tparam T_init scalar type of initial unknown values
+   * @tparam T_init scalar type of initial unknown values, specified
+   *         as std::vector<T_init>
    * @tparam T_par scalar type of parameters
    */
-  template <typename F, typename Tt, typename T_init, typename T_par,
-            typename = require_std_ode_t<F>>
-  struct  PMXOdeSystem {
+  template <typename F, typename Tt, typename T_init, typename T_par>
+  struct  PMXOdeSystem : torsten::std_ode<F> {
     using Ode = PMXOdeSystem<F, Tt, T_init, T_par>;
     using scalar_t = typename stan::return_type_t<Tt, T_init, T_par>;
+    using state_t = std::vector<scalar_t>;
     static constexpr bool is_var_ts  = stan::is_var<Tt>::value;
     static constexpr bool is_var_y0  = stan::is_var<T_init>::value;
     static constexpr bool is_var_par = stan::is_var<T_par>::value;
@@ -95,6 +117,14 @@ namespace dsolve {
       }
     }
 
+    static std::vector<double> null_dbl_state(size_t n_size) {
+      return std::vector<double>(n_size, 0.0);
+    }
+
+    static state_t null_state(size_t n_size) {
+      return std::vector<scalar_t>(n_size, 0.0);
+    }
+
     /*
      * retrieving a vector of vars that will be used as parameters
      */
@@ -117,22 +147,18 @@ namespace dsolve {
     /*
      * evaluate RHS with data only inputs.
      */
-    inline void dbl_rhs_impl(double t, const std::vector<double>& y, std::vector<double>& dy_dt) const
+    inline std::vector<double> dbl_rhs_impl(double t, const std::vector<double>& y) const
     {
-      stan::math::check_size_match("PMXOdeSystem", "y", y.size(), "dy_dt", dy_dt.size());
-      dy_dt = f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
-      return;      
+      return f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
     }
 
     /*
      * evaluate RHS with data only inputs.
      */
-    inline void dbl_rhs_impl(double t, const N_Vector& nv_y, std::vector<double>& dy_dt) const
+    inline std::vector<double> dbl_rhs_impl(double t, const N_Vector& nv_y) const
     {
-      stan::math::check_size_match("PMXOdeSystem", "y", NV_LENGTH_S(nv_y), "dy_dt", dy_dt.size());
       std::vector<double> y(NV_DATA_S(nv_y), NV_DATA_S(nv_y) + N);
-      dy_dt = f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
-      return;      
+      return f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
     }
 
     /*
@@ -208,8 +234,6 @@ namespace dsolve {
     inline void operator()(int ns, double t, N_Vector nv_y, N_Vector ydot,
                            N_Vector* ys, N_Vector* ysdot,
                            N_Vector temp1, N_Vector temp2) {
-      // for (int i = 0; i < N; ++i) y[i] = NV_Ith_S(nv_y, i);
-
       // initialize ysdot
       for (int i = 0; i < ns; ++i) N_VConst(0.0, ysdot[i]);
 
@@ -299,6 +323,305 @@ namespace dsolve {
     }
   };
 
+  /**
+   * ODE system that contains informtion on residual
+   * equation functor, sensitivity residual equation functor,
+   * as well as initial conditions. This is a base type that
+   * is intended to contain common values used by forward
+   * sensitivity system.
+   *
+   * @tparam F type of functor for ODE residual
+   * @tparam Tt scalar type of time steps
+   * @tparam T_init scalar type of initial unknown values
+   * @tparam T_par variadic parameters
+   */
+  template <typename F, typename Tt, typename T_init, typename... T_par>
+  class PMXVariadicOdeSystem : torsten::eigen_ode<F, T_par...> {
+    using Ode = PMXVariadicOdeSystem<F, Tt, T_init, T_par...>;
+
+    const F& f_;
+    const TupleOdeFunc<F> f_tuple_;
+    std::tuple<decltype(torsten::value_of(std::declval<const T_par&>()))...> theta_dbl_tuple_;
+    std::ostream* msgs_;
+
+  public:
+    using scalar_t = typename stan::return_type_t<Tt, T_init, T_par...>;
+    using state_t = Eigen::Matrix<scalar_t, -1, 1>;
+    static constexpr bool is_var_ts  = stan::is_var<Tt>::value;
+    static constexpr bool is_var_y0  = stan::is_var<T_init>::value;
+    static constexpr bool is_var_par = stan::is_var<stan::return_type_t<T_par...>>::value;
+    static constexpr bool use_fwd_sens = is_var_y0 || is_var_par;
+
+    const double t0_;
+    const std::vector<Tt>& ts_;
+    const Eigen::Matrix<T_init, -1, 1>& y0_;
+    std::tuple<const T_par&...> theta_ref_tuple_;
+    std::tuple<const Eigen::Matrix<T_init, -1, 1>&, const T_par&..., const std::vector<Tt>&> ode_arg_tuple_;
+    const size_t N;
+    const size_t M;
+    const size_t ns;
+    const size_t system_size;
+    Eigen::VectorXd y0_fwd_system;
+
+    PMXVariadicOdeSystem(const F& f,
+                         double t0,
+                         const std::vector<Tt>& ts,
+                         const Eigen::Matrix<T_init, -1, 1>& y0,
+                         std::ostream* msgs,
+                         const T_par&... args)
+      : f_(f),
+        f_tuple_(f_),
+        t0_(t0),
+        ts_(ts),
+        y0_(y0),
+        theta_dbl_tuple_(stan::math::value_of(args)...),
+        theta_ref_tuple_(std::forward_as_tuple(args...)),
+        ode_arg_tuple_(std::forward_as_tuple(y0_, args..., ts_)),
+        N(y0.size()),
+        M(stan::math::count_vars(args...)),
+        ns((is_var_y0 ? N : 0) + M),
+        system_size(N + N * ns),
+        msgs_(msgs),
+        y0_fwd_system(Eigen::VectorXd::Zero(system_size))
+    {
+      const char* caller = "PMX Variadic ODE System";
+      // torsten::dsolve::ode_check(y0_, t0_, ts_, theta_, x_r_, x_i_, caller);
+
+      // initial state
+      for (size_t i = 0; i < N; ++i) {
+        y0_fwd_system.coeffRef(i) = stan::math::value_of(y0.coeffRef(i));
+      }
+      if (is_var_y0)  {
+        for (size_t i = 0; i < N; ++i) {
+          y0_fwd_system.coeffRef(N + i * N + i) = 1.0;        
+        }
+      }
+    }
+
+    static Eigen::VectorXd null_dbl_state(size_t n_size) {
+      return Eigen::VectorXd::Zero(n_size);
+    }
+
+    static state_t null_state(size_t n_size) {
+      return Eigen::Matrix<scalar_t, -1, 1>::Zero(n_size);
+    }
+
+    /*
+     * retrieving a vector of vars that will be used as parameters
+     */
+    inline auto& vars() const {
+      return ode_arg_tuple_;
+    }
+
+    /*
+     * Evaluate RHS of the ODE(the combined system)
+     * @param y current dependent value, arranged as {y, dy_dp1, dy_dp2...}
+     * @param dy_dt ODE RHS to be filled.
+     * @param t current indepedent value
+     */
+    inline void operator()(const Eigen::VectorXd& y, Eigen::VectorXd& dy_dt,
+                           double t) {
+      dy_dt.resize(system_size); // boost::odeint vector_space_algebra doesn't do resize
+      stan::math::check_size_match("PMXVariadicOdeSystem", "y", y.size(), "dy_dt", dy_dt.size());
+      rhs_impl(y, dy_dt, t);
+    }
+
+    /*
+     * evaluate RHS with data only inputs.
+     */
+    inline Eigen::VectorXd dbl_rhs_impl(double t, const Eigen::VectorXd& y) const {
+      return f_tuple_(t, y, msgs_, theta_dbl_tuple_);
+    }
+
+    /*
+     * evaluate RHS with data only inputs.
+     */
+    inline Eigen::VectorXd dbl_rhs_impl(double t, const N_Vector& nv_y) const {
+      return dbl_rhs_impl(t, Eigen::Map<Eigen::VectorXd>(NV_DATA_S(nv_y), N));
+    }
+
+    /**
+     * evaluate RHS with data only inputs for N_Vector data
+     */    
+    inline void operator()(double t, N_Vector& nv_y, N_Vector& ydot) const {
+      Eigen::Map<Eigen::VectorXd>(NV_DATA_S(ydot), N) = dbl_rhs_impl(t, nv_y);
+    }
+
+    static int cvodes_rhs(double t, N_Vector y, N_Vector ydot, void* user_data) {
+      Ode* ode = static_cast<Ode*>(user_data);
+      (*ode)(t, y, ydot);
+      return 0;
+    }
+
+    /**
+     * evalute RHS of the entire system, possibly including
+     * the forward sensitivity equation components in @c y and @c dy_dt.
+     */
+    void rhs_impl(const Eigen::VectorXd & y, Eigen::VectorXd & dydt, double t) {
+      using stan::math::var;
+      using stan::math::vector_v;
+      using stan::math::vector_d;
+      using stan::math::apply;
+      using stan::math::zero_adjoints;
+      using stan::math::accumulate_adjoints;
+
+      if (!(is_var_y0 || is_var_par)) {
+        dydt = f_tuple_(t, y, msgs_, theta_dbl_tuple_);
+        return;
+      }
+
+      dydt.fill(0.0);
+      stan::math::nested_rev_autodiff nested;
+
+      auto local_theta_tuple_ = deep_copy_tuple()(theta_ref_tuple_);
+
+      vector_v yv(N);
+      for (size_t i = 0; i < N; ++i) { yv[i] = y[i]; }
+      vector_v fyv(f_tuple_(t, yv, msgs_, local_theta_tuple_));
+
+      stan::math::check_size_match("PMXOdeSystem", "dydt", fyv.size(), "states", N);
+
+      Eigen::VectorXd g(M);
+      for (size_t i = 0; i < N; ++i) {
+        if (i > 0) {
+          nested.set_zero_all_adjoints();            
+        }
+        dydt[i] = fyv[i].val();
+        fyv[i].grad();
+
+        // df/dy*s_i term, for i = 1...ns
+        for (size_t j = 0; j < ns; ++j) {
+          for (size_t k = 0; k < N; ++k) {
+            dydt[N + N * j + i] += y[N + N * j + k] * yv[k].adj();
+          }
+        }
+
+        // df/dp_i term, for i = n...n+m-1
+        if (is_var_par) {
+          g.fill(0);
+          apply([&](auto&&... args) {accumulate_adjoints(g.data(), args...);},
+                local_theta_tuple_);
+          for (size_t j = 0; j < M; ++j) {
+            dydt(N + N * (ns - M + j) + i) += g[j];
+          }
+        }
+
+        apply([&](auto&&... args) { zero_adjoints(args...); }, local_theta_tuple_);
+      }
+    }
+
+    /**
+     * Calculate sensitivity rhs using CVODES vectors. The
+     * internal workspace is allocated by @c PMXOdeService.
+     */
+    inline void operator()(int ns, double t, N_Vector nv_y, N_Vector ydot,
+                           N_Vector* ys, N_Vector* ysdot,
+                           N_Vector temp1, N_Vector temp2) {
+      using stan::math::var;
+      using stan::math::vector_v;
+      using stan::math::vector_d;
+
+      // initialize ysdot
+      for (int i = 0; i < ns; ++i) N_VConst(0.0, ysdot[i]);
+
+      stan::math::nested_rev_autodiff nested;
+
+      auto local_theta_tuple_ = deep_copy_tuple()(theta_ref_tuple_);
+
+      vector_v yv(N);
+      for (size_t i = 0; i < N; ++i) { yv[i] = NV_Ith_S(nv_y, i); }
+      vector_v dydt(f_tuple_(t, yv, msgs_, local_theta_tuple_));
+      // vector_v dydt(is_var_par ?
+      //               f_tuple_(t, yv, msgs_, local_theta_tuple_) :
+                    // f_tuple_(t, yv, msgs_, theta_dbl_tuple_));
+
+      stan::math::check_size_match("PMXOdeSystem", "dydt", dydt.size(), "states", N);
+
+      Eigen::VectorXd g(M);
+      for (int j = 0; j < N; ++j) {
+        if (j > 0) {
+          nested.set_zero_all_adjoints();
+        }
+        dydt[j].grad();
+
+        // df/dy*s_i term, for i = 1...ns
+        for (int i = 0; i < ns; ++i) {
+          auto ysp = N_VGetArrayPointer(ys[i]);
+          auto nvp = N_VGetArrayPointer(ysdot[i]);
+          for (int k = 0; k < N; ++k) {
+            nvp[j] += yv[k].adj() * ysp[k];              
+          }
+        }
+
+        // df/dp_i term, for i = n...n+m-1
+        if (is_var_par) {
+          g.fill(0);
+          stan::math::apply([&](auto&&... args) {stan::math::accumulate_adjoints(g.data(), args...);},
+                local_theta_tuple_);
+          for (int i = 0; i < M; ++i) {
+            auto nvp = N_VGetArrayPointer(ysdot[ns - M + i]);
+            nvp[j] += g[i];
+          }
+        }
+
+        stan::math::apply([&](auto&&... args) { stan::math::zero_adjoints(args...); }, local_theta_tuple_);
+      }
+    }
+
+    static int cvodes_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
+                               N_Vector* ys, N_Vector* ysdot, void* user_data,
+                               N_Vector temp1, N_Vector temp2) {
+      if (!use_fwd_sens) return 0;
+      Ode* ode = static_cast<Ode*>(user_data);
+      (*ode)(ns, t, y, ydot, ys, ysdot, temp1, temp2);
+      return 0;
+    }
+
+    /**
+     * return a closure for CVODES residual callback using a
+     * non-capture lambda.
+     *
+     * @tparam Ode type of Ode
+     * @return RHS function for Cvodes
+     */
+    inline CVLsJacFn cvodes_jac() {
+      return [](realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void* user_data, // NOLINT
+                N_Vector tmp1, N_Vector tmp2, N_Vector tmp3) -> int {
+        Ode* ode = static_cast<Ode*>(user_data);
+        ode -> jac(t, y, fy, J);
+        return 0;
+      };
+    }
+
+    /**
+     * evaluate Jacobian matrix using current state, store
+     * the result in @c SUNMatrix J.
+     *
+     * @param t current time
+     * @param y current y
+     * @param fy current f(y)
+     * @param J Jacobian matrix J(i,j) = df_i/dy_j
+     */
+    inline void jac(double t, N_Vector& nv_y, N_Vector& fy, SUNMatrix& J) {
+      using stan::math::vector_v;
+
+      stan::math::nested_rev_autodiff nested;
+
+      auto local_theta_tuple_ = deep_copy_tuple()(theta_ref_tuple_);
+
+      vector_v yv(N);
+      for (size_t i = 0; i < N; ++i) { yv[i] = NV_Ith_S(nv_y, i); }
+      vector_v dydt(f_tuple_(t, yv, msgs_, local_theta_tuple_));
+
+      for (int i = 0; i < N; ++i) {
+        nested.set_zero_all_adjoints();
+        dydt[i].grad();
+        for (int j = 0; j < N; ++j) {
+          SM_ELEMENT_D(J, i, j) = yv[j].adj();
+        }
+      }
+    }
+  };
 
 }  // namespace dsolve
 }  // namespace torsten

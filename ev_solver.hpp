@@ -111,7 +111,7 @@ namespace torsten{
     void pred(int id,
               const T_event_record& events_rec,
               Eigen::Matrix<typename EM::T_scalar, -1, -1>& res,
-              const integrator_type integrator,
+              const integrator_type& integrator,
               const std::vector<theta_container<T4>>& theta,
               const std::vector<std::vector<event_ctrl_type>>&... event_ctrl,
               const std::vector<std::vector<ode_data_type>>&... ode_data,
@@ -149,7 +149,7 @@ namespace torsten{
      */
     template<typename integrator_type, typename... scalar_pars_type>
     void stepper(int i, PKRec<typename EM::T_scalar>& init, const EM& em,
-                 const integrator_type integrator,
+                 const integrator_type& integrator,
                  const scalar_pars_type... scalar_pars) {
       auto events = em.events();
 
@@ -179,7 +179,7 @@ namespace torsten{
     void stepper_solve(int i, torsten::PKRec<typename EM::T_scalar>& init,
                        torsten::PKRec<double>& sol_d,
                        const EM& em,
-                       const integrator_type integrator,
+                       const integrator_type& integrator,
                        const scalar_pars_type... scalar_pars) {
       using std::vector;
       using stan::math::var;
@@ -211,7 +211,7 @@ namespace torsten{
     void stepper_sync(int i, torsten::PKRec<typename EM::T_scalar>& init,
                       torsten::PKRec<double>& sol_d,
                       const EM& em,
-                      const integrator_type integrator,
+                      const integrator_type& integrator,
                       const scalar_pars_type... scalar_pars) {
       using std::vector;
       using stan::math::var;
@@ -269,7 +269,7 @@ namespace torsten{
     template<typename integrator_type, typename... scalar_pars_type>
     void pred(const T_event_record& events_rec,
               Eigen::Matrix<stan::math::var, -1, -1>& res,
-              const integrator_type integrator,
+              const integrator_type& integrator,
               const std::vector<theta_container<T4>>& theta,
               const std::vector<std::vector<event_ctrl_type>>&... event_ctrl,
               const std::vector<std::vector<ode_data_type>>&... ode_data,
@@ -421,7 +421,7 @@ namespace torsten{
      */
     template<typename integrator_type, typename... scalar_pars_type>
     void pred(const T_event_record& events_rec, Eigen::MatrixXd& res,
-              const integrator_type integrator,
+              const integrator_type& integrator,
               const std::vector<theta_container<T4>>& theta,
               const std::vector<std::vector<event_ctrl_type>>&... event_ctrl,
               const std::vector<std::vector<ode_data_type>>&... ode_data,
@@ -519,7 +519,7 @@ namespace torsten{
     template<typename integrator_type, typename... scalar_pars_type> //NOLINT
     void pred(const T_event_record& events_rec,
               Eigen::Matrix<typename EM::T_scalar, -1, -1>& res,
-              const integrator_type integrator,
+              const integrator_type& integrator,
               const std::vector<theta_container<T4>>& theta,
               const std::vector<std::vector<event_ctrl_type>>&... event_ctrl,
               const std::vector<std::vector<ode_data_type>>&... ode_data,

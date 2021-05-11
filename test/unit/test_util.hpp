@@ -16,7 +16,6 @@
 #include <vector>
 #include <string>
 
-
 /**
  * Tests if any elementwise difference of the input matrices
  * of doubles is greater than DELTA. This uses the
@@ -26,7 +25,7 @@
  * @param B second input matrix to compare
  * @param DELTA the maximum allowed difference
  */
-#define EXPECT_MAT_VAL_NEAR(A, B, DELTA)                     \
+#define EXPECT_MAT_VAL_NEAR(A, B, DELTA)                        \
   {                                                             \
     EXPECT_EQ(A.rows(), B.rows());                              \
     EXPECT_EQ(A.cols(), B.cols());                              \
@@ -60,6 +59,75 @@
       }                                                         \
     }                                                           \
   }
+
+/**
+ * Tests if any elementwise difference of the input matrices
+ * of doubles is greater than DELTA. This uses the
+ * EXPECT_NEAR macro from GTest.
+ *
+ * @param A first input matrix to compare
+ * @param B second input matrix to compare
+ * @param DELTA the maximum allowed difference
+ */
+#define EXPECT_ARRAY2D_VAL_FLOAT_EQ(A, B)                               \
+  {                                                                     \
+  EXPECT_EQ(A.size(), B.size());                                        \
+  for (int i = 0; i < A.size(); ++i) {                                  \
+    for (int j = 0; j < A[i].size(); ++j) {                             \
+      EXPECT_EQ(A[i].size(), B[i].size());                              \
+      double a = stan::math::value_of(A[i][j]);                         \
+      double b = stan::math::value_of(B[i][j]);                         \
+      EXPECT_FLOAT_EQ(a, b) << "as entry (" << i << "," << j << ")";    \
+    }                                                                   \
+  }                                                                     \
+  }
+
+/** 
+ * For MAT vs 2D-array alike, check member value float equal
+ * 
+ * @param A Matrix
+ * @param B 2D array
+ * 
+ */
+#define EXPECT_MAT_ARRAY2D_VAL_FLOAT_EQ(A, B)                   \
+  {                                                             \
+    EXPECT_EQ(A.cols(), B.size());                              \
+    for (int i = 0; i < A.cols(); ++i) {                        \
+      for (int j = 0; j < A.rows(); ++j) {                   \
+        double a = stan::math::value_of(A(j, i));               \
+        double b = stan::math::value_of(B[i][j]);               \
+        EXPECT_FLOAT_EQ(a, b) << "at (" << i << "," << j << ")";\
+      }                                                         \
+    }                                                           \
+  }
+
+#define EXPECT_ARRAY2D_ADJ_NEAR(A, B, P, NESTED, DELTA, MSG)                \
+  {                                                                     \
+    EXPECT_EQ(A.size(), B.size());                                      \
+    std::vector<double> ga(P.size()), gb(P.size());                     \
+    for (int i = 0; i < A.size(); ++i) {                                \
+      EXPECT_VEC_ADJ_NEAR(A[i], B[i], P, NESTED, DELTA, MSG);           \
+    }                                                                   \
+  }
+
+#define EXPECT_MAT_ARRAY2D_ADJ_NEAR(B, A, P, NESTED, DELTA, MSG)        \
+  {                                                                     \
+    EXPECT_EQ(A.size(), B.cols());                                      \
+    std::vector<double> ga(P.size()), gb(P.size());                     \
+    auto theta = stan::math::to_array_1d(P);                            \
+    for (int i = 0; i < A.size(); ++i) {                                \
+      for (int j = 0; j < A[i].size(); ++j) {                           \
+        NESTED.set_zero_all_adjoints();                                 \
+        A[i][j].grad(theta, ga);                                        \
+        NESTED.set_zero_all_adjoints();                                 \
+        B(j, i).grad(theta, gb);                                        \
+        for (auto k = 0; k < P.size(); ++k) {                           \
+          EXPECT_NEAR(ga[k], gb[k], DELTA) << k << "'th grad at (" << i << ", " << j<< ") of A and B: " << MSG; \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+  }
+
 
 /**
  * Tests if any elementwise difference of the input vectors
@@ -97,6 +165,27 @@
       double b = stan::math::value_of(B[i]);            \
       EXPECT_FLOAT_EQ(a, b) << "as entry " << i;        \
     }                                                   \
+  }
+
+/**
+ * @param P parameter array of which grad is checked
+ * @param NESTED nested_rev_autodiff where A, B and P live
+ * @param DELTA the maximum allowed difference
+ */
+#define EXPECT_VEC_ADJ_NEAR(A, B, P, NESTED, DELTA, MSG)                \
+  {                                                                     \
+  EXPECT_EQ(A.size(), B.size());                                        \
+  std::vector<double> ga(P.size()), gb(P.size());                       \
+  auto theta = stan::math::to_array_1d(P);\
+  for (int i = 0; i < A.size(); ++i) {                                  \
+    nested.set_zero_all_adjoints();                                \
+    A[i].grad(theta, ga);                                               \
+    nested.set_zero_all_adjoints();                            \
+    B[i].grad(theta, gb);                                               \
+    for (auto k = 0; k < P.size(); ++k) {                               \
+      EXPECT_NEAR(ga[k], gb[k], DELTA) << k << "'th grad at " << i << ": " << MSG; \
+    }                                                                   \
+  }                                                                     \
   }
 
 /**
@@ -162,7 +251,7 @@
       }                                                                 \
     }                                                                   \
   }
-   
+
 /**
  * Tests if a function's autodiff gradient is near finite diff gradient
  * w.r.t given vector.
@@ -330,13 +419,15 @@ namespace torsten {
       using stan::math::value_of;
       EXPECT_EQ(y1.rows(), y2.rows());
       EXPECT_EQ(y1.cols(), y2.cols());
-      for (int i = 0; i < y1.size(); ++i) {
-        double y1_i = value_of(y1(i));
-        double y2_i = value_of(y2(i));
-        if (abs(y1_i) < 1e-5 && abs(y2_i) < 1e-5) {
-          EXPECT_NEAR(y1_i, y2_i, atol);
-        } else {
-          EXPECT_NEAR(y1_i, y2_i, std::max(abs(y1_i), abs(y2_i)) * rtol);
+      for (int i = 0; i < y1.rows(); ++i) {
+        for (int j = 0; j < y1.cols(); ++j) {
+          double y1_i = value_of(y1(i, j));
+          double y2_i = value_of(y2(i, j));
+          if (abs(y1_i) < 1e-5 && abs(y2_i) < 1e-5) {
+            EXPECT_NEAR(y1_i, y2_i, atol);
+          } else {
+            EXPECT_NEAR(y1_i, y2_i, std::max(abs(y1_i), abs(y2_i)) * rtol);
+          }
         }
       }
     }
@@ -702,7 +793,7 @@ namespace torsten {
       }
     }
 
-    /*
+    /**
      * Test @c std::vector<var> results between two results.
      * An example use would be to have the results coming from torsten
      * and stan, respectively, so ensure the soundness of

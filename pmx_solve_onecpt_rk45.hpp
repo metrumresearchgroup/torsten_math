@@ -7,6 +7,7 @@
 #include <stan/math/torsten/pmx_ode_model.hpp>
 #include <stan/math/torsten/pmx_coupled_model.hpp>
 #include <stan/math/torsten/pmx_onecpt_model.hpp>
+#include <stan/math/torsten/dsolve/pmx_odeint_integrator.hpp>
 #include <vector>
 #include <string>
 #include <stan/math/torsten/ev_solver.hpp>
@@ -87,6 +88,7 @@ pmx_solve_onecpt_rk45(const F& f,
   using Eigen::Dynamic;
   using Eigen::Matrix;
   using boost::math::tools::promote_args;
+  using torsten::dsolve::odeint_scheme_rk45;
 
   // check arguments
   static const char* function("pmx_solve_onecpt_rk45");
@@ -98,8 +100,7 @@ pmx_solve_onecpt_rk45(const F& f,
 
   const int &nPK = torsten::PMXOneCptModel<double>::Ncmt;
 
-  using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-  dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXOdeintIntegrator<scheme_t>>
+  dsolve::PMXOdeIntegrator<dsolve::PMXVariadicOdeSystem, dsolve::PMXOdeintIntegrator<odeint_scheme_rk45>>
     integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
   const int nCmt = nPK + nOde;
 
@@ -110,9 +111,9 @@ pmx_solve_onecpt_rk45(const F& f,
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
-  using model_type = torsten::PkOneCptOdeModel<typename EM::T_rate, typename EM::T_par, F>;
+  using model_type = torsten::PkOneCptOdeModel<typename EM::T_par, F>;
   EventSolver<model_type, EM> pr;
-  pr.pred(0, events_rec, pred, integrator, theta, biovar, tlag, f, nOde);
+  pr.pred(0, events_rec, pred, integrator, theta, biovar, tlag, nOde, f);
   return pred;
 }
 

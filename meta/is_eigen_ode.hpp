@@ -28,6 +28,10 @@ namespace torsten {
     static constexpr bool value = sizeof(test<F>(nullptr)) == sizeof(yes);
   };
 
+  template <typename F, typename... Args>
+  struct eigen_ode {
+    using type = std::enable_if_t<torsten::is_eigen_ode<F, Args...>::value>;
+  };
 }
 
 #endif

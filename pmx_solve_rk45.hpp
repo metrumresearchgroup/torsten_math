@@ -33,8 +33,8 @@ namespace torsten {
  */
   template <typename F, typename... Ts>
   auto pmx_solve_rk45(const F& f, const int nCmt, Ts... args) {
-    using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-    return PMXSolveODE<dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXOdeintIntegrator<scheme_t>>>::solve(f, nCmt, args...);
+    using scheme_t = torsten::dsolve::odeint_scheme_rk45;
+    return PMXSolveODE<dsolve::PMXOdeIntegrator<dsolve::PMXVariadicOdeSystem, dsolve::PMXOdeintIntegrator<scheme_t>>>::solve(f, nCmt, args...);
 }
 
   /*
@@ -80,8 +80,8 @@ namespace torsten {
   template <typename F, typename... Ts>
   auto pmx_solve_group_rk45(const F& f, const int nCmt,
                             const std::vector<int>& len, Ts... args) {
-    using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-    return PMXSolveGroupODE<dsolve::PMXOdeIntegrator<dsolve::PMXOdeSystem, dsolve::PMXOdeintIntegrator<scheme_t>>>::solve(f, nCmt, len, args...);
+    using scheme_t = torsten::dsolve::odeint_scheme_rk45;
+    return PMXSolveGroupODE<dsolve::PMXOdeIntegrator<dsolve::PMXVariadicOdeSystem, dsolve::PMXOdeintIntegrator<scheme_t>>>::solve(f, nCmt, len, args...);
   }
 }
 

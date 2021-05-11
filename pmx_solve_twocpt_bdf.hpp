@@ -98,7 +98,8 @@ pmx_solve_twocpt_bdf(const F& f,
   using dsolve::PMXOdeIntegrator;
   using dsolve::PMXCvodesIntegrator;
   using dsolve::PMXOdeSystem;
-  PMXOdeIntegrator<PMXOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>> integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
+  PMXOdeIntegrator<dsolve::PMXVariadicOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>>
+    integrator(rel_tol, abs_tol, max_num_steps, as_rel_tol, as_abs_tol, as_max_num_steps, msgs);
   const int nCmt = nPK + nOde;
 
   using ER = NONMENEventsRecord<T0, T1, T2, T3>;
@@ -108,9 +109,9 @@ pmx_solve_twocpt_bdf(const F& f,
   Matrix<typename EM::T_scalar, Dynamic, Dynamic> pred =
     Matrix<typename EM::T_scalar, Dynamic, Dynamic>::Zero(events_rec.num_event_times(), EM::nCmt(events_rec));
 
-  using model_type = torsten::PkTwoCptOdeModel<typename EM::T_rate, typename EM::T_par, F>;
+  using model_type = torsten::PkTwoCptOdeModel<typename EM::T_par, F>;
   EventSolver<model_type, EM> pr;
-  pr.pred(0, events_rec, pred, integrator, theta, biovar, tlag, f, nOde);
+  pr.pred(0, events_rec, pred, integrator, theta, biovar, tlag, nOde, f);
   return pred;
 }
 

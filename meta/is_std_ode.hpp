@@ -26,6 +26,11 @@ namespace torsten {
 
     static constexpr bool value = sizeof(test<F>(nullptr)) == sizeof(yes);
   };
+
+  template <typename F>
+  struct std_ode {
+    using type = std::enable_if_t<torsten::is_std_ode<F>::value>;
+  };
 }
 
 #endif

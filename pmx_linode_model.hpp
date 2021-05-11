@@ -54,6 +54,32 @@ namespace torsten {
 
       return res;
     }
+
+    /** 
+     * Eigen::Matrix version
+     * 
+     */
+    template <typename T0, typename T1, typename T2>
+    Eigen::Matrix<typename stan::return_type_t<T0, T1, T2>, -1, 1>
+    operator()(const T0& t,
+               const Eigen::Matrix<T1, -1, 1>& x,
+               std::ostream* pstream__,
+               const std::vector<T2>& parms,
+               const std::vector<double>& x_r,
+               const std::vector<int>& x_i) const {
+      typedef typename stan::return_type_t<T0, T1, T2> scalar;
+      
+      size_t n = x.size();
+      Eigen::Matrix<scalar, -1, 1> res(n);
+      Matrix<scalar, Dynamic, Dynamic> m(n, n);
+      Matrix<scalar, Dynamic, 1> v(n);
+      for (size_t i = 0; i < n * n; ++i) m(i) = parms[i];
+      for (size_t i = 0; i < n; ++i) v(i) = x[i];
+      torsten::PMXLin<scalar> rv = stan::math::multiply(m, v);
+      for (size_t i = 0; i < n; ++i) res[i] = rv(i);
+
+      return res;
+    }
   };
 
   /**

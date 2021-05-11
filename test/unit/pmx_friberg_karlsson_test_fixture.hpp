@@ -16,13 +16,13 @@ struct FribergKarlsson {
    // x contains both the PK and the PD states.
   template <typename T0, typename T1, typename T2, typename T3>
   inline
-  std::vector<typename boost::math::tools::promote_args<T0, T1, T2, T3>::type>
+  Eigen::Matrix<typename stan::return_type_t<T0, T1, T2, T3>, -1, 1>
   operator()(const T0& t,
-             const std::vector<T1>& x,
+             const Eigen::Matrix<T1, -1, 1>& x,
+             std::ostream* pstream__,
              const std::vector<T2>& parms,
              const std::vector<T3>& x_r,
-             const std::vector<int>& x_i,
-             std::ostream* pstream__) const {
+             const std::vector<int>& x_i) const {
     using Eigen::Matrix;
     using Eigen::Dynamic;
     using scalar = typename stan::return_type_t<T0, T1, T2, T3>;
@@ -52,7 +52,7 @@ struct FribergKarlsson {
       transit3 = x[6] + circ0,
       circ = stan::math::fmax(stan::math::machine_precision(), x[7] + circ0);
 
-    std::vector<scalar> dxdt(8);
+    Eigen::Matrix<scalar, -1, 1> dxdt(8);
     dxdt[0] = -ka * x[0];
     dxdt[1] = ka * x[0] - (k10 + k12) * x[1] + k21 * x[2];
     dxdt[2] = k12 * x[1] - k21 * x[2];
