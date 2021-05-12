@@ -302,6 +302,54 @@ namespace dsolve {
           system.dbl_rhs_impl(curr_t_, y);
       }
     }
+
+    /**
+     * @c ts is data
+     */
+    template<typename F, typename T_init, typename T_par>
+    inline void observer_impl(Eigen::MatrixXd& y_res,
+                              const std::vector<double>& y,
+                              const PMXOdeSystem<F, double, T_init, T_par>& system) const {
+      y_res.col(step_counter_) = Eigen::VectorXd::Map(y.data(), system.system_size);
+    }
+
+    /**
+     * @c ts is @c var
+     */
+    template<typename F, typename T_init, typename T_par>
+    inline void observer_impl(Eigen::MatrixXd& y_res,
+                              const std::vector<double>& y,
+                              const PMXOdeSystem<F, stan::math::var, T_init, T_par>& system) const {
+      for (size_t j = 0; j < system.system_size; ++j) y_res(j, step_counter_) = y[j];
+      std::vector<double> y_tmp(y.begin(), y.begin() + n);
+      std::vector<double> dydt(system.dbl_rhs_impl(curr_t_, y_tmp));
+      for (size_t j = 0; j < n; ++j) {
+        y_res(system.system_size + step_counter_ * n + j, step_counter_) = dydt[j];        
+      }
+    }
+
+    /**
+     * @c ts is @c var
+     */
+    template<typename F, typename Tt, typename T_init, typename T_par>
+    inline void observer_impl(Eigen::MatrixXd& y_res,
+                              const N_Vector& y,
+                              const N_Vector* ys,
+                              const PMXOdeSystem<F, Tt, T_init, T_par>& system) const {
+      y_res.block(0, step_counter_, n, 1) = Eigen::VectorXd::Map(NV_DATA_S(y), n);
+
+      if (system.use_fwd_sens) {
+        for (size_t j = 0; j < ns; ++j) {
+          y_res.block(n + j * n, step_counter_, n, 1) = Eigen::VectorXd::Map(NV_DATA_S(ys[j]), n);
+        }
+      }
+
+      if (system.is_var_ts) {
+        std::vector<double> dydt(system.dbl_rhs_impl(curr_t_, y));
+        y_res.block(n + (step_counter_ + ns) * n, step_counter_, n, 1) =
+          Eigen::VectorXd::Map(dydt.data(), n);
+      }
+    }
   };
 
 }

@@ -937,7 +937,7 @@ TEST_F(TorstenOdeTest_sho, integrate_ode_adams_theta_ts) {
 // }
 
 // TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_theta_AD_stan_bdf) {
-//   using torsten::dsolve::PMXOdeSystem;
+//   
 //   using torsten::pmx_integrate_ode_bdf;
 //   using stan::math::var;
 //   using std::vector;
@@ -955,7 +955,7 @@ TEST_F(TorstenOdeTest_sho, integrate_ode_adams_theta_ts) {
 // }
 
 // TEST_F(CVODESIntegratorTest, error_handling) {
-//   using torsten::dsolve::PMXOdeSystem;
+//   
 //   using torsten::dsolve::PMXCvodesIntegrator;
 //   const double rtol = 1e-4;
 //   const double atol = 1e-8;

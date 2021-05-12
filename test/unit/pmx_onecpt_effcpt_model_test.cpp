@@ -13,7 +13,7 @@ using stan::math::matrix_v;
 using torsten::PMXTwoCptODE;
 using torsten::PMXOneCptEffCptModel;
 using torsten::dsolve::PMXOdeIntegrator;
-using torsten::dsolve::PMXOdeSystem;
+
 using torsten::dsolve::PMXCvodesIntegrator;
 
 TEST_F(onecpt_effcpt_model_test, bolus) {

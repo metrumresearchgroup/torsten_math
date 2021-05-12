@@ -48,6 +48,7 @@ namespace torsten {
   }
 }
 
+using torsten::dsolve::PMXVariadicOdeSystem;
 using torsten::dsolve::PMXOdeSystem;
 using torsten::dsolve::PMXOdeintIntegrator;
 using torsten::dsolve::PMXCvodesIntegrator;
@@ -328,7 +329,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_ts_par_multiple
 
     {
       using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-      using Ode = torsten::dsolve::PMXOdeSystem<TwoCptNeutModelODE, var, double, double>;
+      using Ode = PMXOdeSystem<TwoCptNeutModelODE, var, double, double>;
       size_t integ_id = integrator_id<PMXOdeintIntegrator<scheme_t>>::value;
       Matrix<var, -1, -1> res = load.master(f, integ_id, y0_m, t0, len, ts_m, theta_m, x_r_m, x_i_m, 1.e-8, 1.e-8, 10000);
       std::vector<var>::const_iterator its = ts_m.begin();
@@ -414,7 +415,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_theta_par_multi
 
     {
       using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-      using Ode = torsten::dsolve::PMXOdeSystem<TwoCptNeutModelODE, double, double, var>;
+      using Ode = PMXOdeSystem<TwoCptNeutModelODE, double, double, var>;
       size_t integ_id = integrator_id<PMXOdeintIntegrator<scheme_t>>::value;
       Matrix<var, -1, -1> res = load.master(f, integ_id, y0_m, t0, len, ts_m, theta_m, x_r_m, x_i_m, 1.e-8, 1.e-8, 10000);
       std::vector<double>::const_iterator its = ts_m.begin();
@@ -507,7 +508,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_y0_par_multiple
 
     {
       using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-      using Ode = torsten::dsolve::PMXOdeSystem<TwoCptNeutModelODE, double, var, double>;
+      using Ode = PMXOdeSystem<TwoCptNeutModelODE, double, var, double>;
       size_t integ_id = integrator_id<PMXOdeintIntegrator<scheme_t>>::value;
       Matrix<var, -1, -1> res = load.master(f, integ_id, y0_m, t0, len, ts_m, theta_m, x_r_m, x_i_m, 1.e-8, 1.e-8, 10000);
       std::vector<double>::const_iterator its = ts_m.begin();
@@ -606,7 +607,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_y0_theta_par_mu
 
     {
       using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-      using Ode = torsten::dsolve::PMXOdeSystem<TwoCptNeutModelODE, double, var, var>;
+      using Ode = PMXOdeSystem<TwoCptNeutModelODE, double, var, var>;
       size_t integ_id = integrator_id<PMXOdeintIntegrator<scheme_t>>::value;
       Matrix<var, -1, -1> res = load.master(f, integ_id, y0_m, t0, len, ts_m, theta_m, x_r_m, x_i_m, 1.e-8, 1.e-8, 10000);
       std::vector<double>::const_iterator its = ts_m.begin();
@@ -710,7 +711,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_ts_y0_theta_par
 
     {
       using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-      using Ode = torsten::dsolve::PMXOdeSystem<TwoCptNeutModelODE, var, var, var>;
+      using Ode = PMXOdeSystem<TwoCptNeutModelODE, var, var, var>;
       size_t integ_id = integrator_id<PMXOdeintIntegrator<scheme_t>>::value;
       Matrix<var, -1, -1> res = load.master(f, integ_id, y0_m, t0, len, ts_m, theta_m, x_r_m, x_i_m, 1.e-8, 1.e-8, 10000);
       std::vector<var>::const_iterator its = ts_m.begin();
@@ -805,7 +806,7 @@ TEST_F(TorstenOdeTest_neutropenia, mpi_dynamic_load_master_slave_ts_y0_par_multi
 
     {
       using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
-      using Ode = torsten::dsolve::PMXOdeSystem<TwoCptNeutModelODE, var, var, double>;
+      using Ode = PMXOdeSystem<TwoCptNeutModelODE, var, var, double>;
       size_t integ_id = integrator_id<PMXOdeintIntegrator<scheme_t>>::value;
       Matrix<var, -1, -1> res = load.master(f, integ_id, y0_m, t0, len, ts_m, theta_m, x_r_m, x_i_m, 1.e-8, 1.e-8, 10000);
       std::vector<var>::const_iterator its = ts_m.begin();

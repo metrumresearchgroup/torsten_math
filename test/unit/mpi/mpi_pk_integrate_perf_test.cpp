@@ -33,7 +33,7 @@
 TORSTEN_MPI_SESSION_INIT;
 
 TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_bdf_mpi) {
-  using torsten::dsolve::PMXOdeSystem;
+  
   using torsten::pmx_integrate_ode_group_bdf;
   using stan::math::var;
   using std::vector;
@@ -60,7 +60,7 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_bdf_mpi) {
 }
 
 TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_theta_bdf_mpi) {
-  using torsten::dsolve::PMXOdeSystem;
+  
   using torsten::pmx_integrate_ode_group_bdf;
   using stan::math::var;
   using std::vector;
@@ -87,7 +87,7 @@ TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_theta_bdf_mpi) {
 }
 
 TEST_F(TorstenOdeTest_neutropenia, fwd_sensitivity_theta_bdf_mpi) {
-  using torsten::dsolve::PMXOdeSystem;
+  
   using torsten::pmx_integrate_ode_group_bdf;
   using stan::math::var;
   using std::vector;
@@ -114,7 +114,7 @@ TEST_F(TorstenOdeTest_neutropenia, fwd_sensitivity_theta_bdf_mpi) {
 }
 
 TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_adams_mpi) {
-  using torsten::dsolve::PMXOdeSystem;
+  
   using torsten::pmx_integrate_ode_group_adams;
   using stan::math::var;
   using std::vector;
@@ -141,7 +141,7 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_adams_mpi) {
 }
 
 TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_theta_adams_mpi) {
-  using torsten::dsolve::PMXOdeSystem;
+  
   using torsten::pmx_integrate_ode_group_adams;
   using stan::math::var;
   using std::vector;
@@ -168,7 +168,7 @@ TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_theta_adams_mpi) {
 }
 
 TEST_F(TorstenOdeTest_neutropenia, fwd_sensitivity_theta_adams_mpi) {
-  using torsten::dsolve::PMXOdeSystem;
+  
   using torsten::pmx_integrate_ode_group_adams;
   using stan::math::var;
   using std::vector;

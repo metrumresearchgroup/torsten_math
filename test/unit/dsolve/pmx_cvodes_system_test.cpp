@@ -17,9 +17,10 @@
 #include <vector>
 #include <limits>
 
-using torsten::dsolve::PMXOdeSystem;
+
 using stan::math::var;
 using stan::math::to_var;
+using torsten::dsolve::PMXOdeSystem;
 
 TEST_F(TorstenOdeTest_sho, PMXOdeSystem) {
   std::vector<stan::math::var> theta_var{to_var(theta)};

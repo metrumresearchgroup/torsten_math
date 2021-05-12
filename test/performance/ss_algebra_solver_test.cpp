@@ -31,8 +31,8 @@ using torsten::NONMENEventsRecord;
 using torsten::PKODEModel;
 using torsten::dsolve::PMXOdeIntegrator;
 using torsten::dsolve::PMXOdeintIntegrator;
-using torsten::dsolve::PMXOdeSystem;
-using torsten::dsolve::PMXOdeSystem;
+
+
 using torsten::dsolve::PMXCvodesIntegrator;
 using torsten::PKRec;
 

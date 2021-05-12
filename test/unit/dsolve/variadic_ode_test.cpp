@@ -19,7 +19,6 @@ using namespace boost::phoenix::arg_names;
 
 TEST_F(TorstenOdeTest_sho, variadic_ode_system_odeint) {
   using torsten::dsolve::PMXVariadicOdeSystem;
-  using torsten::dsolve::PMXOdeSystem;
   using stan::math::value_of;
   using stan::math::to_var;
   
@@ -38,7 +37,7 @@ TEST_F(TorstenOdeTest_sho, variadic_ode_system_odeint) {
   EXPECT_FLOAT_EQ(ydot[0], dydt[0]);
   EXPECT_FLOAT_EQ(ydot[1], dydt[1]);
 
-  PMXOdeSystem<harm_osc_ode_fun, double, stan::math::var, stan::math::var>
+  torsten::dsolve::PMXOdeSystem<harm_osc_ode_fun, double, stan::math::var, stan::math::var>
     ode0(f, 0.0, ts, to_var(y0), theta_var, x_r, x_i, nullptr);
   std::vector<double> dydt_vec(ode.system_size);
   ode0(ode0.y0_fwd_system, dydt_vec, ts[0]);
@@ -53,7 +52,7 @@ TEST_F(TorstenOdeTest_sho, variadic_ode_system_odeint) {
 
 TEST_F(TorstenOdeTest_sho, variadic_ode_system_cvodes) {
   using torsten::dsolve::PMXVariadicOdeSystem;
-  using torsten::dsolve::PMXOdeSystem;
+  
   using stan::math::value_of;
   using stan::math::to_var;
   
@@ -81,7 +80,7 @@ TEST_F(TorstenOdeTest_sho, variadic_ode_system_cvodes) {
 
 TEST_F(TorstenOdeTest_sho, eigen_vector_rk45) {
   using torsten::dsolve::PMXVariadicOdeSystem;
-  using torsten::dsolve::PMXOdeSystem;
+  
   using stan::math::value_of;
   using torsten::dsolve::PMXOdeintIntegrator;
 
@@ -143,7 +142,7 @@ TEST_F(TorstenOdeTest_sho, eigen_vector_rk45) {
 
 TEST_F(TorstenOdeTest_chem, eigen_vector_bdf) {
   using torsten::dsolve::PMXVariadicOdeSystem;
-  using torsten::dsolve::PMXOdeSystem;
+  
   using stan::math::value_of;
   using torsten::dsolve::PMXOdeintIntegrator;
 
@@ -205,7 +204,7 @@ TEST_F(TorstenOdeTest_chem, eigen_vector_bdf) {
 
 TEST_F(TorstenOdeTest_lorenz, eigen_vector_adams) {
   using torsten::dsolve::PMXVariadicOdeSystem;
-  using torsten::dsolve::PMXOdeSystem;
+  
   using stan::math::value_of;
   using torsten::dsolve::PMXOdeintIntegrator;
 
@@ -256,7 +255,7 @@ TEST_F(TorstenOdeTest_lorenz, eigen_vector_adams) {
 
 TEST_F(TorstenOdeTest_neutropenia, eigen_vector_ckrk) {
   using torsten::dsolve::PMXVariadicOdeSystem;
-  using torsten::dsolve::PMXOdeSystem;
+  
   using stan::math::value_of;
   using torsten::dsolve::PMXOdeintIntegrator;
 

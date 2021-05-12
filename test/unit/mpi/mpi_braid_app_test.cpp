@@ -8,7 +8,7 @@
 #include <vector>
 #include <memory>
 
-using torsten::dsolve::PMXOdeSystem;
+
 using torsten::dsolve::PMXCvodesIntegrator;
 using torsten::dsolve::PMXOdeService;
 using torsten::PMXCvodesSensMethod;
