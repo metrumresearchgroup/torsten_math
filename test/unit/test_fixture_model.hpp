@@ -15,11 +15,81 @@
 #include <vector>
 #include <string>
 
+
+/** 
+ * Helper functor to apply solver. Default solver assumes numerical ODE for 
+ * <code>solver_func_t</code>.
+ */
+template<typename solver_func_t>
+struct apply_solver {
+  solver_func_t const& s;
+  apply_solver(solver_func_t const& sol) : s(sol) {}
+
+  template<typename child_test_t>
+  auto operator()(child_test_t* test_ptr) {
+  typename child_test_t::ode_t f;
+  return s(f, test_ptr -> ncmt, test_ptr -> time, test_ptr -> amt, test_ptr -> rate, test_ptr -> ii, test_ptr -> evid, test_ptr -> cmt, test_ptr -> addl, test_ptr -> ss,
+           test_ptr -> theta, test_ptr -> biovar, test_ptr -> tlag,
+           test_ptr -> rtol, test_ptr -> atol, test_ptr -> max_num_steps,
+           test_ptr -> as_rtol, test_ptr -> as_atol, test_ptr -> as_max_num_steps,
+           nullptr);
+  }
+};
+
+template<>
+struct apply_solver<pmx_solve_onecpt_functor> {
+  pmx_solve_onecpt_functor const& s;
+  apply_solver(pmx_solve_onecpt_functor const& sol) : s(sol) {}
+
+  template<typename child_test_t>
+  auto operator()(child_test_t* test_ptr) {
+  return s(test_ptr -> time, test_ptr -> amt, test_ptr -> rate, test_ptr -> ii, test_ptr -> evid, test_ptr -> cmt, test_ptr -> addl, test_ptr -> ss,
+           test_ptr -> theta, test_ptr -> biovar, test_ptr -> tlag);
+  }
+};
+
+template<>
+struct apply_solver<pmx_solve_twocpt_functor> {
+  pmx_solve_twocpt_functor const& s;
+  apply_solver(pmx_solve_twocpt_functor const& sol) : s(sol) {}
+
+  template<typename child_test_t>
+  auto operator()(child_test_t* test_ptr) {
+  return s(test_ptr -> time, test_ptr -> amt, test_ptr -> rate, test_ptr -> ii, test_ptr -> evid, test_ptr -> cmt, test_ptr -> addl, test_ptr -> ss,
+           test_ptr -> theta, test_ptr -> biovar, test_ptr -> tlag);
+  }
+};
+
+template<>
+struct apply_solver<pmx_solve_onecpt_effcpt_functor> {
+  pmx_solve_onecpt_effcpt_functor const& s;
+  apply_solver(pmx_solve_onecpt_effcpt_functor const& sol) : s(sol) {}
+
+  template<typename child_test_t>
+  auto operator()(child_test_t* test_ptr) {
+  return s(test_ptr -> time, test_ptr -> amt, test_ptr -> rate, test_ptr -> ii, test_ptr -> evid, test_ptr -> cmt, test_ptr -> addl, test_ptr -> ss,
+           test_ptr -> theta, test_ptr -> biovar, test_ptr -> tlag);
+  }
+};
+
+template<>
+struct apply_solver<pmx_solve_linode_functor> {
+  pmx_solve_linode_functor const& s;
+  apply_solver(pmx_solve_linode_functor const& sol) : s(sol) {}
+
+  template<typename child_test_t>
+  auto operator()(child_test_t* test_ptr) {
+    return s(test_ptr -> time, test_ptr -> amt, test_ptr -> rate, test_ptr -> ii, test_ptr -> evid,
+             test_ptr -> cmt, test_ptr -> addl, test_ptr -> ss, test_ptr -> pMatrix,
+             test_ptr -> biovar, test_ptr -> tlag);
+  }
+};
+
 template<typename T>
-struct TorstenPMXTestBase;
+struct TorstenPMXTest;
 
 template<template<typename> class child_type, typename T>
-struct TorstenPMXTestBase<child_type<T> > : public testing::Test {
+struct TorstenPMXTest<child_type<T> > : public testing::Test {
   /// solver type for analytical solutions
   using sol1_t = std::tuple_element_t<0, T>;
   /// solver type for numerical ode solutions
@@ -73,7 +143,7 @@ struct TorstenPMXTestBase<child_type<T> > : public testing::Test {
   int as_max_num_steps;
   std::ostream* msgs;
 
-  TorstenPMXTestBase() : 
+  TorstenPMXTest() : 
     t0(0.0),
     rtol             {1.E-10},
     atol             {1.E-10},
@@ -86,7 +156,7 @@ struct TorstenPMXTestBase<child_type<T> > : public testing::Test {
     // nested.set_zero_all_adjoints();    
   }
 
-  void resize(int n) {
+  void reset_events(int n) {
     nt = n;
     time.resize(nt);
     amt .resize(nt);
@@ -107,17 +177,29 @@ struct TorstenPMXTestBase<child_type<T> > : public testing::Test {
     std::fill(ss  .begin(), ss  .end(), 0);
   }
 
+  void compare_val(Eigen::MatrixXd const& x) {
+    child_type<T>& fixture = static_cast<child_type<T>&>(*this);
+    auto res1 = apply_solver<sol1_t>(sol1)(&fixture);
+    EXPECT_MAT_VAL_FLOAT_EQ(res1, x);
+  }
+
+  void compare_val(Eigen::MatrixXd const& x, double tol) {
+    child_type<T>& fixture = static_cast<child_type<T>&>(*this);
+    auto res1 = apply_solver<sol1_t>(sol1)(&fixture);
+    EXPECT_MAT_VAL_NEAR(res1, x, tol);
+  }
+
   void compare_solvers_val() {
     child_type<T>& fixture = static_cast<child_type<T>&>(*this);
-    auto res1 = sol1(time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
-    auto res2 = fixture.solver2_solution();
+    auto res1 = apply_solver<sol1_t>(sol1)(&fixture);
+    auto res2 = apply_solver<sol2_t>(sol2)(&fixture);
     EXPECT_MAT_VAL_FLOAT_EQ(res1, res2);
   }
 
   void compare_solvers_val(double tol) {
     child_type<T>& fixture = static_cast<child_type<T>&>(*this);
-    auto res1 = sol1(time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
-    auto res2 = fixture.solver2_solution();
+    auto res1 = apply_solver<sol1_t>(sol1)(&fixture);
+    auto res2 = apply_solver<sol2_t>(sol2)(&fixture);
     EXPECT_MAT_VAL_NEAR(res1, res2, tol);
   }
 
@@ -126,8 +208,8 @@ struct TorstenPMXTestBase<child_type<T> > : public testing::Test {
   void compare_solvers_adj(std::vector<stan::math::var>& p, double tol,
                            const char* diagnostic_msg) {
     child_type<T>& fixture = static_cast<child_type<T>&>(*this);
-    auto res1 = sol1(time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
-    auto res2 = fixture.solver2_solution();
+    auto res1 = apply_solver<sol1_t>(sol1)(&fixture);
+    auto res2 = apply_solver<sol2_t>(sol2)(&fixture);
     EXPECT_MAT_ADJ_NEAR(res1, res2, p, this -> nested, tol, diagnostic_msg);
   }
 
@@ -169,48 +251,20 @@ struct TorstenPMXTestBase<child_type<T> > : public testing::Test {
     return sol1(time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, x_);
   }
 
-#define ADD_FD_TEST(NAME) \
-  void test_finite_diff_##NAME(double h, double tol) {\
-    EXPECT_MAT_FUNC_POSITIVE_PARAM_NEAR_FD(test_func_##NAME, NAME, nested, h, tol, #NAME); \
+#define ADD_FD_TEST(NAME, ARG_VEC)                                      \
+  void test_finite_diff_##NAME(double h, double tol) {                  \
+    EXPECT_MAT_FUNC_POSITIVE_PARAM_NEAR_FD(test_func_##NAME, ARG_VEC, nested, h, tol, #NAME); \
   }
 
-  ADD_FD_TEST(amt);
-  ADD_FD_TEST(time);
-  ADD_FD_TEST(rate);
-  ADD_FD_TEST(ii);
-  ADD_FD_TEST(theta);
-  ADD_FD_TEST(biovar);
-  ADD_FD_TEST(tlag);
+  ADD_FD_TEST(amt, amt);
+  ADD_FD_TEST(time, time);
+  ADD_FD_TEST(rate, rate);
+  ADD_FD_TEST(ii, ii);
+  ADD_FD_TEST(theta, theta[0]);
+  ADD_FD_TEST(biovar, biovar[0]);
+  ADD_FD_TEST(tlag, tlag[0]);
 
 #undef ADD_FD_TEST
-};
-
-/** 
- * Default test fixture assuming numerical ODE solver for 
- * <code>sol2_t</code>.
- */
-template<typename T>
-struct TorstenPMXTest : public TorstenPMXTestBase<TorstenPMXTest<T> >
-{
-  auto solver2_solution () {
-    typename TorstenPMXTestBase<TorstenPMXTest<T> >::ode_t f;
-    return this -> sol2(f, this -> ncmt, this -> time, this -> amt, this -> rate, this -> ii, this -> evid, this -> cmt, this -> addl, this ->
-                        ss, this -> theta, this -> biovar, this -> tlag, this -> rtol, this -> atol, this -> max_num_steps, this -> as_rtol, this -> as_atol, this -> as_max_num_steps,
-                        nullptr);
-  }
-};
-
-/** 
- * Specialization of test fixture assuming linear ODE solver for 
- * <code>sol2_t</code>.
- */
-template<typename sol1_type, typename... Ts>
-struct TorstenPMXTest<std::tuple<sol1_type, pmx_solve_linode_functor, Ts...>> :
-  public TorstenPMXTestBase<TorstenPMXTest<std::tuple<sol1_type, pmx_solve_linode_functor, Ts...>>>
-{
-  auto solver2_solution () {
-    return this -> sol2(this -> time, this -> amt, this -> rate, this -> ii, this -> evid, this -> cmt, this -> addl, this -> ss, this -> pMatrix, this -> biovar, this -> tlag);
-  }
 };
 
 #endif

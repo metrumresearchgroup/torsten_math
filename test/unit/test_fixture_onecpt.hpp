@@ -13,11 +13,11 @@
 #include <string>
 
 template<typename T>
-struct test_onecpt : public TorstenPMXTest<T> {
+struct test_onecpt : public TorstenPMXTest<test_onecpt<T> > {
   test_onecpt() {
     this -> ncmt = 2;
 
-    this -> resize(10);
+    this -> reset_events(10);
 
     this -> theta.resize(1);
     this -> theta[0] = {10, 80, 1.2};

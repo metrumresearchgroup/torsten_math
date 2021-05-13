@@ -6,12 +6,13 @@
 #define PMX_ADD_FUNCTOR(name, func)             \
   struct name##_functor {                       \
     template <typename... Ts>                   \
-    auto operator()(Ts... args) {               \
+    auto operator()(Ts... args) const {         \
       return func(args...);                     \
     }                                           \
   };
 
 PMX_ADD_FUNCTOR(pmx_solve_onecpt, torsten::pmx_solve_onecpt);
+PMX_ADD_FUNCTOR(pmx_solve_twocpt, torsten::pmx_solve_twocpt);
 PMX_ADD_FUNCTOR(pmx_solve_linode, torsten::pmx_solve_linode);
 PMX_ADD_FUNCTOR(pmx_solve_adams, torsten::pmx_solve_adams);
 PMX_ADD_FUNCTOR(pmx_solve_bdf, torsten::pmx_solve_bdf);
