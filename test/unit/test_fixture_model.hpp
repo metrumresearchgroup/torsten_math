@@ -179,6 +179,15 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
     EXPECT_MAT_VAL_NEAR(res1, x, tol);
   }
 
+  void compare_rel_val(Eigen::MatrixXd const& x, double rtol) {
+    child_type<T>& fixture = static_cast<child_type<T>&>(*this);
+    Eigen::ArrayXXd res = (stan::math::value_of(apply_solver(sol1, &fixture))).array();
+    Eigen::ArrayXXd xr = x.array();
+    Eigen::ArrayXXd rel = (res + 1) / (xr + 1); // add 1 to remove zero entries
+    Eigen::ArrayXXd one = Eigen::ArrayXXd::Zero(xr.rows(), xr.cols()) + 1;
+    EXPECT_MAT_VAL_NEAR((rel.matrix()), (one.matrix()), rtol);
+  }
+
   void compare_solvers_val() {
     child_type<T>& fixture = static_cast<child_type<T>&>(*this);
     auto res1 = apply_solver(sol1, &fixture);
@@ -203,43 +212,75 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
     EXPECT_MAT_ADJ_NEAR(res1, res2, p, this -> nested, tol, diagnostic_msg);
   }
 
-  template<typename x_type>
-  auto test_func_time(std::vector<x_type> const& x) {
-    return sol1(x, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+#define ADD_TEST_FUNC(NAME)                             \
+  template<typename x_type>                             \
+  auto test_func_##NAME(std::vector<x_type> const& x) { \
+    return test_func_##NAME##_impl(x, sol1);              \
   }
 
-  template<typename x_type>
-  auto test_func_amt(std::vector<x_type> const& x) {
-    return sol1(time, x, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+#define ADD_CPT_TEST_FUNC_IMPL(NAME, ...)                               \
+  template<typename x_type, typename solver_func_t,                     \
+           stan::require_any_t<std::is_same<solver_func_t, pmx_solve_onecpt_functor>, \
+                               std::is_same<solver_func_t, pmx_solve_twocpt_functor>, \
+                               std::is_same<solver_func_t, pmx_solve_onecpt_effcpt_functor>>* = nullptr> \
+  auto test_func_##NAME##_impl(std::vector<x_type> const& x, solver_func_t const& s) { \
+    return s(__VA_ARGS__);                                              \
   }
 
-  template<typename x_type>
-  auto test_func_rate(std::vector<x_type> const& x) {
-    return sol1(time, amt, x, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+#define ADD_ODE_TEST_FUNC_IMPL(NAME, ...)                               \
+  template<typename x_type, typename solver_func_t,                     \
+           stan::require_any_t<std::is_same<solver_func_t, pmx_solve_adams_functor>, \
+                               std::is_same<solver_func_t, pmx_solve_bdf_functor>, \
+                               std::is_same<solver_func_t, pmx_solve_rk45_functor> >* = nullptr> \
+  auto test_func_##NAME##_impl(std::vector<x_type> const& x, solver_func_t const& s) { \
+    ode_t f;                                                            \
+    return s(f, ncmt, __VA_ARGS__, rtol, atol, max_num_steps, as_rtol, as_atol, as_max_num_steps, msgs); \
   }
 
+  ADD_CPT_TEST_FUNC_IMPL(time, x, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  ADD_ODE_TEST_FUNC_IMPL(time, x, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  ADD_TEST_FUNC(time)
+
+  ADD_CPT_TEST_FUNC_IMPL(amt, time, x, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  ADD_ODE_TEST_FUNC_IMPL(amt, time, x, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  ADD_TEST_FUNC(amt)
+
+  ADD_CPT_TEST_FUNC_IMPL(rate, time, amt, x, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  ADD_ODE_TEST_FUNC_IMPL(rate, time, amt, x, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  ADD_TEST_FUNC(rate)
+
+  ADD_CPT_TEST_FUNC_IMPL(ii, time, amt, rate, x, evid, cmt, addl, ss, theta, biovar, tlag);
+  ADD_ODE_TEST_FUNC_IMPL(ii, time, amt, rate, x, evid, cmt, addl, ss, theta, biovar, tlag);
+  ADD_TEST_FUNC(ii)
+
+
+  ADD_CPT_TEST_FUNC_IMPL(theta, time, amt, rate, ii, evid, cmt, addl, ss, x, biovar, tlag);
+  ADD_ODE_TEST_FUNC_IMPL(theta, time, amt, rate, ii, evid, cmt, addl, ss, x, biovar, tlag);
   template<typename x_type>
-  auto test_func_ii(std::vector<x_type> const& x) {
-    return sol1(time, amt, rate, x, evid, cmt, addl, ss, theta, biovar, tlag);
+  auto test_func_theta(std::vector<x_type> const& x_) {
+    std::vector<std::vector<x_type> > x{x_};
+    return test_func_theta(time, amt, rate, ii, evid, cmt, addl, ss, x, biovar, tlag);
   }
 
+  ADD_CPT_TEST_FUNC_IMPL(biovar, time, amt, rate, ii, evid, cmt, addl, ss, theta, x, tlag);
+  ADD_ODE_TEST_FUNC_IMPL(biovar, time, amt, rate, ii, evid, cmt, addl, ss, theta, x, tlag);
   template<typename x_type>
-  auto test_func_theta(std::vector<x_type> const& x) {
-    std::vector<std::vector<x_type> > x_{x};
-    return sol1(time, amt, rate, ii, evid, cmt, addl, ss, x_, biovar, tlag);
+  auto test_func_biovar(std::vector<x_type> const& x_) {
+    std::vector<std::vector<x_type> > x{x_};
+    return test_func_biovar(time, amt, rate, ii, evid, cmt, addl, ss, theta, x, tlag);
   }
 
+  ADD_CPT_TEST_FUNC_IMPL(tlag, time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, x);
+  ADD_ODE_TEST_FUNC_IMPL(tlag, time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, x);
   template<typename x_type>
-  auto test_func_biovar(std::vector<x_type> const& x) {
-    std::vector<std::vector<x_type> > x_{x};
-    return sol1(time, amt, rate, ii, evid, cmt, addl, ss, theta, x_, tlag);
+  auto test_func_tlag(std::vector<x_type> const& x_) {
+    std::vector<std::vector<x_type> > x{x_};
+    return test_func_tlag(time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, x);
   }
 
-  template<typename x_type>
-  auto test_func_tlag(std::vector<x_type> const& x) {
-    std::vector<std::vector<x_type> > x_{x};
-    return sol1(time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, x_);
-  }
+#undef ADD_CPT_TEST_FUNC_IMPL
+#undef ADD_ODE_TEST_FUNC_IMPL
+#undef ADD_TEST_FUNC
 
 #define ADD_FD_TEST(NAME, ARG_VEC)                                      \
   void test_finite_diff_##NAME(double h, double tol) {                  \
