@@ -129,11 +129,10 @@ namespace torsten{
 
       try {
         EM em(id, events_rec, theta, event_ctrl..., ode_data...);
-        auto events = em.events();
         int ikeep = 0, iev = 0;
         while(ikeep < em.nKeep) {
           stepper(iev, init, em, integrator, scalar_pars...);
-          if(events.keep(iev)) {
+          if(em.events().keep(iev)) {
             res.col(ikeep) = init;
             ikeep++;
           }
@@ -151,7 +150,7 @@ namespace torsten{
     void stepper(int i, PKRec<typename EM::T_scalar>& init, const EM& em,
                  const integrator_type& integrator,
                  const scalar_pars_type... scalar_pars) {
-      auto events = em.events();
+      auto& events = em.events();
 
       using scalar = typename EM::T_scalar;
       typename EM::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
@@ -184,7 +183,7 @@ namespace torsten{
       using std::vector;
       using stan::math::var;
 
-      auto events = em.events();
+      auto& events = em.events();
 
       typename EM::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
@@ -216,7 +215,7 @@ namespace torsten{
       using std::vector;
       using stan::math::var;
 
-      auto events = em.events();
+      auto& events = em.events();
 
       typename EM::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 
@@ -358,7 +357,7 @@ namespace torsten{
       //     rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
       //   } else {
       //     EM em(id, events_rec);
-      //     auto events = em.events();
+      //     auto& events = em.events();
       //     PKRec<scalar> init(nCmt); init.setZero();
       //     PKRec<double> pred1 = VectorXd::Zero(res_d[id].rows());
 
@@ -391,7 +390,7 @@ namespace torsten{
             rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
           } else {
             EM em(id, events_rec, theta, event_ctrl..., ode_data...);
-            auto events = em.events();
+            auto& events = em.events();
             PKRec<scalar> init(nCmt); init.setZero();
             PKRec<double> pred1 = VectorXd::Zero(res_d[id].rows());
 
@@ -463,7 +462,7 @@ namespace torsten{
         if (rank == my_worker_id) {
           try {
             EM em(id, events_rec, theta, event_ctrl..., ode_data...);
-            auto events = em.events();
+            auto& events = em.events();
             init.setZero();
             int ikeep = 0, iev = 0;
             while(ikeep < em.nKeep) {
