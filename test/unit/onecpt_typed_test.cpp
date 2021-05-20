@@ -6,6 +6,26 @@
 
 TYPED_TEST_SUITE_P(test_onecpt);
 
+TYPED_TEST_P(test_onecpt, single_bolus_with_tlag) {
+  this -> reset_events(2);      // only need two events
+  this -> amt[0] = 1000;
+  this -> evid[0] = 1;
+  this -> cmt[0] = 1;
+  this -> ii[0] = 0;
+  this -> addl[0] = 0;
+  this -> time[0] = 0.0;
+  this -> tlag[0][0] = 1.5;
+  this -> time[1] = 2.5;
+
+  this -> compare_solvers_val();
+  this -> compare_solvers_adj(this -> amt, 1.e-8, "AMT");
+  this -> compare_solvers_adj(this -> rate, 1.e-8, "RATE");
+  this -> compare_solvers_adj(this -> ii, 5.e-6, "II");
+  this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
+  this -> compare_solvers_adj(this -> biovar[0], 1.e-6, "bioavailability");
+  this -> compare_solvers_adj(this -> tlag[0], 5.e-7, "lag time");
+}
+
 TYPED_TEST_P(test_onecpt, multiple_bolus) {
   Eigen::MatrixXd amounts(10, 2);
   amounts << 1000.0, 0.0,
@@ -66,26 +86,6 @@ TYPED_TEST_P(test_onecpt, multiple_bolus_addl) {
   this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
   this -> compare_solvers_adj(this -> biovar[0], 1.e-6, "bioavailability");
   this -> compare_solvers_adj(this -> tlag[0], 1.e-8, "lag time");
-}
-
-TYPED_TEST_P(test_onecpt, single_bolus_with_tlag) {
-  this -> reset_events(2);      // only need two events
-  this -> amt[0] = 1000;
-  this -> evid[0] = 1;
-  this -> cmt[0] = 1;
-  this -> ii[0] = 0;
-  this -> addl[0] = 0;
-  this -> time[0] = 0.0;
-  this -> tlag[0][0] = 1.5;
-  this -> time[1] = 2.5;
-
-  this -> compare_solvers_val();
-  this -> compare_solvers_adj(this -> amt, 1.e-8, "AMT");
-  this -> compare_solvers_adj(this -> rate, 1.e-8, "RATE");
-  this -> compare_solvers_adj(this -> ii, 5.e-6, "II");
-  this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
-  this -> compare_solvers_adj(this -> biovar[0], 1.e-6, "bioavailability");
-  this -> compare_solvers_adj(this -> tlag[0], 5.e-7, "lag time");
 }
 
 TYPED_TEST_P(test_onecpt, multiple_bolus_with_tlag) {

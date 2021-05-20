@@ -223,7 +223,7 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
            stan::require_any_t<std::is_same<solver_func_t, pmx_solve_onecpt_functor>, \
                                std::is_same<solver_func_t, pmx_solve_twocpt_functor>, \
                                std::is_same<solver_func_t, pmx_solve_onecpt_effcpt_functor>>* = nullptr> \
-  auto test_func_##NAME##_impl(std::vector<x_type> const& x, solver_func_t const& s) { \
+  auto test_func_##NAME##_impl(x_type const& x, solver_func_t const& s) { \
     return s(__VA_ARGS__);                                              \
   }
 
@@ -232,7 +232,7 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
            stan::require_any_t<std::is_same<solver_func_t, pmx_solve_adams_functor>, \
                                std::is_same<solver_func_t, pmx_solve_bdf_functor>, \
                                std::is_same<solver_func_t, pmx_solve_rk45_functor> >* = nullptr> \
-  auto test_func_##NAME##_impl(std::vector<x_type> const& x, solver_func_t const& s) { \
+  auto test_func_##NAME##_impl(x_type const& x, solver_func_t const& s) { \
     ode_t f;                                                            \
     return s(f, ncmt, __VA_ARGS__, rtol, atol, max_num_steps, as_rtol, as_atol, as_max_num_steps, msgs); \
   }
@@ -259,7 +259,7 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
   template<typename x_type>
   auto test_func_theta(std::vector<x_type> const& x_) {
     std::vector<std::vector<x_type> > x{x_};
-    return test_func_theta(time, amt, rate, ii, evid, cmt, addl, ss, x, biovar, tlag);
+    return test_func_theta_impl(x, sol1);
   }
 
   ADD_CPT_TEST_FUNC_IMPL(biovar, time, amt, rate, ii, evid, cmt, addl, ss, theta, x, tlag);
@@ -267,7 +267,7 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
   template<typename x_type>
   auto test_func_biovar(std::vector<x_type> const& x_) {
     std::vector<std::vector<x_type> > x{x_};
-    return test_func_biovar(time, amt, rate, ii, evid, cmt, addl, ss, theta, x, tlag);
+    return test_func_biovar_impl(x, sol1);
   }
 
   ADD_CPT_TEST_FUNC_IMPL(tlag, time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, x);
@@ -275,7 +275,7 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
   template<typename x_type>
   auto test_func_tlag(std::vector<x_type> const& x_) {
     std::vector<std::vector<x_type> > x{x_};
-    return test_func_tlag(time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, x);
+    return test_func_tlag_impl(x, sol1);
   }
 
 #undef ADD_CPT_TEST_FUNC_IMPL
