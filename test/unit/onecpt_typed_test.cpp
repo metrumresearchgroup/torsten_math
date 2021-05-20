@@ -197,39 +197,43 @@ TYPED_TEST_P(test_onecpt, single_infusion) {
              210.47626, 876.28631,
              19.09398, 844.11769;
   Eigen::MatrixXd x = amounts.transpose();
-
   this -> compare_val(x);
+
+  this -> compare_solvers_adj(this -> amt, 1.e-6, "AMT");
+  this -> compare_solvers_adj(this -> rate, 1.e-6, "RATE");
+  this -> compare_solvers_adj(this -> theta[0], 1.5e-6, "theta");
+}
+
+TYPED_TEST_P(test_onecpt, single_infusion_cent) {
+  this -> amt[0] = 1000;
+  this -> rate[0] = 600;
+  this -> evid[0] = 1;
+  this -> cmt[0] = 2;
+
+  Eigen::MatrixXd amounts(10, 2);
+  amounts << 
+    0,           0,
+    0, 147.6804745,
+    0, 290.8172984,
+    0, 429.5502653,
+    0, 564.0148675,
+    0, 694.3424289,
+    0, 820.6602327,
+    0, 893.3511610,
+    0,  865.865635,
+    0, 674.3368348;
+  Eigen::MatrixXd x = amounts.transpose();
+  this -> compare_val(x, 5.e-7);
+
+  this -> amt[0] = 1200;
+  this -> rate[0] = 1200;
+  this -> cmt[0] = 2;
+  this -> addl[0] = 0;
 
   this -> compare_solvers_adj(this -> amt, 1.e-6, "AMT");
   this -> compare_solvers_adj(this -> rate, 1.e-6, "RATE");
   this -> compare_solvers_adj(this -> theta[0], 1.e-6, "theta");
 }
-
-// TYPED_TEST_P(test_onecpt, single_infusion_cent) {
-//   this -> reset_events(2)
-//   this -> amt[0] = 1200;
-//   this -> rate[0] = 1200;
-//   this -> addl[0] = 0;
-
-//   Eigen::MatrixXd amounts(10, 2);
-//   amounts << 0.00000,   0.00000,
-//              259.18178,  40.38605,
-//              451.18836, 145.61440,
-//              593.43034, 296.56207,
-//              698.80579, 479.13371,
-//              517.68806, 642.57025,
-//              383.51275, 754.79790,
-//              284.11323, 829.36134,
-//              210.47626, 876.28631,
-//              19.09398, 844.11769;
-//   Eigen::MatrixXd x = amounts.transpose();
-
-//   this -> compare_val(x);
-
-//   this -> compare_solvers_adj(this -> amt, 1.e-6, "AMT");
-//   this -> compare_solvers_adj(this -> rate, 1.e-6, "RATE");
-//   this -> compare_solvers_adj(this -> theta[0], 1.e-6, "theta");
-// }
 
 TYPED_TEST_P(test_onecpt, multiple_infusion) {
   this -> reset_events(3);
@@ -251,51 +255,56 @@ TYPED_TEST_P(test_onecpt, multiple_infusion) {
   this -> compare_solvers_adj(this -> tlag[0], 1.e-8, "lag time");  
 }
 
-// TYPED_TEST_P(test_onecpt, time_dependent_theta) {
-//   this -> reset_events(11);
-//   int nt = this -> nt;
+TYPED_TEST_P(test_onecpt, time_dependent_theta) {
+  this -> reset_events(11);
+  int nt = this -> nt;
 
-//   this -> theta.resize(nt);
-//   for (int i = 0; i < nt; i++) {
-//     this -> theta[i].resize(3);
-//     if (i < 6) {
-//       this -> theta[i][0] = 10; // CL      
-//     } else {
-//       this -> theta[i][0] = 50; // CL is piece-wise contant      
-//     } 
-//     this -> theta[i][1] = 80; // Vc
-//     this -> theta[i][2] = 1.2; // ka
-//   }
+  this -> theta.resize(nt);
+  this -> pMatrix.resize(nt);
+  for (int i = 0; i < nt; i++) {
+    this -> theta[i].resize(3);
+    this -> pMatrix[i].resize(2, 2);
+    if (i < 6) {
+      this -> theta[i][0] = 10; // CL      
+    } else {
+      this -> theta[i][0] = 50; // CL is piece-wise contant      
+    } 
+    this -> theta[i][1] = 80; // Vc
+    this -> theta[i][2] = 1.2; // ka
+    // for linode
+    this -> pMatrix[i] << - this -> theta[i][2], 0.0,
+      this -> theta[i][2], - this -> theta[i][0]/ this -> theta[i][1];
+  }
 
-//   this -> time[0] = 0.0;
-//   for(int i = 1; i < nt; i++) {
-//     this -> time[i] = this -> time[i - 1] + 2.5; 
-//   }
+  this -> time[0] = 0.0;
+  for(int i = 1; i < nt; i++) {
+    this -> time[i] = this -> time[i - 1] + 2.5; 
+  }
 
-//   this -> amt[0] = 1000;
-//   this -> cmt[0] = 1;
-//   this -> evid[0] = 1;
-//   this -> ii[0] = 12;
-//   this -> addl[0] = 1;
+  this -> amt[0] = 1000;
+  this -> cmt[0] = 1;
+  this -> evid[0] = 1;
+  this -> ii[0] = 12;
+  this -> addl[0] = 1;
 
-//   Eigen::MatrixXd amounts(nt, 2);
-//   amounts << 1000.0, 0.0,
-//     4.978707e+01, 761.1109513,
-//     2.478752e+00, 594.7341503,
-//     1.234098e-01, 437.0034049,
-//     6.144212e-03, 319.8124495,
-//     5.488119e+02, 670.0046601,
-//     2.732374e+01, 323.4948561,
-//     1.360369e+00, 76.9219400,
-//     6.772877e-02, 16.5774607,
-//     3.372017e-03, 3.4974152,
-//     1.678828e-04, 0.7342228;
-//   Eigen::MatrixXd x = amounts.transpose();
+  Eigen::MatrixXd amounts(nt, 2);
+  amounts << 1000.0, 0.0,
+    4.978707e+01, 761.1109513,
+    2.478752e+00, 594.7341503,
+    1.234098e-01, 437.0034049,
+    6.144212e-03, 319.8124495,
+    5.488119e+02, 670.0046601,
+    2.732374e+01, 323.4948561,
+    1.360369e+00, 76.9219400,
+    6.772877e-02, 16.5774607,
+    3.372017e-03, 3.4974152,
+    1.678828e-04, 0.7342228;
+  Eigen::MatrixXd x = amounts.transpose();
 
-//   this -> compare_val(x);
-//   this -> compare_solvers_val();
-//   this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
-// }
+  this -> compare_val(x);
+  this -> compare_solvers_val();
+  this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
+}
 
 REGISTER_TYPED_TEST_SUITE_P(test_onecpt,
                             multiple_bolus,           
@@ -306,9 +315,9 @@ REGISTER_TYPED_TEST_SUITE_P(test_onecpt,
                             multiple_bolus_ss,        
                             multiple_infusion_ss,     
                             single_infusion,          
-                            multiple_infusion);
-// ,
-//                             time_dependent_theta
+                            single_infusion_cent,
+                            multiple_infusion,
+                            time_dependent_theta);
 
 using onecpt_test_types = boost::mp11::mp_product<
   std::tuple,
@@ -317,31 +326,14 @@ using onecpt_test_types = boost::mp11::mp_product<
                    pmx_solve_rk45_functor,
                    pmx_solve_bdf_functor,
                    pmx_solve_adams_functor>, // solver 2
-  ::testing::Types<stan::math::var_value<double>>,  // TIME
-  ::testing::Types<stan::math::var_value<double>>,  // AMT
-  ::testing::Types<stan::math::var_value<double>> , // RATE
-  ::testing::Types<stan::math::var_value<double>> , // II
-  ::testing::Types<stan::math::var_value<double>> , // PARAM
-  ::testing::Types<stan::math::var_value<double>> , // BIOVAR
-  ::testing::Types<stan::math::var_value<double>> , // TLAG
+  ::testing::Types<double, stan::math::var_value<double>>,  // TIME
+  ::testing::Types<double, stan::math::var_value<double>>,  // AMT
+  ::testing::Types<double, stan::math::var_value<double>> , // RATE
+  ::testing::Types<double, stan::math::var_value<double>> , // II
+  ::testing::Types<double, stan::math::var_value<double>> , // PARAM
+  ::testing::Types<double, stan::math::var_value<double>> , // BIOVAR
+  ::testing::Types<double, stan::math::var_value<double>> , // TLAG
   ::testing::Types<torsten::PMXOneCptODE>                   // ODE
     >;
-
-// using onecpt_test_types = boost::mp11::mp_product<
-//   std::tuple,
-//   ::testing::Types<pmx_solve_onecpt_functor>, // solver 1
-//   ::testing::Types<pmx_solve_linode_functor,
-//                    pmx_solve_rk45_functor,
-//                    pmx_solve_bdf_functor,
-//                    pmx_solve_adams_functor>, // solver 2
-//   ::testing::Types<double, stan::math::var_value<double>>,  // TIME
-//   ::testing::Types<double, stan::math::var_value<double>>,  // AMT
-//   ::testing::Types<double, stan::math::var_value<double>> , // RATE
-//   ::testing::Types<double, stan::math::var_value<double>> , // II
-//   ::testing::Types<double, stan::math::var_value<double>> , // PARAM
-//   ::testing::Types<double, stan::math::var_value<double>> , // BIOVAR
-//   ::testing::Types<double, stan::math::var_value<double>> , // TLAG
-//   ::testing::Types<torsten::PMXOneCptODE>                   // ODE
-//     >;
 
 INSTANTIATE_TYPED_TEST_SUITE_P(PMX, test_onecpt, onecpt_test_types);

@@ -208,8 +208,13 @@ namespace torsten {
                  double t0,
                  const Tt& t1,
                  const T_par&... args) const {
-        std::vector<Tt> ts{t1};
-        return (*this)(f, y0, t0, ts, args...)[0];
+        const double dt_min = 1.e-14;
+        if (stan::math::value_of(t1) - stan::math::value_of(t0) > dt_min) {
+          std::vector<Tt> ts{t1};
+          return (*this)(f, y0, t0, ts, args...)[0];
+        } else {                // single-step forward Euler
+          return y0 + (t1 - t0) * f(t0, y0, nullptr, args...);
+        }
       }
 
       template <typename F, typename Tt, typename T_initial, typename... T_par>

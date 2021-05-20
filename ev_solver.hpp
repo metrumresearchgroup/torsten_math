@@ -130,6 +130,7 @@ namespace torsten{
       try {
         EM em(id, events_rec, theta, event_ctrl..., ode_data...);
         int ikeep = 0, iev = 0;
+
         while(ikeep < em.nKeep) {
           stepper(iev, init, em, integrator, scalar_pars...);
           if(em.events().keep(iev)) {
@@ -151,7 +152,6 @@ namespace torsten{
                  const integrator_type& integrator,
                  const scalar_pars_type... scalar_pars) {
       auto& events = em.events();
-
       using scalar = typename EM::T_scalar;
       typename EM::T_time tprev = i == 0 ? events.time(0) : events.time(i-1);
 

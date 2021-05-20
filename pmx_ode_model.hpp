@@ -348,9 +348,7 @@ namespace torsten {
       const double t0_d = stan::math::value_of(t0);
       std::vector<Tt1> ts(time_step(t0, t1));
       PMXOdeFunctorRateAdaptor<F> f_rate;
-      if (t1 - t0 > dt_min) {
-        y = integrator(f_rate, y, t0_d, ts[0], par_, rate, x_r_, x_i_);
-      }
+      y = integrator(f_rate, y, t0_d, ts[0], par_, rate, x_r_, x_i_);
     }
 
     /** 

@@ -30,7 +30,6 @@ struct test_onecpt : public TorstenPMXTest<test_onecpt<T> > {
     this -> pMatrix[0] << - this -> theta[0][2], 0.0,
       this -> theta[0][2], - this -> theta[0][0]/ this -> theta[0][1];
 
-    this -> time[0] = 0.0;
     for(int i = 0; i < this -> nt; i++) {
       this -> time[i] = i * 0.25; 
     }
