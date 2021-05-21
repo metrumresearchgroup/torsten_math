@@ -127,10 +127,10 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
                                std::is_same<solver_func_t, pmx_solve_rk45_functor> >* = nullptr>
   auto apply_solver(solver_func_t const& sol, child_test_t* test_ptr) {
     typename child_test_t::ode_t f;
-    return sol(f, test_ptr -> ncmt, test_ptr -> time, test_ptr -> amt, test_ptr -> rate, test_ptr -> ii, test_ptr -> evid, test_ptr -> cmt, test_ptr -> addl, test_ptr -> ss,
-               test_ptr -> theta, test_ptr -> biovar, test_ptr -> tlag,
-               test_ptr -> rtol, test_ptr -> atol, test_ptr -> max_num_steps,
-               test_ptr -> as_rtol, test_ptr -> as_atol, test_ptr -> as_max_num_steps,
+    return sol(f, ncmt, time, amt, rate, ii, evid, cmt, addl, ss,
+               theta, biovar, tlag,
+               rtol, atol, max_num_steps,
+               as_rtol, as_atol, as_max_num_steps,
                nullptr);
   }
 
@@ -147,8 +147,7 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
                                std::is_same<solver_func_t, pmx_solve_twocpt_functor>,
                                std::is_same<solver_func_t, pmx_solve_onecpt_effcpt_functor>>* = nullptr>
   auto apply_solver(solver_func_t const& sol, child_test_t* test_ptr) {
-    return sol(test_ptr -> time, test_ptr -> amt, test_ptr -> rate, test_ptr -> ii, test_ptr -> evid, test_ptr -> cmt, test_ptr -> addl, test_ptr -> ss,
-               test_ptr -> theta, test_ptr -> biovar, test_ptr -> tlag);
+    return sol(time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
   }
 
   /** 
@@ -162,9 +161,9 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
   template<typename solver_func_t, typename child_test_t,
            stan::require_any_t<std::is_same<solver_func_t, pmx_solve_linode_functor>>* = nullptr>
   auto apply_solver(solver_func_t const& sol, child_test_t* test_ptr) {
-    return sol(test_ptr -> time, test_ptr -> amt, test_ptr -> rate, test_ptr -> ii, test_ptr -> evid,
-               test_ptr -> cmt, test_ptr -> addl, test_ptr -> ss, test_ptr -> pMatrix,
-               test_ptr -> biovar, test_ptr -> tlag);
+    return sol(time, amt, rate, ii, evid,
+               cmt, addl, ss, pMatrix,
+               biovar, tlag);
   }
 
   void compare_val(Eigen::MatrixXd const& x) {
@@ -200,6 +199,20 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
     auto res1 = apply_solver(sol1, &fixture);
     auto res2 = apply_solver(sol2, &fixture);
     EXPECT_MAT_VAL_NEAR(res1, res2, tol);
+  }
+
+  template<typename T1, typename T2, typename T3,
+           stan::require_any_not_t<stan::is_var<T1>, stan::is_var<T2>, stan::is_var<T3>>* = nullptr>
+  void compare_mat_adj(Eigen::Matrix<T1, -1, -1>& mat1,
+                       Eigen::Matrix<T2, -1, -1>& mat2,
+                       std::vector<T3>& p, double tol, const char* diagnostic_msg) {}
+
+  template<typename T1, typename T2, typename T3,
+           stan::require_all_t<stan::is_var<T1>, stan::is_var<T2>, stan::is_var<T3>>* = nullptr>
+  void compare_mat_adj(Eigen::Matrix<T1, -1, -1>& mat1,
+                       Eigen::Matrix<T2, -1, -1>& mat2,
+                       std::vector<T3>& p, double tol, const char* diagnostic_msg) {
+    EXPECT_MAT_ADJ_NEAR(mat1, mat2, p, nested, tol, diagnostic_msg);
   }
 
   void compare_solvers_adj(const std::vector<double>& p, double tol, const char*) {}
@@ -296,6 +309,37 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
   ADD_FD_TEST(tlag, tlag[0]);
 
 #undef ADD_FD_TEST
+
+  // test overload signatures
+#define ADD_TIME_INDEPENDENT_OVERLOAD_TEST(TOL, ...)                    \
+  {                                                                     \
+    auto x = s(time, amt, rate, ii, evid, cmt, addl, ss, __VA_ARGS__);  \
+    EXPECT_MAT_VAL_FLOAT_EQ(x0, x);                                     \
+    compare_mat_adj(x0, x, amt, TOL, "AMT");                            \
+    compare_mat_adj(x0, x, rate, TOL, "RATE");                          \
+    compare_mat_adj(x0, x, theta[0], TOL, "theta");                     \
+    compare_mat_adj(x0, x, biovar[0], TOL, "biovar");                   \
+    compare_mat_adj(x0, x, tlag[0], TOL, "tlag");                       \
+  }
+
+  template<typename solver_func_t,
+           stan::require_any_t<std::is_same<solver_func_t, pmx_solve_onecpt_functor>,
+                               std::is_same<solver_func_t, pmx_solve_twocpt_functor>,
+                               std::is_same<solver_func_t, pmx_solve_onecpt_effcpt_functor>>* = nullptr>
+  void compare_time_independent_overload_impl(solver_func_t const& s, double tol) {
+      auto x0 = s(time, amt, rate, ii, evid, cmt, addl, ss, theta,    biovar,    tlag);   
+      ADD_TIME_INDEPENDENT_OVERLOAD_TEST(tol, theta[0], biovar,    tlag);   
+      ADD_TIME_INDEPENDENT_OVERLOAD_TEST(tol, theta[0], biovar[0], tlag);   
+      ADD_TIME_INDEPENDENT_OVERLOAD_TEST(tol, theta[0], biovar[0], tlag[0]);
+      ADD_TIME_INDEPENDENT_OVERLOAD_TEST(tol, theta[0], biovar,    tlag[0]);
+      ADD_TIME_INDEPENDENT_OVERLOAD_TEST(tol, theta,    biovar[0], tlag);   
+      ADD_TIME_INDEPENDENT_OVERLOAD_TEST(tol, theta,    biovar[0], tlag[0]);
+      ADD_TIME_INDEPENDENT_OVERLOAD_TEST(tol, theta,    biovar,    tlag[0]);
+  }
+
+  void compare_time_independent_overload(double tol) {
+    compare_time_independent_overload_impl(sol1, tol);
+  }
 };
 
 #endif
