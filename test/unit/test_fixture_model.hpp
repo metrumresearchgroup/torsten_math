@@ -311,34 +311,59 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
 #undef ADD_FD_TEST
 
   // test overload signatures
-#define ADD_TIME_INDEPENDENT_OVERLOAD_TEST(TOL, ...)                    \
+#define ADD_OVERLOAD_TEST(TOL, ...)                                     \
   {                                                                     \
     auto x = s(time, amt, rate, ii, evid, cmt, addl, ss, __VA_ARGS__);  \
     EXPECT_MAT_VAL_FLOAT_EQ(x0, x);                                     \
     compare_mat_adj(x0, x, amt, TOL, "AMT");                            \
     compare_mat_adj(x0, x, rate, TOL, "RATE");                          \
     compare_mat_adj(x0, x, theta[0], TOL, "theta");                     \
-    compare_mat_adj(x0, x, biovar[0], TOL, "biovar");                   \
-    compare_mat_adj(x0, x, tlag[0], TOL, "tlag");                       \
   }
 
   template<typename solver_func_t,
            stan::require_any_t<std::is_same<solver_func_t, pmx_solve_onecpt_functor>,
                                std::is_same<solver_func_t, pmx_solve_twocpt_functor>,
                                std::is_same<solver_func_t, pmx_solve_onecpt_effcpt_functor>>* = nullptr>
-  void compare_time_independent_overload_impl(solver_func_t const& s, double tol) {
+  void compare_overload_impl(solver_func_t const& s, double tol) {
       auto x0 = s(time, amt, rate, ii, evid, cmt, addl, ss, theta,    biovar,    tlag);   
-      ADD_TIME_INDEPENDENT_OVERLOAD_TEST(tol, theta[0], biovar,    tlag);   
-      ADD_TIME_INDEPENDENT_OVERLOAD_TEST(tol, theta[0], biovar[0], tlag);   
-      ADD_TIME_INDEPENDENT_OVERLOAD_TEST(tol, theta[0], biovar[0], tlag[0]);
-      ADD_TIME_INDEPENDENT_OVERLOAD_TEST(tol, theta[0], biovar,    tlag[0]);
-      ADD_TIME_INDEPENDENT_OVERLOAD_TEST(tol, theta,    biovar[0], tlag);   
-      ADD_TIME_INDEPENDENT_OVERLOAD_TEST(tol, theta,    biovar[0], tlag[0]);
-      ADD_TIME_INDEPENDENT_OVERLOAD_TEST(tol, theta,    biovar,    tlag[0]);
+      ADD_OVERLOAD_TEST(tol, theta[0], biovar,    tlag);   
+      ADD_OVERLOAD_TEST(tol, theta[0], biovar[0], tlag);   
+      ADD_OVERLOAD_TEST(tol, theta[0], biovar[0], tlag[0]);
+      ADD_OVERLOAD_TEST(tol, theta[0], biovar,    tlag[0]);
+      ADD_OVERLOAD_TEST(tol, theta,    biovar[0], tlag);   
+      ADD_OVERLOAD_TEST(tol, theta,    biovar[0], tlag[0]);
+      ADD_OVERLOAD_TEST(tol, theta,    biovar,    tlag[0]);
+
+      // optional args
+      ADD_OVERLOAD_TEST(tol, theta[0], biovar);   
+      ADD_OVERLOAD_TEST(tol, theta[0], biovar[0]);
+      ADD_OVERLOAD_TEST(tol, theta,    biovar[0]);
+      ADD_OVERLOAD_TEST(tol, theta,    biovar);
+      ADD_OVERLOAD_TEST(tol, theta[0]);
+      ADD_OVERLOAD_TEST(tol, theta);
   }
 
-  void compare_time_independent_overload(double tol) {
-    compare_time_independent_overload_impl(sol1, tol);
+  template<typename solver_func_t,
+           stan::require_any_t<std::is_same<solver_func_t, pmx_solve_onecpt_functor>,
+                               std::is_same<solver_func_t, pmx_solve_twocpt_functor>,
+                               std::is_same<solver_func_t, pmx_solve_onecpt_effcpt_functor>>* = nullptr>
+  void compare_param_overload_impl(solver_func_t const& s, double tol) {
+      auto x0 = s(time, amt, rate, ii, evid, cmt, addl, ss, theta,    biovar,    tlag);   
+      ADD_OVERLOAD_TEST(tol, theta[0], biovar,    tlag);   
+      ADD_OVERLOAD_TEST(tol, theta[0], biovar[0], tlag);   
+      ADD_OVERLOAD_TEST(tol, theta[0], biovar[0], tlag[0]);
+      ADD_OVERLOAD_TEST(tol, theta[0], biovar,    tlag[0]);
+      ADD_OVERLOAD_TEST(tol, theta,    biovar[0], tlag);   
+      ADD_OVERLOAD_TEST(tol, theta,    biovar[0], tlag[0]);
+      ADD_OVERLOAD_TEST(tol, theta,    biovar,    tlag[0]);
+  }
+  
+  void compare_overload(double tol) {
+    compare_overload_impl(sol1, tol);
+  }
+
+  void compare_param_overload(double tol) {
+    compare_param_overload_impl(sol1, tol);
   }
 };
 

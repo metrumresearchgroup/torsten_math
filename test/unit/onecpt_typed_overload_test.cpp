@@ -17,21 +17,21 @@ TYPED_TEST_P(test_onecpt, single_bolus_with_tlag) {
   this -> tlag[0][0] = 1.5;
   this -> time[1] = 2.5;
 
-  this -> compare_time_independent_overload(1.e-10);
+  this -> compare_param_overload(1.e-10);
 }
 
 TYPED_TEST_P(test_onecpt, multiple_bolus) {
-  this -> compare_time_independent_overload(1.e-10);
+  this -> compare_overload(1.e-10);
 }
 
 TYPED_TEST_P(test_onecpt, multiple_bolus_cent) {
   this -> cmt[0] = 2;
-  this -> compare_time_independent_overload(1.e-10);
+  this -> compare_overload(1.e-10);
 }
 
 TYPED_TEST_P(test_onecpt, multiple_bolus_addl) {
   this -> ii[0] = 1.3;          // ensure test II + ADDL by end of time
-  this -> compare_time_independent_overload(1.e-10);
+  this -> compare_overload(1.e-10);
 }
 
 TYPED_TEST_P(test_onecpt, multiple_bolus_with_tlag) {
@@ -41,7 +41,7 @@ TYPED_TEST_P(test_onecpt, multiple_bolus_with_tlag) {
   for(int i = 1; i < 10; ++i) this -> time[i] = this -> time[i - 1] + 1;
   this -> amt[0] = 1200;
 
-  this -> compare_time_independent_overload(1.e-10);
+  this -> compare_param_overload(1.e-10);
 }
 
 TYPED_TEST_P(test_onecpt, multiple_bolus_ss) {
@@ -52,7 +52,7 @@ TYPED_TEST_P(test_onecpt, multiple_bolus_ss) {
   this -> addl[0] = 10;
   this -> ss[0] = 1;
 
-  this -> compare_time_independent_overload(1.e-10);
+  this -> compare_overload(1.e-10);
 }
 
 TYPED_TEST_P(test_onecpt, multiple_infusion) {
@@ -63,7 +63,7 @@ TYPED_TEST_P(test_onecpt, multiple_infusion) {
   this -> biovar[0] = {0.8, 0.9};
   this -> tlag[0] = {0.4, 0.8};
 
-  this -> compare_time_independent_overload(1.e-10);
+  this -> compare_param_overload(1.e-10);
 }
 
 TYPED_TEST_P(test_onecpt, multiple_infusion_ss) {
@@ -75,7 +75,7 @@ TYPED_TEST_P(test_onecpt, multiple_infusion_ss) {
   this -> addl[0] = 10;
   this -> ss[0] = 1;
 
-  this -> compare_time_independent_overload(1.e-10);
+  this -> compare_overload(1.e-10);
 }
 
 REGISTER_TYPED_TEST_SUITE_P(test_onecpt,
