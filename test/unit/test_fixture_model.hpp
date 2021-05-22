@@ -240,6 +240,13 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
     return s(__VA_ARGS__);                                              \
   }
 
+#define ADD_LIN_TEST_FUNC_IMPL(NAME, ...)                               \
+  template<typename x_type, typename solver_func_t,                     \
+           stan::require_any_t<std::is_same<solver_func_t, pmx_solve_linode_functor>>* = nullptr> \
+  auto test_func_##NAME##_impl(x_type const& x, solver_func_t const& s) { \
+    return s(__VA_ARGS__);                                              \
+  }
+
 #define ADD_ODE_TEST_FUNC_IMPL(NAME, ...)                               \
   template<typename x_type, typename solver_func_t,                     \
            stan::require_any_t<std::is_same<solver_func_t, pmx_solve_adams_functor>, \
@@ -252,20 +259,23 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
 
   ADD_CPT_TEST_FUNC_IMPL(time, x, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
   ADD_ODE_TEST_FUNC_IMPL(time, x, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  ADD_LIN_TEST_FUNC_IMPL(time, x, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
   ADD_TEST_FUNC(time)
 
   ADD_CPT_TEST_FUNC_IMPL(amt, time, x, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
   ADD_ODE_TEST_FUNC_IMPL(amt, time, x, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  ADD_LIN_TEST_FUNC_IMPL(amt, time, x, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
   ADD_TEST_FUNC(amt)
 
   ADD_CPT_TEST_FUNC_IMPL(rate, time, amt, x, ii, evid, cmt, addl, ss, theta, biovar, tlag);
   ADD_ODE_TEST_FUNC_IMPL(rate, time, amt, x, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  ADD_LIN_TEST_FUNC_IMPL(rate, time, amt, x, ii, evid, cmt, addl, ss, pMatrix, biovar, tlag);
   ADD_TEST_FUNC(rate)
 
   ADD_CPT_TEST_FUNC_IMPL(ii, time, amt, rate, x, evid, cmt, addl, ss, theta, biovar, tlag);
   ADD_ODE_TEST_FUNC_IMPL(ii, time, amt, rate, x, evid, cmt, addl, ss, theta, biovar, tlag);
+  ADD_LIN_TEST_FUNC_IMPL(ii, time, amt, rate, x, evid, cmt, addl, ss, pMatrix, biovar, tlag);
   ADD_TEST_FUNC(ii)
-
 
   ADD_CPT_TEST_FUNC_IMPL(theta, time, amt, rate, ii, evid, cmt, addl, ss, x, biovar, tlag);
   ADD_ODE_TEST_FUNC_IMPL(theta, time, amt, rate, ii, evid, cmt, addl, ss, x, biovar, tlag);
@@ -277,6 +287,7 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
 
   ADD_CPT_TEST_FUNC_IMPL(biovar, time, amt, rate, ii, evid, cmt, addl, ss, theta, x, tlag);
   ADD_ODE_TEST_FUNC_IMPL(biovar, time, amt, rate, ii, evid, cmt, addl, ss, theta, x, tlag);
+  ADD_LIN_TEST_FUNC_IMPL(biovar, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, x, tlag);
   template<typename x_type>
   auto test_func_biovar(std::vector<x_type> const& x_) {
     std::vector<std::vector<x_type> > x{x_};
@@ -285,6 +296,7 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
 
   ADD_CPT_TEST_FUNC_IMPL(tlag, time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, x);
   ADD_ODE_TEST_FUNC_IMPL(tlag, time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, x);
+  ADD_LIN_TEST_FUNC_IMPL(tlag, time, amt, rate, ii, evid, cmt, addl, ss, pMatrix, biovar, x);
   template<typename x_type>
   auto test_func_tlag(std::vector<x_type> const& x_) {
     std::vector<std::vector<x_type> > x{x_};
@@ -358,6 +370,21 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
       ADD_OVERLOAD_TEST(tol, theta,    biovar,    tlag[0]);
   }
   
+  template<typename solver_func_t,
+           stan::require_any_t<std::is_same<solver_func_t, pmx_solve_linode_functor>>* = nullptr>
+  void compare_param_overload_impl(solver_func_t const& s, double tol) {
+      auto x0 = s(time, amt, rate, ii, evid, cmt, addl, ss, pMatrix,   biovar,    tlag);   
+      ADD_OVERLOAD_TEST(tol, pMatrix[0], biovar,    tlag);   
+      ADD_OVERLOAD_TEST(tol, pMatrix[0], biovar[0], tlag);   
+      ADD_OVERLOAD_TEST(tol, pMatrix[0], biovar[0], tlag[0]);
+      ADD_OVERLOAD_TEST(tol, pMatrix[0], biovar,    tlag[0]);
+      ADD_OVERLOAD_TEST(tol, pMatrix,    biovar[0], tlag);   
+      ADD_OVERLOAD_TEST(tol, pMatrix,    biovar[0], tlag[0]);
+      ADD_OVERLOAD_TEST(tol, pMatrix,    biovar,    tlag[0]);
+  }
+
+#undef ADD_OVERLOAD_TEST
+
   void compare_overload(double tol) {
     compare_overload_impl(sol1, tol);
   }
