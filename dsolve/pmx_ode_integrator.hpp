@@ -6,9 +6,6 @@
 #include <stan/math/prim/meta/return_type.hpp>
 #include <stan/math/prim/fun/value_of.hpp>
 #include <stan/math/prim/err/check_positive_finite.hpp>
-#include <stan/math/prim/functor/integrate_ode_rk45.hpp>
-#include <stan/math/rev/functor/integrate_ode_adams.hpp>
-#include <stan/math/rev/functor/integrate_ode_bdf.hpp>
 #include <stan/math/torsten/dsolve/pmx_cvodes_integrator.hpp>
 #include <stan/math/torsten/dsolve/pmx_odeint_integrator.hpp>
 #include <ostream>
@@ -208,7 +205,7 @@ namespace torsten {
                  double t0,
                  const Tt& t1,
                  const T_par&... args) const {
-        const double dt_min = 1.e-14;
+        const double dt_min = 1.e-10; // too small would cause CVODES -27 error
         if (stan::math::value_of(t1) - stan::math::value_of(t0) > dt_min) {
           std::vector<Tt> ts{t1};
           return (*this)(f, y0, t0, ts, args...)[0];

@@ -385,6 +385,69 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
 
 #undef ADD_OVERLOAD_TEST
 
+#define ADD_OVERLOAD_TEST(TOL, ...)                                     \
+  {                                                                     \
+    ode_t f;                                                            \
+    auto x = s(f, ncmt, time, amt, rate, ii, evid, cmt, addl, ss, __VA_ARGS__); \
+    EXPECT_MAT_VAL_NEAR(x0, x, TOL);                                    \
+    compare_mat_adj(x0, x, amt, TOL, "AMT");                            \
+    compare_mat_adj(x0, x, rate, TOL, "RATE");                          \
+    compare_mat_adj(x0, x, theta[0], TOL, "theta");                     \
+  }
+
+  template<typename solver_func_t,
+           stan::require_any_t<std::is_same<solver_func_t, pmx_solve_rk45_functor>,
+                               std::is_same<solver_func_t, pmx_solve_adams_functor>,
+                               std::is_same<solver_func_t, pmx_solve_bdf_functor>>* = nullptr>
+  void compare_overload_impl(solver_func_t const& s, double tol) {
+    ode_t f;
+    auto x0 = s(f, ncmt, time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag, nullptr);
+    ADD_OVERLOAD_TEST(tol, theta[0], biovar,    tlag, nullptr);
+    ADD_OVERLOAD_TEST(tol, theta[0], biovar[0], tlag, nullptr);   
+    ADD_OVERLOAD_TEST(tol, theta[0], biovar[0], tlag[0], nullptr);
+    ADD_OVERLOAD_TEST(tol, theta[0], biovar,    tlag[0], nullptr);
+    ADD_OVERLOAD_TEST(tol, theta,    biovar[0], tlag, nullptr);   
+    ADD_OVERLOAD_TEST(tol, theta,    biovar[0], tlag[0], nullptr);
+    ADD_OVERLOAD_TEST(tol, theta,    biovar,    tlag[0], nullptr);
+
+    // optional args
+    ADD_OVERLOAD_TEST(tol, theta[0], biovar, nullptr);   
+    ADD_OVERLOAD_TEST(tol, theta[0], biovar[0], nullptr);
+    ADD_OVERLOAD_TEST(tol, theta,    biovar[0], nullptr);
+    ADD_OVERLOAD_TEST(tol, theta,    biovar, nullptr);
+    ADD_OVERLOAD_TEST(tol, theta[0], nullptr);
+    ADD_OVERLOAD_TEST(tol, theta, nullptr);
+
+    // ODE controls args
+    ADD_OVERLOAD_TEST(tol, theta[0], biovar, 1.e-10, 1.e-10, 100000, 1.e-10, 1.e-10, 100, nullptr);
+    ADD_OVERLOAD_TEST(tol, theta[0], biovar, 1.e-10, 1.e-10, 100000, nullptr);
+    ADD_OVERLOAD_TEST(tol, theta[0], biovar[0], 1.e-10, 1.e-10, 100000, 1.e-10, 1.e-10, 100, nullptr);
+    ADD_OVERLOAD_TEST(tol, theta,    biovar[0], 1.e-10, 1.e-10, 100000, nullptr);
+    ADD_OVERLOAD_TEST(tol, theta,    biovar, 1.e-10, 1.e-10, 100000, 1.e-10, 1.e-10, 100, nullptr);
+    ADD_OVERLOAD_TEST(tol, theta,    biovar, 1.e-10, 1.e-10, 100000, nullptr);
+    ADD_OVERLOAD_TEST(tol, theta[0], 1.e-10, 1.e-10, 100000, 1.e-10, 1.e-10, 100, nullptr);
+    ADD_OVERLOAD_TEST(tol, theta, 1.e-10, 1.e-10, 100000, nullptr);
+  }
+
+  template<typename solver_func_t,
+           stan::require_any_t<std::is_same<solver_func_t, pmx_solve_rk45_functor>,
+                               std::is_same<solver_func_t, pmx_solve_adams_functor>,
+                               std::is_same<solver_func_t, pmx_solve_bdf_functor>>* = nullptr>
+  void compare_param_overload_impl(solver_func_t const& s, double tol) {
+    ode_t f;
+    auto x0 = s(f, ncmt, time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag, nullptr);
+
+    // optional args
+    ADD_OVERLOAD_TEST(tol, theta[0], biovar, nullptr);   
+    ADD_OVERLOAD_TEST(tol, theta[0], biovar[0], nullptr);
+    ADD_OVERLOAD_TEST(tol, theta,    biovar[0], nullptr);
+    ADD_OVERLOAD_TEST(tol, theta,    biovar, nullptr);
+    ADD_OVERLOAD_TEST(tol, theta[0], nullptr);
+    ADD_OVERLOAD_TEST(tol, theta, nullptr);
+  }
+
+#undef ADD_OVERLOAD_TEST
+
   void compare_overload(double tol) {
     compare_overload_impl(sol1, tol);
   }
@@ -395,4 +458,3 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
 };
 
 #endif
-

@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_META_REQUIRE_GENERICS_HPP
 
 #include <stan/math/prim/meta/require_helpers.hpp>
+#include <stan/math/prim/meta/is_vector.hpp>
 #include <stan/math/torsten/meta/is_std_ode.hpp>
 #include <stan/math/torsten/meta/is_eigen_ode.hpp>
 

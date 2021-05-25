@@ -109,7 +109,7 @@ struct FribergKarlssonTest : public testing::Test {
     ss(nt, 0)
   {
     time[0] = 0.0;
-    for(int i = 1; i < 10; i++) time[i] = time[i - 1] + 1.25;
+    for(int i = 1; i < nt; i++) time[i] = i * 1.25;
 
     amt[0] = 80 * 1000.0;
     cmt[0] = 1;

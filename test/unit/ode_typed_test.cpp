@@ -1,5 +1,6 @@
 #include <stan/math/torsten/test/unit/test_fixture_onecpt.hpp>
 #include <stan/math/torsten/test/unit/test_fixture_twocpt.hpp>
+#include <stan/math/torsten/test/unit/test_fixture_ode_non_autonomous.hpp>
 #include <stan/math/torsten/test/unit/test_functors.hpp>
 #include <stan/math/torsten/pmx_onecpt_model.hpp>
 #include <stan/math/torsten/pmx_ode_model.hpp>
@@ -211,6 +212,24 @@ TYPED_TEST_P(test_onecpt, single_infusion_cent) {
   this -> compare_solvers_adj(this -> theta[0], 1.e-6, "theta");
 }
 
+TYPED_TEST_P(test_onecpt, multiple_infusion_ss_2) {
+  this -> time[0] = 0.0;
+  for(int i = 1; i < this -> nt; i++) this -> time[i] = this -> time[i - 1] + 3.0;
+
+  this -> amt[0] = 800;
+  std::fill(this -> rate.begin(), this -> rate.end(), 350.0);
+  this -> ii[0] = 2.5;
+  this -> ii[2] = 2;
+  this -> addl[0] = 0;
+  this -> ss[0] = 1;
+  this -> ss[2] = 1;
+
+  this -> compare_solvers_adj(this -> amt, 1.e-6, "AMT");
+  this -> compare_solvers_adj(this -> rate, 1.e-6, "RATE");
+  this -> compare_solvers_adj(this -> theta[0], 2.e-6, "theta");
+  this -> compare_solvers_adj(this -> ii, 1.e-6, "II");
+}
+
 TYPED_TEST_P(test_onecpt, time_dependent_theta) {
   this -> reset_events(11);
   int nt = this -> nt;
@@ -282,15 +301,31 @@ TYPED_TEST_P(test_onecpt, time_dependent_theta) {
 //   EXPECT_FLOAT_EQ(stan::math::value_of(y(1, 2)), 800.0);
 // }
 
+TYPED_TEST_P(test_onecpt, constant_infusion_ss) {
+  this -> time[0] = 0.0;
+  for(int i = 1; i < this -> nt; i++) this -> time[i] = this -> time[i - 1] + 2.5;
+
+  this -> amt[0] = 0.0;
+  this -> rate[0] = 150;
+  this -> ii[0] = 0.0;
+  this -> addl[0] = 0;
+  this -> ss[0] = 1;
+
+  this -> compare_solvers_adj(this -> rate, 1.e-6, "RATE");
+  this -> compare_solvers_adj(this -> theta[0], 1.e-6, "theta");
+}
+
 REGISTER_TYPED_TEST_SUITE_P(test_onecpt,
                             multiple_bolus, 
                             multiple_bolus_cent, 
                             multiple_bolus_with_tlag, 
                             multiple_bolus_ss, 
                             multiple_infusion_ss, 
+                            multiple_infusion_ss_2,
                             single_infusion, 
                             single_infusion_cent, 
-                            time_dependent_theta); 
+                            constant_infusion_ss,
+                            time_dependent_theta);
                             // reset_cmt);
 
 using onecpt_test_types = boost::mp11::mp_product<
@@ -535,3 +570,48 @@ using twocpt_test_types = boost::mp11::mp_product<
     >;
 
 INSTANTIATE_TYPED_TEST_SUITE_P(PMX, test_twocpt, twocpt_test_types);
+
+
+// non-autonomous one-cpt model
+
+TYPED_TEST_SUITE_P(test_onecpt_non_autonomous);
+
+TYPED_TEST_P(test_onecpt_non_autonomous, single_bolus) {
+  Eigen::MatrixXd amounts(10, 2);
+  amounts << 1000.0, 0.0,
+    740.8182, 255.4765,
+    548.8116, 439.2755,
+    406.5697, 571.5435,
+    301.1942, 666.5584,
+    223.1302, 734.5274,
+    165.2989, 782.7979,
+    122.4564, 816.6868,
+    90.71795, 840.0581,
+    8.229747, 869.0283;
+  Eigen::MatrixXd x = amounts.transpose();
+
+  this -> compare_val(x);
+  this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
+  this -> compare_solvers_adj(this -> amt, 1.e-6, "AMT");
+  this -> compare_solvers_adj(this -> biovar[0], 1.e-6, "bioavailability");
+}
+
+REGISTER_TYPED_TEST_SUITE_P(test_onecpt_non_autonomous,
+                            single_bolus);
+
+using onecpt_non_autonomous_test_types = boost::mp11::mp_product<
+  std::tuple,
+  ::testing::Types<pmx_solve_bdf_functor, // solver 2
+                   pmx_solve_adams_functor>, // solver 1
+  ::testing::Types<pmx_solve_rk45_functor>,
+  ::testing::Types<stan::math::var_value<double>>,  // TIME
+  ::testing::Types<stan::math::var_value<double>>,  // AMT
+  ::testing::Types<stan::math::var_value<double>> , // RATE
+  ::testing::Types<stan::math::var_value<double>> , // II
+  ::testing::Types<stan::math::var_value<double>> , // PARAM
+  ::testing::Types<stan::math::var_value<double>> , // BIOVAR
+  ::testing::Types<stan::math::var_value<double>> , // TLAG
+  ::testing::Types<onecpt_abstime_functor>          // ODE
+    >;
+
+INSTANTIATE_TYPED_TEST_SUITE_P(PMX, test_onecpt_non_autonomous, onecpt_non_autonomous_test_types);

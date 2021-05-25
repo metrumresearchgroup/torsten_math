@@ -232,7 +232,7 @@ TEST(pmx_solve_ode, solver_iv_end_time_equals_to_next_ev_time) {
   std::vector<double> rate{0, 3.64285714285714, 3.64285714285714, 1.82142857142857, 0, 1.82142857142857};
   std::vector<int> cmt{4, 2, 2, 2, 4, 2};
   std::vector<int> evid{0, 1, 1, 1, 0, 1};
-  std::vector<double> time{0, 0, 14, 28, 56, 56};
+  std::vector<double> time{0, 0, 14, 28, 56, 56.1};
   std::vector<int> addl(nt, 0);
   std::vector<int> ss(nt, 0);
   std::vector<double> ii(nt, 0.0);
