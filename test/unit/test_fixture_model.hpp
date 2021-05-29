@@ -135,7 +135,7 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
   }
 
   /** 
-   * apply numerical ODE solver functor to child test fixture
+   * apply coupled numerical ODE solver functor to child test fixture
    * 
    * @param sol solver
    * @param test_ptr pointer to child fixture
@@ -148,6 +148,26 @@ struct TorstenPMXTest<child_type<T> > : public testing::Test {
   auto apply_solver(solver_func_t const& sol, child_test_t* test_ptr) {
     typename child_test_t::ode_t f;
     return sol(f, ncmt - 2, time, amt, rate, ii, evid, cmt, addl, ss,
+               theta, biovar, tlag,
+               rtol, atol, max_num_steps,
+               as_rtol, as_atol, as_max_num_steps,
+               nullptr);
+  }
+
+  /** 
+   * apply coupled numerical ODE solver functor to child test fixture
+   * 
+   * @param sol solver
+   * @param test_ptr pointer to child fixture
+   * 
+   * @return Events solutions
+   */
+  template<typename solver_func_t, typename child_test_t,
+           stan::require_any_t<std::is_same<solver_func_t, pmx_solve_twocpt_rk45_functor>,
+                               std::is_same<solver_func_t, pmx_solve_twocpt_bdf_functor> >* = nullptr>
+  auto apply_solver(solver_func_t const& sol, child_test_t* test_ptr) {
+    typename child_test_t::ode_t f;
+    return sol(f, ncmt - 3, time, amt, rate, ii, evid, cmt, addl, ss,
                theta, biovar, tlag,
                rtol, atol, max_num_steps,
                as_rtol, as_atol, as_max_num_steps,
