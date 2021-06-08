@@ -19,6 +19,8 @@ using torsten::PKODEModel;
 using torsten::dsolve::PMXVariadicOdeSystem;
 using torsten::dsolve::PMXCvodesIntegrator;
 
+PMXLinODE f0;
+
 TEST_F(TorstenTwoCptModelTest, linode_dbl) {
   y0(0) = 745;
   y0(1) = 100;
@@ -84,7 +86,7 @@ TEST_F(TorstenTwoCptModelTest, linode_solver) {
   std::vector<var> theta_vec(theta.data(), theta.data() + theta.size());
   theta_vec.insert(theta_vec.end(), rate_var.begin(), rate_var.end());
 
-  PMXOdeFunctorRateAdaptor<PMXLinODE> f1;
+  PMXOdeFunctorRateAdaptor<PMXLinODE> f1(f0);
   auto y1 = pmx_ode_bdf(f1, y0, t0, ts, msgs, theta_vec, rate_var, x_r, x_i);
   torsten::PKRec<var> y2(to_var(y0));
   model.solve(y2, t0, ts[0], rate_var);
@@ -124,7 +126,7 @@ TEST_F(TorstenTwoCptModelTest, linode_solver_zero_rate) {
   model_t model(theta, y0.size());
   std::vector<var> theta_vec(theta.data(), theta.data() + theta.size());
 
-  PMXOdeFunctorRateAdaptor<PMXLinODE> f1;
+  PMXOdeFunctorRateAdaptor<PMXLinODE> f1(f0);
   auto y1 = pmx_ode_bdf(f1, y0, t0, ts, msgs, theta_vec, rate, x_r, x_i);
   torsten::PKRec<var> y2(to_var(y0));
   model.solve(y2, t0, ts[0], rate);

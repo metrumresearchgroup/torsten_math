@@ -20,6 +20,8 @@ using torsten::dsolve::PMXVariadicOdeSystem;
 using torsten::dsolve::PMXCvodesIntegrator;
 using torsten::dsolve::PMXOdeintIntegrator;
 
+PMXTwoCptODE f0;
+
 TEST_F(TorstenTwoCptModelTest, ka_zero) {
   y0(0) = 745;
   y0(1) = 100;
@@ -43,7 +45,7 @@ TEST_F(TorstenTwoCptModelTest, rate_dbl) {
   rate[2] = 300;
   using model_t = PMXTwoCptModel<double>;
   model_t model(CL, Q, V2, V3, ka);
-  PMXOdeFunctorRateAdaptor<PMXTwoCptODE> f1;
+  PMXOdeFunctorRateAdaptor<PMXTwoCptODE> f1(f0);
 
   Eigen::VectorXd y = f1(t0, y0, msgs, model.par(),rate, x_r, x_i);
   EXPECT_FLOAT_EQ(y[0], rate[0]);
@@ -64,7 +66,7 @@ TEST_F(TorstenTwoCptModelTest, rate_var) {
   using model_t = PMXTwoCptModel<var>;
   model_t model(CLv, Qv, V2v, V3v, kav);
   std::vector<stan::math::var> theta(model.par());
-  PMXOdeFunctorRateAdaptor<PMXTwoCptODE> f1;
+  PMXOdeFunctorRateAdaptor<PMXTwoCptODE> f1(f0);
 
   Eigen::Matrix<var, -1, 1> y = f1(t0, y0, msgs, theta, rate_var, x_r, x_i);
   EXPECT_FLOAT_EQ(y[0].val(), rate[0]);
@@ -90,7 +92,7 @@ TEST_F(TorstenTwoCptModelTest, sd_solver) {
   std::vector<stan::math::var> rate_var{to_var(rate)};
   using model_t = PMXTwoCptModel<var>;
   model_t model(CLv, Qv, V2v, V3v, kav);
-  PMXOdeFunctorRateAdaptor<PMXTwoCptODE> f1;
+  PMXOdeFunctorRateAdaptor<PMXTwoCptODE> f1(f0);
   std::vector<var> theta = model.par();
 
   auto y1 = pmx_ode_bdf(f1, y0, t0, ts, msgs, theta, rate_var, x_r, x_i);

@@ -25,6 +25,8 @@ PMXOdeIntegrator<PMXVariadicOdeSystem, PMXCvodesIntegrator<CV_BDF, CV_STAGGERED>
 using scheme_t = boost::numeric::odeint::runge_kutta_dopri5<std::vector<double>, double, std::vector<double>, double>;
 PMXOdeIntegrator<PMXVariadicOdeSystem, PMXOdeintIntegrator<scheme_t>> integrator_rk45;
 
+PMXTwoCptODE f0;
+
 TEST_F(TorstenTwoCptModelTest, pk_integrator_t0_var) {
   y0(0) = 100.0;
   y0(1) = 1000.0;
@@ -315,7 +317,7 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver) {
   rate[1] = 2000;
   rate[2] = 3000;
   PMXTwoCptModel<double> model0(CL, Q, V2, V3, ka); // NOLINT
-  PMXOdeFunctorRateAdaptor<PMXTwoCptODE> f1;
+  PMXOdeFunctorRateAdaptor<PMXTwoCptODE> f1(f0);
   using model_t = PKODEModel<double, PMXTwoCptODE>;
   model_t model(model0.par(), y0.size(), model0.f());
 
@@ -368,7 +370,7 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver_y0) {
   y0[1] = 0;
   y0[2] = 8000;
   PMXTwoCptModel<double> model0(CL, Q, V2, V3, ka); // NOLINT
-  PMXOdeFunctorRateAdaptor<PMXTwoCptODE> f1;
+  PMXOdeFunctorRateAdaptor<PMXTwoCptODE> f1(f0);
   using model_t = PKODEModel<double, PMXTwoCptODE>;
   model_t model(model0.par(), y0.size(), model0.f());
 
@@ -423,7 +425,7 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver_par_sens) {
   std::vector<stan::math::var> theta = to_var(par);
 
   PMXTwoCptModel<var> model0(theta);
-  PMXOdeFunctorRateAdaptor<PMXTwoCptODE> f1;
+  PMXOdeFunctorRateAdaptor<PMXTwoCptODE> f1(f0);
   using model_t = PKODEModel<var, PMXTwoCptODE>;
   model_t model(model0.par(), y0.size(), model0.f());
 
@@ -487,7 +489,7 @@ TEST_F(TorstenTwoCptModelTest, general_ode_solver_par_rate_sens) {
   std::vector<stan::math::var> rate_var = to_var(rate);
 
   PMXTwoCptModel<var> model0(theta);
-  PMXOdeFunctorRateAdaptor<PMXTwoCptODE> f1;
+  PMXOdeFunctorRateAdaptor<PMXTwoCptODE> f1(f0);
   using model_t = PKODEModel<var, PMXTwoCptODE>;
   model_t model(theta, y0.size(), model0.f());
 

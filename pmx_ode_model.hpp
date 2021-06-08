@@ -9,6 +9,7 @@
 #include <stan/math/rev/functor/algebra_solver_fp.hpp>
 #include <stan/math/prim/err/check_less_or_equal.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
+#include <stan/math/torsten/ode_rhs_ostream_adatpor.hpp>
 #include <stan/math/torsten/dsolve/pmx_algebra_solver_newton.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_integrator.hpp>
 
@@ -23,6 +24,10 @@ namespace torsten {
    */
   template<typename F>
   struct PMXOdeFunctorRateAdaptor {
+    F const& f_;
+
+    PMXOdeFunctorRateAdaptor(F const& f) : f_(f) {}
+
     /**
      * Evaluate ODE functor, and add rate.
      */
@@ -35,7 +40,6 @@ namespace torsten {
                const std::vector<T3>& rate,
                const std::vector<double>& x_r,
                const std::vector<int>& x_i) const {
-      const F f_;
       Eigen::Matrix<stan::return_type_t<T0, T1, T2, T3>, -1, 1> fy = f_(t, y, msgs, theta, x_r, x_i);
       for (auto i = 0; i < fy.size(); ++i) {
         fy(i) += rate[i];
@@ -84,7 +88,7 @@ namespace torsten {
 
       if (rate == 0) {  // bolus dose
         x0[cmt - 1] += amt;
-        auto pred = integrator_(F(), x0, t0, ii, y, x_r, x_i);
+        auto pred = integrator_(f_, x0, t0, ii, y, x_r, x_i);
         for (int i = 0; i < ncmt; ++i) {
 #ifdef TORSTEN_AS_FP
           result(i) = pred(i);
@@ -99,12 +103,12 @@ namespace torsten {
         auto dt1 = dt - n * ii;
         std::vector<T_r> rate_vec(ncmt, 0.0);
         rate_vec[cmt - 1] = (n + 1) * rate;
-        const PMXOdeFunctorRateAdaptor<F> f1;
+        const PMXOdeFunctorRateAdaptor<F> f1(f_);
         x0 = integrator_(f1, x, t0, dt1, y, rate_vec, x_r, x_i);
 
         auto dt2 = (n + 1) * ii - dt;
         rate_vec[cmt - 1] = n * rate;
-        const PMXOdeFunctorRateAdaptor<F> f2;
+        const PMXOdeFunctorRateAdaptor<F> f2(f_);
         auto pred = integrator_(f2, x0, t0, dt2, y, rate_vec, x_r, x_i);
         for (int i = 0; i < ncmt; ++i) {
 #ifdef TORSTEN_AS_FP
@@ -120,7 +124,7 @@ namespace torsten {
 #ifdef TORSTEN_AS_FP
         stan::math::throw_domain_error(func, "algebra_solver_fp used for ", 1, "constant infusion");
 #else
-        const PMXOdeFunctorRateAdaptor<F> f;
+        const PMXOdeFunctorRateAdaptor<F> f(f_);
         result = f(0, x, nullptr, y, rate_vec, x_r, x_i);
 #endif
       }
@@ -135,15 +139,16 @@ namespace torsten {
    * @tparam T_par PK parameters type
    * @tparam F ODE functor
    */
-  template<typename T_par, typename F>
+  template<typename T_par, typename F0>
   class PKODEModel {
+    using F = ode_rhs_ostream_adaptor<F0>;
     static const double dt_min; /**< min step to move ode solution */
     const std::vector<double> x_r_dummy; /**< dummy data to point to*/
     const std::vector<int> x_i_dummy; /**< dummy data to point to */
     const std::vector<T_par> &par_; /**< parameters */
     const std::vector<double>& x_r_; /**< real data */
     const std::vector<int>& x_i_; /**< integer data */
-    const F &f_;                /**< ODE functor */
+    const F f_;                /**< ODE functor */
     const int ncmt_;            /**< dim of ODE system */
   public:
     using par_type    = T_par;
@@ -319,7 +324,7 @@ namespace torsten {
         res = y0;
       } else {
         const std::vector<double> pars{value_of(par_)};
-        PMXOdeFunctorRateAdaptor<F> f;
+        PMXOdeFunctorRateAdaptor<F> f(f_);
         res = integrator(f, y0_, t0, ts[0], pars, rate, x_r_, x_i_);
       }
       return res;
@@ -347,7 +352,7 @@ namespace torsten {
                const integrator_type& integrator) const {
       const double t0_d = stan::math::value_of(t0);
       std::vector<Tt1> ts(time_step(t0, t1));
-      PMXOdeFunctorRateAdaptor<F> f_rate;
+      PMXOdeFunctorRateAdaptor<F> f_rate(f_);
       y = integrator(f_rate, y, t0_d, ts[0], par_, rate, x_r_, x_i_);
     }
 
@@ -375,7 +380,7 @@ namespace torsten {
 
       const double t0_d = value_of(t0);
       std::vector<T0> ts(time_step(t0, t1));
-      PMXOdeFunctorRateAdaptor<F> f_rate;
+      PMXOdeFunctorRateAdaptor<F> f_rate(f_);
 
       if (t1 - t0 > dt_min) {
         yd = integrator.solve_d(f_rate, y, t0_d, ts, par_, rate, x_r_, x_i_).col(0);
