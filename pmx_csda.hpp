@@ -3,7 +3,7 @@
 
 #include <stan/math/prim/fun/value_of.hpp>
 #include <stan/math/prim/meta/return_type.hpp>
-#include <stan/math/rev/core/precomp_v_vari.hpp>
+#include <stan/math/rev/core/callback_vari.hpp>
 #include <stan/math/rev/core/vari.hpp>
 #include <stan/math/rev/core/var.hpp>
 
@@ -44,7 +44,11 @@ stan::math::var pk_csda(const F& f,
   const complex<double> res = f(complex<double>(theta_d, h), x_r, x_i, msgs);
   const double fx = std::real(res);
   const double g = std::imag(res) / h;
-  return var(new stan::math::precomp_v_vari(fx, theta.vi_, g));
+  // return var(new stan::math::precomp_v_vari(fx, theta.vi_, g));
+  return stan::math::make_callback_var(fx, [theta, g](auto& vi) mutable {
+    theta.adj() += g;
+  });
+
 }
 
 /**

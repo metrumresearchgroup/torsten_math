@@ -10,10 +10,11 @@
 #include <stan/math/torsten/dsolve/ode_tuple_functor.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
+#include <stan/math/torsten/apply.hpp>
 #include <stan/math/torsten/meta/require_generics.hpp>
 #include <stan/math/torsten/value_of.hpp>
 #include <stan/math/prim/fun/typedefs.hpp>
-#include <stan/math/rev/fun/typedefs.hpp>
+#include <stan/math/rev/core/typedefs.hpp>
 #include <stan/math/rev/fun/to_var.hpp>
 #include <stan/math/rev/fun/value_of.hpp>
 #include <stan/math/rev/fun/value_of_rec.hpp>
@@ -462,7 +463,6 @@ namespace dsolve {
       using stan::math::var;
       using stan::math::vector_v;
       using stan::math::vector_d;
-      using stan::math::apply;
       using stan::math::zero_adjoints;
       using stan::math::accumulate_adjoints;
 
@@ -500,14 +500,14 @@ namespace dsolve {
         // df/dp_i term, for i = n...n+m-1
         if (is_var_par) {
           g.fill(0);
-          apply([&](auto&&... args) {accumulate_adjoints(g.data(), args...);},
+          stan::math::apply([&](auto&&... args) {accumulate_adjoints(g.data(), args...);},
                 local_theta_tuple_);
           for (size_t j = 0; j < M; ++j) {
             dydt(N + N * (ns - M + j) + i) += g[j];
           }
         }
 
-        apply([&](auto&&... args) { zero_adjoints(args...); }, local_theta_tuple_);
+        torsten::apply([&](auto&&... args) { zero_adjoints(args...); }, local_theta_tuple_);
       }
     }
 
@@ -565,7 +565,7 @@ namespace dsolve {
           }
         }
 
-        stan::math::apply([&](auto&&... args) { stan::math::zero_adjoints(args...); }, local_theta_tuple_);
+        torsten::apply([&](auto&&... args) { stan::math::zero_adjoints(args...); }, local_theta_tuple_);
       }
     }
 

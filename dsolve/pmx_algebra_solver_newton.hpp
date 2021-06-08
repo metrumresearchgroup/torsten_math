@@ -16,6 +16,7 @@
 #include <stan/math/torsten/dsolve/ode_tuple_functor.hpp>
 #include <stan/math/torsten/mpi/precomputed_gradients.hpp>
 #include <stan/math/torsten/meta/is_nl_system.hpp>
+#include <stan/math/torsten/apply.hpp>
 #include <kinsol/kinsol.h>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
@@ -128,7 +129,7 @@ namespace torsten {
      * @return a vector with x's val and Jxy as gradient.
      */
     Eigen::Matrix<stan::math::var, -1, 1> jac_xy(const Eigen::VectorXd& x) {
-      apply([&](auto&&... args) { zero_adjoints(args...); }, theta_tuple_);
+      torsten::apply([&](auto&&... args) { stan::math::zero_adjoints(args...); }, theta_tuple_);
 
       Eigen::MatrixXd jfx(N, N);
       Eigen::MatrixXd jfy(N, M);
@@ -148,12 +149,12 @@ namespace torsten {
           }
           if (is_var_par) {
             g.fill(0);
-            apply([&](auto&&... args) {accumulate_adjoints(g.data(), args...);}, theta_tuple_);
+            stan::math::apply([&](auto&&... args) {accumulate_adjoints(g.data(), args...);}, theta_tuple_);
             for (auto k = 0; k < M; ++k) {
               jfy(i, k) = g[k];
             }
           }
-          apply([&](auto&&... args) { zero_adjoints(args...); }, theta_tuple_);
+          torsten::apply([&](auto&&... args) { stan::math::zero_adjoints(args...); }, theta_tuple_);
         }
       }
       Eigen::MatrixXd jxy = jfx.colPivHouseholderQr().solve(-jfy);

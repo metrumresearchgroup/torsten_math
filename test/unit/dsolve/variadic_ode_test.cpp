@@ -13,9 +13,6 @@
 #include <boost/numeric/odeint/external/eigen/eigen_algebra.hpp>
 #include <boost/fusion/adapted/std_tuple.hpp>
 #include <boost/fusion/include/algorithm.hpp>
-#include <boost/phoenix/phoenix.hpp>
-
-using namespace boost::phoenix::arg_names;
 
 TEST_F(TorstenOdeTest_sho, variadic_ode_system_odeint) {
   using torsten::dsolve::PMXVariadicOdeSystem;
