@@ -701,7 +701,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, domain_error) {
                                        theta_m, biovar_m, tlag_m,
                                        rtol, atol, max_num_steps, nullptr),
                    std::domain_error,
-                   "PMX SOLVE GROUP ODE: bioavailability[4] is -1, but must be >= 0!");
+                   "PMX SOLVE GROUP ODE: bioavailability[4] is -1, but must be nonnegative!");
 #ifdef TORSTEN_MPI
   MPI_Barrier(comm);
 #endif
