@@ -71,7 +71,7 @@ TEST_F(TorstenOdeTest_chem, cvodes_adams_fwd_sensitivity_theta) {
 
   std::vector<std::vector<stan::math::var>> y1 = integrate_ode_adams(f, y0, t0, ts, theta_var1, x_r, x_i);
   std::vector<std::vector<stan::math::var>> y2 = pmx_integrate_ode_adams(f, y0, t0, ts, theta_var2, x_r, x_i);
-  torsten::test::test_grad(theta_var1, theta_var2, y1, y2, 1.E-6, 1.E-6);
+  torsten::test::test_grad(theta_var1, theta_var2, y1, y2, 1.E-6, 3.E-6);
 }
 
 TEST_F(TorstenOdeTest_sho, fwd_sensitivity_ts) {
@@ -118,7 +118,7 @@ TEST_F(TorstenOdeTest_lorenz, cvodes_adams_fwd_sensitivity_theta) {
 
   std::vector<std::vector<stan::math::var>> y1 = integrate_ode_adams(f, y0, t0, ts, theta_var1, x_r, x_i);
   std::vector<std::vector<stan::math::var>> y2 = pmx_integrate_ode_adams(f, y0, t0, ts, theta_var2, x_r, x_i);
-  torsten::test::test_grad(theta_var1, theta_var2, y1, y2, 1.E-10, 1.E-8);
+  torsten::test::test_grad(theta_var1, theta_var2, y1, y2, 1.E-6, 1.E-5);
 }
 
 TEST_F(TorstenOdeTest_sho, cvodes_adams_fwd_sensitivity_theta) {
@@ -177,8 +177,8 @@ TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_theta_y0) {
 
   std::vector<std::vector<stan::math::var>> y1 = integrate_ode_adams(f, y0_var1, t0, ts, theta_var1, x_r, x_i);
   std::vector<std::vector<stan::math::var>> y2 = pmx_integrate_ode_adams(f, y0_var2, t0, ts, theta_var2, x_r, x_i);
-  torsten::test::test_grad(y0_var1, y0_var2, y1, y2, 1.E-6, 1.E-8);
-  torsten::test::test_grad(theta_var1, theta_var2, y1, y2, 1.E-6, 1.E-8);
+  torsten::test::test_grad(y0_var1, y0_var2, y1, y2, 1.E-6, 1.E-5);
+  torsten::test::test_grad(theta_var1, theta_var2, y1, y2, 1.E-6, 1.E-5);
 }
 
 TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_y0) {
@@ -219,14 +219,14 @@ TEST_F(TorstenOdeTest_neutropenia, group_adams_fwd_sensitivity_theta) {
   int icol = 0;
   for (int i = 0; i < np; ++i) {
     stan::math::matrix_v y_i = y_m1.block(0, icol, y0.size(), len[i]);
-    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 1e-16, 4e-14);
+    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 1e-8, 2e-8);
     icol += len[i];
   }
 
   icol = 0;
   for (int i = 0; i < np; ++i) {
     stan::math::matrix_v y_i = y_m2.block(0, icol, y0.size(), len[i]);
-    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 1e-16, 4e-14);
+    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 1e-8, 2e-8);
     icol += len[i];
   }
 }

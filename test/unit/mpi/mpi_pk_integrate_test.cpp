@@ -237,11 +237,11 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_AD_adams_mpi) {
   int icol = 0;
   matrix_v y;
   y = y_m.block(0, icol, y0.size(), len[0]);
-  torsten::test::test_grad(theta_var1, theta_var_m[0], y1, y, 1e-7, 1e-7);
+  torsten::test::test_grad(theta_var1, theta_var_m[0], y1, y, 1e-7, 3e-6);
 
   icol += len[0];
   y = y_m.block(0, icol, y0.size(), len[1]);
-  torsten::test::test_grad(theta_var2, theta_var_m[1], y2, y, 1e-7, 1e-7);
+  torsten::test::test_grad(theta_var2, theta_var_m[1], y2, y, 1e-7, 3e-6);
 }
 
 TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_AD_bdf_mpi_performance) {
@@ -269,7 +269,7 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_AD_bdf_mpi_performance) {
   int icol = 0;
   for (int i = 0; i < np; ++i) {
     matrix_v y_i = y_m.block(0, icol, y0.size(), len[i]);
-    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 1e-7, 3e-7);
+    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 1e-7, 3e-6);
     icol += len[i];
   }
 }
@@ -299,7 +299,7 @@ TEST_F(TorstenOdeTest_chem, fwd_sensitivity_theta_AD_adams_mpi_performance) {
   int icol = 0;
   for (int i = 0; i < np; ++i) {
     matrix_v y_i = y_m.block(0, icol, y0.size(), len[i]);
-    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 1e-7, 3e-7);
+    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 3e-7, 3e-6);
     icol += len[i];
   }
 }
@@ -328,7 +328,7 @@ TEST_F(TorstenOdeTest_lorenz, fwd_sensitivity_theta_AD_bdf_mpi_performance) {
   int icol = 0;
   for (int i = 0; i < np; ++i) {
     matrix_v y_i = y_m.block(0, icol, y0.size(), len[i]);
-    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 1e-7, 3e-7);
+    torsten::test::test_grad(theta_var, theta_var_m[i], y, y_i, 6e-6, 6.5e-5);
     icol += len[i];
   }
 }

@@ -162,7 +162,7 @@ TEST_F(TorstenOdeTest_chem, eigen_vector_bdf) {
     auto y_sol = stan::math::ode_bdf_tol(f_eigen, y0_vec, t0, ts, rtol, atol, max_num_steps, msgs,
                                           theta_var, x_r, x_i);
     for (size_t j = 0; j < ts.size(); ++j) {
-      torsten::test::test_grad(theta_var, y_sol[j], y[j], 1e-8, 1e-8);
+      torsten::test::test_grad(theta_var, y_sol[j], y[j], 1e-8, 1e-6);
     }
   }
 
@@ -177,8 +177,8 @@ TEST_F(TorstenOdeTest_chem, eigen_vector_bdf) {
                                           theta_var, x_r, x_i);
 
     for (size_t j = 0; j < ts.size(); ++j) {
-      torsten::test::test_grad(theta_var, y_sol[j], y[j], 1e-8, 1e-8);
-      torsten::test::test_grad(y0_var, y_sol[j], y[j], 1e-8, 1e-8);
+      torsten::test::test_grad(theta_var, y_sol[j], y[j], 1e-8, 1e-6);
+      torsten::test::test_grad(y0_var, y_sol[j], y[j], 1e-8, 1e-6);
     }
   }
 
@@ -193,8 +193,8 @@ TEST_F(TorstenOdeTest_chem, eigen_vector_bdf) {
                                           theta, x_r, x_i);
 
     for (size_t j = 0; j < ts.size(); ++j) {
-      torsten::test::test_grad(ts_var, y_sol[j], y[j], 1e-8, 1e-8);
-      torsten::test::test_grad(y0_var, y_sol[j], y[j], 1e-8, 1e-8);
+      torsten::test::test_grad(ts_var, y_sol[j], y[j], 1e-8, 1e-6);
+      torsten::test::test_grad(y0_var, y_sol[j], y[j], 1e-8, 1e-6);
     }
   }
 }
@@ -216,8 +216,8 @@ TEST_F(TorstenOdeTest_lorenz, eigen_vector_adams) {
                                           theta_var, x_r, x_i);
 
     for (size_t j = 0; j < ts.size(); ++j) {
-      torsten::test::test_grad(theta_var, y_sol[j], y[j], 1e-8, 1e-8);
-      torsten::test::test_grad(y0_var, y_sol[j], y[j], 1e-8, 1e-8);
+      torsten::test::test_grad(theta_var, y_sol[j], y[j], 1e-6, 8e-6);
+      torsten::test::test_grad(y0_var, y_sol[j], y[j], 1e-6, 8e-6);
     }
   }
 
@@ -232,8 +232,8 @@ TEST_F(TorstenOdeTest_lorenz, eigen_vector_adams) {
                                           theta, x_r, x_i);
 
     for (size_t j = 0; j < ts.size(); ++j) {
-      torsten::test::test_grad(ts_var, y_sol[j], y[j], 1e-8, 1e-8);
-      torsten::test::test_grad(y0_var, y_sol[j], y[j], 1e-8, 1e-8);
+      torsten::test::test_grad(ts_var, y_sol[j], y[j], 1e-6, 8e-6);
+      torsten::test::test_grad(y0_var, y_sol[j], y[j], 1e-6, 8e-6);
     }
   }
 
@@ -245,7 +245,7 @@ TEST_F(TorstenOdeTest_lorenz, eigen_vector_adams) {
                                           theta, x_r, x_i);
 
     for (size_t j = 0; j < ts.size(); ++j) {
-      torsten::test::test_grad(ts_var, y_sol[j], y[j], 1e-8, 1e-8);
+      torsten::test::test_grad(ts_var, y_sol[j], y[j], 1e-6, 8e-6);
     }
   }
 }
@@ -283,8 +283,8 @@ TEST_F(TorstenOdeTest_neutropenia, eigen_vector_ckrk) {
                                           theta, x_r, x_i);
 
     for (size_t j = 0; j < ts.size(); ++j) {
-      torsten::test::test_grad(ts_var, y_sol[j], y[j], 1e-8, 1e-8);
-      torsten::test::test_grad(y0_var, y_sol[j], y[j], 1e-8, 1e-8);
+      torsten::test::test_grad(ts_var, y_sol[j], y[j], 1e-8, 1e-7);
+      torsten::test::test_grad(y0_var, y_sol[j], y[j], 1e-8, 1e-7);
     }
   }
 
@@ -296,7 +296,7 @@ TEST_F(TorstenOdeTest_neutropenia, eigen_vector_ckrk) {
                                           theta, x_r, x_i);
 
     for (size_t j = 0; j < ts.size(); ++j) {
-      torsten::test::test_grad(ts_var, y_sol[j], y[j], 1e-8, 1e-8);
+      torsten::test::test_grad(ts_var, y_sol[j], y[j], 1e-8, 1e-7);
     }
   }
 }
