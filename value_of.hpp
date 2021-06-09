@@ -70,6 +70,7 @@ inline auto value_of(const std::vector<T>& x) {
     for (auto i = 0; i < M.size(); ++i) {
       res[i] = stan::math::value_of(M[i]);
     }
+    return res;
   }
 
   template <typename T>
@@ -78,6 +79,7 @@ inline auto value_of(const std::vector<T>& x) {
     for (auto i = 0; i < M.size(); ++i) {
       res(i) = stan::math::value_of(M(i));
     }
+    return res;
   }
 }
 
