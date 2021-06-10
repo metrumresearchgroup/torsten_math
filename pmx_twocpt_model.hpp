@@ -83,7 +83,7 @@ namespace torsten {
       T2 k12 = Q / V1;
       T2 k21 = Q / V2;
 
-    Eigen:Matrix<scalar, -1, 1> y(3);
+      Eigen::Matrix<scalar, -1, 1> y(3);
       y(0) = -ka * x(0);
       y(1) = ka * x(0) - (k10 + k12) * x(1) + k21 * x(2);
       y(2) = k12 * x(1) - k21 * x(2);
