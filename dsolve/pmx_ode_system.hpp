@@ -373,17 +373,17 @@ namespace dsolve {
                          const T_par&... args)
       : f_(f),
         f_tuple_(f_),
+        theta_dbl_tuple_(stan::math::value_of(args)...),
+        msgs_(msgs),
         t0_(t0),
         ts_(ts),
         y0_(y0),
-        theta_dbl_tuple_(stan::math::value_of(args)...),
         theta_ref_tuple_(std::forward_as_tuple(args...)),
         ode_arg_tuple_(std::forward_as_tuple(y0_, args..., ts_)),
         N(y0.size()),
         M(stan::math::count_vars(args...)),
         ns((is_var_y0 ? N : 0) + M),
         system_size(N + N * ns),
-        msgs_(msgs),
         y0_fwd_system(Eigen::VectorXd::Zero(system_size))
     {
       const char* caller = "PMX Variadic ODE System";
