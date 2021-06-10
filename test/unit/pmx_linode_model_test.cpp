@@ -121,7 +121,7 @@ TEST_F(TorstenTwoCptModelTest, linode_solver_zero_rate) {
   y0[2] = 800;
   ts[0] = 20.0;
   ts.resize(1);
- Eigen:Matrix<var,-1,-1> theta{to_var(linode_par)};  
+  Eigen::Matrix<var,-1,-1> theta{to_var(linode_par)};
   using model_t = PMXLinODEModel<var>;
   model_t model(theta, y0.size());
   std::vector<var> theta_vec(theta.data(), theta.data() + theta.size());
