@@ -331,8 +331,7 @@ REGISTER_TYPED_TEST_SUITE_P(test_onecpt,
 using onecpt_test_types = boost::mp11::mp_product<
   std::tuple,
   ::testing::Types<pmx_solve_rk45_functor,
-                   pmx_solve_bdf_functor,
-                   pmx_solve_adams_functor>, // solver 1
+                   pmx_solve_bdf_functor>, // solver 1
   ::testing::Types<pmx_solve_onecpt_functor>, // solver 2
   ::testing::Types<double, stan::math::var_value<double>>,  // TIME
   ::testing::Types<double, stan::math::var_value<double>>,  // AMT
@@ -556,8 +555,7 @@ REGISTER_TYPED_TEST_SUITE_P(test_twocpt,
 using twocpt_test_types = boost::mp11::mp_product<
   std::tuple,
   ::testing::Types<pmx_solve_rk45_functor,
-                   pmx_solve_bdf_functor,
-                   pmx_solve_adams_functor>, // solver 1
+                   pmx_solve_bdf_functor>, // solver 1
   ::testing::Types<pmx_solve_twocpt_functor>, // solver 2
   ::testing::Types<double, stan::math::var_value<double>>,  // TIME
   ::testing::Types<double, stan::math::var_value<double>>,  // AMT

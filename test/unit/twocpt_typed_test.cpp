@@ -312,8 +312,7 @@ using twocpt_test_types = boost::mp11::mp_product<
   ::testing::Types<pmx_solve_twocpt_functor>, // solver 1
   ::testing::Types<pmx_solve_linode_functor,
                    pmx_solve_rk45_functor,
-                   pmx_solve_bdf_functor,
-                   pmx_solve_adams_functor>, // solver 2
+                   pmx_solve_bdf_functor>, // solver 2
   ::testing::Types<double>,  // TIME
   ::testing::Types<double, stan::math::var_value<double>>,  // AMT
   ::testing::Types<double, stan::math::var_value<double>> , // RATE
