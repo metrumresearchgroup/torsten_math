@@ -1,6 +1,5 @@
 #include <stan/math/torsten/test/unit/test_fixture_onecpt.hpp>
 #include <stan/math/torsten/test/unit/test_fixture_twocpt.hpp>
-#include <stan/math/torsten/test/unit/test_fixture_ode_non_autonomous.hpp>
 #include <stan/math/torsten/test/unit/test_functors.hpp>
 #include <stan/math/torsten/pmx_onecpt_model.hpp>
 #include <stan/math/torsten/pmx_ode_model.hpp>
@@ -21,7 +20,7 @@ TYPED_TEST_P(test_onecpt, multiple_bolus) {
     90.71795, 768.09246,
     8.229747, 667.87079;
   Eigen::MatrixXd x = amounts.transpose();
-  this -> compare_val(x, 5.e-5);
+  this -> compare_val(x);
 
   this -> biovar[0] = {0.8, 0.9};
   this -> compare_solvers_val();
@@ -31,7 +30,6 @@ TYPED_TEST_P(test_onecpt, multiple_bolus) {
   this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
   this -> compare_solvers_adj(this -> biovar[0], 1.e-6, "bioavailability");
   this -> compare_solvers_adj(this -> tlag[0], 1.e-8, "lag time");
-  this -> compare_solvers_adj(this -> time, 1.e-6, "time");
 }
 
 TYPED_TEST_P(test_onecpt, multiple_bolus_cent) {
@@ -58,7 +56,6 @@ TYPED_TEST_P(test_onecpt, multiple_bolus_cent) {
   this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
   this -> compare_solvers_adj(this -> biovar[0], 1.e-6, "bioavailability");
   this -> compare_solvers_adj(this -> tlag[0], 1.e-8, "lag time");
-  this -> compare_solvers_adj(this -> time, 1.e-6, "time");
 }
 
 TYPED_TEST_P(test_onecpt, multiple_bolus_with_tlag) {
@@ -85,7 +82,6 @@ TYPED_TEST_P(test_onecpt, multiple_bolus_with_tlag) {
   this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
   this -> compare_solvers_adj(this -> biovar[0], 1.e-6, "bioavailability");
   this -> compare_solvers_adj(this -> tlag[0], 6.e-7, "lag time");
-  this -> compare_solvers_adj(this -> time, 1.e-6, "time");
 }
 
 TYPED_TEST_P(test_onecpt, multiple_bolus_ss) {
@@ -113,8 +109,6 @@ TYPED_TEST_P(test_onecpt, multiple_bolus_ss) {
   this -> compare_solvers_adj(this -> amt, 1.e-6, "AMT");
   this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
   this -> compare_solvers_adj(this -> biovar[0], 1.e-6, "bioavailability");
-  this -> compare_solvers_adj(this -> time, 1.e-6, "time");
-  this -> compare_solvers_adj(this -> ii, 1.e-6, "II");
 
   this -> tlag[0][0] = 1.7;
   this -> compare_solvers_adj(this -> tlag[0], 5.e-7, "lag time");
@@ -142,7 +136,7 @@ TYPED_TEST_P(test_onecpt, multiple_infusion_ss) {
     123.979747, 789.6393;
   Eigen::MatrixXd x = amounts.transpose();
 
-  this -> compare_val(x, 5.e-5);
+  this -> compare_val(x);
 
   this -> compare_solvers_adj(this -> amt, 1.e-6, "AMT");
   this -> compare_solvers_adj(this -> rate, 1.e-6, "RATE");
@@ -154,7 +148,6 @@ TYPED_TEST_P(test_onecpt, multiple_infusion_ss) {
   this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
   this -> compare_solvers_adj(this -> biovar[0], 1.e-6, "bioavailability");
   this -> compare_solvers_adj(this -> tlag[0], 5.e-7, "lag time");
-  this -> compare_solvers_adj(this -> ii, 5.e-7, "II");
 }
 
 TYPED_TEST_P(test_onecpt, single_infusion) {
@@ -200,7 +193,7 @@ TYPED_TEST_P(test_onecpt, single_infusion_cent) {
     0,  865.865635,
     0, 674.3368348;
   Eigen::MatrixXd x = amounts.transpose();
-  this -> compare_val(x, 1.e-6);
+  this -> compare_val(x, 5.e-7);
 
   this -> amt[0] = 1200;
   this -> rate[0] = 1200;
@@ -210,24 +203,6 @@ TYPED_TEST_P(test_onecpt, single_infusion_cent) {
   this -> compare_solvers_adj(this -> amt, 1.e-6, "AMT");
   this -> compare_solvers_adj(this -> rate, 1.e-6, "RATE");
   this -> compare_solvers_adj(this -> theta[0], 1.e-6, "theta");
-}
-
-TYPED_TEST_P(test_onecpt, multiple_infusion_ss_2) {
-  this -> time[0] = 0.0;
-  for(int i = 1; i < this -> nt; i++) this -> time[i] = this -> time[i - 1] + 3.0;
-
-  this -> amt[0] = 800;
-  std::fill(this -> rate.begin(), this -> rate.end(), 350.0);
-  this -> ii[0] = 2.5;
-  this -> ii[2] = 2;
-  this -> addl[0] = 0;
-  this -> ss[0] = 1;
-  this -> ss[2] = 1;
-
-  this -> compare_solvers_adj(this -> amt, 1.e-6, "AMT");
-  this -> compare_solvers_adj(this -> rate, 1.e-6, "RATE");
-  this -> compare_solvers_adj(this -> theta[0], 2.e-6, "theta");
-  this -> compare_solvers_adj(this -> ii, 1.e-6, "II");
 }
 
 TYPED_TEST_P(test_onecpt, time_dependent_theta) {
@@ -275,44 +250,10 @@ TYPED_TEST_P(test_onecpt, time_dependent_theta) {
     3.372017e-03, 3.4974152,
     1.678828e-04, 0.7342228;
   Eigen::MatrixXd x = amounts.transpose();
-  this -> compare_val(x, 5.e-5);
 
+  this -> compare_val(x);
+  this -> compare_solvers_val();
   this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
-}
-
-// TYPED_TEST_P(test_onecpt, reset_cmt) {
-//   this -> reset_events(3);
-//   this -> evid[0] = 1;
-//   this -> evid[1] = 2;
-//   this -> evid[2] = 1;
-//   this -> cmt[0] = 1;
-//   this -> cmt[1] = -2;
-//   this -> amt[0] = 1000;
-//   this -> amt[2]= 800;
-//   this -> ii[0] = 0;
-//   this -> addl[0] = 0;
-//   this -> time[0] = 0.0;
-//   this -> time[1] = 0.25;
-//   this -> time[2] = this -> time[1];
-  
-//   EXPECT_FLOAT_EQ(stan::math::value_of(y(0, 1)), 740.8182206817178);
-//   EXPECT_FLOAT_EQ(stan::math::value_of(y(1, 1)), 0.0);
-//   EXPECT_FLOAT_EQ(stan::math::value_of(y(0, 2)), 740.8182206817178);
-//   EXPECT_FLOAT_EQ(stan::math::value_of(y(1, 2)), 800.0);
-// }
-
-TYPED_TEST_P(test_onecpt, constant_infusion_ss) {
-  this -> time[0] = 0.0;
-  for(int i = 1; i < this -> nt; i++) this -> time[i] = this -> time[i - 1] + 2.5;
-
-  this -> amt[0] = 0.0;
-  this -> rate[0] = 150;
-  this -> ii[0] = 0.0;
-  this -> addl[0] = 0;
-  this -> ss[0] = 1;
-
-  this -> compare_solvers_adj(this -> rate, 1.e-6, "RATE");
-  this -> compare_solvers_adj(this -> theta[0], 1.e-6, "theta");
 }
 
 REGISTER_TYPED_TEST_SUITE_P(test_onecpt,
@@ -321,18 +262,13 @@ REGISTER_TYPED_TEST_SUITE_P(test_onecpt,
                             multiple_bolus_with_tlag, 
                             multiple_bolus_ss, 
                             multiple_infusion_ss, 
-                            multiple_infusion_ss_2,
                             single_infusion, 
                             single_infusion_cent, 
-                            constant_infusion_ss,
                             time_dependent_theta);
-                            // reset_cmt);
 
 using onecpt_test_types = boost::mp11::mp_product<
   std::tuple,
-  ::testing::Types<pmx_solve_rk45_functor,
-                   pmx_solve_bdf_functor,
-                   pmx_solve_adams_functor>, // solver 1
+  ::testing::Types<pmx_solve_linode_functor>, // solver 1
   ::testing::Types<pmx_solve_onecpt_functor>, // solver 2
   ::testing::Types<double, stan::math::var_value<double>>,  // TIME
   ::testing::Types<double, stan::math::var_value<double>>,  // AMT
@@ -369,7 +305,6 @@ TYPED_TEST_P(test_twocpt, multiple_bolus) {
   this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
   this -> compare_solvers_adj(this -> biovar[0], 1.e-6, "bioavailability");
   this -> compare_solvers_adj(this -> tlag[0], 5.e-7, "lag time");
-  this -> compare_solvers_adj(this -> time, 1.e-6, "time");
 }
 
 TYPED_TEST_P(test_twocpt, multiple_bolus_ss) {
@@ -399,8 +334,6 @@ TYPED_TEST_P(test_twocpt, multiple_bolus_ss) {
   this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
   this -> compare_solvers_adj(this -> biovar[0], 1.e-6, "bioavailability");
   this -> compare_solvers_adj(this -> tlag[0], 5.e-7, "lag time");
-  this -> compare_solvers_adj(this -> time, 1.e-6, "time");
-  this -> compare_solvers_adj(this -> ii, 2.0e-6, "II");
 }
 
 TYPED_TEST_P(test_twocpt, multiple_infusion_ss) {
@@ -431,12 +364,12 @@ TYPED_TEST_P(test_twocpt, multiple_infusion_ss) {
   this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
   this -> compare_solvers_adj(this -> biovar[0], 1.e-6, "bioavailability");
   this -> compare_solvers_adj(this -> tlag[0], 5.e-7, "lag time");
-  this -> compare_solvers_adj(this -> time, 1.e-6, "time");
 }
 
 TYPED_TEST_P(test_twocpt, time_dependent_theta) {
   this -> reset_events(11);
   this -> theta.resize(this -> nt);
+  this -> pMatrix.resize(this -> nt);
   for (int i = 0; i < this -> nt; i++) {
     this -> theta[i].resize(5);
     if (i < 6) {
@@ -448,6 +381,17 @@ TYPED_TEST_P(test_twocpt, time_dependent_theta) {
     this -> theta[i][2] = 20;  // Vc
     this -> theta[i][3] = 70;  // Vp
     this -> theta[i][4] = 1.2;  // ka
+
+    this -> pMatrix[i].resize(3, 3);
+    auto CL = this -> theta[i][0];
+    auto Q = this -> theta[i][1];
+    auto V2 = this -> theta[i][2];
+    auto V3 = this -> theta[i][3];
+    auto ka = this -> theta[i][4];
+    auto k10 = CL / V2;
+    auto k12 = Q / V2;
+    auto k21 = Q / V3;
+    this -> pMatrix[i] << -ka, 0.0, 0.0, ka, -(k10 + k12), k21, 0.0, k12, -k21;
   }
 	
   this -> time[0] = 0.0;
@@ -472,12 +416,11 @@ TYPED_TEST_P(test_twocpt, time_dependent_theta) {
     3.372017e-03,   8.549649, 209.5604,
     1.678828e-04,   6.690631, 164.0364;
   Eigen::MatrixXd x = amounts.transpose();
-  this -> compare_val(x, 5.e-5);
+  this -> compare_val(x);
 
   for (auto i = 0; i < this -> nt; ++i) {
     this -> compare_solvers_adj(this -> theta[i], 5.e-6, "theta");
   }
-  this -> compare_solvers_adj(this -> time, 1.e-6, "time");
 }
 
 TYPED_TEST_P(test_twocpt, multiple_infusion_2) {
@@ -486,6 +429,17 @@ TYPED_TEST_P(test_twocpt, multiple_infusion_2) {
   this -> theta[0][2] = 35;  // Vc
   this -> theta[0][3] = 105;  // Vp
   this -> theta[0][4] = 1.2;  // ka
+  
+  auto CL = this -> theta[0][0];
+  auto Q = this -> theta[0][1];
+  auto V2 = this -> theta[0][2];
+  auto V3 = this -> theta[0][3];
+  auto ka = this -> theta[0][4];
+  auto k10 = CL / V2;
+  auto k12 = Q / V2;
+  auto k21 = Q / V3;
+  this -> pMatrix[0] << -ka, 0.0, 0.0, ka, -(k10 + k12), k21, 0.0, k12, -k21;
+
   this -> amt[0] = 1200;
   this -> rate[0] = 1200;
 
@@ -540,7 +494,7 @@ TYPED_TEST_P(test_twocpt, single_infusion_cent) {
     0, 425.085221, 450.714833;
   Eigen::MatrixXd x = amounts.transpose();
 
-  this -> compare_val(x);
+  this -> compare_val(x, 2.e-6);
   this -> compare_solvers_adj(this -> amt, 1.e-6, "AMT");
   this -> compare_solvers_adj(this -> rate, 1.e-6, "RATE");
 }
@@ -555,9 +509,7 @@ REGISTER_TYPED_TEST_SUITE_P(test_twocpt,
 
 using twocpt_test_types = boost::mp11::mp_product<
   std::tuple,
-  ::testing::Types<pmx_solve_rk45_functor,
-                   pmx_solve_bdf_functor,
-                   pmx_solve_adams_functor>, // solver 1
+  ::testing::Types<pmx_solve_linode_functor>, // solver 1
   ::testing::Types<pmx_solve_twocpt_functor>, // solver 2
   ::testing::Types<double, stan::math::var_value<double>>,  // TIME
   ::testing::Types<double, stan::math::var_value<double>>,  // AMT
@@ -570,47 +522,3 @@ using twocpt_test_types = boost::mp11::mp_product<
     >;
 
 INSTANTIATE_TYPED_TEST_SUITE_P(PMX, test_twocpt, twocpt_test_types);
-
-
-// non-autonomous one-cpt model
-
-TYPED_TEST_SUITE_P(test_onecpt_non_autonomous);
-
-TYPED_TEST_P(test_onecpt_non_autonomous, single_bolus) {
-  Eigen::MatrixXd amounts(10, 2);
-  amounts << 1000.0, 0.0,
-    740.8182, 255.4765,
-    548.8116, 439.2755,
-    406.5697, 571.5435,
-    301.1942, 666.5584,
-    223.1302, 734.5274,
-    165.2989, 782.7979,
-    122.4564, 816.6868,
-    90.71795, 840.0581,
-    8.229747, 869.0283;
-  Eigen::MatrixXd x = amounts.transpose();
-
-  this -> compare_val(x);
-  this -> compare_solvers_adj(this -> theta[0], 5.e-6, "theta");
-  this -> compare_solvers_adj(this -> amt, 1.e-6, "AMT");
-  this -> compare_solvers_adj(this -> biovar[0], 1.e-6, "bioavailability");
-}
-
-REGISTER_TYPED_TEST_SUITE_P(test_onecpt_non_autonomous,
-                            single_bolus);
-
-using onecpt_non_autonomous_test_types = boost::mp11::mp_product<
-  std::tuple,
-  ::testing::Types<pmx_solve_bdf_functor>, // solver 1
-  ::testing::Types<pmx_solve_rk45_functor>,
-  ::testing::Types<double>,  // TIME
-  ::testing::Types<double, stan::math::var_value<double>>,  // AMT
-  ::testing::Types<double, stan::math::var_value<double>> , // RATE
-  ::testing::Types<stan::math::var_value<double>> , // II
-  ::testing::Types<double, stan::math::var_value<double>> , // PARAM
-  ::testing::Types<double> , // BIOVAR
-  ::testing::Types<double> , // TLAG
-  ::testing::Types<onecpt_abstime_functor>          // ODE
-    >;
-
-INSTANTIATE_TYPED_TEST_SUITE_P(PMX, test_onecpt_non_autonomous, onecpt_non_autonomous_test_types);

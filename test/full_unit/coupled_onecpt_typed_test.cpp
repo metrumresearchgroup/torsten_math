@@ -95,9 +95,9 @@ using onecpt_test_types = boost::mp11::mp_product<
   ::testing::Types<stan::math::var_value<double>>,  // TIME
   ::testing::Types<double, stan::math::var_value<double>>,  // AMT
   ::testing::Types<double, stan::math::var_value<double>> , // RATE
-  ::testing::Types<double> , // II
+  ::testing::Types<double, stan::math::var_value<double>> , // II
   ::testing::Types<double, stan::math::var_value<double>> , // PARAM
-  ::testing::Types<double> , // BIOVAR
+  ::testing::Types<double, stan::math::var_value<double>> , // BIOVAR
   ::testing::Types<stan::math::var_value<double>> , // TLAG
   ::testing::Types<CoupledOneCptODE>                   // ODE
     >;

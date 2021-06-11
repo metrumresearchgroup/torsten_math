@@ -92,12 +92,12 @@ using twocpt_test_types = boost::mp11::mp_product<
   ::testing::Types<pmx_solve_twocpt_rk45_functor,
                    pmx_solve_twocpt_bdf_functor>, // solver 1
   ::testing::Types<pmx_solve_rk45_functor>, // solver 2
-  ::testing::Types<stan::math::var_value<double>>,  // TIME
+  ::testing::Types< stan::math::var_value<double>>,  // TIME
   ::testing::Types<double, stan::math::var_value<double>>,  // AMT
   ::testing::Types<double, stan::math::var_value<double>> , // RATE
-  ::testing::Types<double, stan::math::var_value<double>> , // II
+  ::testing::Types<double> , // II
   ::testing::Types<double, stan::math::var_value<double>> , // PARAM
-  ::testing::Types<double, stan::math::var_value<double>> , // BIOVAR
+  ::testing::Types<stan::math::var_value<double>> , // BIOVAR
   ::testing::Types<stan::math::var_value<double>> , // TLAG
   ::testing::Types<CoupledTwoCptODE>                   // ODE
     >;

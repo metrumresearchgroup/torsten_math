@@ -1,7 +1,6 @@
 #include <stan/math/torsten/test/unit/test_fixture_onecpt.hpp>
 #include <stan/math/torsten/test/unit/test_fixture_twocpt.hpp>
 #include <stan/math/torsten/test/unit/test_functors.hpp>
-#include <stan/math/torsten/test/unit/test_fixture_ode_non_autonomous.hpp>
 #include <stan/math/torsten/pmx_onecpt_model.hpp>
 #include <stan/math/torsten/pmx_twocpt_model.hpp>
 #include <stan/math/torsten/pmx_ode_model.hpp>
@@ -47,7 +46,7 @@ TYPED_TEST_P(test_onecpt, multiple_infusion) {
 
   this -> test_finite_diff_amt(1.e-3, 1.e-6);
   this -> test_finite_diff_rate(1.e-3, 1.e-6);
-  this -> test_finite_diff_tlag(1.e-3, 1.e-4);
+  this -> test_finite_diff_tlag(1.e-3, 1.e-6);
 }
 
 TYPED_TEST_P(test_onecpt, multiple_infusion_ss) {
@@ -60,41 +59,7 @@ TYPED_TEST_P(test_onecpt, multiple_infusion_ss) {
   this -> ss[0] = 1;
 
   this -> test_finite_diff_amt(1.e-3, 1.e-6);
-  this -> test_finite_diff_rate(1.e-3, 2.e-5);
-}
-
-TYPED_TEST_P(test_onecpt, multiple_infusion_ss_tlag) {
-  this -> time[0] = 0.0;
-  this -> time[1] = 0.0;
-  for(int i = 2; i < this -> nt; i++) this -> time[i] = this -> time[i - 1] + 5;
-  this -> time[3] = 6.0;
-
-  this -> amt[0] = 0.0;
-  this -> evid[0] = 0;
-  this -> evid[1] = 1;
-  this -> evid[3] = 1;
-  this -> amt[1] = 1200;
-  this -> amt[3] = 1000;
-  this -> rate[1] = 200;
-  this -> rate[3] = 200;
-  this -> cmt[1] = 1;
-  this -> cmt[3] = 1;
-  this -> ss[1] = 1;
-  this -> tlag.resize(this -> nt);
-  for (int i = 0; i < this -> nt; ++i) {
-    this -> tlag[i].resize(this -> ncmt);
-    this -> tlag[i][0] = 0.0;
-    this -> tlag[i][1] = 0.0;
-  }
-  this -> tlag[1][0] = 1.0;
-  this -> tlag[3][0] = 0.5;
-  this -> ii[1] = 6.5;
-  this -> addl[0] = 0;
-
-  this -> test_finite_diff_amt(1.e-3, 1.e-6);
-  this -> test_finite_diff_rate(1.e-3, 5.e-5);
-  this -> test_finite_diff_biovar(1.e-3, 5.e-4);
-  this -> test_finite_diff_ii(1.e-3, 5.e-4);
+  this -> test_finite_diff_rate(1.e-3, 1.e-6);
 }
 
 TYPED_TEST_P(test_onecpt, multiple_infusion_2) {
@@ -118,13 +83,12 @@ REGISTER_TYPED_TEST_SUITE_P(test_onecpt,
                             multiple_bolus_with_tlag, 
                             multiple_bolus_ss,        
                             multiple_infusion_ss,     
-                            multiple_infusion_ss_tlag,
                             multiple_infusion,
                             multiple_infusion_2);
 
 using onecpt_test_types = boost::mp11::mp_product<
   std::tuple,
-  ::testing::Types<pmx_solve_rk45_functor, pmx_solve_bdf_functor, pmx_solve_adams_functor>, // solver 1
+  ::testing::Types<pmx_solve_linode_functor>, // solver 1
   ::testing::Types<pmx_solve_linode_functor>, // solver 2
   ::testing::Types<double, stan::math::var_value<double>>,  // TIME
   ::testing::Types<double, stan::math::var_value<double>>,  // AMT
@@ -145,7 +109,7 @@ TYPED_TEST_P(test_twocpt, multiple_bolus) {
   this -> biovar[0] = {0.8, 0.9, 0.9};
   this -> tlag[0] = {0.4, 0.8, 0.8};
   this -> test_finite_diff_amt(1.e-3, 1.e-6);
-  this -> test_finite_diff_biovar(1.e-3, 5.e-6);
+  this -> test_finite_diff_biovar(1.e-3, 1.e-6);
   this -> test_finite_diff_tlag(1.e-3, 5.e-4);
 }
 
@@ -159,9 +123,8 @@ TYPED_TEST_P(test_twocpt, multiple_bolus_ss) {
   this -> ss[0] = 1;
 
   this -> test_finite_diff_amt(1.e-3, 1.e-6);
-  this -> test_finite_diff_biovar(1.e-3, 5.e-6);
+  this -> test_finite_diff_biovar(1.e-3, 1.e-6);
   this -> test_finite_diff_ii(1.e-3, 1.5e-3);
-  // FIXME: this -> test_finite_diff_time(1.e-3, 1.e-5);
 }
 
 TYPED_TEST_P(test_twocpt, multiple_infusion) {
@@ -176,8 +139,7 @@ TYPED_TEST_P(test_twocpt, multiple_infusion) {
 
   this -> test_finite_diff_amt(1.e-3, 1.e-6);
   this -> test_finite_diff_rate(1.e-3, 1.e-6);
-  this -> test_finite_diff_biovar(1.e-3, 5.e-6);
-  this -> test_finite_diff_time(1.e-3, 1.e-4);
+  this -> test_finite_diff_biovar(1.e-3, 1.e-6);
 }
 
 TYPED_TEST_P(test_twocpt, multiple_infusion_ss) {
@@ -194,8 +156,6 @@ TYPED_TEST_P(test_twocpt, multiple_infusion_ss) {
   this -> test_finite_diff_biovar(1.e-3, 5.e-4);
   this -> test_finite_diff_ii(1.e-3, 5.e-4);
 }
-
-
 
 TYPED_TEST_P(test_twocpt, time_dependent_theta) {
   this -> reset_events(11);
@@ -238,30 +198,8 @@ TYPED_TEST_P(test_twocpt, multiple_infusion_2) {
   this -> test_finite_diff_rate(1.e-3, 1.e-6);
 }
 
-TYPED_TEST_P(test_twocpt, multiple_bolus_2) {
-  this -> reset_events(3);
-  this -> time[0] = 0.0;
-  this -> time[1] = 5.0;
-  this -> time[2] = 10.0;
-  this -> evid[0] = 1;
-  this -> amt[0] = 1200;
-  this -> amt[1] = 800;
-  this -> amt[2] = 800;
-  this -> cmt[0] = 1;
-  this -> cmt[1] = 3;
-  this -> cmt[2] = 3;
-  this -> rate[0] = 0;
-  this -> addl[0] = 0;
-  this -> ii[0] = 0;
-  this -> ss[0] = 0;
-
-  this -> test_finite_diff_amt(1.e-3, 1.e-6);
-  this -> test_finite_diff_theta(1.e-3, 1.e-4);
-}
-
 REGISTER_TYPED_TEST_SUITE_P(test_twocpt,
                             multiple_bolus,
-                            multiple_bolus_2,
                             multiple_bolus_ss,
                             multiple_infusion,
                             multiple_infusion_ss,
@@ -270,15 +208,15 @@ REGISTER_TYPED_TEST_SUITE_P(test_twocpt,
 
 using twocpt_test_types = boost::mp11::mp_product<
   std::tuple,
-  ::testing::Types<pmx_solve_rk45_functor, pmx_solve_bdf_functor>, // solver 1
+  ::testing::Types<pmx_solve_linode_functor>, // solver 1
   ::testing::Types<pmx_solve_linode_functor>, // solver 2
-  ::testing::Types<double>,  // TIME
+  ::testing::Types<double, stan::math::var_value<double>>,  // TIME
   ::testing::Types<double, stan::math::var_value<double>>,  // AMT
   ::testing::Types<double, stan::math::var_value<double>> , // RATE
-  ::testing::Types<double> , // II
+  ::testing::Types<double, stan::math::var_value<double>> , // II
   ::testing::Types<double, stan::math::var_value<double>> , // PARAM
-  ::testing::Types<stan::math::var_value<double>> , // BIOVAR
-  ::testing::Types<double> , // TLAG
+  ::testing::Types<double, stan::math::var_value<double>> , // BIOVAR
+  ::testing::Types<double, stan::math::var_value<double>> , // TLAG
   ::testing::Types<torsten::PMXTwoCptODE>                   // ODE
     >;
 

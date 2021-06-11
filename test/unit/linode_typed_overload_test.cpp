@@ -54,13 +54,13 @@ using linode_test_types = boost::mp11::mp_product<
   std::tuple,
   ::testing::Types<pmx_solve_linode_functor>, // solver 1
   ::testing::Types<pmx_solve_linode_functor>, // solver 2
-  ::testing::Types<double, stan::math::var_value<double>>,  // TIME
+  ::testing::Types<double>,  // TIME
   ::testing::Types<double, stan::math::var_value<double>>,  // AMT
   ::testing::Types<double, stan::math::var_value<double>> , // RATE
-  ::testing::Types<double, stan::math::var_value<double>> , // II
+  ::testing::Types<double> , // II
   ::testing::Types<double, stan::math::var_value<double>> , // PARAM
-  ::testing::Types<double, stan::math::var_value<double>> , // BIOVAR
-  ::testing::Types<double, stan::math::var_value<double>> , // TLAG
+  ::testing::Types<stan::math::var_value<double>> , // BIOVAR
+  ::testing::Types<stan::math::var_value<double>> , // TLAG
   ::testing::Types<torsten::PMXOneCptODE>                   // ODE
     >;
 

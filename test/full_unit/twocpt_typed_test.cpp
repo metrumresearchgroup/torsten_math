@@ -314,13 +314,13 @@ using twocpt_test_types = boost::mp11::mp_product<
                    pmx_solve_rk45_functor,
                    pmx_solve_bdf_functor,
                    pmx_solve_adams_functor>, // solver 2
-  ::testing::Types<double>,  // TIME
+  ::testing::Types<double, stan::math::var_value<double>>,  // TIME
   ::testing::Types<double, stan::math::var_value<double>>,  // AMT
   ::testing::Types<double, stan::math::var_value<double>> , // RATE
-  ::testing::Types<stan::math::var_value<double>> , // II
+  ::testing::Types<double, stan::math::var_value<double>> , // II
   ::testing::Types<double, stan::math::var_value<double>> , // PARAM
-  ::testing::Types<double> , // BIOVAR
-  ::testing::Types<double> , // TLAG
+  ::testing::Types<double, stan::math::var_value<double>> , // BIOVAR
+  ::testing::Types<double, stan::math::var_value<double>> , // TLAG
   ::testing::Types<torsten::PMXTwoCptODE>                   // ODE
     >;
 
