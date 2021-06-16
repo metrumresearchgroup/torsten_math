@@ -7,10 +7,10 @@
 #include <stan/math/prim/functor/apply.hpp>
 #include <stan/math/prim/err.hpp>
 #include <stan/math/prim/meta/return_type.hpp>
+#include <stan/math/prim/functor/for_each.hpp>
 #include <stan/math/torsten/dsolve/ode_tuple_functor.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
-#include <stan/math/torsten/apply.hpp>
 #include <stan/math/torsten/meta/require_generics.hpp>
 #include <stan/math/torsten/value_of.hpp>
 #include <stan/math/prim/fun/typedefs.hpp>
@@ -507,7 +507,7 @@ namespace dsolve {
           }
         }
 
-        torsten::apply([&](auto&&... args) { zero_adjoints(args...); }, local_theta_tuple_);
+        stan::math::for_each([](auto&& arg) { stan::math::zero_adjoints(arg); }, local_theta_tuple_);
       }
     }
 
@@ -565,7 +565,7 @@ namespace dsolve {
           }
         }
 
-        torsten::apply([&](auto&&... args) { stan::math::zero_adjoints(args...); }, local_theta_tuple_);
+        stan::math::for_each([](auto&& arg) { stan::math::zero_adjoints(arg); }, local_theta_tuple_);
       }
     }
 
