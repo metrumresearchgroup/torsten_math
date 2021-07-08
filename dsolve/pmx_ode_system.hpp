@@ -415,7 +415,7 @@ namespace dsolve {
       return ode_arg_tuple_;
     }
 
-    /*
+    /**
      * Evaluate RHS of the ODE(the combined system)
      * @param y current dependent value, arranged as {y, dy_dp1, dy_dp2...}
      * @param dy_dt ODE RHS to be filled.
@@ -452,6 +452,17 @@ namespace dsolve {
     static int cvodes_rhs(double t, N_Vector y, N_Vector ydot, void* user_data) {
       Ode* ode = static_cast<Ode*>(user_data);
       (*ode)(t, y, ydot);
+      return 0;
+    }
+
+    static int arkode_combined_rhs(double t, N_Vector y, N_Vector ydot, void* user_data) {
+      Ode* ode = static_cast<Ode*>(user_data);
+      Eigen::VectorXd y_vec = Eigen::Map<Eigen::VectorXd>(NV_DATA_S(y), ode -> system_size);
+      Eigen::VectorXd ydot_vec = Eigen::Map<Eigen::VectorXd>(NV_DATA_S(ydot), ode -> system_size);
+      ode -> rhs_impl(y_vec, ydot_vec, t);
+      for (size_t i = 0; i < ode -> system_size; ++i) {
+        NV_Ith_S(ydot, i) = ydot_vec[i];
+      }
       return 0;
     }
 
@@ -532,9 +543,6 @@ namespace dsolve {
       vector_v yv(N);
       for (size_t i = 0; i < N; ++i) { yv[i] = NV_Ith_S(nv_y, i); }
       vector_v dydt(f_tuple_(t, yv, msgs_, local_theta_tuple_));
-      // vector_v dydt(is_var_par ?
-      //               f_tuple_(t, yv, msgs_, local_theta_tuple_) :
-                    // f_tuple_(t, yv, msgs_, theta_dbl_tuple_));
 
       stan::math::check_size_match("PMXOdeSystem", "dydt", dydt.size(), "states", N);
 
