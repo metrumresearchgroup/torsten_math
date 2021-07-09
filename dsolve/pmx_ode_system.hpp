@@ -363,7 +363,8 @@ namespace dsolve {
     const size_t M;
     const size_t ns;
     const size_t system_size;
-    Eigen::VectorXd y0_fwd_system;
+    std::vector<double> y0_fwd_system; // internally we use std::vector
+    Eigen::VectorXd y_work, dydt_work;
 
     PMXVariadicOdeSystem(const F& f,
                          double t0,
@@ -384,18 +385,20 @@ namespace dsolve {
         M(stan::math::count_vars(args...)),
         ns((is_var_y0 ? N : 0) + M),
         system_size(N + N * ns),
-        y0_fwd_system(Eigen::VectorXd::Zero(system_size))
+        y0_fwd_system(system_size, 0.0),
+        y_work(system_size),
+        dydt_work(system_size)
     {
       const char* caller = "PMX Variadic ODE System";
       // torsten::dsolve::ode_check(y0_, t0_, ts_, theta_, x_r_, x_i_, caller);
 
       // initial state
       for (size_t i = 0; i < N; ++i) {
-        y0_fwd_system.coeffRef(i) = stan::math::value_of(y0.coeffRef(i));
+        y0_fwd_system[i] = stan::math::value_of(y0.coeffRef(i));
       }
       if (is_var_y0)  {
         for (size_t i = 0; i < N; ++i) {
-          y0_fwd_system.coeffRef(N + i * N + i) = 1.0;        
+          y0_fwd_system[N + i * N + i] = 1.0;
         }
       }
     }
@@ -421,11 +424,18 @@ namespace dsolve {
      * @param dy_dt ODE RHS to be filled.
      * @param t current indepedent value
      */
-    inline void operator()(const Eigen::VectorXd& y, Eigen::VectorXd& dy_dt,
+    inline void operator()(const std::vector<double> & y, std::vector<double> & dydt,
                            double t) {
-      dy_dt.resize(system_size); // boost::odeint vector_space_algebra doesn't do resize
-      stan::math::check_size_match("PMXVariadicOdeSystem", "y", y.size(), "dy_dt", dy_dt.size());
-      rhs_impl(y, dy_dt, t);
+      dydt.resize(system_size); // boost::odeint vector_space_algebra doesn't do resize
+      stan::math::check_size_match("PMXVariadicOdeSystem", "y", y.size(), "dy_dt", dydt.size());
+
+      for (auto i = 0; i < system_size; ++i) {
+        y_work.coeffRef(i) = y[i];
+      }
+
+      rhs_impl(y_work, dydt_work, t);
+
+      Eigen::Map<Eigen::VectorXd>(dydt.data(), system_size) = dydt_work;
     }
 
     /*
@@ -631,7 +641,6 @@ namespace dsolve {
       }
     }
   };
-
 }  // namespace dsolve
 }  // namespace torsten
 #endif
