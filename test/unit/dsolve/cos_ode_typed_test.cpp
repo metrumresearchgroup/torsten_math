@@ -22,44 +22,44 @@ using cos_arg_test_types = boost::mp11::mp_product<
 
 TYPED_TEST_SUITE_P(cos_arg_test);
 TYPED_TEST_P(cos_arg_test, y0_error) {
-  // this->test_y0_error();
-  // this->test_y0_error_with_tol();
+  this->test_y0_error();
+  this->test_y0_error_with_tol();
 }
 TYPED_TEST_P(cos_arg_test, t0_error) {
-  // this->test_t0_error();
-  // this->test_t0_error_with_tol();
+  this->test_t0_error();
+  this->test_t0_error_with_tol();
 }
 TYPED_TEST_P(cos_arg_test, ts_error) {
   // this->test_ts_error();
   // this->test_ts_error_with_tol();
 }
 TYPED_TEST_P(cos_arg_test, one_arg_error) {
-  // this->test_one_arg_error();
-  // this->test_one_arg_error_with_tol();
+  this->test_one_arg_error();
+  this->test_one_arg_error_with_tol();
 }
 TYPED_TEST_P(cos_arg_test, two_arg_error) {
-  // this->test_two_arg_error();
-  // this->test_two_arg_error_with_tol();
+  this->test_two_arg_error();
+  this->test_two_arg_error_with_tol();
 }
 TYPED_TEST_P(cos_arg_test, rhs_wrong_size_error) {
-  // this->test_rhs_wrong_size_error();
-  // this->test_rhs_wrong_size_error_with_tol();
+  this->test_rhs_wrong_size_error();
+  this->test_rhs_wrong_size_error_with_tol();
 }
 TYPED_TEST_P(cos_arg_test, error_name) {
   // this->test_error_name();
   // this->test_error_name_with_tol();
 }
 TYPED_TEST_P(cos_arg_test, tol_error) {
-  // this->test_rtol_error();
-  // this->test_atol_error();
-  // this->test_max_num_step_error();
+  this->test_rtol_error();
+  this->test_atol_error();
+  this->test_max_num_step_error();
   // this->test_too_much_work();
 }
 TYPED_TEST_P(cos_arg_test, value) { this->test_value(); }
 TYPED_TEST_P(cos_arg_test, grad) {
   // this->test_grad_t0();
   this->test_grad_ts();
-  this->test_grad_ts_repeat();
+  // this->test_grad_ts_repeat();
   this->test_scalar_arg();
   this->test_std_vector_arg();
   this->test_vector_arg();
@@ -77,7 +77,7 @@ TYPED_TEST_P(cos_arg_test, tol_grad) {
   this->test_tol_int_ts();
   // this->test_tol_t0();
   this->test_tol_ts();
-  this->test_tol_ts_repeat();
+  // this->test_tol_ts_repeat();
   this->test_tol_scalar_arg();
   this->test_tol_scalar_arg_multi_time();
   this->test_tol_std_vector_arg();

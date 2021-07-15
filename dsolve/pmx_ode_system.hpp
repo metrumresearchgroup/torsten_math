@@ -396,7 +396,7 @@ namespace dsolve {
         fyv_work((is_var_y0 || is_var_par)? N : 0)
     {
       const char* caller = "PMX Variadic ODE System";
-      // torsten::dsolve::ode_check(y0_, t0_, ts_, theta_, x_r_, x_i_, caller);
+      torsten::dsolve::ode_check(y0_, t0_, ts_, caller, theta_ref_tuple_);
 
       // initial state
       for (size_t i = 0; i < N; ++i) {
@@ -448,10 +448,12 @@ namespace dsolve {
      * evaluate RHS with data only inputs.
      */
     inline Eigen::VectorXd dbl_rhs_impl(double t, const Eigen::VectorXd& y) const {
-      return f_tuple_(t, y, msgs_, theta_dbl_tuple_);
+      Eigen::VectorXd res = f_tuple_(t, y, msgs_, theta_dbl_tuple_);
+      stan::math::check_size_match("PMXVariadicOdeSystem", "y", y.size(), "dy_dt", res.size());
+      return res;
     }
 
-    /*
+    /**
      * evaluate RHS with data only inputs.
      */
     inline Eigen::VectorXd dbl_rhs_impl(double t, const N_Vector& nv_y) const {
@@ -489,6 +491,7 @@ namespace dsolve {
     void rhs_impl(const Eigen::VectorXd & y, Eigen::VectorXd & dydt, double t) {
       if (!(is_var_y0 || is_var_par)) {
         dydt = f_tuple_(t, y, msgs_, theta_dbl_tuple_);
+        stan::math::check_size_match("PMXVariadicOdeSystem", "y", y.size(), "dy_dt", dydt.size());
         return;
       }
 
@@ -499,6 +502,7 @@ namespace dsolve {
       stan::math::vector_v& fyv = fyv_work;
       for (size_t i = 0; i < N; ++i) { yv.coeffRef(i) = y.coeffRef(i); }
       fyv = f_tuple_(t, yv, msgs_, theta_local_tuple_);
+      stan::math::check_size_match("PMXVariadicOdeSystem", "y", yv.size(), "dy_dt", fyv.size());
 
       Eigen::VectorXd& g = g_work;
       for (size_t i = 0; i < N; ++i) {
