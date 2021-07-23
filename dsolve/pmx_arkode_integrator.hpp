@@ -18,8 +18,9 @@ namespace dsolve {
   struct PMXArkodeIntegrator {
     static constexpr int ARKODE_MAX_STEPS = 500;
 
-    const double rtol_;
-    const double atol_;
+    static double rtol_;
+    static double atol_;
+    static double curr_dt_;
     const int64_t max_num_steps_;
 
     /**
@@ -30,8 +31,11 @@ namespace dsolve {
      */
     PMXArkodeIntegrator(const double rtol, const double atol,
                         const int64_t max_num_steps = ARKODE_MAX_STEPS)
-      : rtol_(rtol), atol_(atol), max_num_steps_(max_num_steps)
-    {}
+      : max_num_steps_(max_num_steps)
+    {
+      rtol_ = rtol;
+      atol_ = atol;
+    }
       
     /**
      * Return the solutions for the specified ODE
@@ -68,6 +72,11 @@ namespace dsolve {
 
       CHECK_SUNDIALS_CALL(ERKStepSetTableNum(mem, butcher_tab));
       CHECK_SUNDIALS_CALL(ERKStepSetAdaptivityMethod(mem, 3, SUNTRUE, SUNFALSE, NULL));
+      CHECK_SUNDIALS_CALL(ERKStepSetMaxGrowth(mem, 5));
+      CHECK_SUNDIALS_CALL(ERKStepSetMinReduction(mem, 0.2));
+
+      // typedef int (*ARKEwtFn)(N_Vector y, N_Vector ewt, void* user_data)
+      // int ERKStepWFtolerances(void* arkode_mem, ARKEwtFn efun)
 
       double t1 = ode.t0_;
       
@@ -81,6 +90,16 @@ namespace dsolve {
     }
 
   };  // arkode integrator
+
+  template<int butcher_tab>
+  double PMXArkodeIntegrator<butcher_tab>::rtol_ = 0;
+
+  template<int butcher_tab>
+  double PMXArkodeIntegrator<butcher_tab>::atol_ = 0;
+
+  template<int butcher_tab>
+  double PMXArkodeIntegrator<butcher_tab>::curr_dt_ = 0;
+
 }  // namespace dsolve
 }  // namespace torsten
 

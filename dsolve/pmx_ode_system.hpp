@@ -58,7 +58,7 @@ namespace dsolve {
    * @tparam T_par scalar type of parameters
    */
   template <typename F, typename Tt, typename T_init, typename T_par>
-  struct  PMXOdeSystem : torsten::std_ode<F> {
+  struct PMXOdeSystem : torsten::std_ode<F> {
     using Ode = PMXOdeSystem<F, Tt, T_init, T_par>;
     using scalar_t = typename stan::return_type_t<Tt, T_init, T_par>;
     using state_t = std::vector<scalar_t>;
@@ -81,7 +81,7 @@ namespace dsolve {
     const size_t system_size;
     std::ostream* msgs_;
     std::vector<double> y0_fwd_system;
-
+    std::vector<double> y_work, dydt_work;
   public:
     PMXOdeSystem(const F& f,
                  double t0,
@@ -104,7 +104,9 @@ namespace dsolve {
         ns((is_var_y0 ? N : 0) + (is_var_par ? M : 0)),
         system_size(N + N * ns),
         msgs_(msgs),
-        y0_fwd_system(system_size, 0.0)
+        y0_fwd_system(system_size, 0.0),
+        y_work(N),
+        dydt_work(N)
     {
       const char* caller = "PMX ODE System";
       torsten::dsolve::ode_check(y0_, t0_, ts_, theta_, x_r_, x_i_, caller);
@@ -141,35 +143,40 @@ namespace dsolve {
      * @param t current indepedent value
      */
     inline void operator()(const std::vector<double>& y, std::vector<double>& dy_dt,
-                           double t) const {
+                           double t) {
       stan::math::check_size_match("PMXOdeSystem", "y", y.size(), "dy_dt", dy_dt.size());
       rhs_impl(y, dy_dt, t);
     }
 
-    /*
+    /**
      * evaluate RHS with data only inputs.
      */
-    inline std::vector<double> dbl_rhs_impl(double t, const std::vector<double>& y) const
+    inline std::vector<double>& dbl_rhs_impl(double t, const std::vector<double>& y)
     {
-      return f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
+      dydt_work = f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
+      return dydt_work;
     }
 
     /*
      * evaluate RHS with data only inputs.
      */
-    inline std::vector<double> dbl_rhs_impl(double t, const N_Vector& nv_y) const
+    inline std::vector<double>& dbl_rhs_impl(double t, const N_Vector& nv_y)
     {
-      std::vector<double> y(NV_DATA_S(nv_y), NV_DATA_S(nv_y) + N);
-      return f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
+      for (int i = 0; i < N; ++i) {
+        y_work[i] = NV_Ith_S(nv_y, i);
+      }
+      return dbl_rhs_impl(t, y_work);
     }
 
-    /*
+    /**
      * evaluate RHS with data only inputs for N_Vector data
      */    
-    inline void operator()(double t, N_Vector& nv_y, N_Vector& ydot) const {
+    inline void operator()(double t, N_Vector& nv_y, N_Vector& ydot) {
       stan::math::check_size_match("PMXOdeSystem", "y", NV_LENGTH_S(nv_y), "dy_dt", NV_LENGTH_S(ydot));
-      std::vector<double> y(NV_DATA_S(nv_y), NV_DATA_S(nv_y) + N);
-      std::vector<double> dydt(f_(t, y, theta_dbl_, x_r_, x_i_, msgs_));
+      for (int i = 0; i < N; ++i) {
+        y_work[i] = NV_Ith_S(nv_y, i);
+      }
+      std::vector<double>& dydt = dbl_rhs_impl(t, y_work);
       for (size_t i = 0; i < N; ++i) {
         NV_Ith_S(ydot, i) = dydt[i];
       }
@@ -186,12 +193,12 @@ namespace dsolve {
      * the forward sensitivity equation components in @c y and @c dy_dt.
      */
     void rhs_impl(const std::vector<double>& y,
-                  std::vector<double>& dy_dt, double t) const {
+                  std::vector<double>& dy_dt, double t) {
       using std::vector;
       using stan::math::var;
 
       if (!(is_var_y0 || is_var_par)) {
-        dy_dt = f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
+        dy_dt = dbl_rhs_impl(t, y);
         return;
       }
 
@@ -241,26 +248,26 @@ namespace dsolve {
 
       stan::math::nested_rev_autodiff nested;
 
-      std::vector<stan::math::var> yv_work(NV_DATA_S(nv_y), NV_DATA_S(nv_y) + N);
-      std::vector<stan::math::var> theta_work(theta_dbl_.begin(), theta_dbl_.end());
-      std::vector<stan::math::var> dy_dt(is_var_par ?
-                                         f_(t, yv_work, theta_work, x_r_, x_i_, msgs_) :
-                                         f_(t, yv_work, theta_dbl_, x_r_, x_i_, msgs_));
+      std::vector<stan::math::var> yv(NV_DATA_S(nv_y), NV_DATA_S(nv_y) + N);
+      std::vector<stan::math::var> theta_v(theta_dbl_.begin(), theta_dbl_.end());
+      std::vector<stan::math::var> fyv(is_var_par ?
+                                         f_(t, yv, theta_v, x_r_, x_i_, msgs_) :
+                                         f_(t, yv, theta_dbl_, x_r_, x_i_, msgs_));
 
-      stan::math::check_size_match("PMXOdeSystem", "dy_dt", dy_dt.size(), "states", N);
+      stan::math::check_size_match("PMXOdeSystem", "dy_dt", fyv.size(), "states", N);
 
       for (int j = 0; j < N; ++j) {
         if (j > 0) {
           nested.set_zero_all_adjoints();
         }
-        dy_dt[j].grad();
+        fyv[j].grad();
 
         // df/dy*s_i term, for i = 1...ns
         for (int i = 0; i < ns; ++i) {
           auto ysp = N_VGetArrayPointer(ys[i]);
           auto nvp = N_VGetArrayPointer(ysdot[i]);
           for (int k = 0; k < N; ++k) {
-            nvp[j] += yv_work[k].adj() * ysp[k];              
+            nvp[j] += yv[k].adj() * ysp[k];
           }
         }
 
@@ -268,7 +275,7 @@ namespace dsolve {
         if (is_var_par) {
           for (int i = 0; i < M; ++i) {
             auto nvp = N_VGetArrayPointer(ysdot[ns - M + i]);
-            nvp[j] += theta_work[i].adj();
+            nvp[j] += theta_v[i].adj();
           }
         }
       }
@@ -365,8 +372,7 @@ namespace dsolve {
     const size_t ns;
     const size_t system_size;
     std::vector<double> y0_fwd_system; // internally we use std::vector
-    Eigen::VectorXd y_work, dydt_work, g_work;
-    stan::math::vector_v yv_work, fyv_work;
+    Eigen::VectorXd y_work, dydt_work, y_dbl_work, dydt_dbl_work, g_work;
 
     PMXVariadicOdeSystem(const F& f,
                          double t0,
@@ -391,9 +397,9 @@ namespace dsolve {
         y0_fwd_system(system_size, 0.0),
         y_work(system_size),
         dydt_work(system_size),
-        g_work(is_var_par? M : 0),
-        yv_work((is_var_y0 || is_var_par)? N : 0),
-        fyv_work((is_var_y0 || is_var_par)? N : 0)
+        y_dbl_work(N),
+        dydt_dbl_work(N),
+        g_work(is_var_par? M : 0)
     {
       const char* caller = "PMX Variadic ODE System";
       torsten::dsolve::ode_check(y0_, t0_, ts_, caller, theta_ref_tuple_);
@@ -447,23 +453,26 @@ namespace dsolve {
     /*
      * evaluate RHS with data only inputs.
      */
-    inline Eigen::VectorXd dbl_rhs_impl(double t, const Eigen::VectorXd& y) const {
-      Eigen::VectorXd res = f_tuple_(t, y, msgs_, theta_dbl_tuple_);
-      stan::math::check_size_match("PMXVariadicOdeSystem", "y", y.size(), "dy_dt", res.size());
-      return res;
+    inline Eigen::VectorXd& dbl_rhs_impl(double t, const Eigen::VectorXd& y) {
+      dydt_dbl_work = f_tuple_(t, y, msgs_, theta_dbl_tuple_);
+      stan::math::check_size_match("PMXVariadicOdeSystem", "y", y.size(), "dy_dt", dydt_dbl_work.size());
+      return dydt_dbl_work;
     }
 
     /**
      * evaluate RHS with data only inputs.
      */
-    inline Eigen::VectorXd dbl_rhs_impl(double t, const N_Vector& nv_y) const {
-      return dbl_rhs_impl(t, Eigen::Map<Eigen::VectorXd>(NV_DATA_S(nv_y), N));
+    inline Eigen::VectorXd& dbl_rhs_impl(double t, const N_Vector& nv_y) {
+      for (int i = 0; i < N; ++i) {
+        y_dbl_work[i] = NV_Ith_S(nv_y, i);
+      }
+      return dbl_rhs_impl(t, y_dbl_work);
     }
 
     /**
      * evaluate RHS with data only inputs for N_Vector data
      */    
-    inline void operator()(double t, N_Vector& nv_y, N_Vector& ydot) const {
+    inline void operator()(double t, N_Vector& nv_y, N_Vector& ydot) {
       Eigen::Map<Eigen::VectorXd>(NV_DATA_S(ydot), N) = dbl_rhs_impl(t, nv_y);
     }
 
@@ -484,24 +493,30 @@ namespace dsolve {
       return 0;
     }
 
+    // Alternative ARKODE' WRMS norm weight, we can use odeint's
+    // weight norm that incorporates derivatives
+    static int wrms_fn(N_Vector y, N_Vector ewt, void* user_data) {
+      // Ode* ode = static_cast<Ode*>(user_data);
+      // (*ode)(t, y, ydot);
+      return 0;
+    }
+
     /**
      * evalute RHS of the entire system, possibly including
      * the forward sensitivity equation components in @c y and @c dy_dt.
      */
     void rhs_impl(const Eigen::VectorXd & y, Eigen::VectorXd & dydt, double t) {
       if (!(is_var_y0 || is_var_par)) {
-        dydt = f_tuple_(t, y, msgs_, theta_dbl_tuple_);
-        stan::math::check_size_match("PMXVariadicOdeSystem", "y", y.size(), "dy_dt", dydt.size());
+        dydt = dbl_rhs_impl(t, y);
         return;
       }
 
       dydt.fill(0.0);
       stan::math::nested_rev_autodiff nested;
 
-      stan::math::vector_v& yv = yv_work;
-      stan::math::vector_v& fyv = fyv_work;
+      stan::math::vector_v yv(N);
       for (size_t i = 0; i < N; ++i) { yv.coeffRef(i) = y.coeffRef(i); }
-      fyv = f_tuple_(t, yv, msgs_, theta_local_tuple_);
+      stan::math::vector_v fyv(f_tuple_(t, yv, msgs_, theta_local_tuple_));
       stan::math::check_size_match("PMXVariadicOdeSystem", "y", yv.size(), "dy_dt", fyv.size());
 
       Eigen::VectorXd& g = g_work;

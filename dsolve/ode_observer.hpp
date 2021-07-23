@@ -37,7 +37,7 @@ namespace dsolve {
      * 
      */
     template<typename... Ts>
-    Eigen::VectorXd ode_rhs(std::vector<double> const& y, PMXVariadicOdeSystem<Ts...> const& system) const {
+    Eigen::VectorXd ode_rhs(std::vector<double> const& y, PMXVariadicOdeSystem<Ts...>& system) const {
       // FIXME: static
       Eigen::VectorXd y_work(system.N);
       std::copy(y.begin(), y.begin() + system.N, y_work.data());
@@ -49,7 +49,7 @@ namespace dsolve {
      * 
      */
     template<typename... Ts>
-    std::vector<double> ode_rhs(std::vector<double> const& y, PMXOdeSystem<Ts...> const& system) const {
+    std::vector<double> ode_rhs(std::vector<double> const& y, PMXOdeSystem<Ts...>& system) const {
       return system.dbl_rhs_impl(curr_t_, y);
     }    
   };
@@ -58,14 +58,14 @@ namespace dsolve {
   struct OdeObserver : public OdeObserverBase {
     using state_t = typename Ode::state_t;
 
-    const Ode& ode;
+    Ode& ode;
     const size_t n;
     const size_t m;
     const size_t ns;
     std::vector<state_t> y;
     int step_counter_;
 
-    OdeObserver(const Ode& ode0) :
+    OdeObserver(Ode& ode0) :
       ode(ode0), n(ode.N), m(ode.M), ns(ode.ns),
       y(ode.ts_.size(), Ode::null_state(n)),
       step_counter_(0)
@@ -129,7 +129,7 @@ namespace dsolve {
      */
     template<typename ode_type = Ode>
     inline std::enable_if_t<has_var_ts<ode_type>::value && (!has_var_y0<ode_type>::value) && (!has_var_par<ode_type>::value)>
-    observer_impl(state_t& y_res, const std::vector<double>& y) const {
+    observer_impl(state_t& y_res, const std::vector<double>& y) {
       std::vector<double> g(n * (1 + ode.ts_.size()), 0.0);
       std::copy(y.data(), y.data() + n, g.data());
       auto dydt = ode_rhs(y, ode);
@@ -143,7 +143,7 @@ namespace dsolve {
      */
     template<typename ode_type = Ode>
     inline std::enable_if_t<has_var_ts<ode_type>::value && (!has_var_y0<ode_type>::value) && (!has_var_par<ode_type>::value)>
-    observer_impl(state_t& y_res, const N_Vector & y, const N_Vector* ys) const {
+    observer_impl(state_t& y_res, const N_Vector & y, const N_Vector* ys) {
       std::vector<double> g(ode.ts_.size(), 0.0);
       auto dydt = ode.dbl_rhs_impl(curr_t_, y);
       for (size_t j = 0; j < n; ++j) {
@@ -159,7 +159,7 @@ namespace dsolve {
      */
     template<typename ode_type = Ode>
     inline std::enable_if_t<(!has_var_ts<ode_type>::value) && (has_var_y0<ode_type>::value || has_var_par<ode_type>::value)>
-    observer_impl(state_t& y_res, const std::vector<double> & y) const {
+    observer_impl(state_t& y_res, const std::vector<double> & y) {
       y_res = torsten::precomputed_gradients(y, ode.vars());
     }
 
@@ -168,7 +168,7 @@ namespace dsolve {
      */
     template<typename ode_type = Ode>
     inline std::enable_if_t<(!has_var_ts<ode_type>::value) && (has_var_y0<ode_type>::value || has_var_par<ode_type>::value)>
-    observer_impl(state_t& y_res, const N_Vector& y, const N_Vector* ys) const {
+    observer_impl(state_t& y_res, const N_Vector& y, const N_Vector* ys) {
       y_res = torsten::precomputed_gradients(y, ys, ode.vars());
     }
 
@@ -177,7 +177,7 @@ namespace dsolve {
      */
     template<typename ode_type = Ode>
     inline std::enable_if_t<has_var_ts<ode_type>::value && (has_var_y0<ode_type>::value || has_var_par<ode_type>::value)>
-    observer_impl(state_t& y_res, const std::vector<double> & y) const {
+    observer_impl(state_t& y_res, const std::vector<double> & y) {
       auto g(ode_type::null_dbl_state(n * (1 + ns + ode.ts_.size())));
       std::copy(y.data(), y.data() + y.size(), g.data());        
       auto dydt = ode_rhs(y, ode);
@@ -190,7 +190,7 @@ namespace dsolve {
      */
     template<typename ode_type = Ode>
     inline std::enable_if_t<has_var_ts<ode_type>::value && (has_var_y0<ode_type>::value || has_var_par<ode_type>::value)>
-    observer_impl(state_t& y_res, const N_Vector& y, const N_Vector* ys) const {
+    observer_impl(state_t& y_res, const N_Vector& y, const N_Vector* ys) {
       using stan::math::ChainableStack;
 
       // auto g(ode_type::null_dbl_state(ns + ode.ts_.size()));
@@ -235,7 +235,7 @@ namespace dsolve {
   struct OdeDataObserver : OdeObserverBase {
     using state_t = typename Ode::state_t;
 
-    const Ode& ode;
+    Ode& ode;
     const size_t n;
     const size_t m;
     const size_t ns;
@@ -244,7 +244,7 @@ namespace dsolve {
     int step_counter_;
     double curr_t_;
 
-    OdeDataObserver(const Ode& ode0) :
+    OdeDataObserver(Ode& ode0) :
       ode(ode0), n(ode.N), m(ode.M), ns(ode.ns), nt(ode.ts_.size()),
       y(Eigen::MatrixXd::Zero(ode.system_size + n*(Ode::is_var_ts ? nt : 0), nt)),
       step_counter_(0)
@@ -278,7 +278,7 @@ namespace dsolve {
     template<typename F, typename T_init, typename... T_par>
     inline void observer_impl(Eigen::MatrixXd& y_res,
                               const std::vector<double>& y,
-                              const PMXVariadicOdeSystem<F, double, T_init, T_par...>& system) const {
+                              PMXVariadicOdeSystem<F, double, T_init, T_par...>& system) {
       y_res.col(step_counter_) = Eigen::VectorXd::Map(y.data(), system.system_size);
     }
 
@@ -288,7 +288,7 @@ namespace dsolve {
     template<typename F, typename T_init, typename... T_par>
     inline void observer_impl(Eigen::MatrixXd& y_res,
                               const std::vector<double>& y,
-                              const PMXVariadicOdeSystem<F, stan::math::var, T_init, T_par...>& system) const {
+                              PMXVariadicOdeSystem<F, stan::math::var, T_init, T_par...>& system) {
       for (size_t j = 0; j < system.system_size; ++j) y_res(j, step_counter_) = y[j];
       auto dydt = ode_rhs(y, system);
       for (size_t j = 0; j < n; ++j) {
@@ -303,7 +303,7 @@ namespace dsolve {
     inline void observer_impl(Eigen::MatrixXd& y_res,
                               const N_Vector& y,
                               const N_Vector* ys,
-                              const PMXVariadicOdeSystem<F, Tt, T_init, T_par...>& system) const {
+                              PMXVariadicOdeSystem<F, Tt, T_init, T_par...>& system) {
       y_res.block(0, step_counter_, n, 1) = Eigen::VectorXd::Map(NV_DATA_S(y), n);
 
       if (system.use_fwd_sens) {
@@ -327,7 +327,7 @@ namespace dsolve {
     template<typename F, typename T_init, typename T_par>
     inline void observer_impl(Eigen::MatrixXd& y_res,
                               const std::vector<double>& y,
-                              const PMXOdeSystem<F, double, T_init, T_par>& system) const {
+                              const PMXOdeSystem<F, double, T_init, T_par>& system) {
       y_res.col(step_counter_) = Eigen::VectorXd::Map(y.data(), system.system_size);
     }
 
@@ -337,7 +337,7 @@ namespace dsolve {
     template<typename F, typename T_init, typename T_par>
     inline void observer_impl(Eigen::MatrixXd& y_res,
                               const std::vector<double>& y,
-                              const PMXOdeSystem<F, stan::math::var, T_init, T_par>& system) const {
+                              const PMXOdeSystem<F, stan::math::var, T_init, T_par>& system) {
       for (size_t j = 0; j < system.system_size; ++j) y_res(j, step_counter_) = y[j];
       auto dydt = ode_rhs(y, system);
       for (size_t j = 0; j < n; ++j) {
@@ -352,7 +352,7 @@ namespace dsolve {
     inline void observer_impl(Eigen::MatrixXd& y_res,
                               const N_Vector& y,
                               const N_Vector* ys,
-                              const PMXOdeSystem<F, Tt, T_init, T_par>& system) const {
+                              const PMXOdeSystem<F, Tt, T_init, T_par>& system) {
       y_res.block(0, step_counter_, n, 1) = Eigen::VectorXd::Map(NV_DATA_S(y), n);
 
       if (system.use_fwd_sens) {
