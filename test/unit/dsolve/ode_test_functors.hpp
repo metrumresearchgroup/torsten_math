@@ -2,13 +2,7 @@
 #define STAN_MATH_TEST_ODE_TORSTEN_TEST_FUNCTORS_HPP
 
 #include <test/unit/math/rev/functor/ode_test_functors.hpp>
-#include <stan/math/torsten/dsolve/pmx_ode_ckrk.hpp>
-#include <stan/math/torsten/dsolve/pmx_ode_rk45.hpp>
-#include <stan/math/torsten/dsolve/pmx_ode_adams.hpp>
-#include <stan/math/torsten/dsolve/pmx_ode_bdf.hpp>
-#include <stan/math/torsten/dsolve/pmx_integrate_ode_adams.hpp>
-#include <stan/math/torsten/dsolve/pmx_integrate_ode_rk45.hpp>
-#include <stan/math/torsten/dsolve/pmx_integrate_ode_bdf.hpp>
+#include <stan/math/torsten/dsolve.hpp>
 
 #define TORSTEN_DEF_ODE_SOLVER_FUNCTOR(solver_name, solver_func)                  \
   struct solver_name##_functor {                                               \
@@ -32,8 +26,8 @@
                const std::vector<T_ts>& ts, double rtol, double atol,          \
                size_t max_num_steps, std::ostream* msgs,                       \
                const Args&... args) {                                          \
-      return solver_func##_ctrl(f, y0_arg, t0, ts, msgs, rtol, atol, max_num_steps, \
-                               args...);                                 \
+      return solver_func##_ctrl(f, y0_arg, t0, ts, rtol, atol, max_num_steps, \
+                                msgs, args...);                               \
     }                                                                          \
   };
 
@@ -41,6 +35,7 @@ TORSTEN_DEF_ODE_SOLVER_FUNCTOR(pmx_ode_adams, torsten::pmx_ode_adams);
 TORSTEN_DEF_ODE_SOLVER_FUNCTOR(pmx_ode_ckrk, torsten::pmx_ode_ckrk);
 TORSTEN_DEF_ODE_SOLVER_FUNCTOR(pmx_ode_bdf, torsten::pmx_ode_bdf);
 TORSTEN_DEF_ODE_SOLVER_FUNCTOR(pmx_ode_rk45, torsten::pmx_ode_rk45);
+TORSTEN_DEF_ODE_SOLVER_FUNCTOR(pmx_ode_erk45, torsten::pmx_ode_erk45);
 
 STAN_DEF_STD_ODE_SOLVER_FUNCTOR(pmx_integrate_ode_adams,
                                 torsten::pmx_integrate_ode_adams);

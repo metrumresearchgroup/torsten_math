@@ -18,7 +18,7 @@ using ode_test_tuple = std::tuple<solve_type, solve_type, Ts...>;
  */
 using harmonic_oscillator_fd_test_types = boost::mp11::mp_product<
     ode_test_tuple,
-    ::testing::Types<pmx_ode_adams_functor, pmx_ode_bdf_functor, pmx_ode_ckrk_functor,
+    ::testing::Types<pmx_ode_erk45_functor, pmx_ode_adams_functor, pmx_ode_bdf_functor, pmx_ode_ckrk_functor,
                      pmx_ode_rk45_functor>,
     ::testing::Types<double>,  // t
     ::testing::Types<double>,  // y0

@@ -18,9 +18,8 @@ namespace dsolve {
   struct PMXArkodeIntegrator {
     static constexpr int ARKODE_MAX_STEPS = 500;
 
-    static double rtol_;
-    static double atol_;
-    static double curr_dt_;
+    const double rtol_;
+    const double atol_;
     const int64_t max_num_steps_;
 
     /**
@@ -31,11 +30,7 @@ namespace dsolve {
      */
     PMXArkodeIntegrator(const double rtol, const double atol,
                         const int64_t max_num_steps = ARKODE_MAX_STEPS)
-      : max_num_steps_(max_num_steps)
-    {
-      rtol_ = rtol;
-      atol_ = atol;
-    }
+      : rtol_(rtol), atol_(atol), max_num_steps_(max_num_steps) {}
       
     /**
      * Return the solutions for the specified ODE
@@ -65,18 +60,30 @@ namespace dsolve {
 
       void* mem = serv.mem;
       
+      ode.rtol = rtol_;
+      ode.atol = atol_;
+      ode.mem_ptr = mem;
+
       CHECK_SUNDIALS_CALL(ERKStepReInit(mem, Ode::arkode_combined_rhs, ode.t0_, y));
       CHECK_SUNDIALS_CALL(ERKStepSStolerances(mem, rtol_, atol_));
       CHECK_SUNDIALS_CALL(ERKStepSetMaxNumSteps(mem, max_num_steps_));
-      CHECK_SUNDIALS_CALL(ERKStepSetUserData(mem, static_cast<void*>(&ode)));      
+      CHECK_SUNDIALS_CALL(ERKStepSetUserData(mem, static_cast<void*>(&ode)));
 
       CHECK_SUNDIALS_CALL(ERKStepSetTableNum(mem, butcher_tab));
-      CHECK_SUNDIALS_CALL(ERKStepSetAdaptivityMethod(mem, 3, SUNTRUE, SUNFALSE, NULL));
-      CHECK_SUNDIALS_CALL(ERKStepSetMaxGrowth(mem, 5));
-      CHECK_SUNDIALS_CALL(ERKStepSetMinReduction(mem, 0.2));
+      ERKStepSetInitStep(mem, 0.1);
+
+      // CHECK_SUNDIALS_CALL(ERKStepSetAdaptivityMethod(mem, 1, SUNTRUE, SUNFALSE, NULL));
+      // CHECK_SUNDIALS_CALL(ERKStepSetMaxGrowth(mem, 5));
+      // CHECK_SUNDIALS_CALL(ERKStepSetMinReduction(mem, 0.2));
+
+      // ERKStepSetAdaptivityFn(mem, Ode::arkode_erk_adapt, static_cast<void*>(&ode));
 
       // typedef int (*ARKEwtFn)(N_Vector y, N_Vector ewt, void* user_data)
-      // int ERKStepWFtolerances(void* arkode_mem, ARKEwtFn efun)
+      // ERKStepWFtolerances(mem, Ode::wrms_fn3);
+      // ERKStepSetFixedStepBounds(mem, 1.0, 1.1);
+      // ERKStepSetMaxErrTestFails(mem, 3);
+      // ERKStepSetSafetyFactor(mem, 0.9);
+      // ERKStepSetErrorBias(mem, 1.0);
 
       double t1 = ode.t0_;
       
@@ -90,16 +97,6 @@ namespace dsolve {
     }
 
   };  // arkode integrator
-
-  template<int butcher_tab>
-  double PMXArkodeIntegrator<butcher_tab>::rtol_ = 0;
-
-  template<int butcher_tab>
-  double PMXArkodeIntegrator<butcher_tab>::atol_ = 0;
-
-  template<int butcher_tab>
-  double PMXArkodeIntegrator<butcher_tab>::curr_dt_ = 0;
-
 }  // namespace dsolve
 }  // namespace torsten
 

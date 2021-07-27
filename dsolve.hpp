@@ -8,6 +8,8 @@
 #include <stan/math/torsten/dsolve/pmx_ode_rk45.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_adams.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_bdf.hpp>
+#include <stan/math/torsten/dsolve/pmx_ode_erk45.hpp>
+#include <stan/math/torsten/dsolve/pmx_ode_ckrk.hpp>
 
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_group_rk45.hpp>
 #include <stan/math/torsten/dsolve/pmx_integrate_ode_group_adams.hpp>

@@ -21,6 +21,8 @@
 #include <cvodes/cvodes.h>
 #include <nvector/nvector_serial.h>
 #include <sunmatrix/sunmatrix_dense.h>
+#include <arkode/arkode.h>
+#include <arkode/arkode_erkstep.h>
 #include <ostream>
 #include <stdexcept>
 #include <vector>
@@ -81,7 +83,7 @@ namespace dsolve {
     const size_t system_size;
     std::ostream* msgs_;
     std::vector<double> y0_fwd_system;
-    std::vector<double> y_work, dydt_work;
+    std::vector<double> y_dbl_work, dydt_dbl_work;
   public:
     PMXOdeSystem(const F& f,
                  double t0,
@@ -105,8 +107,8 @@ namespace dsolve {
         system_size(N + N * ns),
         msgs_(msgs),
         y0_fwd_system(system_size, 0.0),
-        y_work(N),
-        dydt_work(N)
+        y_dbl_work(N),
+        dydt_dbl_work(N)
     {
       const char* caller = "PMX ODE System";
       torsten::dsolve::ode_check(y0_, t0_, ts_, theta_, x_r_, x_i_, caller);
@@ -153,19 +155,19 @@ namespace dsolve {
      */
     inline std::vector<double>& dbl_rhs_impl(double t, const std::vector<double>& y)
     {
-      dydt_work = f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
-      return dydt_work;
+      dydt_dbl_work = f_(t, y, theta_dbl_, x_r_, x_i_, msgs_);
+      return dydt_dbl_work;
     }
 
-    /*
+    /**
      * evaluate RHS with data only inputs.
      */
     inline std::vector<double>& dbl_rhs_impl(double t, const N_Vector& nv_y)
     {
       for (int i = 0; i < N; ++i) {
-        y_work[i] = NV_Ith_S(nv_y, i);
+        y_dbl_work[i] = NV_Ith_S(nv_y, i);
       }
-      return dbl_rhs_impl(t, y_work);
+      return dbl_rhs_impl(t, y_dbl_work);
     }
 
     /**
@@ -174,9 +176,9 @@ namespace dsolve {
     inline void operator()(double t, N_Vector& nv_y, N_Vector& ydot) {
       stan::math::check_size_match("PMXOdeSystem", "y", NV_LENGTH_S(nv_y), "dy_dt", NV_LENGTH_S(ydot));
       for (int i = 0; i < N; ++i) {
-        y_work[i] = NV_Ith_S(nv_y, i);
+        y_dbl_work[i] = NV_Ith_S(nv_y, i);
       }
-      std::vector<double>& dydt = dbl_rhs_impl(t, y_work);
+      std::vector<double>& dydt = dbl_rhs_impl(t, y_dbl_work);
       for (size_t i = 0; i < N; ++i) {
         NV_Ith_S(ydot, i) = dydt[i];
       }
@@ -373,6 +375,8 @@ namespace dsolve {
     const size_t system_size;
     std::vector<double> y0_fwd_system; // internally we use std::vector
     Eigen::VectorXd y_work, dydt_work, y_dbl_work, dydt_dbl_work, g_work;
+    double rtol, atol;
+    void* mem_ptr;
 
     PMXVariadicOdeSystem(const F& f,
                          double t0,
@@ -447,7 +451,9 @@ namespace dsolve {
 
       rhs_impl(y_work, dydt_work, t);
 
-      Eigen::Map<Eigen::VectorXd>(dydt.data(), system_size) = dydt_work;
+      for (auto i = 0; i < system_size; ++i) {
+        dydt[i] = dydt_work.coeffRef(i);
+      }
     }
 
     /*
@@ -484,20 +490,68 @@ namespace dsolve {
 
     static int arkode_combined_rhs(double t, N_Vector y, N_Vector ydot, void* user_data) {
       Ode* ode = static_cast<Ode*>(user_data);
-      Eigen::VectorXd y_vec = Eigen::Map<Eigen::VectorXd>(NV_DATA_S(y), ode -> system_size);
-      Eigen::VectorXd ydot_vec = Eigen::Map<Eigen::VectorXd>(NV_DATA_S(ydot), ode -> system_size);
-      ode -> rhs_impl(y_vec, ydot_vec, t);
-      for (size_t i = 0; i < ode -> system_size; ++i) {
-        NV_Ith_S(ydot, i) = ydot_vec[i];
+      for (auto i = 0; i < ode -> system_size; ++i) {
+        ode -> y_work.coeffRef(i) = NV_Ith_S(y, i);
+      }
+
+      ode -> rhs_impl(ode -> y_work, ode -> dydt_work, t);
+
+      for (auto i = 0; i < ode -> system_size; ++i) {
+        NV_Ith_S(ydot, i) = ode -> dydt_work.coeffRef(i);
+      }
+      return 0;
+    }
+
+    // Equavalent to ARKODE' default WRMS
+    static int wrms_fn1(N_Vector y, N_Vector ewt, void* user_data) {
+      Ode* ode = static_cast<Ode*>(user_data);
+      // dydt_work contains the latest evaluation the combined RHS
+      // we use it as proxy to the current RHS.
+      for (int i = 0; i < ode -> system_size; ++i) {
+        NV_Ith_S(ewt, i) = 1.0/(ode -> atol + ode -> rtol * abs(NV_Ith_S(y, i)));
+      }
+
+      return 0;
+    }
+
+    // Alternative ARKODE' WRMS norm weight, we can use odeint's
+    // weight norm that incorporates derivatives
+    static int wrms_fn2(N_Vector y, N_Vector ewt, void* user_data) {
+      Ode* ode = static_cast<Ode*>(user_data);
+      // dydt_work contains the latest evaluation the combined RHS
+      // we use it as proxy to the current RHS.
+      double dt;
+      ERKStepGetLastStep(ode -> mem_ptr, &dt);
+      for (int i = 0; i < ode -> system_size; ++i) {
+        NV_Ith_S(ewt, i) = 1.0/(ode -> atol + ode -> rtol * abs(NV_Ith_S(y, i)));
       }
       return 0;
     }
 
     // Alternative ARKODE' WRMS norm weight, we can use odeint's
     // weight norm that incorporates derivatives
-    static int wrms_fn(N_Vector y, N_Vector ewt, void* user_data) {
+    static int wrms_fn3(N_Vector y, N_Vector ewt, void* user_data) {
+      Ode* ode = static_cast<Ode*>(user_data);
+      // dydt_work contains the latest evaluation the combined RHS
+      // we use it as proxy to the current RHS.
+      double dt;
+      ERKStepGetLastStep(ode -> mem_ptr, &dt);
+      for (int i = 0; i < ode -> system_size; ++i) {
+        NV_Ith_S(ewt, i) = 1.0/(ode -> atol + ode -> rtol * std::max(abs(NV_Ith_S(y, i)),
+                                                                     dt * abs(ode -> dydt_work[i])));
+      }
+      return 0;
+    }
+
+    static int arkode_erk_adapt(N_Vector y, double t, double h1, double h2, double h3, double e1, double e2, double e3, int q, int p, double* hnew, void* user_data)
+    {
       // Ode* ode = static_cast<Ode*>(user_data);
-      // (*ode)(t, y, ydot);
+      *hnew = h1;
+      if (e1 > 1) {
+        *hnew = h1 * std::max( 0.9 * std::pow(e1 , -0.25) , 0.2 );
+      } else if (e1 < 0.5) {
+        *hnew = h1 * std::min( 0.9 * std::pow(e1 , -0.20) , 5.0 );
+      }
       return 0;
     }
 

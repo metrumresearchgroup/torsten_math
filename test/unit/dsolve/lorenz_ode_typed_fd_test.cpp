@@ -17,7 +17,7 @@ using ode_test_tuple = std::tuple<solve_type, solve_type, Ts...>;
  */
 using lorenz_test_types = boost::mp11::mp_product<
     ode_test_tuple,
-    ::testing::Types<pmx_ode_adams_functor, pmx_ode_bdf_functor, pmx_ode_ckrk_functor,
+    ::testing::Types<pmx_ode_erk45_functor, pmx_ode_adams_functor, pmx_ode_bdf_functor, pmx_ode_ckrk_functor,
                      pmx_ode_rk45_functor>>;
 
 TYPED_TEST_SUITE_P(lorenz_test);
@@ -32,6 +32,11 @@ TYPED_TEST_P(lorenz_test, param_and_data_finite_diff) {
     this->test_fd_vd(1.e-6, 5e-2);
     this->test_fd_dv(1.e-6, 5e-2);
     this->test_fd_vv(1.e-6, 5e-2);
+  } else if (std::is_same<TypeParam, std::tuple<pmx_ode_erk45_functor,
+                                                pmx_ode_erk45_functor>>::value) {
+    this->test_fd_vd(1.e-6, 1.1e-1);
+    this->test_fd_dv(1.e-6, 1.1e-1);
+    this->test_fd_vv(1.e-6, 1.1e-1);
   } else {
     this->test_fd_vd(1.e-6, 1e-2);
     this->test_fd_dv(1.e-6, 1e-2);
