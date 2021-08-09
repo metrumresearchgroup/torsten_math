@@ -13,6 +13,7 @@
 #include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
 #include <stan/math/torsten/meta/require_generics.hpp>
 #include <stan/math/torsten/value_of.hpp>
+#include <stan/math/torsten/dsolve/braid_data.hpp>
 #include <stan/math/prim/fun/typedefs.hpp>
 #include <stan/math/rev/core/typedefs.hpp>
 #include <stan/math/rev/fun/to_var.hpp>
@@ -26,6 +27,12 @@
 #include <ostream>
 #include <stdexcept>
 #include <vector>
+
+#ifdef TORSTEN_BRAID
+#include <arkode/arkode_xbraid.h>
+#include <braid.h>
+#include <boost/mpi.hpp>
+#endif
 
 namespace torsten {
 namespace dsolve {
@@ -375,8 +382,7 @@ namespace dsolve {
     const size_t system_size;
     std::vector<double> y0_fwd_system; // internally we use std::vector
     Eigen::VectorXd y_work, dydt_work, y_dbl_work, dydt_dbl_work, g_work;
-    double rtol, atol;
-    void* mem_ptr;
+    braid_data braid;
 
     PMXVariadicOdeSystem(const F& f,
                          double t0,
@@ -388,6 +394,7 @@ namespace dsolve {
         f_tuple_(f_),
         theta_dbl_tuple_(stan::math::value_of(args)...),
         msgs_(msgs),
+        braid(),
         t0_(t0),
         ts_(ts),
         y0_(y0),
@@ -710,6 +717,167 @@ namespace dsolve {
         }
       }
     }
+
+#ifdef TORSTEN_BRAID
+    static int braid_init(braid_App app, double t, braid_Vector *u_ptr) {
+      int      flag;
+      void     *user_data;
+
+      // Get user data pointer
+      ARKBraid_GetUserData(app, &user_data);
+      Ode *ode = static_cast<Ode*>(user_data);
+
+      // Create new vector
+      N_Vector y = N_VNew_Serial(ode -> system_size);
+      flag = SUNBraidVector_New(y, u_ptr);
+      if (flag != 0) return 1;
+
+      // Set initial condition at all time points
+      if (t == ode -> t0_) {
+        for (auto i = 0; i < ode -> system_size; ++i) {
+          NV_Ith_S(y, i) = ode -> y0_fwd_system[i];
+        }
+      } else {
+        N_VConst(0.0, y);
+      }
+
+      return 0;        
+    }
+
+    static int braid_access(braid_App app, braid_Vector u, braid_AccessStatus astatus) {
+      int       flag;    // return flag
+      int       iter;    // current iteration number
+      int       level;   // current level
+      int       done;    // has XBraid finished
+      int       index;   // time point index
+      double    t;       // current time
+      void     *user_data;
+      Ode      *ode;
+
+      // Timing variables
+      std::chrono::time_point<std::chrono::steady_clock> t1;
+      std::chrono::time_point<std::chrono::steady_clock> t2;
+
+      // Start timer
+      t1 = std::chrono::steady_clock::now();
+
+      // Get user data pointer
+      ARKBraid_GetUserData(app, &user_data);
+      ode = static_cast<Ode*>(user_data);
+
+      // Get current time, iteration, level, and status
+      braid_AccessStatusGetTILD(astatus, &t, &iter, &level, &done);
+      braid_AccessStatusGetTIndex(astatus, &index);
+
+      // Output on fine level when XBraid has finished
+      if (level == 0 && done) {
+        // Get current time index and number of fine grid points
+        int index;
+        int ntpts;
+        braid_AccessStatusGetTIndex(astatus, &index);
+        braid_AccessStatusGetNTPoints(astatus, &ntpts);
+
+        // Extract NVector
+        N_Vector y = NULL;
+        SUNBraidVector_GetNVector(u, &y);
+
+        // Write visualization files
+        // if (udata->output == 2)
+        //   {
+        //     // Get output frequency (ensure the final time is output)
+        //     int qout = ntpts / udata->nout;
+        //     int rout = ntpts % udata->nout;
+        //     int nout = (rout > 0) ? udata->nout + 2 : udata->nout + 1;
+
+        //     // Output problem information
+        //     if (index == 0)
+        //       {
+        //         ofstream dout;
+        //         dout.open("heat2d_info.txt");
+        //         dout <<  "xu  " << udata->xu << endl;
+        //         dout <<  "yu  " << udata->yu << endl;
+        //         dout <<  "nx  " << udata->nx << endl;
+        //         dout <<  "ny  " << udata->ny << endl;
+        //         dout <<  "nt  " << nout      << endl;
+        //         dout.close();
+        //       }
+
+        //     // Output solution and error
+        //     if (!(index % qout) || index == ntpts)
+        //       {
+        //         // Open output streams
+        //         stringstream fname;
+        //         fname << "heat2d_solution."
+        //               << setfill('0') << setw(6) << index / qout << ".txt";
+
+        //         udata->uout.open(fname.str());
+        //         udata->uout << scientific;
+        //         udata->uout << setprecision(numeric_limits<realtype>::digits10);
+
+        //         fname.str("");
+        //         fname.clear();
+        //         fname << "heat2d_error."
+        //               << setfill('0') << setw(6) << index / qout << ".txt";
+
+        //         udata->eout.open(fname.str());
+        //         udata->eout << scientific;
+        //         udata->eout << setprecision(numeric_limits<realtype>::digits10);
+
+        //         // Compute the error
+        //         flag = SolutionError(t, y, udata->e, udata);
+        //         if (check_flag(&flag, "SolutionError", 1)) return 1;
+
+        //         // Output solution to disk
+        //         realtype *yarray = N_VGetArrayPointer(y);
+        //         if (check_flag((void *) yarray, "N_VGetArrayPointer", 0)) return -1;
+
+        //         udata->uout << t << " ";
+        //         for (sunindextype i = 0; i < udata->nodes; i++)
+        //           {
+        //             udata->uout << yarray[i] << " ";
+        //           }
+        //         udata->uout << endl;
+
+        //         // Output error to disk
+        //         realtype *earray = N_VGetArrayPointer(udata->e);
+        //         if (check_flag((void *) earray, "N_VGetArrayPointer", 0)) return -1;
+
+        //         udata->eout << t << " ";
+        //         for (sunindextype i = 0; i < udata->nodes; i++)
+        //           {
+        //             udata->eout << earray[i] << " ";
+        //           }
+        //         udata->eout << endl;
+
+        //         // Close output streams
+        //         udata->uout.close();
+        //         udata->eout.close();
+        //       }
+        //   }
+
+        // Output final error
+        // if (index == ntpts) {
+        //   // Compute the max error
+        //   flag = SolutionError(t, y, udata->e, udata);
+        //   if (check_flag(&flag, "SolutionError", 1)) return 1;
+
+        //   realtype maxerr = N_VMaxNorm(udata->e);
+
+        //   cout << scientific;
+        //   cout << setprecision(numeric_limits<realtype>::digits10);
+        //   cout << "  Max error = " << maxerr << endl << endl;
+        // }
+      }
+
+      // Stop timer
+      t2 = std::chrono::steady_clock::now();
+
+      // Update timing
+      // ode.braid.accesstime += std::chrono::duration<double>(t2 - t1).count();
+
+      return 0;
+    }
+#endif
   };
 }  // namespace dsolve
 }  // namespace torsten

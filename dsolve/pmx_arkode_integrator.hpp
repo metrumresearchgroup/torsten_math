@@ -6,7 +6,16 @@
 #include <stan/math/torsten/dsolve/sundials_check.hpp>
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
 #include <arkode/arkode_butcher_erk.h>
+#include <arkode/arkode_erkstep.h>
+#include <arkode/arkode_arkstep.h>
+#include <arkode/arkode.h>
 #include <type_traits>
+
+#ifdef TORSTEN_BRAID
+#include <arkode/arkode_xbraid.h>
+#include <braid.h>
+#include <boost/mpi.hpp>
+#endif
 
 namespace torsten {
 namespace dsolve {
@@ -46,9 +55,11 @@ namespace dsolve {
      * same size as the state variable, corresponding to a time in ts.
      */
     template <typename Ode, typename Observer>
-    inline void integrate(Ode& ode, Observer& observer) {
+    void integrate(Ode& ode, Observer& observer) {
       PMXOdeService<Ode, 0, butcher_tab> serv(ode.N, ode.M, ode.ns, ode);
       N_Vector& y = serv.nv_y;
+      void* mem = serv.mem;
+
       const size_t n = ode.N;
       const size_t ns = ode.ns;
 
@@ -57,46 +68,64 @@ namespace dsolve {
       for (size_t i = 0; i < ode.system_size; ++i) {
         NV_Ith_S(y, i) = ode.y0_fwd_system[i];
       }
-
-      void* mem = serv.mem;
       
-      ode.rtol = rtol_;
-      ode.atol = atol_;
-      ode.mem_ptr = mem;
+#ifdef TORSTEN_BRAID
+      braid_data const& bd = ode.braid;
 
+      CHECK_SUNDIALS_CALL(ERKStepReInit(mem, Ode::arkode_combined_rhs, ode.t0_, y));
+      CHECK_SUNDIALS_CALL(ERKStepSStolerances(mem, rtol_, atol_));
+      CHECK_SUNDIALS_CALL(ERKStepSetMaxNumSteps(mem, max_num_steps_));
+      CHECK_SUNDIALS_CALL(ERKStepSetUserData(mem, static_cast<void*>(&ode)));
+      CHECK_SUNDIALS_CALL(ERKStepSetTableNum(mem, butcher_tab));
+      CHECK_SUNDIALS_CALL(ERKStepSetAdaptivityMethod(mem, ARK_ADAPT_PI, SUNTRUE, SUNFALSE, NULL));
+
+      MPI_Comm comm_w = MPI_COMM_WORLD;
+      braid_Core core    = NULL; // XBraid memory structure
+      SUNBraidApp app      = NULL; // ARKode + XBraid interface structure        
+
+      // Create the ARKStep + XBraid interface
+      CHECK_SUNDIALS_CALL(ARKBraid_Create(mem, &app)); // FIXME: can ARKBraid_Create be used on ERKStep?
+      CHECK_SUNDIALS_CALL(ARKBraid_SetInitFn(app, Ode::braid_init));
+      CHECK_SUNDIALS_CALL(ARKBraid_SetAccessFn(app, Ode::braid_access));
+
+      CHECK_SUNDIALS_CALL(ARKBraid_BraidInit(comm_w, comm_w, ode.t0_, ode.ts_.back(), bd.x_nt, app, &core));
+      CHECK_SUNDIALS_CALL(braid_SetAbsTol(core, bd.x_tol));
+      CHECK_SUNDIALS_CALL(braid_SetCFactor(core, -1, bd.x_cfactor));
+      CHECK_SUNDIALS_CALL(braid_SetPrintLevel(core, bd.x_print_level));
+      CHECK_SUNDIALS_CALL(braid_SetMaxLevels(core, bd.x_max_levels));
+      braid_SetAccessLevel(core, bd.x_access_level);
+
+      braid_Drive(core);
+
+      braid_Destroy(core);
+      ARKBraid_Free(&app);
+#else      
       CHECK_SUNDIALS_CALL(ERKStepReInit(mem, Ode::arkode_combined_rhs, ode.t0_, y));
       CHECK_SUNDIALS_CALL(ERKStepSStolerances(mem, rtol_, atol_));
       CHECK_SUNDIALS_CALL(ERKStepSetMaxNumSteps(mem, max_num_steps_));
       CHECK_SUNDIALS_CALL(ERKStepSetUserData(mem, static_cast<void*>(&ode)));
 
       CHECK_SUNDIALS_CALL(ERKStepSetTableNum(mem, butcher_tab));
-      ERKStepSetInitStep(mem, 0.1);
+      CHECK_SUNDIALS_CALL(ERKStepSetInitStep(mem, 0.1));
 
-      // CHECK_SUNDIALS_CALL(ERKStepSetAdaptivityMethod(mem, 1, SUNTRUE, SUNFALSE, NULL));
-      // CHECK_SUNDIALS_CALL(ERKStepSetMaxGrowth(mem, 5));
+      CHECK_SUNDIALS_CALL(ERKStepSetAdaptivityMethod(mem, ARK_ADAPT_PI, SUNTRUE, SUNFALSE, NULL));
+      // CHECK_SUNDIALS_CALL(ERKStepSetMaxGrowth(mem, 10));
       // CHECK_SUNDIALS_CALL(ERKStepSetMinReduction(mem, 0.2));
 
-      // ERKStepSetAdaptivityFn(mem, Ode::arkode_erk_adapt, static_cast<void*>(&ode));
-
-      // typedef int (*ARKEwtFn)(N_Vector y, N_Vector ewt, void* user_data)
       // ERKStepWFtolerances(mem, Ode::wrms_fn3);
-      // ERKStepSetFixedStepBounds(mem, 1.0, 1.1);
-      // ERKStepSetMaxErrTestFails(mem, 3);
-      // ERKStepSetSafetyFactor(mem, 0.9);
-      // ERKStepSetErrorBias(mem, 1.0);
 
       double t1 = ode.t0_;
-      
       for (size_t i = 0; i < ode.ts_.size(); ++i) {
         CHECK_SUNDIALS_CALL(ERKStepEvolve(mem, stan::math::value_of(ode.ts_[i]), y, &t1, ARK_NORMAL));
         for (size_t j = 0; j < ode.system_size; ++j) {
           ode.y0_fwd_system[j] = NV_Ith_S(y, j);
         }
         observer(ode.y0_fwd_system, t1);
-      }
+      }        
+#endif
     }
+  };
 
-  };  // arkode integrator
 }  // namespace dsolve
 }  // namespace torsten
 

@@ -30,7 +30,7 @@ namespace torsten {
      * @tparam lmm_type CVODES solver type (BDF & ADAMS)
      * @tparam butcher_tab AKRODE Butcher table
      */
-    template <typename Ode, int lmm_type, int butcher_tab = 0, typename = void>
+    template <typename Ode, int lmm_type, int butcher_tab = -1, typename = void>
     struct PMXOdeService {
       int ns;
       N_Vector nv_y;
