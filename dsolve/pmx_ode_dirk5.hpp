@@ -1,5 +1,5 @@
-#ifndef STAN_MATH_TORSTEN_ODE_ERK_HPP
-#define STAN_MATH_TORSTEN_ODE_ERK_HPP
+#ifndef STAN_MATH_TORSTEN_ODE_DIRK_HPP
+#define STAN_MATH_TORSTEN_ODE_DIRK_HPP
 
 #include <stan/math/torsten/dsolve/pmx_ode_integrator.hpp>
 #include <stan/math/torsten/dsolve/pmx_arkode_integrator.hpp>
@@ -8,7 +8,7 @@
 
 namespace torsten {
   /**
-   * solve an ODE given its RHS with AKRODE' ERK solver.
+   * solve an ODE given its RHS with AKRODE' DIRK solver.
    *
    * @tparam F Functor type for RHS of ODE
    * @tparam Tt type of time
@@ -29,7 +29,7 @@ namespace torsten {
    */
   template <typename F, typename Tt, typename T_initial, typename... T_param>
   std::vector<Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param...>,-1,1> >
-  pmx_ode_erk45_ctrl(const F& f,
+  pmx_ode_dirk5_ctrl(const F& f,
                    const Eigen::Matrix<T_initial, -1, 1>& y0,
                    double t0,
                    const std::vector<Tt>& ts,
@@ -39,7 +39,7 @@ namespace torsten {
     using dsolve::PMXOdeIntegrator;
     using dsolve::PMXArkodeIntegrator;
     using dsolve::PMXVariadicOdeSystem;
-    PMXOdeIntegrator<PMXVariadicOdeSystem, PMXArkodeIntegrator<DORMAND_PRINCE_7_4_5>> solver(rtol, atol, max_num_step, msgs);
+    PMXOdeIntegrator<PMXVariadicOdeSystem, PMXArkodeIntegrator<DEFAULT_DIRK_5>> solver(rtol, atol, max_num_step, msgs);
     return solver(f, y0, t0, ts, args...);
   }
 
@@ -48,13 +48,13 @@ namespace torsten {
    */
   template <typename F, typename Tt, typename T_initial, typename... T_param>
   std::vector<Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param...>,-1,1> >
-  pmx_ode_erk45(const F& f,
+  pmx_ode_dirk5(const F& f,
               const Eigen::Matrix<T_initial, -1, 1>& y0,
               double t0,
               const std::vector<Tt>& ts,
               std::ostream* msgs,
               const T_param&... args) {
-    return pmx_ode_erk45_ctrl(f, y0, t0, ts, 1.e-6, 1.e-6, 1e6, msgs, args...);
+    return pmx_ode_dirk5_ctrl(f, y0, t0, ts, 1.e-10, 1.e-10, 1e6, msgs, args...);
   }
 }
 #endif

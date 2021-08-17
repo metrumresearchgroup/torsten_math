@@ -10,6 +10,7 @@
 #include <cvodes/cvodes.h>
 #include <arkode/arkode.h>
 #include <arkode/arkode_erkstep.h>
+#include <arkode/arkode_arkstep.h>
 #include <nvector/nvector_serial.h>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
@@ -28,19 +29,18 @@ namespace torsten {
      * service by injection.
      * @tparam ode ode type
      * @tparam lmm_type CVODES solver type (BDF & ADAMS)
-     * @tparam butcher_tab AKRODE Butcher table
      */
-    template <typename Ode, int lmm_type, int butcher_tab = -1, typename = void>
-    struct PMXOdeService {
+    template <typename Ode, int lmm_type>
+    struct CvodesService {
       int ns;
       N_Vector nv_y;
       N_Vector* nv_ys;
       void* mem;
       SUNMatrix A;
       SUNLinearSolver LS;
-      std::vector<std::complex<double> > yy_cplx;
-      std::vector<std::complex<double> > theta_cplx;
-      std::vector<std::complex<double> > fval_cplx;
+      // std::vector<std::complex<double> > yy_cplx;
+      // std::vector<std::complex<double> > theta_cplx;
+      // std::vector<std::complex<double> > fval_cplx;
       bool sens_inited;
 
       /**
@@ -50,16 +50,16 @@ namespace torsten {
        * @param[in] m length of parameter theta
        * @param[in] f ODE RHS function
        */
-      PMXOdeService(int n, int m, int ns0, Ode& ode) :
+      CvodesService(int n, int m, int ns0, Ode& ode) :
         ns(ns0),
         nv_y(N_VNew_Serial(n)),
         nv_ys(nullptr),
         mem(CVodeCreate(lmm_type)),
         A(SUNDenseMatrix(n, n)),
         LS(SUNLinSol_Dense(nv_y, A)),
-        yy_cplx(n),
-        theta_cplx(m),
-        fval_cplx(n),
+        // yy_cplx(n),
+        // theta_cplx(m),
+        // fval_cplx(n),
         sens_inited(false)
       {
         const double t0 = 0.0;
@@ -85,7 +85,7 @@ namespace torsten {
         }
       }
 
-      ~PMXOdeService() {
+      ~CvodesService() {
         SUNLinSolFree(LS);
         SUNMatDestroy(A);
         CVodeFree(&mem);
@@ -99,21 +99,13 @@ namespace torsten {
       }
     };
 
-    /** 
-     * ARKODE's Butcher table: 0-99 are for ERK.
-     * 
-     */
-    template<int butcher_tab>
-    struct is_erk_tab {
-      static constexpr bool value = butcher_tab >= 0 && butcher_tab < 100;
-    };
-
-    template <typename Ode, int butcher_tab>
-    struct PMXOdeService<Ode, 0, butcher_tab,
-                         stan::require_t<is_erk_tab<butcher_tab> > > {
+    template <typename Ode>
+    struct ArkodeService {
       int ns;
       N_Vector nv_y;
       void* mem;
+      SUNMatrix A;
+      SUNLinearSolver LS;
 
       /**
        * Construct CVODES ODE mem & workspace
@@ -122,18 +114,23 @@ namespace torsten {
        * @param[in] m length of parameter theta
        * @param[in] f ODE RHS function
        */
-      PMXOdeService(int n, int m, int ns0, Ode& ode) :
+      ArkodeService(int n, int m, int ns0, Ode& ode) :
         ns(ns0),
         nv_y(N_VNew_Serial(ode.system_size)),
-        mem(ERKStepCreate(Ode::cvodes_rhs, 0.0, nv_y))
+        mem(ARKStepCreate(NULL, Ode::arkode_combined_rhs, 0.0, nv_y)),
+        A(SUNDenseMatrix(ode.system_size, ode.system_size)),
+        LS(SUNLinSol_Dense(nv_y, A))
       {
         N_VConst(RCONST(0.0), nv_y);
-        CHECK_SUNDIALS_CALL(ERKStepSetUserData(mem, static_cast<void*>(&ode)));
+        CHECK_SUNDIALS_CALL(ARKStepSetUserData(mem, static_cast<void*>(&ode)));
+        ARKStepSetLinearSolver(mem, LS, A);
       }
 
-      ~PMXOdeService() {
-        ERKStepFree(&mem);    // Free integrator memory
-        N_VDestroy(nv_y);        // Free y vector
+      ~ArkodeService() {
+        SUNLinSolFree(LS);
+        SUNMatDestroy(A);
+        ARKStepFree(&mem);    // Free integrator memory
+        N_VDestroy(nv_y);     // Free y vector
       }
     };
   }

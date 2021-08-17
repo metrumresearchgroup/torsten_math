@@ -16,9 +16,10 @@ using ode_test_tuple = std::tuple<solve_type, solve_type, Ts...>;
 /**
  * Outer product of test types
  */
+// FIXME: add ark45 finite diff tests.
 using harmonic_oscillator_fd_test_types = boost::mp11::mp_product<
     ode_test_tuple,
-    ::testing::Types<pmx_ode_erk45_functor, pmx_ode_adams_functor, pmx_ode_bdf_functor, pmx_ode_ckrk_functor,
+    ::testing::Types<pmx_ode_adams_functor, pmx_ode_bdf_functor, pmx_ode_ckrk_functor,
                      pmx_ode_rk45_functor>,
     ::testing::Types<double>,  // t
     ::testing::Types<double>,  // y0
@@ -87,41 +88,14 @@ REGISTER_TYPED_TEST_SUITE_P(harmonic_oscillator_data_test,
 INSTANTIATE_TYPED_TEST_SUITE_P(StanOde, harmonic_oscillator_data_test,
                                harmonic_oscillator_fd_test_types);
 
-using harmonic_oscillator_test_types = boost::mp11::mp_product<
-    ode_test_tuple,
-    ::testing::Types<ode_adams_functor, ode_bdf_functor, ode_ckrk_functor,
-                     ode_rk45_functor, ode_adjoint_functor>,
-    ::testing::Types<double>,                                  // t
-    ::testing::Types<double, stan::math::var_value<double> >,  // y0
-    ::testing::Types<double, stan::math::var_value<double> >   // theta
-    >;
-
-TYPED_TEST_SUITE_P(harmonic_oscillator_t0_ad_test);
-TYPED_TEST_P(harmonic_oscillator_t0_ad_test, t0_ad) {
-  if (std::is_same<std::tuple_element_t<0, TypeParam>,
-                   ode_rk45_functor>::value) {
-    this->test_t0_ad(5e-6);
-  }
-  if (std::is_same<std::tuple_element_t<0, TypeParam>,
-                   ode_ckrk_functor>::value) {
-    this->test_t0_ad(5e-6);
-  }
-  if (std::is_same<std::tuple_element_t<0, TypeParam>,
-                   ode_adams_functor>::value) {
-    this->test_t0_ad(1e-8);
-  }
-  if (std::is_same<std::tuple_element_t<0, TypeParam>,
-                   ode_bdf_functor>::value) {
-    this->test_t0_ad(1e-7);
-  }
-  if (std::is_same<std::tuple_element_t<0, TypeParam>,
-                   ode_adjoint_functor>::value) {
-    this->test_t0_ad(1e-7);
-  }
-}
-REGISTER_TYPED_TEST_SUITE_P(harmonic_oscillator_t0_ad_test, t0_ad);
-INSTANTIATE_TYPED_TEST_SUITE_P(StanOde, harmonic_oscillator_t0_ad_test,
-                               harmonic_oscillator_test_types);
+using sho_analytical_test_types = boost::mp11::mp_product<
+  ode_test_tuple,
+  ::testing::Types<pmx_ode_dirk5_functor, pmx_ode_adams_functor, pmx_ode_bdf_functor, pmx_ode_ckrk_functor,
+                   pmx_ode_rk45_functor>,
+  ::testing::Types<double>,                                  // t
+  ::testing::Types<double, stan::math::var_value<double> >,  // y0
+  ::testing::Types<double, stan::math::var_value<double> >   // theta
+  >;
 
 TYPED_TEST_SUITE_P(harmonic_oscillator_analytical_test);
 TYPED_TEST_P(harmonic_oscillator_analytical_test, dv) {
@@ -162,4 +136,4 @@ TYPED_TEST_P(harmonic_oscillator_analytical_test, vv) {
 
 REGISTER_TYPED_TEST_SUITE_P(harmonic_oscillator_analytical_test, dv, vd, vv);
 INSTANTIATE_TYPED_TEST_SUITE_P(StanOde, harmonic_oscillator_analytical_test,
-                               harmonic_oscillator_test_types);
+                               sho_analytical_test_types);

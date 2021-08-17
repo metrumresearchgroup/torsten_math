@@ -20,7 +20,6 @@
 
 using torsten::dsolve::PMXVariadicOdeSystem;
 using torsten::dsolve::PMXCvodesIntegrator;
-using torsten::dsolve::PMXOdeService;
 using torsten::dsolve::OdeObserver;
 using torsten::dsolve::OdeDataObserver;
 using torsten::PMXCvodesSensMethod;

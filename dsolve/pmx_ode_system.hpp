@@ -247,7 +247,7 @@ namespace dsolve {
 
     /**
      * Calculate sensitivity rhs using CVODES vectors. The
-     * internal workspace is allocated by @c PMXOdeService.
+     * internal workspace is allocated by @c CvodesService.
      */
     inline void operator()(int ns, double t, N_Vector nv_y, N_Vector ydot,
                            N_Vector* ys, N_Vector* ysdot,
@@ -611,7 +611,7 @@ namespace dsolve {
 
     /**
      * Calculate sensitivity rhs using CVODES vectors. The
-     * internal workspace is allocated by @c PMXOdeService.
+     * internal workspace is allocated by @c CvodesService.
      */
     inline void operator()(int ns, double t, N_Vector nv_y, N_Vector ydot,
                            N_Vector* ys, N_Vector* ysdot,

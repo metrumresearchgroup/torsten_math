@@ -48,7 +48,7 @@ namespace dsolve {
      */
     template <typename Ode, typename Observer>
     inline void integrate(Ode& ode, Observer& observer) {
-      PMXOdeService<Ode, lmm_type> serv(ode.N, ode.M, ode.ns, ode);
+      CvodesService<Ode, lmm_type> serv(ode.N, ode.M, ode.ns, ode);
 
       void* mem = serv.mem;
       N_Vector& y = serv.nv_y;

@@ -38,18 +38,18 @@ namespace torsten {
 
       braid_data() {
         x_tol           = 1.0e-6;
-        x_nt            = 300;
+        x_nt            = 100;
         x_skip          = 1;
         x_max_levels    = 15;
         x_min_coarse    = 3;
         x_nrelax        = 1;
         x_nrelax0       = -1;
-        x_tnorm         = 2;
+        x_tnorm         = 1;
         x_cfactor       = 10;
         x_cfactor0      = -1;
-        x_max_iter      = 100;
+        x_max_iter      = 20;
         x_storage       = -1;
-        x_print_level   = 2;
+        x_print_level   = 3;
         x_access_level  = 1;
         x_rfactor_limit = 10;
         x_rfactor_fail  = 4;
