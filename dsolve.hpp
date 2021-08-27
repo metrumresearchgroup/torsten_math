@@ -8,6 +8,9 @@
 #include <stan/math/torsten/dsolve/pmx_ode_rk45.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_adams.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_bdf.hpp>
+#include <stan/math/torsten/dsolve/pmx_ode_dirk2.hpp>
+#include <stan/math/torsten/dsolve/pmx_ode_dirk3.hpp>
+#include <stan/math/torsten/dsolve/pmx_ode_dirk4.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_dirk5.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_ckrk.hpp>
 

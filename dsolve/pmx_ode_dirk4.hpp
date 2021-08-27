@@ -1,5 +1,5 @@
-#ifndef STAN_MATH_TORSTEN_ODE_DIRK5_HPP
-#define STAN_MATH_TORSTEN_ODE_DIRK5_HPP
+#ifndef STAN_MATH_TORSTEN_ODE_DIRK4_HPP
+#define STAN_MATH_TORSTEN_ODE_DIRK4_HPP
 
 #include <stan/math/torsten/dsolve/pmx_ode_integrator.hpp>
 #include <stan/math/torsten/dsolve/pmx_arkode_integrator.hpp>
@@ -29,17 +29,17 @@ namespace torsten {
    */
   template <typename F, typename Tt, typename T_initial, typename... T_param>
   std::vector<Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param...>,-1,1> >
-  pmx_ode_dirk5_ctrl(const F& f,
-                   const Eigen::Matrix<T_initial, -1, 1>& y0,
-                   double t0,
-                   const std::vector<Tt>& ts,
-                   double rtol, double atol, int max_num_step,
-                   std::ostream* msgs,
-                   const T_param&... args) {
+  pmx_ode_dirk4_ctrl(const F& f,
+                     const Eigen::Matrix<T_initial, -1, 1>& y0,
+                     double t0,
+                     const std::vector<Tt>& ts,
+                     double rtol, double atol, int max_num_step,
+                     std::ostream* msgs,
+                     const T_param&... args) {
     using dsolve::PMXOdeIntegrator;
     using dsolve::PMXArkodeIntegrator;
     using dsolve::PMXVariadicOdeSystem;
-    PMXOdeIntegrator<PMXVariadicOdeSystem, PMXArkodeIntegrator<DEFAULT_DIRK_5>> solver(rtol, atol, max_num_step, msgs);
+    PMXOdeIntegrator<PMXVariadicOdeSystem, PMXArkodeIntegrator<DEFAULT_DIRK_4>> solver(rtol, atol, max_num_step, msgs);
     return solver(f, y0, t0, ts, args...);
   }
 
@@ -48,13 +48,13 @@ namespace torsten {
    */
   template <typename F, typename Tt, typename T_initial, typename... T_param>
   std::vector<Eigen::Matrix<typename stan::return_type_t<Tt, T_initial, T_param...>,-1,1> >
-  pmx_ode_dirk5(const F& f,
-              const Eigen::Matrix<T_initial, -1, 1>& y0,
-              double t0,
-              const std::vector<Tt>& ts,
-              std::ostream* msgs,
-              const T_param&... args) {
-    return pmx_ode_dirk5_ctrl(f, y0, t0, ts, 1.e-10, 1.e-10, 1e6, msgs, args...);
+  pmx_ode_dirk4(const F& f,
+                const Eigen::Matrix<T_initial, -1, 1>& y0,
+                double t0,
+                const std::vector<Tt>& ts,
+                std::ostream* msgs,
+                const T_param&... args) {
+    return pmx_ode_dirk4_ctrl(f, y0, t0, ts, 1.e-10, 1.e-10, 1e6, msgs, args...);
   }
 }
 #endif

@@ -36,6 +36,9 @@ TORSTEN_DEF_ODE_SOLVER_FUNCTOR(pmx_ode_ckrk, torsten::pmx_ode_ckrk);
 TORSTEN_DEF_ODE_SOLVER_FUNCTOR(pmx_ode_bdf, torsten::pmx_ode_bdf);
 TORSTEN_DEF_ODE_SOLVER_FUNCTOR(pmx_ode_rk45, torsten::pmx_ode_rk45);
 TORSTEN_DEF_ODE_SOLVER_FUNCTOR(pmx_ode_dirk5, torsten::pmx_ode_dirk5);
+TORSTEN_DEF_ODE_SOLVER_FUNCTOR(pmx_ode_dirk4, torsten::pmx_ode_dirk4);
+TORSTEN_DEF_ODE_SOLVER_FUNCTOR(pmx_ode_dirk3, torsten::pmx_ode_dirk3);
+TORSTEN_DEF_ODE_SOLVER_FUNCTOR(pmx_ode_dirk2, torsten::pmx_ode_dirk2);
 
 STAN_DEF_STD_ODE_SOLVER_FUNCTOR(pmx_integrate_ode_adams,
                                 torsten::pmx_integrate_ode_adams);
