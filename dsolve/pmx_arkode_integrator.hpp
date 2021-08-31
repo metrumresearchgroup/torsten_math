@@ -10,6 +10,7 @@
 #include <arkode/arkode_arkstep.h>
 #include <arkode/arkode.h>
 #include <sunnonlinsol/sunnonlinsol_newton.h>      // Newton nonlinear solver
+#include <sunnonlinsol/sunnonlinsol_fixedpoint.h>      // Newton nonlinear solver
 #include <type_traits>
 
 #ifdef TORSTEN_BRAID
@@ -110,6 +111,7 @@ namespace dsolve {
 
       CHECK_SUNDIALS_CALL(ARKStepSetAdaptivityMethod(mem, ARK_ADAPT_PID, SUNTRUE, SUNFALSE, NULL));
       ARKStepSetImplicit(mem);
+      ARKStepSetMaxErrTestFails(mem, 20);
       // ARKStepSetLinear(mem, 0);
 
       double t1 = ode.t0_;
