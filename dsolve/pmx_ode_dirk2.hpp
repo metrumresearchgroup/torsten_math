@@ -39,7 +39,7 @@ namespace torsten {
     using dsolve::PMXOdeIntegrator;
     using dsolve::PMXArkodeIntegrator;
     using dsolve::PMXVariadicOdeSystem;
-    PMXOdeIntegrator<PMXVariadicOdeSystem, PMXArkodeIntegrator<DEFAULT_DIRK_2>> solver(rtol, atol, max_num_step, msgs);
+    PMXOdeIntegrator<PMXVariadicOdeSystem, PMXArkodeIntegrator<TRBDF2_3_3_2>> solver(rtol, atol, max_num_step, msgs);
     return solver(f, y0, t0, ts, args...);
   }
 

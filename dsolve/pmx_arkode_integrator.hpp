@@ -109,9 +109,11 @@ namespace dsolve {
       CHECK_SUNDIALS_CALL(ARKStepSetUserData(mem, static_cast<void*>(&ode)));
       CHECK_SUNDIALS_CALL(ARKStepSetTableNum(mem, butcher_tab, -1));
 
-      CHECK_SUNDIALS_CALL(ARKStepSetAdaptivityMethod(mem, ARK_ADAPT_PID, SUNTRUE, SUNFALSE, NULL));
-      ARKStepSetImplicit(mem);
+      CHECK_SUNDIALS_CALL(ARKStepSetAdaptivityMethod(mem, 4, SUNTRUE, SUNFALSE, NULL));
+      // ARKStepSetPredictorMethod(mem, 0);
+      // ARKStepSetImplicit(mem);
       ARKStepSetMaxErrTestFails(mem, 20);
+      ARKStepSetMaxConvFails(mem, 20);
       // ARKStepSetLinear(mem, 0);
 
       double t1 = ode.t0_;
