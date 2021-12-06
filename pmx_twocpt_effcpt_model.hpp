@@ -16,7 +16,7 @@
 
 namespace torsten {
   /**
-   * standard two compartment PK ODE functor.
+   * one-compartment model coupled with an effective compartment PK model.
    */
   struct PMXTwocptEffCptODE {
   /**
@@ -25,11 +25,12 @@ namespace torsten {
    * @tparam T1 initial condition type
    * @tparam T2 parameter type
    * @tparam T3 real data/rate type
-   * @param t type
-   * @param x initial condition type
+   * @param t time
+   * @param x initial condition
    * @param parms parameters
    * @param rate dosing rate
-   * @param dummy dummy
+   * @param x_r real data
+   * @param x_i integer data
    */
     template <typename T0, typename T1, typename T2, typename T3>
     inline
@@ -62,7 +63,7 @@ namespace torsten {
     }
 
   /**
-   * Eigen version
+   * Eigen version where the statement variable is an Eigen vector.
    */
     template <typename T0, typename T1, typename T2, typename T3>
     inline
@@ -96,15 +97,11 @@ namespace torsten {
   };
 
   /**
-   * two-compartment PK model coupled with one effective compartment
+   * twocpt-effcpt coupled model coupled with one effective compartment
    * model for PD effects. The static memebers provide
-   * universal information, i.e. nb. of compartments,
-   * nb. of parameters, and the RHS functor. Containing RHS
-   * functor @c PMXTwocptEffCptODE makes @c PMXTwocptEffCptModel solvable
-   * using general ODE solvers, which makes testing easier.
+   * universal information: nb. of compartments,
+   * nb. of parameters, and the RHS functor.
    *
-   * @tparam T_time t type
-   * @tparam T_rate dosing rate type
    * @tparam T_par PK parameters type
    */
   template<typename T_par>
@@ -244,8 +241,6 @@ namespace torsten {
                const dsolve::PMXAnalyiticalIntegrator& integ) const {
       using stan::math::exp;
 
-      PKRec<T> y_bak(y);
-
       typename stan::return_type_t<Tt0, Tt1> dt = t1 - t0;
 
       std::vector<T> a(Ncmt, 0);
@@ -266,13 +261,6 @@ namespace torsten {
         linode_model.solve(y2, t0, t1, rate2, integ);
         y.tail(Ncmt - 1) = y2;
       }
-
-      if (y[1] < 0) {
-      std::cout << "taki test pars: " << CL_ << " " << V2_ << " " << ka_ << " " << ke_ << "\n";
-      std::cout << "taki test y_init: " << y_bak[0] << " " << y_bak[1] << " " << y_bak[2] << "\n";
-      std::cout << "taki test y: " << y[0] << " " << y[1] << " " << y[2] << "\n";
-      std::cout << "taki test t: " << t0 << " " << t1 << "\n";
-      }
     }
 
   /**
@@ -291,8 +279,12 @@ namespace torsten {
    * different scenarios: bolus/multiple truncated infusion/const infusion
    *
    * @tparam T_amt amt type
+   * @tparam T_r rate type
+   * @tparam T_ii dosing interval type
+   * @param t0 start time for steady state events
    * @param amt dosing amount
    * @param ii dosing interval
+   * @param rate infusion rate
    * @param cmt dosing compartment
    */
     template<typename T_amt, typename T_r, typename T_ii>

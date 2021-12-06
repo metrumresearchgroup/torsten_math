@@ -9,25 +9,27 @@
 #include <stan/math/torsten/dsolve/pk_vars.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
 #include <stan/math/prim/err/check_positive_finite.hpp>
+#include <stan/math/prim/err/check_less_or_equal.hpp>
 #include <stan/math/prim/err/check_finite.hpp>
 #include <stan/math/prim/err/check_nonnegative.hpp>
 
 namespace torsten {
   /**
-   * standard two compartment PK ODE functor.
+   * one-compartment model coupled with an effective compartment PK model.
    */
   struct PMXOneCptEffCptODE {
   /**
-   * standard two compartment PK ODE RHS function
-   * @tparam T0 t type
+   * The RHS function of the coupled linear ODE model
+   * @tparam T0 t time
    * @tparam T1 initial condition type
    * @tparam T2 parameter type
    * @tparam T3 real data/rate type
-   * @param t type
-   * @param x initial condition type
+   * @param t time
+   * @param x initial condition
    * @param parms parameters
    * @param rate dosing rate
-   * @param dummy dummy
+   * @param x_r real data
+   * @param x_i integer data
    */
     template <typename T0, typename T1, typename T2, typename T3>
     inline
@@ -54,7 +56,7 @@ namespace torsten {
     }
 
   /**
-   * Eigen version
+   * Eigen version where the statement variable is an Eigen vector.
    */
     template <typename T0, typename T1, typename T2, typename T3>
     inline
@@ -83,14 +85,10 @@ namespace torsten {
   };
 
   /**
-   * two-compartment PK model. The static memebers provide
-   * universal information, i.e. nb. of compartments,
-   * nb. of parameters, and the RHS functor. Containing RHS
-   * functor @c PMXOneCptEffCptODE makes @c PMXOneCptEffCptModel solvable
-   * using general ODE solvers, which makes testing easier.
+   * onecpt-effcpt coupled PK model. The static memebers provide
+   * universal information: # of compartments,
+   * # of parameters, and the RHS functor.
    *
-   * @tparam T_time t type
-   * @tparam T_rate dosing rate type
    * @tparam T_par PK parameters type
    */
   template<typename T_par>
@@ -170,8 +168,6 @@ namespace torsten {
                const dsolve::PMXAnalyiticalIntegrator& integ) const {
       using stan::math::exp;
 
-      PKRec<T> y_bak(y);
-
       typename stan::return_type_t<Tt0, Tt1> dt = t1 - t0;
 
       std::vector<T> a(Ncmt, 0);
@@ -206,18 +202,10 @@ namespace torsten {
         linode_model.solve(y2, t0, t1, rate2, integ);
         y.tail(Ncmt - 1) = y2;
       }
-
-      if (y[1] < 0) {
-      std::cout << "taki test pars: " << CL_ << " " << V_ << " " << ka_ << " " << ke_ << "\n";
-      std::cout << "taki test y_init: " << y_bak[0] << " " << y_bak[1] << " " << y_bak[2] << "\n";
-      std::cout << "taki test y: " << y[0] << " " << y[1] << " " << y[2] << "\n";
-      std::cout << "taki test t: " << t0 << " " << t1 << "\n";
-      }
-
     }
 
   /**
-   * Solve two-cpt model: analytical solution
+   * Solve the coupled model: analytical solution
    */
     template<typename Tt0, typename Tt1, typename T, typename T1>
     void solve(PKRec<T>& y,
@@ -232,27 +220,22 @@ namespace torsten {
    * different scenarios: bolus/multiple truncated infusion/const infusion
    *
    * @tparam T_amt amt type
+   * @tparam T_r rate type
+   * @tparam T_ii dosing interval type
+   * @param t0 start time for steady state events
    * @param amt dosing amount
    * @param ii dosing interval
+   * @param rate infusion rate
    * @param cmt dosing compartment
    */
     template<typename T_amt, typename T_r, typename T_ii>
     Eigen::Matrix<typename stan::return_type<T_par, T_amt, T_r, T_ii>::type, -1, 1>
     solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt) const {
-      using Eigen::Matrix;
-      using Eigen::Dynamic;
-      using std::vector;
-      using stan::math::exp;
-      using stan::math::matrix_exp;
-      using stan::math::value_of;
-      using stan::math::mdivide_left;
-      using stan::math::multiply;
-
       using ss_scalar_type = typename stan::return_type<T_par, T_amt, T_r, T_ii>::type;
 
-      stan::math::check_positive_finite("steady state two-cpt solver", "cmt", cmt);
-      stan::math::check_less("steady state two-cpt solver", "cmt", cmt, 4);
-      stan::math::check_positive_finite("steady state two-cpt solver", "ka", ka_);
+      stan::math::check_positive_finite("steady state one-cpt/eff-cpt solver", "cmt", cmt);
+      stan::math::check_less_or_equal("steady state one-cpt/eff-cpt solver", "cmt", cmt, Ncmt);
+      stan::math::check_positive_finite("steady state one-cpt/eff-cpt solver", "ka", ka_);
 
       std::vector<ss_scalar_type> a(3, 0);
       PKRec<ss_scalar_type> pred = PKRec<ss_scalar_type>::Zero(Ncmt);
