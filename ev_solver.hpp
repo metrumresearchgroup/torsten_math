@@ -19,9 +19,18 @@ namespace torsten{
   template<typename T_model, typename T_em>
   struct EventSolver;
 
-  /*
-   * the solver wrapper is aware of @c T_model so it build model
-   * accordingly.
+  /** 
+   * The solver that solves events one by one according to @c evid and
+   * dosing information. It is a wrapper that is aware of @c T_model so it build model
+   * and select solver accordingly.
+   * 
+   * @tparam T_model type of model
+   * @tparam T_event_record type of event record
+   * @tparam T0 TIME type 
+   * @tparam T4 THETA type
+   * @theta_container container for theta type, could be
+   *                  @c std::vector or @c eigen::vector.
+   * 
    */
   template<typename T_model, typename T_event_record,
            typename T0, typename T4, template<typename...> class theta_container,
@@ -37,12 +46,12 @@ namespace torsten{
     using T_param = NonEventParameters<T0, T4, theta_container,
                                        std::tuple<event_ctrl_type...>,
                                        ode_data_type...>;
-    /*
+    /**
      * Data used to fill the results when computation throws exception.
      */
     static constexpr double invalid_res_d = std::numeric_limits<double>::quiet_NaN();
 
-    /*
+    /**
      * calculate the number of parameters according to the
      * model type.
      *
@@ -83,29 +92,6 @@ namespace torsten{
      * model to the other are the Pred1 and PredSS functions, which
      * calculate the amount at an individual event.
      *
-     * @tparam T_em type the @c EventsManager
-     * @param[in] time times of events
-     * @param[in] amt amount at each event
-     * @param[in] rate rate at each event
-     * @param[in] ii inter-dose interval at each event
-     * @param[in] evid event identity:
-     *                    (0) observation
-     *                    (1) dosing
-     *                    (2) other
-     *                    (3) reset
-     *                    (4) reset AND dosing
-     * @param[in] cmt compartment number at each event (starts at 1)
-     * @param[in] addl additional dosing at each event
-     * @param[in] ss steady state approximation at each event
-     * (0: no, 1: yes)
-     * @param[in] pMatrix parameters at each event
-     * @param[in] addParm additional parameters at each event
-     * @parem[in] model basic info for ODE model and evolution operators
-     * @param[in] SystemODE matrix describing linear ODE system that
-     * defines compartment model. Used for matrix exponential solutions.
-     * Included because it may get updated in modelParameters.
-     * @return a matrix with predicted amount in each compartment
-     * at each event.
      */
     template<typename integrator_type, typename... scalar_pars_type>
     void pred(int id,
@@ -144,7 +130,7 @@ namespace torsten{
       }
     }
 
-    /*
+    /**
      * Step through a range of events.
      */
     template<typename integrator_type, typename... scalar_pars_type>
@@ -251,7 +237,7 @@ namespace torsten{
 
 #ifdef TORSTEN_MPI
 
-    /*
+    /**
      * MPI solution when the population
      * information passed in as ragged arrays. The overloading occurs
      * on <code>res</code> arg for results. Here the result is <code>var</code>.
@@ -343,36 +329,6 @@ namespace torsten{
         }
         MPI_Ibcast(res_d[id].data(), res_d[id].size(), MPI_DOUBLE, my_worker_id, comm, &req[id]);
       }
-
-      // int finished = 0;
-      // int index;
-      // int flag = 0;
-      // for(int id = 0; id < np; ++id) {
-      //   MPI_Wait(&req[id], MPI_STATUS_IGNORE);
-
-      //   if (is_invalid) continue;
-      //   if (std::isnan(res_d[id](0))) {
-      //     assert(rank != torsten::mpi::my_worker(id, np, size));
-      //     is_invalid = true;
-      //     rank_fail_msg << "Rank " << rank << " received invalid data for id " << id;
-      //   } else {
-      //     EM em(id, events_rec);
-      //     auto& events = em.events();
-      //     PKRec<scalar> init(nCmt); init.setZero();
-      //     PKRec<double> pred1 = VectorXd::Zero(res_d[id].rows());
-
-      //     int ikeep = 0, iev = 0;
-      //     while(ikeep < em.nKeep) {
-      //       pred1 = res_d[id].col(iev);
-      //       stepper_sync(iev, init, pred1, em, integrator, scalar_pars...);
-      //       if(events.keep(iev)) {
-      //         res.col(EM::begin(id, events_rec) + ikeep) = init;
-      //         ikeep++;
-      //       }
-      //       iev++;
-      //     }
-      //   }
-      // }
 
       int finished = 0;
       int index = 0;

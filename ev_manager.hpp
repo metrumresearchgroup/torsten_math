@@ -14,6 +14,15 @@ namespace torsten {
   template <typename T_event_record, typename T_params>
   struct EventsManager;
 
+  /** 
+   * Manage NMTRAN events by containing an <code>EventHistory</code> member
+   * The class is effectively the interface of
+   * <code>EventHistory</code>.
+   * 
+   * @tparam NONMENEventsRecord<...> currently only support NMTRAN records
+   * @tparam NonEventParameters<...> non-event parameters such as ODE params.
+   * 
+   */
   template <typename T0, typename T1, typename T2, typename T3, typename T4,
             template<class...> class theta_container, typename... tuple_pars_t, typename... Ts>
   struct EventsManager<NONMENEventsRecord<T0, T1, T2, T3>,
@@ -28,24 +37,36 @@ namespace torsten {
     using T_par_rate = T2;
     using T_par_ii   = T3;
 
-    param_t params;
+    param_t params;             /**< non-event parameters */
     EventHistory<T0, T1, T2, T3, typename param_t::lag_t> event_his;
 
-    int nKeep;
-    int ncmt;
+    int nKeep;                  /**< number of original events */
+    int ncmt;                   /**< number of compartments of the PMX model */
 
+    /** 
+     * number of compartments in the NMTRAN record
+     * 
+     * @param rec NMTRAN record
+     * 
+     * @return number of compartments
+     */
     static int nCmt(const ER& rec) {
       return rec.ncmt;
     }
 
-    /*
+    /** 
      * the index in the result/input where subject @c id begins.
+     * 
+     * @param id subject id
+     * @param rec NMTRAN record
+     * 
+     * @return the beginning index of the subject in the record
      */
     static int begin(int id, const ER& rec) {
       return rec.begin_.at(id);
     }
 
-    /*
+    /**
      * For population models, we need generate events using
      * ragged arrays.
      */
@@ -56,7 +77,7 @@ namespace torsten {
       EventsManager(0, rec, theta, non_event_params...)
     {}
 
-    /*
+    /**
      * For population models, we need generate events using
      * ragged arrays.
      */
@@ -120,10 +141,21 @@ namespace torsten {
       event_his.sort_state_time();
     }
 
+    /** 
+     * Get the @c EventHistory member
+     * 
+     * 
+     * @return @c EventHistory
+     */
     const EventHistory<T0, T1, T2, T3, typename param_t::lag_t>& events() const {
       return event_his;
     }
 
+    /** 
+     * When new events are created we need to attach its corresponding
+     * parameters. 
+     * 
+     */
     void attach_event_parameters() {
       int nEvent = event_his.size();
       assert(nEvent > 0);

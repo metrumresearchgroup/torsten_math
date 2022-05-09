@@ -18,26 +18,44 @@
 
 namespace torsten {
   /** 
-   * Implementation of Non event parameters structure for
-   * bioavailability, lag time, real ODEdata, integer ODE data. Since
-   * we allow elision of any of these we need template discern the
-   * combination. The default is that the param pack has both
-   * bioavailability and lag time
+   * Non-event parameters structure for
+   * bioavailability, lag time, real ODEd ata, integer ODE data. Since
+   * we allow elision of any of these we need template discerning the
+   * combination. The template parameters default to a pack with both
+   * bioavailability and lag time.
    *
    * @tparam Ts types of non-event parameters. Each in the parameter
    * pack is a 2d array.
    */
   template<typename... Ts>
   struct NonEventParameters_Impl {
-    /// total # of params plus one for theta
-    static constexpr int npar = sizeof...(Ts) + 1;
+    static constexpr int npar = sizeof...(Ts) + 1; /**< total # of params plus one for theta */
     using biovar_t = std::tuple_element_t<0, std::tuple<Ts...> >;
     using lag_t = std::tuple_element_t<1, std::tuple<Ts...> >;
 
+    /** 
+     * Get bioavailability given subject id & compartment id
+     * 
+     * @param i subject id
+     * @param j compartment id
+     * @param array_2d_params bioavailability array
+     * 
+     * @return F[i,j]
+     */
     static const auto& bioavailability(int i, int j,
                                        const std::tuple<const std::vector<std::vector<Ts> >&...> array_2d_params) {
       return std::get<0>(array_2d_params).at(i).at(j);
     }
+
+    /** 
+     * Get lag time given subject id & compartment id
+     * 
+     * @param i subject id
+     * @param j compartment id
+     * @param array_2d_params lag time array
+     * 
+     * @return tlag[i,j]
+     */
     static const auto& lag_time(int i, int j,
                                 const std::tuple<const std::vector<std::vector<Ts> >&...> array_2d_params) {
       return std::get<1>(array_2d_params).at(i).at(j);
@@ -45,18 +63,38 @@ namespace torsten {
   };
 
   /**
-   * Specialization: there's bioavailabity but no lag time.
+   * Specialization of NonEventParameters_Impl: lag time omitted.
+   * @tparam T bioavailability type
    */
   template<typename T>
   struct NonEventParameters_Impl<T> {
-    static constexpr int npar = 2;
+    static constexpr int npar = 2; /**< paramters: bioavailability & theta */
     using biovar_t = T;
     using lag_t = double;
 
+    /** 
+     * Get bioavailability given subject id & compartment id
+     * 
+     * @param i subject id
+     * @param j compartment id
+     * @param array_2d_params bioavailability array
+     * 
+     * @return F[i,j]
+     */
     static const auto& bioavailability(int i, int j,
                                        const std::tuple<const std::vector<std::vector<T> >&> array_2d_params) {
       return std::get<0>(array_2d_params).at(i).at(j);
     }
+
+    /** 
+     * Since lag time is omiited, the default 0.0 is used
+     * 
+     * @param i subject id
+     * @param j compartment id
+     * @param array_2d_params lag time array.
+     * 
+     * @return tlag[i, j]
+     */
     static double lag_time(int i, int j,
                                 const std::tuple<const std::vector<std::vector<T> >&> array_2d_params) {
       return 0.0;
@@ -64,7 +102,8 @@ namespace torsten {
   };
 
   /**
-   * Specialization: there's neither bioavailabity but nor lag time.
+   * Specialization of NonEventParameters_Impl: bioavailability & lag time omitted.
+   * @tparam T bioavailability type
    */
   template<>
   struct NonEventParameters_Impl<> {
@@ -72,12 +111,31 @@ namespace torsten {
     using biovar_t = double;
     using lag_t = double;
 
+    /** 
+     * Since bioavailability is omiited, the default 1.0 is used
+     * 
+     * @param i subject id
+     * @param j compartment id
+     * @param array_2d_params bioavailability array
+     * 
+     * @return F[i,j]
+     */
     static double bioavailability(int i, int j,
                                   const std::tuple<> array_2d_params) {
       return 1.0;
     }
+
+    /** 
+     * Since lag time is omiited, the default 0.0 is used
+     * 
+     * @param i subject id
+     * @param j compartment id
+     * @param array_2d_params lag time array.
+     * 
+     * @return tlag[i, j]
+     */
     static double lag_time(int i, int j,
-                                const std::tuple<> array_2d_params) {
+                           const std::tuple<> array_2d_params) {
       return 0.0;
     }
   };
@@ -178,7 +236,6 @@ namespace torsten {
      * @param array_2d_params0 additional params
      * 
      */
-    // template <typename rec_t, std::enable_if_t<sizeof...(Ts) == 2>* = nullptr>
     template <typename rec_t>
     NonEventParameters(int id, const rec_t& rec,
                        int ibegin_theta, int isize_theta,
@@ -261,7 +318,7 @@ namespace torsten {
   };
 
   /** 
-   * find <code>i</code>'th param index for subject <code>id</code>
+   * Find <code>i</code>'th param index for subject <code>id</code>
    * 
    * @param id subject index
    * @param i param index for this subject
@@ -277,61 +334,117 @@ namespace torsten {
   }
 
   /**
-   * The EventHistory class defines objects that contain a vector of Events,
-   * along with a series of functions that operate on them.
+   * Container of a vector of events ordered chronologically.
+   * During events generation there are cases where some events are
+   * repeated or new events are generated, in addition to the NMTRAN
+   * input. To avoid copying the events, ideally one can use a 
+   * <code>reference_wrapper</code>. Here we simply use an integer
+   * vector to store the location of the events in the original NMTRAN
+   * input vector. Thus the events are reflected in an <code>std::array</code>
+   * type <code> using IDVec = std::array<int, 4> </code>
+   *  
+   * 0: original(0)/generated(1)
+   *
+   * 1: index in original/generated arrays
+   *
+   * 2: EVID
+   *
+   * 3: is new?(0/1)
+   *
+   * @tparam T0 TIME type
+   * @tparam T1 AMT type
+   * @tparam T2 RATE type
+   * @tparam T3 II type
+   * @tparam T_lag LAG time type
    */
   template<typename T0, typename T1, typename T2, typename T3, typename T_lag>
   struct EventHistory {
-    // using T_scalar = typename stan::return_type_t<T0, T1, T2, T3, T4, T5, T6>;
     using T_time = typename stan::return_type_t<T0, T1, T2, T3, T_lag>;
-    // using T_rate = typename stan::return_type_t<T2, T5>;
-    // using T_amt = typename stan::return_type_t<T1, T5>;
-    /// <time, <theta index, F index, lag index> >
     using Param = std::pair<double, std::array<int, 3> >;
     using rate_t = std::pair<double, std::vector<T2> >;
 
-    const std::vector<T0>& time_;
-    const std::vector<T1>& amt_;
-    const std::vector<T2>& rate_;
-    const std::vector<T3>& ii_;
-    const std::vector<int>& evid_;
-    const std::vector<int>& cmt_;
-    const std::vector<int>& addl_;
-    const std::vector<int>& ss_;
+    const std::vector<T0>& time_; /**< event time */
+    const std::vector<T1>& amt_; /**< dosing amount */
+    const std::vector<T2>& rate_; /**< dosing rate */
+    const std::vector<T3>& ii_; /**< dosing interval */
+    const std::vector<int>& evid_; /**< event id */
+    const std::vector<int>& cmt_; /**< compartment id */
+    const std::vector<int>& addl_; /**< additional doses */
+    const std::vector<int>& ss_; /**< steady state flag */
 
-    // internally generated events
-    // these events are not from user input but required for event
-    // specification. Such examples include those from tlag or
-    // infusion dosing.
-    const size_t num_event_times;
-    std::vector<T_time> gen_time;
-    std::vector<T1> gen_amt;
-    std::vector<T2> gen_rate;
-    std::vector<T3> gen_ii;
-    std::vector<int> gen_cmt;
-    std::vector<int> gen_addl;
-    std::vector<int> gen_ss;
+    const size_t num_event_times; /**< number of original events */
+    std::vector<T_time> gen_time; /**< generated event time */
+    std::vector<T1> gen_amt;    /**< generated event dosing */
+    std::vector<T2> gen_rate;   /**< generated event dosing rate */
+    std::vector<T3> gen_ii;     /**< generated event dosing interval */
+    std::vector<int> gen_cmt;   /**< generated event dosing compartment */
+    std::vector<int> gen_addl;  /**< generated event additional dosing */
+    std::vector<int> gen_ss;    /**< generated event steady state flag */
 
-    // 0: original(0)/generated(1)
-    // 1: index in original/generated arrays
-    // 2: evid
-    // 3: is new?(0/1)
-    using IDVec = std::array<int, 4>;
-    std::vector<IDVec> idx;
+    using IDVec = std::array<int, 4>; /**< event representation */
+    std::vector<IDVec> idx;     /**< event representation vector */
 
-    // rate at distinct time
-    std::vector<rate_t> rates;
-    std::vector<int> rate_index;
+    std::vector<rate_t> rates;  /**< dosing rate at distinct time */
+    std::vector<int> rate_index; /**< points to the rates for each state time,
+                                  * since there is one rates vector per time, not per event. */
 
+    /** 
+     * Keep the event results or not. Only original NMTRAN input
+     * events results are kept.
+     * 
+     * @param id event id
+     * 
+     * @return true keep; false discard
+     */
     inline bool keep(const IDVec& id)  const { return id[0] == 0; }
+
+    /** 
+     * Is the event original or newly generated.
+     * 
+     * @param id event id
+     * 
+     * @return true: generated; false: original
+     */
     inline bool isnew(const IDVec& id) const { return id[3] == 1; }
+
+    /** 
+     * EVID for the given event
+     * 
+     * @param id event id
+     * 
+     * @return event id
+     */
     inline int evid (const IDVec& id) const { return id[2] ; }
 
+    /** 
+     * Keep the event results or not. Only original NMTRAN input
+     * events results are kept.
+     * 
+     * @param id event id in the event vector
+     * 
+     * @return true keep; false discard
+     */
     inline bool keep(int i)  const { return keep(idx[i]); }
+
+    /** 
+     * Is the event original or newly generated.
+     * 
+     * @param id event id in the event vector
+     * 
+     * @return true: generated; false: original
+     */
     inline bool isnew(int i) const { return isnew(idx[i]); }
+
+    /** 
+     * EVID for the given event
+     * 
+     * @param id event id in the event vector
+     * 
+     * @return event id
+     */
     inline int evid (int i) const { return evid(idx[i]); }
 
-    /*
+    /**
      * for a population with data in ragged array form, we
      * form the events history using the population data and
      * the location of the individual in the ragged arrays.
@@ -424,7 +537,7 @@ namespace torsten {
       return evid(i) == 1 || evid(i) == 4;
     }
 
-    /*
+    /**
      * if an event is steady-state dosing event.
      */
     bool is_ss_dosing(int i) const {
@@ -440,7 +553,7 @@ namespace torsten {
       return is_dosing(i) && rate(i) < eps;
     }
 
-    /*
+    /**
      * use current event #i as template to @c push_back
      * another event.
      */
@@ -476,7 +589,7 @@ namespace torsten {
       }
     }
 
-    /*
+    /**
      * sort PMX events and nonevents times
      */
     void sort_state_time() { std::stable_sort(idx.begin(), idx.end(),
@@ -538,8 +651,7 @@ namespace torsten {
       }
 
       /*
-       * rate index points to the rates for each state time,
-       * since there is one rates vector per time, not per event.
+       * 
        */
       rate_index.resize(idx.size());
       int iRate = 0;
