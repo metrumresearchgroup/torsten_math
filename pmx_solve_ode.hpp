@@ -41,7 +41,7 @@ namespace torsten {
      * for a general compartment model, defined by a system of ordinary
      * differential equations. 
      *
-     * <b>Warning:</b> This prototype does not handle steady state events. 
+     *  
      *
      * @tparam T0 type of scalar for time of events. 
      * @tparam T1 type of scalar for amount at each event.
@@ -54,7 +54,6 @@ namespace torsten {
      * @param[in] f functor for base ordinary differential equation that defines 
      *            compartment model.
      * @param[in] nCmt number of compartments in model
-     * @param[in] pMatrix parameters at each event
      * @param[in] time times of events  
      * @param[in] amt amount at each event
      * @param[in] rate rate at each event
@@ -68,6 +67,9 @@ namespace torsten {
      * @param[in] cmt compartment number at each event 
      * @param[in] addl additional dosing at each event 
      * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] tlag lag time 2D array
      * @param[in] rel_tol relative tolerance for the Boost ode solver 
      * @param[in] abs_tol absolute tolerance for the Boost ode solver
      * @param[in] max_num_steps maximal number of steps to take within 
@@ -76,12 +78,10 @@ namespace torsten {
      * @param[in] as_abs_tol absolute tolerance for the algebra solver
      * @param[in] as_max_num_steps maximal number of steps to take within 
      *            the algebra solver
+     * @param[in] msg I/O stream for ODE & algebra solvers.
      * @return a matrix with predicted amount in each compartment 
      *         at each event. 
      *
-     * FIX ME: currently have a dummy msgs argument. Makes it easier
-     * to expose to stan grammar files, because I can follow more closely
-     * what was done for the ODE integrator. Not ideal.
      */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename T5, typename T6, typename F>
@@ -123,8 +123,45 @@ namespace torsten {
       return pred;
     }
 
-    /*
-     * Overload with default ODE & algebra solver controls 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. ODE & algebra solver control parameter
+     * take default values.
+     *
+     *  
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T4 type of scalars for the model parameters.
+     * @tparam T5 type of scalars for the bio-variability parameters.
+     * @tparam T6 type of scalars for the model tlag parameters.
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] tlag lag time 2D array
+     * @param[in] msg I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename T5, typename T6, typename F>
@@ -144,8 +181,48 @@ namespace torsten {
                    msgs);
     }
 
-    /*
-     * Overload with default algebra solver controls 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. Algebra solver takes default control values.
+     *
+     *  
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T4 type of scalars for the model parameters.
+     * @tparam T5 type of scalars for the bio-variability parameters.
+     * @tparam T6 type of scalars for the model tlag parameters.
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] tlag lag time 2D array
+     * @param[in] rel_tol relative tolerance for the Boost ode solver 
+     * @param[in] abs_tol absolute tolerance for the Boost ode solver
+     * @param[in] max_num_steps maximal number of steps to take within 
+     *            the Boost ode solver 
+     * @param[in] msg I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename T5, typename T6, typename F>
@@ -169,8 +246,46 @@ namespace torsten {
     }
 
     /**
-     * Overload function to allow user to pass an std::vector for 
-     * pMatrix/bioavailability/tlag
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. Overloaded @c pMatrix @c biovar @c tlag
+     * arguments can be 1D arrays, indicating they are time-independent.
+     * In the overloaded signature the three arguments can take
+     * combination of 1D & 2D arrays.
+     *  
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T_par type for model parameters (scalar or vector)
+     * @tparam T_biovar type for the bio-variability parameters (scalar or vector)
+     * @tparam T_tlag type for the model tlag parameters (scalar or vector)
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] tlag lag time 2D array
+     * @param[in] solver_ctrl parameter pack for ODE and algebra solver controls,
+     *            as well as I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename T_biovar, typename T_tlag,
@@ -194,9 +309,51 @@ namespace torsten {
                    solver_ctrl...);
     }
 
-    /** 
-     * Overload: omitting lag time, with full tolerance spec
-     * 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. In this signature the @c tlag argument
+     * is omitted, with assumed value 0.0.
+     *
+     *  
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T4 type of scalars for the model parameters.
+     * @tparam T5 type of scalars for the bio-variability parameters.
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] rel_tol relative tolerance for the Boost ode solver 
+     * @param[in] abs_tol absolute tolerance for the Boost ode solver
+     * @param[in] max_num_steps maximal number of steps to take within 
+     *            the Boost ode solver 
+     * @param[in] as_rel_tol relative tolerance for the algebra solver
+     * @param[in] as_abs_tol absolute tolerance for the algebra solver
+     * @param[in] as_max_num_steps maximal number of steps to take within 
+     *            the algebra solver
+     * @param[in] msg I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename T5, typename F>
@@ -232,9 +389,44 @@ namespace torsten {
       return pred;
     }
 
-    /** 
-     * Overload: omitting lag time, with default ode & algebra solver spec
-     * 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. In this signature the @c tlag argument
+     * is omitted, with assumed value 0.0, and ODE & algebra solver
+     * controls also assume default values.
+     *
+     *  
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T4 type of scalars for the model parameters.
+     * @tparam T5 type of scalars for the bio-variability parameters.
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] msg I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename T5, typename F>
@@ -253,9 +445,48 @@ namespace torsten {
                    msgs);
     }
 
-    /** 
-     * Overload: omitting lag time, with default algebra solver spec
-     * 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. In this signature the @c tlag argument
+     * is omitted, with assumed value 0.0, and algebra solver controls
+     * also assume default values.
+     *
+     *  
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T4 type of scalars for the model parameters.
+     * @tparam T5 type of scalars for the bio-variability parameters.
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] rel_tol relative tolerance for the Boost ode solver 
+     * @param[in] abs_tol absolute tolerance for the Boost ode solver
+     * @param[in] max_num_steps maximal number of steps to take within 
+     *            the Boost ode solver 
+     * @param[in] msg I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename T5, typename F>
@@ -277,10 +508,44 @@ namespace torsten {
                    msgs);
     }
 
-    /** 
-     * Overload: omitting lag time, allow population-wise 1d array,
-     * with full ode & algebra solver spec
-     * 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. In this signature the @c tlag argument
+     * is omitted, with assumed value 0.0. The @c pMatrix @c biovar @c tlag
+     * arguments take combination of 1D & 2D arrays, with 1D array
+     * indicating time-independence.
+     *
+     *  
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T_par type for model parameters (scalar or vector)
+     * @tparam T_biovar type for the bio-variability parameters (scalar or vector)
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] solver_ctrl parameter pack for ODE & algebra solver controls,
+     *            as well as I/O stream.
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename T_biovar, typename F,
@@ -300,10 +565,50 @@ namespace torsten {
                    solver_ctrl...);
     }
 
-    /** 
-     * Overload: omitting bioavailability & lag time,
-     * with full ode & algebra solver spec
-     * 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. In this signature the @c tlag argument
+     * is omitted, with assumed value 0.0, and @c biovar argument is
+     * also omitted, with assumed value 1.0.
+     *
+     *  
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T4 type of scalars for the model parameters.
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] rel_tol relative tolerance for the Boost ode solver 
+     * @param[in] abs_tol absolute tolerance for the Boost ode solver
+     * @param[in] max_num_steps maximal number of steps to take within 
+     *            the Boost ode solver 
+     * @param[in] as_rel_tol relative tolerance for the algebra solver
+     * @param[in] as_abs_tol absolute tolerance for the algebra solver
+     * @param[in] as_max_num_steps maximal number of steps to take within 
+     *            the algebra solver
+     * @param[in] msg I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename F>
@@ -338,10 +643,43 @@ namespace torsten {
       return pred;
     }
 
-    /** 
-     * Overload: omitting bioavailability & lag time,
-     * with default ode & algebra solver spec
-     * 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. In this signature the @c tlag argument
+     * is omitted, with assumed value 0.0, and @c biovar argument is
+     * also omitted, with assumed value 1.0, and ODE & algebra solver
+     * controls assume default values.
+     *
+     *  
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T4 type of scalars for the model parameters.
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] msg I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename F>
@@ -359,10 +697,47 @@ namespace torsten {
                    msgs);
     }
 
-    /** 
-     * Overload: omitting bioavailability & lag time,
-     * with default algebra solver spec
-     * 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. In this signature the @c tlag argument
+     * is omitted, with assumed value 0.0, and @c biovar argument is
+     * also omitted, with assumed value 1.0. Algebra solver controls
+     * assume default values.
+     *
+     *  
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T4 type of scalars for the model parameters.
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] rel_tol relative tolerance for the Boost ode solver 
+     * @param[in] abs_tol absolute tolerance for the Boost ode solver
+     * @param[in] max_num_steps maximal number of steps to take within 
+     *            the Boost ode solver 
+     * @param[in] msg I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename F>
@@ -383,11 +758,44 @@ namespace torsten {
                    msgs);
     }
 
-    /** 
-     * Overload: omitting bioavailability & lag time, allow
-     * population-wise 1d array,
-     * with full algebra solver spec
-     * 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. In this signature the @c tlag argument
+     * is omitted, with assumed value 0.0, and @c biovar argument is
+     * also omitted, with assumed value 1.0. The @c pMatrix @c biovar @c tlag
+     * arguments take combination of 1D & 2D arrays, with 1D array
+     * indicating time-independence.
+     *  
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T_par type for model parameters (scalar or vector)
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] solver_ctrl parameter pack for ODE & algebra solver controls,
+     *            as well as I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename F,
@@ -406,10 +814,53 @@ namespace torsten {
                    solver_ctrl...);
     }
 
-    /** 
-     * Overload: additional real data for ODE, with full ode & algebra
-     * solver spec
-     * 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. ODE solver has an additional argument
+     * for real data.
+     *
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T4 type of scalars for the model parameters.
+     * @tparam T5 type of scalars for the bio-variability parameters.
+     * @tparam T6 type of scalars for the model tlag parameters.
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] tlag lag time 2D array
+     * @param[in] x_r real data 2D array for ODE functor @c f
+     * @param[in] rel_tol relative tolerance for the Boost ode solver 
+     * @param[in] abs_tol absolute tolerance for the Boost ode solver
+     * @param[in] max_num_steps maximal number of steps to take within 
+     *            the Boost ode solver 
+     * @param[in] as_rel_tol relative tolerance for the algebra solver
+     * @param[in] as_abs_tol absolute tolerance for the algebra solver
+     * @param[in] as_max_num_steps maximal number of steps to take within 
+     *            the algebra solver
+     * @param[in] msg I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename T5, typename T6, typename F>
@@ -448,10 +899,45 @@ namespace torsten {
       return pred;
     }
 
-    /** 
-     * Overload: additional real data for ODE, with default ode & algebra 
-     * solver spec
-     * 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. ODE solver has an additional argument
+     * for real data. ODE & algebra solver controls assume default values.
+     *
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T4 type of scalars for the model parameters.
+     * @tparam T5 type of scalars for the bio-variability parameters.
+     * @tparam T6 type of scalars for the model tlag parameters.
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] tlag lag time 2D array
+     * @param[in] x_r real data 2D array for ODE functor @c f
+     * @param[in] msg I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename T5, typename T6, typename F>
@@ -472,10 +958,49 @@ namespace torsten {
                    msgs);
     }
 
-    /** 
-     * Overload: additional real data for ODE, with default algebra 
-     * solver spec
-     * 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. ODE solver has an additional argument
+     * for real data. Algebra solver controls assume default values.
+     *
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T4 type of scalars for the model parameters.
+     * @tparam T5 type of scalars for the bio-variability parameters.
+     * @tparam T6 type of scalars for the model tlag parameters.
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] tlag lag time 2D array
+     * @param[in] x_r real data 2D array for ODE functor @c f
+     * @param[in] rel_tol relative tolerance for the Boost ode solver 
+     * @param[in] abs_tol absolute tolerance for the Boost ode solver
+     * @param[in] max_num_steps maximal number of steps to take within 
+     *            the Boost ode solver 
+     * @param[in] msg I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename T5, typename T6, typename F>
@@ -499,7 +1024,50 @@ namespace torsten {
                    msgs);
     }
 
-    // Overload: with real data, PMX params can be either 1d or 2d arrays.
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. ODE solver has an additional argument
+     * for real data. Algebra solver controls assume default values.
+     * The @c pMatrix @c biovar @c tlag
+     * arguments take combination of 1D & 2D arrays, with 1D array
+     * indicating time-independence.
+     *
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T_par type for model parameters (scalar or vector)
+     * @tparam T_biovar type for the bio-variability parameters (scalar or vector)
+     * @tparam T_tlag type for the model tlag parameters (scalar or vector)
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] tlag lag time 2D array
+     * @param[in] x_r real data 2D array for ODE functor @c f
+     * @param[in] solver_ctrl parameter pack for ODE & algebra solver controls,
+     *            as well as I/O stream.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
+     */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename T_biovar, typename T_tlag,
               typename F,
@@ -523,10 +1091,54 @@ namespace torsten {
                    solver_ctrl...);
     }
 
-    /** 
-     * Overload: additional real & int data for ODE, with full ode & algebra
-     * solver spec
-     * 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. ODE solver has an additional arguments
+     * for real data & integer data.
+     *
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T4 type of scalars for the model parameters.
+     * @tparam T5 type of scalars for the bio-variability parameters.
+     * @tparam T6 type of scalars for the model tlag parameters.
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] tlag lag time 2D array
+     * @param[in] x_r real data 2D array for ODE functor @c f
+     * @param[in] x_i integer data 2D array for ODE functor @c f
+     * @param[in] rel_tol relative tolerance for the Boost ode solver 
+     * @param[in] abs_tol absolute tolerance for the Boost ode solver
+     * @param[in] max_num_steps maximal number of steps to take within 
+     *            the Boost ode solver 
+     * @param[in] as_rel_tol relative tolerance for the algebra solver
+     * @param[in] as_abs_tol absolute tolerance for the algebra solver
+     * @param[in] as_max_num_steps maximal number of steps to take within 
+     *            the algebra solver
+     * @param[in] msg I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename T5, typename T6, typename F>
@@ -566,10 +1178,47 @@ namespace torsten {
       return pred;
     }
 
-    /** 
-     * Overload: additional real & int data for ODE, with default ode & algebra
-     * solver spec
-     * 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. ODE solver has an additional arguments
+     * for real data & integer data. ODE & algebra solver controls
+     * assume default values.
+     *
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T4 type of scalars for the model parameters.
+     * @tparam T5 type of scalars for the bio-variability parameters.
+     * @tparam T6 type of scalars for the model tlag parameters.
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] tlag lag time 2D array
+     * @param[in] x_r real data 2D array for ODE functor @c f
+     * @param[in] x_i integer data 2D array for ODE functor @c f
+     * @param[in] msg I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename T5, typename T6, typename F>
@@ -591,10 +1240,50 @@ namespace torsten {
                    msgs);
     }
 
-    /** 
-     * Overload: additional real & int data for ODE, with default algebra 
-     * solver spec
-     * 
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. ODE solver has an additional arguments
+     * for real data & integer data. Algebra solver controls
+     * assume default values.
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T4 type of scalars for the model parameters.
+     * @tparam T5 type of scalars for the bio-variability parameters.
+     * @tparam T6 type of scalars for the model tlag parameters.
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] tlag lag time 2D array
+     * @param[in] x_r real data 2D array for ODE functor @c f
+     * @param[in] x_i integer data 2D array for ODE functor @c f
+     * @param[in] rel_tol relative tolerance for the Boost ode solver 
+     * @param[in] abs_tol absolute tolerance for the Boost ode solver
+     * @param[in] max_num_steps maximal number of steps to take within 
+     *            the Boost ode solver 
+     * @param[in] msg I/O stream for ODE & algebra solvers.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
      */
     template <typename T0, typename T1, typename T2, typename T3, typename T4,
               typename T5, typename T6, typename F>
@@ -619,7 +1308,49 @@ namespace torsten {
                    msgs);
     }
 
-    // Overload: with real & int data, PMX params can be either 1d or 2d arrays.
+    /**
+     * Computes the predicted amounts in each compartment at each event
+     * for a general compartment model, defined by a system of ordinary
+     * differential equations. ODE solver has an additional arguments
+     * for real data & integer data. The @c pMatrix @c biovar @c tlag
+     * arguments take combination of 1D & 2D arrays, with 1D array
+     * indicating time-independence.
+     *
+     * @tparam T0 type of scalar for time of events. 
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T_par type for model parameters (scalar or vector)
+     * @tparam T_biovar type for the bio-variability parameters (scalar or vector)
+     * @tparam T_tlag type for the model tlag parameters (scalar or vector)
+     * @tparam F type of ODE system function.
+     * @param[in] f functor for base ordinary differential equation that defines 
+     *            compartment model.
+     * @param[in] nCmt number of compartments in model
+     * @param[in] time times of events  
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity: 
+     *                    (0) observation 
+     *                    (1) dosing
+     *                    (2) other 
+     *                    (3) reset 
+     *                    (4) reset AND dosing 
+     * @param[in] cmt compartment number at each event 
+     * @param[in] addl additional dosing at each event 
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix 2D parameter array
+     * @param[in] biovar bioavailability 2D array
+     * @param[in] tlag lag time 2D array
+     * @param[in] x_r real data 2D array for ODE functor @c f
+     * @param[in] x_i integer data 2D array for ODE functor @c f
+     * @param[in] solver_ctrl parameter pack for ODE & algebra solver controls,
+     *            as well as I/O stream.
+     * @return a matrix with predicted amount in each compartment 
+     *         at each event. 
+     *
+     */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename T_biovar, typename T_tlag,
               typename F,

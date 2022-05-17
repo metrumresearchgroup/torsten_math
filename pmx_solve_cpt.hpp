@@ -61,21 +61,26 @@ namespace torsten {
     }
   };
 
+  /** 
+   * Solver for compartment models.
+   * 
+   * @tparam model_t PMX model type
+   * 
+   */
   template<template<class> class model_t>
   struct PMXSolveCPT {
     /**
      * Computes the predicted amounts in each compartment at each event
      * for a compartment model with analytical solution, currently
-     * supporting 1 & 2 cpt models.
+     * supporting 1 & 2 cpt models, as well as their coupling with
+     * effective compartment PD models.
      *
      * @tparam T0 type of scalar for time of events.
      * @tparam T1 type of scalar for amount at each event.
      * @tparam T2 type of scalar for rate at each event.
      * @tparam T3 type of scalar for inter-dose inteveral at each event.
      * @tparam T4 type of scalars for the model parameters.
-     * @tparam T5 type of scalar for bio-variability F.
-     * @tparam T6 type of scalar for lag times.
-     * @param[in] pMatrix parameters at each event
+     * @tparam Ts variadic type for bioavailability and lag time arguments
      * @param[in] time times of events
      * @param[in] amt amount at each event
      * @param[in] rate rate at each event
@@ -89,6 +94,8 @@ namespace torsten {
      * @param[in] cmt compartment number at each event
      * @param[in] addl additional dosing at each event
      * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix parameters for each event
+     * @param[in] event_array_2d_params bioavailability & lag time arguments
      * @return a matrix with predicted amount in each compartment
      *         at each event.
      */
@@ -123,9 +130,39 @@ namespace torsten {
     }
 
     /**
-     * Overload function to allow user to pass an std::vector for 
-     * <code>pMatrix/bioavailability/tlag</code>. This indicates the
-     * entire population share these parameters.
+     * Computes the predicted amounts in each compartment at each event
+     * for a compartment model with analytical solution, currently
+     * supporting 1 & 2 cpt models, as well as their coupling with
+     * effective compartment PD models. Overloaded @c pMatrix @c biovar @c tlag
+     * arguments can be 1D arrays, indicating they are time-independent.
+     * In the overloaded signature the three arguments can take
+     * combination of 1D & 2D arrays.
+     *
+     * @tparam T0 type of scalar for time of events.
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T_par type for model parameters (scalar or vector)
+     * @tparam T_biovar type for the bio-variability parameters (scalar or vector)
+     * @tparam T_tlag type for the model tlag parameters (scalar or vector)
+     * @param[in] time times of events
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity:
+     *                    (0) observation
+     *                    (1) dosing
+     *                    (2) other
+     *                    (3) reset
+     *                    (4) reset AND dosing
+     * @param[in] cmt compartment number at each event
+     * @param[in] addl additional dosing at each event
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix parameters for each event
+     * @param[in] biovar bioavailability for each event
+     * @param[in] tlag lag time for each event
+     * @return a matrix with predicted amount in each compartment
+     *         at each event.
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename T_biovar, typename T_tlag,
@@ -142,9 +179,37 @@ namespace torsten {
     }
 
     /**
-     * Overload function to allow user to pass an std::vector for 
-     * <code>pMatrix/bioavailability</code>. This indicates the
-     * entire population share these parameters.
+     * Computes the predicted amounts in each compartment at each event
+     * for a compartment model with analytical solution, currently
+     * supporting 1 & 2 cpt models, as well as their coupling with
+     * effective compartment PD models. Overloaded @c pMatrix @c biovar
+     * arguments can be 1D arrays, indicating they are time-independent.
+     * In the overloaded signature the two arguments can take
+     * combination of 1D & 2D arrays. Lag time assumes default value 0.0.
+     *
+     * @tparam T0 type of scalar for time of events.
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T_par type for model parameters (scalar or vector)
+     * @tparam T_biovar type for the bio-variability parameters (scalar or vector)
+     * @param[in] time times of events
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity:
+     *                    (0) observation
+     *                    (1) dosing
+     *                    (2) other
+     *                    (3) reset
+     *                    (4) reset AND dosing
+     * @param[in] cmt compartment number at each event
+     * @param[in] addl additional dosing at each event
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix parameters for each event
+     * @param[in] biovar bioavailability for each event
+     * @return a matrix with predicted amount in each compartment
+     *         at each event.
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename T_biovar,
@@ -157,9 +222,36 @@ namespace torsten {
     }
 
     /**
-     * Overload function to allow user to pass an std::vector for 
-     * <code>pMatrix</code>. This indicates the
-     * entire population share these parameters.
+     * Computes the predicted amounts in each compartment at each event
+     * for a compartment model with analytical solution, currently
+     * supporting 1 & 2 cpt models, as well as their coupling with
+     * effective compartment PD models. Overloaded @c pMatrix @c biovar
+     * arguments can be 1D arrays, indicating they are time-independent.
+     * In the overloaded signature the two arguments can take
+     * combination of 1D & 2D arrays. Lag time assumed to be 0.0.
+     * Bioavailability assumed to be 1.0.
+     *
+     * @tparam T0 type of scalar for time of events.
+     * @tparam T1 type of scalar for amount at each event.
+     * @tparam T2 type of scalar for rate at each event.
+     * @tparam T3 type of scalar for inter-dose inteveral at each event.
+     * @tparam T_par type for model parameters (scalar or vector)
+     * @param[in] time times of events
+     * @param[in] amt amount at each event
+     * @param[in] rate rate at each event
+     * @param[in] ii inter-dose interval at each event
+     * @param[in] evid event identity:
+     *                    (0) observation
+     *                    (1) dosing
+     *                    (2) other
+     *                    (3) reset
+     *                    (4) reset AND dosing
+     * @param[in] cmt compartment number at each event
+     * @param[in] addl additional dosing at each event
+     * @param[in] ss steady state approximation at each event (0: no, 1: yes)
+     * @param[in] pMatrix parameters for each event
+     * @return a matrix with predicted amount in each compartment
+     *         at each event.
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par,
