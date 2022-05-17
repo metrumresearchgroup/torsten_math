@@ -5,7 +5,7 @@
 #include <stan/math/prim/fun/value_of.hpp>
 #include <stan/math/torsten/dsolve/sundials_check.hpp>
 #include <stan/math/torsten/dsolve/cvodes_service.hpp>
-#include <arkode/arkode_butcher_erk.h>
+// #include <arkode/arkode_butcher_erk.h>
 #include <type_traits>
 
 namespace torsten {

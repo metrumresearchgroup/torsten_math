@@ -8,8 +8,9 @@
 #include <stan/math/torsten/dsolve/ode_func_type.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_system.hpp>
 #include <cvodes/cvodes.h>
-#include <arkode/arkode.h>
-#include <arkode/arkode_erkstep.h>
+// #include <arkode/arkode.h>
+// #include <arkode/arkode_erkstep.h>
+#include <sundials/sundials_context.h>
 #include <nvector/nvector_serial.h>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
@@ -32,6 +33,7 @@ namespace torsten {
      */
     template <typename Ode, int lmm_type, int butcher_tab = 0, typename = void>
     struct PMXOdeService {
+      sundials::Context sundials_context_;
       int ns;
       N_Vector nv_y;
       N_Vector* nv_ys;
@@ -51,12 +53,13 @@ namespace torsten {
        * @param[in] f ODE RHS function
        */
       PMXOdeService(int n, int m, int ns0, Ode& ode) :
+        sundials_context_(),
         ns(ns0),
-        nv_y(N_VNew_Serial(n)),
+        nv_y(N_VNew_Serial(n, sundials_context_)),
         nv_ys(nullptr),
-        mem(CVodeCreate(lmm_type)),
-        A(SUNDenseMatrix(n, n)),
-        LS(SUNLinSol_Dense(nv_y, A)),
+        mem(CVodeCreate(lmm_type, sundials_context_)),
+        A(SUNDenseMatrix(n, n, sundials_context_)),
+        LS(SUNLinSol_Dense(nv_y, A, sundials_context_)),
         yy_cplx(n),
         theta_cplx(m),
         fval_cplx(n),
@@ -111,6 +114,7 @@ namespace torsten {
     template <typename Ode, int butcher_tab>
     struct PMXOdeService<Ode, 0, butcher_tab,
                          stan::require_t<is_erk_tab<butcher_tab> > > {
+      sundials::Context sundials_context_;
       int ns;
       N_Vector nv_y;
       void* mem;
@@ -123,8 +127,9 @@ namespace torsten {
        * @param[in] f ODE RHS function
        */
       PMXOdeService(int n, int m, int ns0, Ode& ode) :
+        sundials_context_(),
         ns(ns0),
-        nv_y(N_VNew_Serial(ode.system_size)),
+        nv_y(N_VNew_Serial(ode.system_size, sundials_context_)),
         mem(ERKStepCreate(Ode::cvodes_rhs, 0.0, nv_y))
       {
         N_VConst(RCONST(0.0), nv_y);

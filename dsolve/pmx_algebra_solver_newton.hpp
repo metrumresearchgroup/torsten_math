@@ -20,6 +20,7 @@
 #include <kinsol/kinsol.h>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
+#include <sundials/sundials_context.h>
 #include <nvector/nvector_serial.h>
 #include <algorithm>
 #include <iostream>
@@ -181,6 +182,8 @@ namespace torsten {
  *
  */
 struct KinsolNewtonService {
+  /** SUNDIALS context */
+  sundials::Context sundials_context_;
   /** KINSOL memory block */
   void* mem_;
   /** NVECTOR for unknowns */
@@ -199,12 +202,13 @@ struct KinsolNewtonService {
   KinsolNewtonService(const Eigen::Matrix<T, -1, 1>& x,
                       const std::vector<T_u>& u_scale,
                       const std::vector<T_f>& f_scale)
-      : mem_(KINCreate()),
-        nv_x_(N_VNew_Serial(x.size())),
-        J(SUNDenseMatrix(x.size(), x.size())),
-        LS(SUNLinSol_Dense(nv_x_, J)),
-        nv_u_scal_(N_VNew_Serial(x.size())),
-        nv_f_scal_(N_VNew_Serial(x.size()))
+      : sundials_context_(),
+        mem_(KINCreate(sundials_context_)),
+        nv_x_(N_VNew_Serial(x.size(), sundials_context_)),
+        J(SUNDenseMatrix(x.size(), x.size(), sundials_context_)),
+        LS(SUNLinSol_Dense(nv_x_, J, sundials_context_)),
+        nv_u_scal_(N_VNew_Serial(x.size(), sundials_context_)),
+        nv_f_scal_(N_VNew_Serial(x.size(), sundials_context_))
   {
     for (int i = 0; i < x.size(); ++i) {
       NV_Ith_S(nv_x_, i) = stan::math::value_of(x(i));

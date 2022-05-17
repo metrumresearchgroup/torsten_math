@@ -9,6 +9,7 @@
 #include <test/unit/math/prim/functor/harmonic_oscillator.hpp>
 #include <test/unit/math/prim/functor/lorenz.hpp>
 #include <nvector/nvector_serial.h>
+#include <sundials/sundials_context.h>
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -137,8 +138,9 @@ struct TorstenOdeTest : public testing::Test {
     EXPECT_EQ(ode.N, y0.size());
     EXPECT_EQ(ode.M, theta.size());
 
-    N_Vector ydot = N_VNew_Serial(ode.N);
-    N_Vector y = N_VMake_Serial(ode.N, y0.data());
+    sundials::Context sundials_context_;
+    N_Vector ydot = N_VNew_Serial(ode.N, sundials_context_);
+    N_Vector y = N_VMake_Serial(ode.N, y0.data(), sundials_context_);
     
     EXPECT_EQ(ode.cvodes_rhs(ts.back(), y, ydot, static_cast<void*>(&ode)), 0);
     auto dydt = ode.f_(ts.back(), y0, theta, x_r, x_i, msgs);

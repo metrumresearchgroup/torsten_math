@@ -137,14 +137,14 @@ class PMXIdasIntegrator {
     typename Dae::return_type res_yy(
         ts.size(), std::vector<typename Dae::scalar_type>(n, 0));
 
-    auto A = SUNDenseMatrix(n, n);
-    auto LS = SUNDenseLinearSolver(yy, A);
+    auto A = SUNDenseMatrix(n, n, dae.sundials_context_);
+    auto LS = SUNLinSol_Dense(yy, A, dae.sundials_context_);
 
     try {
       CHECK_SUNDIALS_CALL(IDASetUserData(mem, dae.to_user_data()));
 
       CHECK_SUNDIALS_CALL(IDAInit(mem, dae.residual(), t0, yy, yp));
-      CHECK_SUNDIALS_CALL(IDADlsSetLinearSolver(mem, LS, A));
+      CHECK_SUNDIALS_CALL(IDASetLinearSolver(mem, LS, A));
       CHECK_SUNDIALS_CALL(IDASStolerances(mem, rtol_, atol_));
       CHECK_SUNDIALS_CALL(IDASetMaxNumSteps(mem, max_num_steps_));
 
