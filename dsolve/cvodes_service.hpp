@@ -111,36 +111,36 @@ namespace torsten {
       static constexpr bool value = butcher_tab >= 0 && butcher_tab < 100;
     };
 
-    template <typename Ode, int butcher_tab>
-    struct PMXOdeService<Ode, 0, butcher_tab,
-                         stan::require_t<is_erk_tab<butcher_tab> > > {
-      sundials::Context sundials_context_;
-      int ns;
-      N_Vector nv_y;
-      void* mem;
+    // template <typename Ode, int butcher_tab>
+    // struct PMXOdeService<Ode, 0, butcher_tab,
+    //                      stan::require_t<is_erk_tab<butcher_tab> > > {
+    //   sundials::Context sundials_context_;
+    //   int ns;
+    //   N_Vector nv_y;
+    //   void* mem;
 
-      /**
-       * Construct CVODES ODE mem & workspace
-       *
-       * @param[in] n ODE system size
-       * @param[in] m length of parameter theta
-       * @param[in] f ODE RHS function
-       */
-      PMXOdeService(int n, int m, int ns0, Ode& ode) :
-        sundials_context_(),
-        ns(ns0),
-        nv_y(N_VNew_Serial(ode.system_size, sundials_context_)),
-        mem(ERKStepCreate(Ode::cvodes_rhs, 0.0, nv_y))
-      {
-        N_VConst(RCONST(0.0), nv_y);
-        CHECK_SUNDIALS_CALL(ERKStepSetUserData(mem, static_cast<void*>(&ode)));
-      }
+    //   /**
+    //    * Construct CVODES ODE mem & workspace
+    //    *
+    //    * @param[in] n ODE system size
+    //    * @param[in] m length of parameter theta
+    //    * @param[in] f ODE RHS function
+    //    */
+    //   PMXOdeService(int n, int m, int ns0, Ode& ode) :
+    //     sundials_context_(),
+    //     ns(ns0),
+    //     nv_y(N_VNew_Serial(ode.system_size, sundials_context_)),
+    //     mem(ERKStepCreate(Ode::cvodes_rhs, 0.0, nv_y))
+    //   {
+    //     N_VConst(RCONST(0.0), nv_y);
+    //     CHECK_SUNDIALS_CALL(ERKStepSetUserData(mem, static_cast<void*>(&ode)));
+    //   }
 
-      ~PMXOdeService() {
-        ERKStepFree(&mem);    // Free integrator memory
-        N_VDestroy(nv_y);        // Free y vector
-      }
-    };
+    //   ~PMXOdeService() {
+    //     ERKStepFree(&mem);    // Free integrator memory
+    //     N_VDestroy(nv_y);        // Free y vector
+    //   }
+    // };
   }
 }
 
