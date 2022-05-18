@@ -65,8 +65,8 @@ class PMXIdasFwdSystem : public PMXIdasSystem<F, Tyy, Typ, Tpar> {
    */
   ~PMXIdasFwdSystem() {
     if (this->need_sens) {
-      N_VDestroyVectorArray_Serial(nv_yys_, this->ns_);
-      N_VDestroyVectorArray_Serial(nv_yps_, this->ns_);
+      N_VDestroyVectorArray(nv_yys_, this->ns_);
+      N_VDestroyVectorArray(nv_yps_, this->ns_);
     }
   }
 

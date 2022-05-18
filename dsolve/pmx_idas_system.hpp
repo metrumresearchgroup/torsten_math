@@ -12,6 +12,7 @@
 #include <stan/math/prim/fun/typedefs.hpp>
 #include <idas/idas.h>
 #include <nvector/nvector_serial.h>
+#include <sundials/sundials_context.h>
 #include <ostream>
 #include <vector>
 
@@ -32,6 +33,9 @@ namespace dsolve {
  */
 template <typename F, typename Tyy, typename Typ, typename Tpar>
 class PMXIdasSystem {
+ public:
+  sundials::Context sundials_context_;
+
  protected:
   const F& f_;
   const std::vector<Tyy>& yy_;
@@ -76,7 +80,8 @@ class PMXIdasSystem {
                 const std::vector<Tyy>& yy0, const std::vector<Typ>& yp0,
                 const std::vector<Tpar>& theta, const std::vector<double>& x_r,
                 const std::vector<int>& x_i, std::ostream* msgs)
-      : f_(f),
+      : sundials_context_(),
+        f_(f),
         yy_(yy0),
         yp_(yp0),
         theta_(theta),
@@ -88,10 +93,10 @@ class PMXIdasSystem {
         M_(theta.size()),
         ns_((is_var_yy0 ? N_ : 0) + (is_var_yp0 ? N_ : 0)
             + (is_var_par ? M_ : 0)),
-        nv_yy_(N_VNew_Serial(N_)),
-        nv_yp_(N_VNew_Serial(N_)),
-        id_(N_VNew_Serial(N_)),
-        mem_(IDACreate()),
+        nv_yy_(N_VNew_Serial(N_, sundials_context_)),
+        nv_yp_(N_VNew_Serial(N_, sundials_context_)),
+        id_(N_VNew_Serial(N_, sundials_context_)),
+        mem_(IDACreate(sundials_context_)),
         msgs_(msgs) {
     using stan::math::check_finite;
     using stan::math::check_nonzero_size;

@@ -7,6 +7,8 @@
 #include <stan/math/prim/fun/matrix_exp.hpp>
 #include <stan/math/prim/fun/mdivide_left.hpp>
 #include <stan/math/rev/fun/mdivide_left.hpp>
+#include <stan/math/prim/fun/exp.hpp>
+#include <stan/math/rev/fun/exp.hpp>
 #include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/torsten/PKModel/functors/check_mti.hpp>
 #include <stan/math/torsten/dsolve/pk_vars.hpp>

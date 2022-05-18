@@ -10,6 +10,7 @@
 #include <stan/math/torsten/dsolve/pmx_ode_adams.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_ckrk.hpp>
 #include <stan/math/torsten/test/unit/pmx_ode_test_fixture.hpp>
+#include <sundials/sundials_context.h>
 #include <boost/numeric/odeint/external/eigen/eigen_algebra.hpp>
 #include <boost/fusion/adapted/std_tuple.hpp>
 #include <boost/fusion/include/algorithm.hpp>
@@ -63,8 +64,9 @@ TEST_F(TorstenOdeTest_sho, variadic_ode_system_cvodes) {
     ode(f_eigen, 0.0, ts, y0_var, nullptr, theta_var, x_r, x_i);
 
   Eigen::VectorXd dydt = f_eigen(ts[0], y0_vec, nullptr, theta, x_r, x_i);
-  N_Vector nv_y(N_VNew_Serial(2));
-  N_Vector ydot(N_VNew_Serial(2));
+  sundials::Context sundials_context_;
+  N_Vector nv_y(N_VNew_Serial(2, sundials_context_));
+  N_Vector ydot(N_VNew_Serial(2, sundials_context_));
   NV_Ith_S(nv_y, 0) = y0[0];
   NV_Ith_S(nv_y, 1) = y0[1];
   ode(ts[0], nv_y, ydot);
