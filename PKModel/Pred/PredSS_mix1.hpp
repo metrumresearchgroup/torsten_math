@@ -6,7 +6,7 @@
 #include <stan/math/torsten/PKModel/functors/SS_system.hpp>
 #include <stan/math/torsten/PKModel/Pred/Pred1_oneCpt.hpp>
 #include <stan/math/torsten/PKModel/Pred/PredSS_oneCpt.hpp>
-#include <stan/math/rev/functor/algebra_solver_powell.hpp>
+#include <stan/math/rev/functor/solve_powell.hpp>
 #include <stan/math/prim/fun/to_vector.hpp>
 #include <stan/math/prim/fun/to_array_1d.hpp>
 #include <vector>
@@ -40,7 +40,7 @@ struct PredSS_mix1 {
    * constant input (if ii = 0). The function is overloaded
    * to address the cases where amt or rate may be fixed or
    * random variables (yielding a total of 4 cases).
-   * 
+   *
    * Case 1 (dd): amt and rate are fixed.
    *
    *	 @tparam T_time type of scalar for time
@@ -76,7 +76,7 @@ struct PredSS_mix1 {
     using Eigen::Dynamic;
     using Eigen::VectorXd;
     using std::vector;
-    using stan::math::algebra_solver_powell;
+    using stan::math::solve_powell_tol;
     using stan::math::to_vector;
     using stan::math::to_array_1d;
 
@@ -136,10 +136,10 @@ struct PredSS_mix1 {
                                         x_r, x_i)[0]);
 
       x_r.push_back(amt);
-      predPD = algebra_solver_powell(system, predPD_guess,
-                              to_vector(theta.get_RealParameters(false)),
-                              x_r, x_i,
-                              0, rel_tol, f_tol, max_num_steps);
+      predPD = solve_powell_tol(system, predPD_guess,
+				rel_tol, f_tol, max_num_steps, 0,
+				to_vector(theta.get_RealParameters(false)),
+				x_r, x_i);
 
       // Remove dose input in dosing compartment. Pred will add it
       // later, so we want to avoid redundancy.
@@ -160,10 +160,10 @@ struct PredSS_mix1 {
                                          x_r, x_i)[0]);
 
       x_r.push_back(amt);  // needed?
-      predPD = algebra_solver_powell(system, predPD_guess,
-                            to_vector(theta.get_RealParameters(false)),
-                            x_r, x_i,
-                            0, rel_tol, f_tol, max_num_steps);
+      predPD = solve_powell_tol(system, predPD_guess,
+				rel_tol, f_tol, max_num_steps, 0,
+				to_vector(theta.get_RealParameters(false)),
+				x_r, x_i);
     } else {  // constant infusion
       x_r[cmt - 1] = rate;
 
@@ -179,10 +179,10 @@ struct PredSS_mix1 {
                                          x_r, x_i)[0]);
 
       x_r.push_back(amt);
-      predPD = algebra_solver_powell(system, predPD_guess,
-                              to_vector(theta.get_RealParameters(false)),
-                              x_r, x_i,
-                              0, rel_tol, f_tol, max_num_steps);
+      predPD = solve_powell_tol(system, predPD_guess,
+				rel_tol, f_tol, max_num_steps, 0,
+				to_vector(theta.get_RealParameters(false)),
+				x_r, x_i);
     }
 
     Matrix<scalar, Dynamic, 1> pred(nPK + nOde_);
@@ -215,7 +215,7 @@ struct PredSS_mix1 {
     using Eigen::Dynamic;
     using Eigen::VectorXd;
     using std::vector;
-    using stan::math::algebra_solver_powell;
+    using stan::math::solve_powell;
     using stan::math::to_vector;
     using stan::math::to_array_1d;
     using stan::math::invalid_argument;
@@ -269,10 +269,10 @@ struct PredSS_mix1 {
                                         unpromote(theta.get_RealParameters(false)),
                                         x_r, x_i)[0]);
 
-      predPD = algebra_solver_powell(system, predPD_guess,
-                              to_vector(theta.get_RealParameters(false)),
-                              x_r, x_i,
-                              0, rel_tol, f_tol, max_num_steps);
+      predPD = solve_powell_tol(system, predPD_guess,
+				rel_tol, f_tol, max_num_steps, 0,
+				to_vector(theta.get_RealParameters(false)),
+				x_r, x_i);
 
       if (cmt <= 2) predPK(cmt - 1) -= amt;
     } else if (ii > 0) {
@@ -289,10 +289,10 @@ struct PredSS_mix1 {
                                          unpromote(theta.get_RealParameters(false)),
                                          x_r, x_i)[0]);
 
-      predPD = algebra_solver_powell(system, predPD_guess,
-                              to_vector(theta.get_RealParameters(false)),
-                              x_r, x_i,
-                              0, rel_tol, f_tol, max_num_steps);
+      predPD = solve_powell_tol(system, predPD_guess,
+				rel_tol, f_tol, max_num_steps, 0,
+				to_vector(theta.get_RealParameters(false)),
+				x_r, x_i);
     }
 
     Matrix<scalar, Dynamic, 1> pred(nPK + nOde_);

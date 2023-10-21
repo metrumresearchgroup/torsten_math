@@ -4,8 +4,8 @@
 #include <stan/math/prim/fun/to_vector.hpp>
 #include <stan/math/prim/fun/to_array_1d.hpp>
 #include <stan/math/rev/fun/to_var.hpp>
-#include <stan/math/rev/functor/algebra_solver_powell.hpp>
-#include <stan/math/rev/functor/algebra_solver_newton.hpp>
+#include <stan/math/rev/functor/solve_powell.hpp>
+#include <stan/math/rev/functor/solve_newton.hpp>
 #include <stan/math/rev/functor/algebra_solver_fp.hpp>
 #include <stan/math/prim/err/check_less_or_equal.hpp>
 #include <stan/math/torsten/pk_nvars.hpp>
@@ -19,7 +19,7 @@ namespace torsten {
   using Eigen::Dynamic;
   using torsten::dsolve::PMXOdeIntegrator;
 
-  /** 
+  /**
    * Functor class that solves ODE & apply infusion dosing.
    */
   template<typename F>
@@ -52,7 +52,7 @@ namespace torsten {
   struct PMXOdeFunctorSSAdaptor {
     F const& f_;
     integrator_type const& integrator_;
-    
+
     PMXOdeFunctorSSAdaptor(F const& f, integrator_type const& integrator)
       : f_(f), integrator_(integrator)
     {}
@@ -118,7 +118,7 @@ namespace torsten {
 #endif
         }
       } else {  // constant infusion
-        stan::math::check_less_or_equal(func, "AMT", amt, 0); 
+        stan::math::check_less_or_equal(func, "AMT", amt, 0);
         std::vector<T_r> rate_vec(ncmt, 0.0);
         rate_vec[cmt - 1] = rate;
 #ifdef TORSTEN_AS_FP
@@ -202,14 +202,14 @@ namespace torsten {
      * @tparam Ts type parameters for @c T_model
      * @param m model that provides ODE information.
      */
-    template<template<typename...> class T_model, typename... Ts>    
+    template<template<typename...> class T_model, typename... Ts>
     PKODEModel(const T_model<Ts...>& m) :
       par_(m.par()),
       x_r_(m.x_r_), x_i_(m.x_i_),
       f_(m.f()),
       ncmt_(m.ncmt())
     {}
-    
+
     template<typename T0, typename T1, typename T2, typename T3>
     static size_t nvars(const T0& t0,
                         const PKRec<T1>& y0,
@@ -234,8 +234,8 @@ namespace torsten {
                                              const PKRec<T1>& y0,
                                              const std::vector<T2> &rate,
                                              const std::vector<T3> &par) {
-      using stan::math::to_var;      
-      using stan::is_var;      
+      using stan::math::to_var;
+      using stan::is_var;
       using stan::math::var;
       std::vector<stan::math::var> res(nvars(t1, y0, rate, par));
       int n = nvars(t1, y0, rate, par);
@@ -304,7 +304,7 @@ namespace torsten {
     }
 
     /**
-     * For steady-state with data rate. 
+     * For steady-state with data rate.
      * Same as the non-steady version but with given @c init.
      */
     template<typename integrator_type>
@@ -356,11 +356,11 @@ namespace torsten {
       y = integrator(f_rate, y, t0_d, ts[0], par_, rate, x_r_, x_i_);
     }
 
-    /** 
-     * Torsten's integrators can return 
+    /**
+     * Torsten's integrators can return
      * results in form of data directly,
      * thanks to @c pmx_cvodes/arkode/odeint_integrator's observer implmenetation.
-     * 
+     *
      * @param yd output data
      * @param y initial condition
      * @param t0 starting time
@@ -430,8 +430,8 @@ namespace torsten {
     solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt,
           const integrator_type& integrator) const {
       using stan::math::value_of;
-      using stan::math::algebra_solver_powell;
-      using stan::math::algebra_solver_newton;
+      using stan::math::solve_powell_tol;
+      using stan::math::solve_newton_tol;
       using stan::math::algebra_solver_fp;
 
       typedef typename stan::return_type_t<T_amt, T_r, T_par, T_ii> scalar;
@@ -453,10 +453,11 @@ namespace torsten {
       fss_func_t fss(f_, integrator);
       try {
 #ifdef TORSTEN_AS_POWELL
-      return algebra_solver_powell(fss, integrate(t0, rate_vec, init_dbl, init_dt, integrator),
-                                   fss.adapted_param(),
-                                   x_r_, x_i_, 0,
-                                   integrator.as_rtol, integrator.as_atol, integrator.as_max_num_step);
+      return solve_powell_tol(fss, integrate(t0, rate_vec, init_dbl, init_dt, integrator),
+			      integrator.as_rtol, integrator.as_atol,
+			      integrator.as_max_num_step, 0,
+                              fss.adapted_param(),
+			      x_r_, x_i_);
 #elif defined(TORSTEN_AS_FP)
       std::vector<double> u_scale(ncmt_, 1.0);
       std::vector<double> f_scale(ncmt_, 1.0);
