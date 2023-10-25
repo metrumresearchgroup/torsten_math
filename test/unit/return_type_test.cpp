@@ -5,6 +5,7 @@
 #include <stan/math/torsten/meta/is_nl_system.hpp>
 #include <test/unit/math/prim/functor/harmonic_oscillator.hpp>
 #include <test/unit/math/rev/functor/util_algebra_solver.hpp>
+#include <stan/math/torsten/dsolve/pmx_algebra_solver_newton.hpp>
 
 using torsten::nl_system_adaptor;
 TEST(Torsten, nonlinear_system_signature) {
@@ -14,10 +15,10 @@ TEST(Torsten, nonlinear_system_signature) {
   static_assert(torsten::is_nl_system<nl_system_adaptor<non_linear_eq_functor>,
                 Eigen::VectorXd, std::vector<double>, std::vector<int>>::value,
                 "Wrong function signature");
-  static_assert(!torsten::is_nl_system<simple_eq_functor,
+  static_assert(torsten::is_nl_system<simple_eq_functor,
                 Eigen::VectorXd, std::vector<double>, std::vector<int>>::value,
                 "Wrong function signature");
-  static_assert(!torsten::is_nl_system<non_linear_eq_functor,
+  static_assert(torsten::is_nl_system<non_linear_eq_functor,
                 Eigen::VectorXd, std::vector<double>, std::vector<int>>::value,
                 "Wrong function signature");
 }

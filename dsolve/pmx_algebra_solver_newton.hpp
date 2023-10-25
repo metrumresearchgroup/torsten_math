@@ -28,12 +28,12 @@
 #include <vector>
 
 namespace torsten {
-  /** 
+  /**
    * Nonlinear system
-   * 
+   *
    */
   template <typename F, typename T_init, typename... T_par>
-  struct PMXNLSystem : torsten::is_nl_system<F, T_par...> {
+  struct PMXNLSystem {
     using Nl = PMXNLSystem<F, T_init, T_par...>;
     using scalar_t = typename stan::return_type_t<T_par...>;
     using state_t = Eigen::Matrix<scalar_t, -1, 1>;
@@ -70,13 +70,13 @@ namespace torsten {
       const char* caller = "PMX nonlinear system";
     }
 
-    /** 
+    /**
      * User-defined function passed to KINSOL
-     * 
+     *
      * @param x independent variable
      * @param f nonlinear functor evaluation
      * @param user_data
-     * 
+     *
      * @return error code
      */
     static int kinsol_nl_system(N_Vector x, N_Vector f, void* user_data) {
@@ -142,8 +142,8 @@ namespace torsten {
         Eigen::VectorXd g(M);
         for (auto i = 0; i < N; ++i) {
           if (i > 0) {
-            nested.set_zero_all_adjoints();            
-          }      
+            nested.set_zero_all_adjoints();
+          }
           f_var(i).grad();
           for (auto k = 0; k < N; ++k) {
             jfx(i, k) = x_var(k).adj();
@@ -167,7 +167,7 @@ namespace torsten {
       for (size_t i = 0; i < N; i++) {
         double* g = ChainableStack::instance_->memalloc_.alloc_array<double>(M);
         for (size_t k = 0; k < M; k++) {
-          *(g + k) = jxy(i, k);        
+          *(g + k) = jxy(i, k);
         }
         x_sol[i] = new stan::math::precomputed_gradients_vari(x[i], M, varis, g);
       }

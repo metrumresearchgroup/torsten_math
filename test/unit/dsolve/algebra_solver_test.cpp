@@ -17,7 +17,7 @@ TEST(newton_solver, simple_eq) {
   simple_eq_functor f;
   torsten::nl_system_adaptor<simple_eq_functor> f_nl(f);
 
-  stan::math::nested_rev_autodiff nested;  
+  stan::math::nested_rev_autodiff nested;
   Eigen::Matrix<stan::math::var, -1, 1> x_var(2);
   x_var << 1, 1;
   Eigen::Matrix<stan::math::var, -1, 1>  y(3);
@@ -37,7 +37,7 @@ TEST(newton_solver, simple_eq) {
   EXPECT_FLOAT_EQ(x_var(0).adj(), 0.0);
   EXPECT_FLOAT_EQ(x_var(1).adj(), 0.0);
 
-  nested.set_zero_all_adjoints();  
+  nested.set_zero_all_adjoints();
   sol(1).grad();
   EXPECT_FLOAT_EQ(y(0).adj(), 0.0);
   EXPECT_FLOAT_EQ(y(1).adj(), 0.0);
@@ -52,9 +52,9 @@ struct nonlinear_eq_func {
   template <typename T0, typename T1>
   inline Eigen::Matrix<stan::return_type_t<T0, T1>, Eigen::Dynamic, 1>
   operator()(const Eigen::Matrix<T0, Eigen::Dynamic, 1>& x,
+	     std::ostream* pstream__,
              const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
-             const std::vector<double>& dat, const std::vector<int>& dat_int,
-             std::ostream* pstream__) const {
+             const std::vector<double>& dat, const std::vector<int>& dat_int) const {
     Eigen::Matrix<stan::return_type_t<T0, T1>, Eigen::Dynamic, 1> z(3);
     z(0) = x(2) * x(2) - y(2) * (x(0) - x(1) + 1);
     z(1) = x(0) * x(1) - y(0) * y(1);
@@ -97,19 +97,19 @@ TEST(newton_solver, nonlinear_eq) {
   EXPECT_FLOAT_EQ(sol(1).val(), -6.0);
   EXPECT_FLOAT_EQ(sol(2).val(), 3.0);
 
-  nested.set_zero_all_adjoints();  
+  nested.set_zero_all_adjoints();
   sol(0).grad();
   EXPECT_FLOAT_EQ(y(0).adj(), -0.75);
   EXPECT_FLOAT_EQ(y(1).adj(), -0.25);
   EXPECT_FLOAT_EQ(y(2).adj(), 0.25);
 
-  nested.set_zero_all_adjoints();  
+  nested.set_zero_all_adjoints();
   sol(1).grad();
   EXPECT_FLOAT_EQ(y(0).adj(), -0.375);
   EXPECT_FLOAT_EQ(y(1).adj(), -0.625);
   EXPECT_FLOAT_EQ(y(2).adj(), -0.375);
 
-  nested.set_zero_all_adjoints();  
+  nested.set_zero_all_adjoints();
   sol(2).grad();
   EXPECT_FLOAT_EQ(y(0).adj(), -0.1875);
   EXPECT_FLOAT_EQ(y(1).adj(),  0.1875);
@@ -135,19 +135,19 @@ TEST(newton_solver, nonlinear_eq_variadic) {
   EXPECT_FLOAT_EQ(sol(1).val(), -6.0);
   EXPECT_FLOAT_EQ(sol(2).val(), 3.0);
 
-  nested.set_zero_all_adjoints();  
+  nested.set_zero_all_adjoints();
   sol(0).grad();
   EXPECT_FLOAT_EQ(y0.adj(), -0.75);
   EXPECT_FLOAT_EQ(y1.adj(), -0.25);
   EXPECT_FLOAT_EQ(y2.adj(), 0.25);
 
-  nested.set_zero_all_adjoints();  
+  nested.set_zero_all_adjoints();
   sol(1).grad();
   EXPECT_FLOAT_EQ(y0.adj(), -0.375);
   EXPECT_FLOAT_EQ(y1.adj(), -0.625);
   EXPECT_FLOAT_EQ(y2.adj(), -0.375);
 
-  nested.set_zero_all_adjoints();  
+  nested.set_zero_all_adjoints();
   sol(2).grad();
   EXPECT_FLOAT_EQ(y0.adj(), -0.1875);
   EXPECT_FLOAT_EQ(y1.adj(),  0.1875);
@@ -220,19 +220,19 @@ TEST(newton_solver, error) {
   EXPECT_FLOAT_EQ(sol(1).val(), -6.0);
   EXPECT_FLOAT_EQ(sol(2).val(), 3.0);
 
-  nested.set_zero_all_adjoints();  
+  nested.set_zero_all_adjoints();
   sol(0).grad();
   EXPECT_FLOAT_EQ(y0.adj(), -0.75);
   EXPECT_FLOAT_EQ(y1.adj(), -0.25);
   EXPECT_FLOAT_EQ(y2.adj(), 0.25);
 
-  nested.set_zero_all_adjoints();  
+  nested.set_zero_all_adjoints();
   sol(1).grad();
   EXPECT_FLOAT_EQ(y0.adj(), -0.375);
   EXPECT_FLOAT_EQ(y1.adj(), -0.625);
   EXPECT_FLOAT_EQ(y2.adj(), -0.375);
 
-  nested.set_zero_all_adjoints();  
+  nested.set_zero_all_adjoints();
   sol(2).grad();
   EXPECT_FLOAT_EQ(y0.adj(), -0.1875);
   EXPECT_FLOAT_EQ(y1.adj(),  0.1875);

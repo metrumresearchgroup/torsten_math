@@ -7,12 +7,12 @@
 #include <vector>
 
 namespace torsten {
-  
-  /** 
+
+  /**
    * Whether a Stan user-defined function can be used as nonlinear
-   * system of which is the zero is to be seeked
+   * system of which the zero is to be seeked
    * The solver is supposed to accept variadic params.
-   * 
+   *
    */
   template <typename F, typename... Args>
   struct is_nl_system {
@@ -30,9 +30,9 @@ namespace torsten {
   };
 
 
-  /** 
+  /**
    * Adaptor for existing Stan nl system signature.
-   * 
+   *
    */
   template<typename F>
   struct nl_system_adaptor {
@@ -46,7 +46,7 @@ namespace torsten {
                std::ostream* pstream__,
                const Eigen::Matrix<T1, Eigen::Dynamic, 1>& y,
                const std::vector<double>& dat, const std::vector<int>& dat_int) const {
-      return f_(x, y, dat, dat_int, pstream__);
+      return f_(x, pstream__, y, dat, dat_int);
     }
   };
 }
