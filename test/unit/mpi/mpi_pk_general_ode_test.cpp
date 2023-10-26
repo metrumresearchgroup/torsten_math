@@ -94,7 +94,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, adams_solver_multiple_bolus_doses_data_on
 TEST_F(TorstenPopulationPMXTwoCptTest, rk45_solver_multiple_IV_doses_data_only) {
   rate[0] = 300;
   for (int i = 0; i < np; ++i) {
-    for (int j = 0; j < nt; ++j) {      
+    for (int j = 0; j < nt; ++j) {
       rate_m[i * nt + j] = rate[j];
     }
   }
@@ -123,7 +123,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, rk45_solver_multiple_IV_doses_data_only) 
 TEST_F(TorstenPopulationPMXTwoCptTest, adams_solver_multiple_IV_doses_data_only) {
   rate[0] = 300;
   for (int i = 0; i < np; ++i) {
-    for (int j = 0; j < nt; ++j) {      
+    for (int j = 0; j < nt; ++j) {
       rate_m[i * nt + j] = rate[j];
     }
   }
@@ -152,7 +152,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, adams_solver_multiple_IV_doses_data_only)
 TEST_F(TorstenPopulationPMXTwoCptTest, bdf_solver_multiple_IV_doses_data_only) {
   rate[0] = 300;
   for (int i = 0; i < np; ++i) {
-    for (int j = 0; j < nt; ++j) {      
+    for (int j = 0; j < nt; ++j) {
       rate_m[i * nt + j] = rate[j];
     }
   }
@@ -265,7 +265,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, bdf_solver_multiple_bolus_doses_par_var) 
 TEST_F(TorstenPopulationPMXTwoCptTest, rk45_solver_multiple_IV_doses_par_var) {
   rate[0] = 300;
   for (int i = 0; i < np; ++i) {
-    for (int j = 0; j < nt; ++j) {      
+    for (int j = 0; j < nt; ++j) {
       rate_m[i * nt + j] = rate[j];
     }
   }
@@ -300,7 +300,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, rk45_solver_multiple_IV_doses_par_var) {
 TEST_F(TorstenPopulationPMXTwoCptTest, adams_solver_multiple_IV_doses_par_var) {
   rate[0] = 300;
   for (int i = 0; i < np; ++i) {
-    for (int j = 0; j < nt; ++j) {      
+    for (int j = 0; j < nt; ++j) {
       rate_m[i * nt + j] = rate[j];
     }
   }
@@ -335,7 +335,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, adams_solver_multiple_IV_doses_par_var) {
 TEST_F(TorstenPopulationPMXTwoCptTest, bdf_solver_multiple_IV_doses_par_var) {
   rate[0] = 300;
   for (int i = 0; i < np; ++i) {
-    for (int j = 0; j < nt; ++j) {      
+    for (int j = 0; j < nt; ++j) {
       rate_m[i * nt + j] = rate[j];
     }
   }
@@ -486,7 +486,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, bdf_non_uniform_population_theta_var) {
 
     Matrix<var, Dynamic, Dynamic> x_i(nCmt, len[i]);
     for (int j = 0; j < len[i]; ++j) {
-      x_i.col(j) = x_m.col(ibegin + j); 
+      x_i.col(j) = x_m.col(ibegin + j);
     }
     for (int j = 0; j < len[i]; ++j) {
       torsten::test::test_grad(theta_m_v[ibegin + j], theta_i_v[j], x_i, x);
@@ -522,10 +522,10 @@ TEST_F(TorstenPopulationNeutropeniaTest, bdf_non_uniform_population_biovar_var) 
     std::vector<std::vector<double> > tlag_i(tlag_m.begin() + ibegin, tlag_m.begin() + ibegin + len[i]);
     auto x = torsten::pmx_solve_bdf(f, nCmt, time_i, amt_i, rate_i, ii_i, evid_i, cmt_i, addl_i, ss_i,
                                     theta_i, biovar_i_v, tlag_i, nullptr);
- 
+
     Matrix<var, Dynamic, Dynamic> x_i(nCmt, len[i]);
     for (int j = 0; j < len[i]; ++j) {
-      x_i.col(j) = x_m.col(ibegin + j); 
+      x_i.col(j) = x_m.col(ibegin + j);
     }
     for (int j = 0; j < len[i]; ++j) {
       torsten::test::test_grad(biovar_m_v[ibegin + j], biovar_i_v[j], x_i, x);
@@ -565,7 +565,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, rk45_non_uniform_population_multiple_IV
 
     Matrix<var, Dynamic, Dynamic> x_i(nCmt, len[i]);
     for (int j = 0; j < len[i]; ++j) {
-      x_i.col(j) = x_m.col(ibegin + j); 
+      x_i.col(j) = x_m.col(ibegin + j);
     }
     for (int j = 0; j < len[i]; ++j) {
       torsten::test::test_grad(theta_m_v[ibegin + j], theta_i_v[j], x_i, x);
@@ -618,7 +618,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, exception_max_num_steps_fails) {
                                             len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m, // NOLINT
                                             theta_m, biovar_m, tlag_m,
                                             rtol, atol, max_num_steps, nullptr),
-               std::domain_error);
+               std::runtime_error);
 }
 
 TEST_F(TorstenPopulationNeutropeniaTest, exception_var_max_num_steps_fails) {
@@ -635,7 +635,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, exception_var_max_num_steps_fails) {
                                             len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m, // NOLINT
                                             theta_m_v, biovar_m, tlag_m,
                                             rtol, atol, max_num_steps, nullptr),
-               std::domain_error);
+               std::runtime_error);
 }
 
 TEST_F(TorstenPopulationNeutropeniaTest, domain_error) {
@@ -656,7 +656,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, domain_error) {
   long int max_num_steps = 1e1;
 
   int id = 4;
-  for (int j = 0; j < nt; ++j) {      
+  for (int j = 0; j < nt; ++j) {
     rate_m[id * nt + j] = std::numeric_limits<double>::infinity();
   }
   EXPECT_THROW_MSG(pmx_solve_group_bdf(f, nCmt,
@@ -669,7 +669,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, domain_error) {
   MPI_Barrier(comm);
 #endif
 
-  for (int j = 0; j < nt; ++j) {      
+  for (int j = 0; j < nt; ++j) {
     rate_m[id * nt + j] = 130;
   }
   theta_m[id][3] = std::numeric_limits<double>::infinity();
@@ -720,7 +720,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, bdf_solver_multiple_bolus_doses_par_bioav
     pMatrix_m_v[i] = stan::math::to_var(pMatrix[0]);
   }
 
-  vector<vector<var> > biovar_v(torsten::to_var(biovar));  
+  vector<vector<var> > biovar_v(torsten::to_var(biovar));
   vector<vector<var> > biovar_m_v(biovar_m.size());
   for (auto i = 0; i < np; ++i) {
     biovar_m_v[i] = torsten::to_var(biovar[0]);
