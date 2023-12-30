@@ -31,16 +31,16 @@ namespace torsten {
     /**
      * Evaluate ODE functor, and add rate.
      */
-    template <typename T0, typename T1, typename T2, typename T3>
-    Eigen::Matrix<typename stan::return_type<T0, T1, T2, T3>::type, -1, 1>
-    operator()(const T0& t,
+    template <typename Tt, typename T1, typename T2, typename T3>
+    Eigen::Matrix<typename stan::return_type<Tt, T1, T2, T3>::type, -1, 1>
+    operator()(const Tt& t,
                const Eigen::Matrix<T1, -1, 1>& y,
                std::ostream* msgs,
                const std::vector<T2>& theta,
                const std::vector<T3>& rate,
                const std::vector<double>& x_r,
                const std::vector<int>& x_i) const {
-      Eigen::Matrix<stan::return_type_t<T0, T1, T2, T3>, -1, 1> fy = f_(t, y, msgs, theta, x_r, x_i);
+      Eigen::Matrix<stan::return_type_t<Tt, T1, T2, T3>, -1, 1> fy = f_(t, y, msgs, theta, x_r, x_i);
       for (auto i = 0; i < fy.size(); ++i) {
         fy(i) += rate[i];
       }
@@ -125,7 +125,7 @@ namespace torsten {
         stan::math::throw_domain_error(func, "algebra_solver_fp used for ", 1, "constant infusion");
 #else
         const PMXOdeFunctorRateAdaptor<F> f(f_);
-        result = f(0, x, nullptr, y, rate_vec, x_r, x_i);
+        result = f(0.0, x, nullptr, y, rate_vec, x_r, x_i);
 #endif
       }
 
