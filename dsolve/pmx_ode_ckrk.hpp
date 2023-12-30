@@ -27,14 +27,14 @@ namespace torsten {
    * @param max_num_step maximum number of integration steps allowed.
    * @return a vector of vectors for results in each time step.
    */
-  template <typename F, typename Tt, typename T_initial, typename... T_param> 
+  template <typename F, typename Tt, typename T_initial, typename... T_param>
   inline std::vector<Eigen::Matrix<typename stan::return_type<Tt, T_initial, T_param...>::type, -1, 1>>
   pmx_ode_ckrk_ctrl(const F& f,
                     const Eigen::Matrix<T_initial, -1, 1>& y0,
                     double t0,
                     const std::vector<Tt>& ts,
-                    std::ostream* msgs,
                     double rtol, double atol, int max_num_step,
+                    std::ostream* msgs,
                     const T_param&... args) {
     using dsolve::PMXOdeIntegrator;
     using dsolve::PMXOdeintIntegrator;
@@ -53,7 +53,7 @@ namespace torsten {
                const std::vector<Tt>& ts,
                std::ostream* msgs,
                const T_param&... args) {
-    return pmx_ode_ckrk_ctrl(f, y0, t0, ts, msgs, 1.e-6, 1.e-6, 1e6, args...);
+    return pmx_ode_ckrk_ctrl(f, y0, t0, ts, 1.e-6, 1.e-6, 1e6, msgs, args...);
   }
 }
 #endif

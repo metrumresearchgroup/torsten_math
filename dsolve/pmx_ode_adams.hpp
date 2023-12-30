@@ -33,8 +33,8 @@ namespace torsten {
                      const Eigen::Matrix<T_initial, -1, 1>& y0,
                      double t0,
                      const std::vector<Tt>& ts,
-                     std::ostream* msgs,
                      double rtol, double atol, int max_num_step,
+                     std::ostream* msgs,
                      const T_param&... args) {
     using dsolve::PMXOdeIntegrator;
     using dsolve::PMXCvodesIntegrator;
@@ -54,7 +54,7 @@ namespace torsten {
               const std::vector<Tt>& ts,
               std::ostream* msgs,
               const T_param&... args) {
-    return pmx_ode_adams_ctrl(f, y0, t0, ts, msgs, 1.e-10, 1.e-10, 1e8, args...);
+    return pmx_ode_adams_ctrl(f, y0, t0, ts, 1.e-10, 1.e-10, 1e8, msgs, args...);
   }
 }
 #endif
