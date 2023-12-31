@@ -32,7 +32,7 @@
                const std::vector<T_ts>& ts, double rtol, double atol,          \
                size_t max_num_steps, std::ostream* msgs,                       \
                const Args&... args) {                                          \
-      return solver_func##_ctrl(f, y0_arg, t0, ts, msgs, rtol, atol, max_num_steps, \
+      return solver_func##_ctrl(f, y0_arg, t0, ts, rtol, atol, max_num_steps, msgs, \
                                args...);                                 \
     }                                                                          \
   };

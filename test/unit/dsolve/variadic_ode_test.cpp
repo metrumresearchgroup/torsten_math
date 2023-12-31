@@ -19,7 +19,7 @@ TEST_F(TorstenOdeTest_sho, variadic_ode_system_odeint) {
   using torsten::dsolve::PMXVariadicOdeSystem;
   using stan::math::value_of;
   using stan::math::to_var;
-  
+
   y0[1] = 0.5;
   y0_vec[1] = 0.5;
   Eigen::Matrix<stan::math::var, -1, 1> y0_var(to_var(y0_vec));
@@ -49,10 +49,10 @@ TEST_F(TorstenOdeTest_sho, variadic_ode_system_odeint) {
 
 TEST_F(TorstenOdeTest_sho, variadic_ode_system_cvodes) {
   using torsten::dsolve::PMXVariadicOdeSystem;
-  
+
   using stan::math::value_of;
   using stan::math::to_var;
-  
+
   y0[1] = 0.5;
   y0_vec[1] = 0.5;
 
@@ -78,12 +78,12 @@ TEST_F(TorstenOdeTest_sho, variadic_ode_system_cvodes) {
 
 TEST_F(TorstenOdeTest_sho, eigen_vector_rk45) {
   using torsten::dsolve::PMXVariadicOdeSystem;
-  
+
   using stan::math::value_of;
   using torsten::dsolve::PMXOdeintIntegrator;
 
   {                             // data only
-    auto y = torsten::pmx_ode_rk45_ctrl(f_eigen, y0_vec, t0, ts, msgs, rtol, atol, max_num_steps,
+    auto y = torsten::pmx_ode_rk45_ctrl(f_eigen, y0_vec, t0, ts, rtol, atol, max_num_steps, msgs,
                                         theta, x_r, x_i);
     auto y_sol = torsten::pmx_integrate_ode_rk45(f, y0, t0, ts,
                                                  theta, x_r, x_i, rtol, atol, max_num_steps, msgs);
@@ -96,7 +96,7 @@ TEST_F(TorstenOdeTest_sho, eigen_vector_rk45) {
 
   {                             // theat var
     std::vector<stan::math::var> theta_var(stan::math::to_var(theta));
-    auto y = torsten::pmx_ode_rk45_ctrl(f_eigen, y0_vec, t0, ts, msgs, rtol, atol, max_num_steps,
+    auto y = torsten::pmx_ode_rk45_ctrl(f_eigen, y0_vec, t0, ts, rtol, atol, max_num_steps, msgs,
                                         theta_var, x_r, x_i);
     auto y_sol = stan::math::ode_rk45_tol(f_eigen, y0_vec, t0, ts, rtol, atol, max_num_steps, msgs,
                                           theta_var, x_r, x_i);
@@ -110,7 +110,7 @@ TEST_F(TorstenOdeTest_sho, eigen_vector_rk45) {
     std::vector<stan::math::var> y0_var(stan::math::to_var(y0));
     Eigen::Matrix<stan::math::var, -1, 1> y0_vec_var(stan::math::to_vector(y0_var));
 
-    auto y = torsten::pmx_ode_rk45_ctrl(f_eigen, y0_vec_var, t0, ts, msgs, rtol, atol, max_num_steps,
+    auto y = torsten::pmx_ode_rk45_ctrl(f_eigen, y0_vec_var, t0, ts, rtol, atol, max_num_steps, msgs,
                                         theta_var, x_r, x_i);
     auto y_sol = stan::math::ode_rk45_tol(f_eigen, y0_vec_var, t0, ts, rtol, atol, max_num_steps, msgs,
                                           theta_var, x_r, x_i);
@@ -126,7 +126,7 @@ TEST_F(TorstenOdeTest_sho, eigen_vector_rk45) {
     Eigen::Matrix<stan::math::var, -1, 1> y0_vec_var(stan::math::to_vector(y0_var));
     std::vector<stan::math::var> ts_var(stan::math::to_var(ts));
 
-    auto y = torsten::pmx_ode_rk45_ctrl(f_eigen, y0_vec_var, t0, ts_var, msgs, rtol, atol, max_num_steps,
+    auto y = torsten::pmx_ode_rk45_ctrl(f_eigen, y0_vec_var, t0, ts_var, rtol, atol, max_num_steps, msgs,
                                         theta, x_r, x_i);
     auto y_sol = stan::math::ode_rk45_tol(f_eigen, y0_vec_var, t0, ts_var, rtol, atol, max_num_steps, msgs,
                                           theta, x_r, x_i);
@@ -140,12 +140,12 @@ TEST_F(TorstenOdeTest_sho, eigen_vector_rk45) {
 
 TEST_F(TorstenOdeTest_chem, eigen_vector_bdf) {
   using torsten::dsolve::PMXVariadicOdeSystem;
-  
+
   using stan::math::value_of;
   using torsten::dsolve::PMXOdeintIntegrator;
 
   {                             // data only
-    auto y = torsten::pmx_ode_bdf_ctrl(f_eigen, y0_vec, t0, ts, msgs, rtol, atol, max_num_steps,
+    auto y = torsten::pmx_ode_bdf_ctrl(f_eigen, y0_vec, t0, ts, rtol, atol, max_num_steps, msgs,
                                         theta, x_r, x_i);
     auto y_sol = torsten::pmx_integrate_ode_bdf(f, y0, t0, ts,
                                                  theta, x_r, x_i, rtol, atol, max_num_steps, msgs);
@@ -158,7 +158,7 @@ TEST_F(TorstenOdeTest_chem, eigen_vector_bdf) {
 
   {                             // theat var
     std::vector<stan::math::var> theta_var(stan::math::to_var(theta));
-    auto y = torsten::pmx_ode_bdf_ctrl(f_eigen, y0_vec, t0, ts, msgs, rtol, atol, max_num_steps,
+    auto y = torsten::pmx_ode_bdf_ctrl(f_eigen, y0_vec, t0, ts, rtol, atol, max_num_steps, msgs,
                                         theta_var, x_r, x_i);
     auto y_sol = stan::math::ode_bdf_tol(f_eigen, y0_vec, t0, ts, rtol, atol, max_num_steps, msgs,
                                           theta_var, x_r, x_i);
@@ -172,7 +172,7 @@ TEST_F(TorstenOdeTest_chem, eigen_vector_bdf) {
     std::vector<stan::math::var> y0_var(stan::math::to_var(y0));
     Eigen::Matrix<stan::math::var, -1, 1> y0_vec_var(stan::math::to_vector(y0_var));
 
-    auto y = torsten::pmx_ode_bdf_ctrl(f_eigen, y0_vec_var, t0, ts, msgs, rtol, atol, max_num_steps,
+    auto y = torsten::pmx_ode_bdf_ctrl(f_eigen, y0_vec_var, t0, ts, rtol, atol, max_num_steps, msgs,
                                         theta_var, x_r, x_i);
     auto y_sol = stan::math::ode_bdf_tol(f_eigen, y0_vec_var, t0, ts, rtol, atol, max_num_steps, msgs,
                                           theta_var, x_r, x_i);
@@ -188,7 +188,7 @@ TEST_F(TorstenOdeTest_chem, eigen_vector_bdf) {
     Eigen::Matrix<stan::math::var, -1, 1> y0_vec_var(stan::math::to_vector(y0_var));
     std::vector<stan::math::var> ts_var(stan::math::to_var(ts));
 
-    auto y = torsten::pmx_ode_bdf_ctrl(f_eigen, y0_vec_var, t0, ts_var, msgs, rtol, atol, max_num_steps,
+    auto y = torsten::pmx_ode_bdf_ctrl(f_eigen, y0_vec_var, t0, ts_var, rtol, atol, max_num_steps, msgs,
                                         theta, x_r, x_i);
     auto y_sol = stan::math::ode_bdf_tol(f_eigen, y0_vec_var, t0, ts_var, rtol, atol, max_num_steps, msgs,
                                           theta, x_r, x_i);
@@ -202,7 +202,7 @@ TEST_F(TorstenOdeTest_chem, eigen_vector_bdf) {
 
 TEST_F(TorstenOdeTest_lorenz, eigen_vector_adams) {
   using torsten::dsolve::PMXVariadicOdeSystem;
-  
+
   using stan::math::value_of;
   using torsten::dsolve::PMXOdeintIntegrator;
 
@@ -211,7 +211,7 @@ TEST_F(TorstenOdeTest_lorenz, eigen_vector_adams) {
     std::vector<stan::math::var> y0_var(stan::math::to_var(y0));
     Eigen::Matrix<stan::math::var, -1, 1> y0_vec_var(stan::math::to_vector(y0_var));
 
-    auto y = torsten::pmx_ode_adams_ctrl(f_eigen, y0_vec_var, t0, ts, msgs, rtol, atol, max_num_steps,
+    auto y = torsten::pmx_ode_adams_ctrl(f_eigen, y0_vec_var, t0, ts, rtol, atol, max_num_steps, msgs,
                                         theta_var, x_r, x_i);
     auto y_sol = stan::math::ode_adams_tol(f_eigen, y0_vec_var, t0, ts, rtol, atol, max_num_steps, msgs,
                                           theta_var, x_r, x_i);
@@ -227,7 +227,7 @@ TEST_F(TorstenOdeTest_lorenz, eigen_vector_adams) {
     Eigen::Matrix<stan::math::var, -1, 1> y0_vec_var(stan::math::to_vector(y0_var));
     std::vector<stan::math::var> ts_var(stan::math::to_var(ts));
 
-    auto y = torsten::pmx_ode_adams_ctrl(f_eigen, y0_vec_var, t0, ts_var, msgs, rtol, atol, max_num_steps,
+    auto y = torsten::pmx_ode_adams_ctrl(f_eigen, y0_vec_var, t0, ts_var, rtol, atol, max_num_steps, msgs,
                                         theta, x_r, x_i);
     auto y_sol = stan::math::ode_adams_tol(f_eigen, y0_vec_var, t0, ts_var, rtol, atol, max_num_steps, msgs,
                                           theta, x_r, x_i);
@@ -240,7 +240,7 @@ TEST_F(TorstenOdeTest_lorenz, eigen_vector_adams) {
 
   {                             // ts var
     std::vector<stan::math::var> ts_var(stan::math::to_var(ts));
-    auto y = torsten::pmx_ode_adams_ctrl(f_eigen, y0_vec, t0, ts_var, msgs, rtol, atol, max_num_steps,
+    auto y = torsten::pmx_ode_adams_ctrl(f_eigen, y0_vec, t0, ts_var, rtol, atol, max_num_steps, msgs,
                                         theta, x_r, x_i);
     auto y_sol = stan::math::ode_adams_tol(f_eigen, y0_vec, t0, ts_var, rtol, atol, max_num_steps, msgs,
                                           theta, x_r, x_i);
@@ -253,7 +253,7 @@ TEST_F(TorstenOdeTest_lorenz, eigen_vector_adams) {
 
 TEST_F(TorstenOdeTest_neutropenia, eigen_vector_ckrk) {
   using torsten::dsolve::PMXVariadicOdeSystem;
-  
+
   using stan::math::value_of;
   using torsten::dsolve::PMXOdeintIntegrator;
 
@@ -262,7 +262,7 @@ TEST_F(TorstenOdeTest_neutropenia, eigen_vector_ckrk) {
     std::vector<stan::math::var> y0_var(stan::math::to_var(y0));
     Eigen::Matrix<stan::math::var, -1, 1> y0_vec_var(stan::math::to_vector(y0_var));
 
-    auto y = torsten::pmx_ode_ckrk_ctrl(f_eigen, y0_vec_var, t0, ts, msgs, rtol, atol, max_num_steps,
+    auto y = torsten::pmx_ode_ckrk_ctrl(f_eigen, y0_vec_var, t0, ts, rtol, atol, max_num_steps, msgs,
                                         theta_var, x_r, x_i);
     auto y_sol = stan::math::ode_rk45_tol(f_eigen, y0_vec_var, t0, ts, rtol, atol, max_num_steps, msgs,
                                           theta_var, x_r, x_i);
@@ -278,7 +278,7 @@ TEST_F(TorstenOdeTest_neutropenia, eigen_vector_ckrk) {
     Eigen::Matrix<stan::math::var, -1, 1> y0_vec_var(stan::math::to_vector(y0_var));
     std::vector<stan::math::var> ts_var(stan::math::to_var(ts));
 
-    auto y = torsten::pmx_ode_ckrk_ctrl(f_eigen, y0_vec_var, t0, ts_var, msgs, rtol, atol, max_num_steps,
+    auto y = torsten::pmx_ode_ckrk_ctrl(f_eigen, y0_vec_var, t0, ts_var, rtol, atol, max_num_steps, msgs,
                                         theta, x_r, x_i);
     auto y_sol = stan::math::ode_rk45_tol(f_eigen, y0_vec_var, t0, ts_var, rtol, atol, max_num_steps, msgs,
                                           theta, x_r, x_i);
@@ -291,7 +291,7 @@ TEST_F(TorstenOdeTest_neutropenia, eigen_vector_ckrk) {
 
   {                             // ts var
     std::vector<stan::math::var> ts_var(stan::math::to_var(ts));
-    auto y = torsten::pmx_ode_ckrk_ctrl(f_eigen, y0_vec, t0, ts_var, msgs, rtol, atol, max_num_steps,
+    auto y = torsten::pmx_ode_ckrk_ctrl(f_eigen, y0_vec, t0, ts_var, rtol, atol, max_num_steps, msgs,
                                         theta, x_r, x_i);
     auto y_sol = stan::math::ode_rk45_tol(f_eigen, y0_vec, t0, ts_var, rtol, atol, max_num_steps, msgs,
                                           theta, x_r, x_i);
