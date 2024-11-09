@@ -414,7 +414,7 @@ TEST(pmx_ln_interpolate, error_conditions_inf) {
   x_bad[0] = inf;
   EXPECT_THROW_MSG(torsten::pmx_ln_interpolate(xout, x_bad, y),
                    std::domain_error,
-                   "x");
+                   "x[1]");
   EXPECT_THROW_MSG(torsten::pmx_ln_interpolate(xout, x_bad, y),
                    std::domain_error,
                    expected_is_inf.str());
