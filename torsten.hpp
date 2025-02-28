@@ -17,7 +17,6 @@
 #include <stan/math/torsten/pmx_solve_twocpt_bdf.hpp>
 
 #include <stan/math/torsten/pmx_ln_interpolate.hpp>
-#include <stan/math/torsten/univariate_integral.hpp>
 
 #include <stan/math/torsten/dsolve.hpp>
 
