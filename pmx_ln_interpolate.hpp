@@ -38,9 +38,9 @@ namespace torsten {
     stan::math::check_matching_sizes("pmx_ln_interpolate", "x", x, "y", y);
 
     typename stan::return_type_t<T0, T1, T2> yout;
-    if (xout < x.front()) {
+    if (xout <= x.front()) {
       yout = y.front();
-    } else if (xout > x.back()) {
+    } else if (xout >= x.back()) {
       yout = y.back();
     } else {
       int i = std::lower_bound(x.begin(), x.end(), xout) - x.begin() - 1;
