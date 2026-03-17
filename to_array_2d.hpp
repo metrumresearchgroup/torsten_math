@@ -1,8 +1,6 @@
 #ifndef STAN_MATH_TORSTEN_TO_ARRAY_2D_HPP
 #define STAN_MATH_TORSTEN_TO_ARRAY_2D_HPP
 
-#include <stan/math/torsten/meta.hpp>
-
 namespace torsten {
   template<typename T,
            typename std::enable_if_t<!stan::is_std_vector<T>::value >* = nullptr> //NOLINT

@@ -52,7 +52,7 @@ namespace torsten {
 
   template <typename T0, typename T1, typename T2, typename T3,
             typename T_par, typename T_biovar, typename T_tlag,
-            typename = require_any_not_std_vector_t<T_par, T_biovar, T_tlag> >
+            typename = stan::require_any_not_std_vector_t<T_par, T_biovar, T_tlag> >
   stan::matrix_return_t<T0, T1, T2, T3, T_par, T_biovar, T_tlag>
   PKModelOneCpt(const std::vector<T0>& time,
                    const std::vector<T1>& amt,

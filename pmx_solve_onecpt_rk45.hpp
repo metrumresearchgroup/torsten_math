@@ -179,13 +179,13 @@ pmx_solve_onecpt_rk45(const F& f,
 }
 
   /**
-   * Overload function to allow user to pass an std::vector for 
+   * Overload function to allow user to pass an std::vector for
    * pMatrix/bioavailability/tlag
    */
   template <typename T0, typename T1, typename T2, typename T3,
             typename T_par, typename T_biovar, typename T_tlag,
             typename F,
-            typename = require_any_not_std_vector_t<T_par, T_biovar, T_tlag> >
+            typename = stan::require_any_not_std_vector_t<T_par, T_biovar, T_tlag> >
   stan::matrix_return_t<T0, T1, T2, T3, T_par, T_biovar, T_tlag>
   pmx_solve_onecpt_rk45(const F& f,
                         const int nOde,
@@ -220,14 +220,14 @@ pmx_solve_onecpt_rk45(const F& f,
   }
 
   /**
-   * Overload function to allow user to pass an std::vector for 
+   * Overload function to allow user to pass an std::vector for
    * pMatrix/bioavailability/tlag, with default ode &
    * algebra solver controls
    */
   template <typename T0, typename T1, typename T2, typename T3,
             typename T_par, typename T_biovar, typename T_tlag,
             typename F,
-            typename = require_any_not_std_vector_t<T_par, T_biovar, T_tlag> >
+            typename = stan::require_any_not_std_vector_t<T_par, T_biovar, T_tlag> >
   stan::matrix_return_t<T0, T1, T2, T3, T_par, T_biovar, T_tlag>
   pmx_solve_onecpt_rk45(const F& f,
                         const int nOde,
@@ -252,14 +252,14 @@ pmx_solve_onecpt_rk45(const F& f,
   }
 
   /**
-   * Overload function to allow user to pass an std::vector for 
+   * Overload function to allow user to pass an std::vector for
    * pMatrix/bioavailability/tlag, with default
    * algebra solver controls
    */
   template <typename T0, typename T1, typename T2, typename T3,
             typename T_par, typename T_biovar, typename T_tlag,
             typename F,
-            typename = require_any_not_std_vector_t<T_par, T_biovar, T_tlag> >
+            typename = stan::require_any_not_std_vector_t<T_par, T_biovar, T_tlag> >
   stan::matrix_return_t<T0, T1, T2, T3, T_par, T_biovar, T_tlag>
   pmx_solve_onecpt_rk45(const F& f,
                         const int nOde,
@@ -318,7 +318,7 @@ mixOde1CptModel_rk45(const F& f,
   template <typename T0, typename T1, typename T2, typename T3,
             typename T_par, typename T_biovar, typename T_tlag,
             typename F,
-            typename = require_any_not_std_vector_t<T_par, T_biovar, T_tlag> >
+            typename = stan::require_any_not_std_vector_t<T_par, T_biovar, T_tlag> >
   stan::matrix_return_t<T0, T1, T2, T3, T_par, T_biovar, T_tlag>
   mixOde1CptModel_rk45(const F& f,
                         const int nOde,

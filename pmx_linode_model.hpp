@@ -44,7 +44,7 @@ namespace torsten {
                const std::vector<int>& dummy,
                std::ostream* pstream__) const {
       typedef typename stan::return_type<T0, T1, T2>::type scalar;
-      
+
       size_t n = x.size();
       std::vector<scalar> res(n);
       Matrix<scalar, Dynamic, Dynamic> m(n, n);
@@ -57,9 +57,9 @@ namespace torsten {
       return res;
     }
 
-    /** 
+    /**
      * Eigen::Matrix version
-     * 
+     *
      */
     template <typename T0, typename T1, typename T2>
     Eigen::Matrix<typename stan::return_type_t<T0, T1, T2>, -1, 1>
@@ -70,7 +70,7 @@ namespace torsten {
                const std::vector<double>& x_r,
                const std::vector<int>& x_i) const {
       typedef typename stan::return_type_t<T0, T1, T2> scalar;
-      
+
       size_t n = x.size();
       Eigen::Matrix<scalar, -1, 1> res(n);
       Matrix<scalar, Dynamic, Dynamic> m(n, n);
@@ -172,7 +172,7 @@ namespace torsten {
      * solve the linear ODE: steady state version
      */
     template<typename T_amt, typename T_r, typename T_ii>
-    Eigen::Matrix<typename stan::return_type_t<T_amt, T_r, T_ii, T_par>, -1, 1> 
+    Eigen::Matrix<typename stan::return_type_t<T_amt, T_r, T_ii, T_par>, -1, 1>
     solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii,
           const int& cmt) const {
       using Eigen::Matrix;
@@ -269,7 +269,7 @@ namespace torsten {
 
   /**
    * linear ode with eigen decomposition
-   * 
+   *
    */
   template<typename T_par>
   class PMXLinOdeEigenDecompModel {
@@ -321,7 +321,7 @@ namespace torsten {
      * solve the linear ODE: steady state version
      */
     template<typename T_amt, typename T_r, typename T_ii>
-    Eigen::Matrix<typename stan::return_type_t<T_amt, T_r, T_ii, T_par>, -1, 1> 
+    Eigen::Matrix<typename stan::return_type_t<T_amt, T_r, T_ii, T_par>, -1, 1>
     solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii,
           const int& cmt) const {
       using Eigen::Matrix;
@@ -355,12 +355,12 @@ namespace torsten {
         bolus(cmt - 1) = amt;
         pred = multiply(multiply(diag, p_inv_), bolus);
         for (int i = 0; i < ncmt_; ++i) {
-          pred(i) /= (1.0 - diag(i, i));
+          pred(i) = pred(i)/(1.0 - diag(i, i));
         }
         pred = multiply(p_, pred);
       } else if (ii > 0) {  // multiple truncated infusions
         /**
-         * with eigen-decomp A= P * diag * P_inv, change of variable: 
+         * with eigen-decomp A= P * diag * P_inv, change of variable:
          * y = P_inv * u decouples original ODE based on u.
          */
         typename stan::return_type_t<T_amt, T_r> dt = amt / rate;

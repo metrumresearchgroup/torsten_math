@@ -3,7 +3,6 @@
 
 #include <Eigen/Dense>
 #include <stan/math/prim/err/check_greater_or_equal.hpp>
-#include <stan/math/torsten/meta.hpp>
 #include <stan/math/torsten/to_array_2d.hpp>
 #include <stan/math/torsten/pmx_solve_cpt.hpp>
 #include <stan/math/torsten/ev_solver.hpp>
@@ -22,9 +21,9 @@ namespace torsten {
  * model with analytical solution.
  *
  * @tparam Ts types of parameters, see <code>pmx_solve_cpt</code> for
- *         details. 
- * @return a matrix with predicted amount in each compartment 
- *         at each event. 
+ *         details.
+ * @return a matrix with predicted amount in each compartment
+ *         at each event.
  *
  */
   template <typename... Ts>
@@ -33,12 +32,12 @@ namespace torsten {
   }
 
 /**
- * Overload function to allow user to pass an std::vector for 
+ * Overload function to allow user to pass an std::vector for
  * pMatrix/bioavailability/tlag
  */
   template <typename T0, typename T1, typename T2, typename T3,
             typename T_par, typename T_biovar, typename T_tlag,
-            typename = require_any_not_std_vector_t<T_par, T_biovar, T_tlag> >
+            typename = stan::require_any_not_std_vector_t<T_par, T_biovar, T_tlag> >
   stan::matrix_return_t<T0, T1, T2, T3, T_par, T_biovar, T_tlag>
   pmx_solve_twocpt_effcpt(const std::vector<T0>& time,
                           const std::vector<T1>& amt,
@@ -61,7 +60,7 @@ namespace torsten {
 
   /**
    * For population models, we follow the call signature
-   * but add the arrays of the length of each individual's data. 
+   * but add the arrays of the length of each individual's data.
    * The size of that vector is the size of
    * the population.
    */

@@ -5,6 +5,7 @@
 #include <stan/math/rev/core.hpp>
 #include <stan/math/prim/meta.hpp>
 #include <stan/math/prim/meta/is_eigen_matrix_base.hpp>
+#include <stan/math/prim/meta/require_helpers.hpp>
 #include <stan/math/rev/meta.hpp>
 #include <stan/math/prim/fun/Eigen.hpp>
 #include <stan/math/torsten/finite_diff_gradient.hpp>
@@ -103,12 +104,12 @@
   }                                                                     \
   }
 
-/** 
+/**
  * For MAT vs 2D-array alike, check member value float equal
- * 
+ *
  * @param A Matrix
  * @param B 2D array
- * 
+ *
  */
 #define EXPECT_MAT_ARRAY2D_VAL_FLOAT_EQ(A, B)                   \
   {                                                             \
@@ -335,7 +336,7 @@ namespace torsten {
     }
 
     /*
-     * Test @c std::vector<var> results between two results. 
+     * Test @c std::vector<var> results between two results.
      * An example use would be to have the results coming from torsten
      * and stan, respectively, so ensure the soundness of
      * torsten results.
@@ -355,7 +356,7 @@ namespace torsten {
     }
 
     /*
-     * Test @c std::vector<var> results between two results. 
+     * Test @c std::vector<var> results between two results.
      * An example use would be to have the results coming from torsten
      * and stan, respectively, so ensure the soundness of
      * torsten results.
@@ -420,7 +421,7 @@ namespace torsten {
      *              with, must of same shape and size as to @c pk_y
      */
     template<typename T1, typename T2,
-             stan::require_all_eigen_matrix_base_t<T1, T2>* = nullptr>
+	     stan::require_all_t<stan::is_eigen_matrix_base<T1>, stan::is_eigen_matrix_base<T2>>* = nullptr>
     void test_val(const T1& y1, const T2& y2) {
       using stan::math::value_of;
       EXPECT_EQ(y1.rows(), y2.rows());
@@ -443,7 +444,7 @@ namespace torsten {
      * @param rtol absolute tolerance
      */
     template<typename T1, typename T2,
-             stan::require_all_eigen_matrix_base_t<T1, T2>* = nullptr>
+             stan::require_all_t<stan::is_eigen_matrix_base<T1>, stan::is_eigen_matrix_base<T2>>* = nullptr>
     void test_val(const T1& y1, const T2& y2,
                   double rtol, double atol) {
       using stan::math::value_of;
@@ -551,7 +552,7 @@ namespace torsten {
     }
 
     /*
-     * Test @c std::vector<var> results between two results. 
+     * Test @c std::vector<var> results between two results.
      * An example use would be to have the results coming from torsten
      * and stan, respectively, so ensure the soundness of
      * torsten results.
@@ -570,7 +571,7 @@ namespace torsten {
                    double fval_eps,
                    double sens_eps) {
       EXPECT_EQ(pk_y.size(), stan_y.size());
-      for (size_t i = 0; i < pk_y.size(); ++i) { 
+      for (size_t i = 0; i < pk_y.size(); ++i) {
         EXPECT_EQ(pk_y[i].size(), stan_y[i].size());
       }
 
@@ -708,7 +709,7 @@ namespace torsten {
     }
 
     /*
-     * Test @c std::vector<var> results between two results. 
+     * Test @c std::vector<var> results between two results.
      * An example use would be to have the results coming from torsten
      * and stan, respectively, so ensure the soundness of
      * torsten results.

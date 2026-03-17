@@ -166,7 +166,7 @@ namespace torsten {
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename T_biovar, typename T_tlag,
-              typename = require_any_not_std_vector_t<T_par, T_biovar, T_tlag> >
+              typename = stan::require_any_not_std_vector_t<T_par, T_biovar, T_tlag> >
     stan::matrix_return_t<T0, T1, T2, T3, T_par, T_biovar, T_tlag>
     static solve(TORSTEN_PMX_FUNC_EVENTS_ARGS,
                  const std::vector<T_par>& pMatrix,
@@ -213,7 +213,7 @@ namespace torsten {
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par, typename T_biovar,
-              typename = require_any_not_std_vector_t<T_par, T_biovar> >
+              typename = stan::require_any_not_std_vector_t<T_par, T_biovar> >
     stan::matrix_return_t<T0, T1, T2, T3, T_par, T_biovar>
     static solve(TORSTEN_PMX_FUNC_EVENTS_ARGS,
                  const std::vector<T_par>& pMatrix,
@@ -255,7 +255,7 @@ namespace torsten {
      */
     template <typename T0, typename T1, typename T2, typename T3,
               typename T_par,
-              typename = require_any_not_std_vector_t<T_par> >
+              typename = stan::require_any_not_std_vector_t<T_par> >
     stan::matrix_return_t<T0, T1, T2, T3, T_par>
     static solve(TORSTEN_PMX_FUNC_EVENTS_ARGS,
                  const std::vector<T_par>& pMatrix) {

@@ -11,7 +11,8 @@
 #include <stan/math/torsten/dsolve/ode_tuple_functor.hpp>
 #include <stan/math/torsten/dsolve/ode_check.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_vars.hpp>
-#include <stan/math/torsten/meta/require_generics.hpp>
+#include <stan/math/torsten/meta/is_std_ode.hpp>
+#include <stan/math/torsten/meta/is_eigen_ode.hpp>
 #include <stan/math/torsten/value_of.hpp>
 #include <stan/math/prim/fun/typedefs.hpp>
 #include <stan/math/rev/core/typedefs.hpp>
@@ -100,7 +101,7 @@ namespace dsolve {
         x_r_(x_r),
         x_i_(x_i),
         N(y0.size()),
-        M(theta.size()),      
+        M(theta.size()),
         ns((is_var_y0 ? N : 0) + (is_var_par ? M : 0)),
         system_size(N + N * ns),
         msgs_(msgs),
@@ -114,7 +115,7 @@ namespace dsolve {
                      [](const T_init& v){ return stan::math::value_of(v); });
       if (is_var_y0)  {
         for (size_t i = 0; i < N; ++i) {
-          y0_fwd_system[N + i * N + i] = 1.0;        
+          y0_fwd_system[N + i * N + i] = 1.0;
         }
       }
     }
@@ -165,7 +166,7 @@ namespace dsolve {
 
     /*
      * evaluate RHS with data only inputs for N_Vector data
-     */    
+     */
     inline void operator()(double t, N_Vector& nv_y, N_Vector& ydot) const {
       stan::math::check_size_match("PMXOdeSystem", "y", NV_LENGTH_S(nv_y), "dy_dt", NV_LENGTH_S(ydot));
       std::vector<double> y(NV_DATA_S(nv_y), NV_DATA_S(nv_y) + N);
@@ -208,7 +209,7 @@ namespace dsolve {
 
       for (size_t i = 0; i < N; ++i) {
         if (i > 0) {
-          nested.set_zero_all_adjoints();            
+          nested.set_zero_all_adjoints();
         }
         dy_dt[i] = fyv[i].val();
         fyv[i].grad();
@@ -260,7 +261,7 @@ namespace dsolve {
           auto ysp = N_VGetArrayPointer(ys[i]);
           auto nvp = N_VGetArrayPointer(ysdot[i]);
           for (int k = 0; k < N; ++k) {
-            nvp[j] += yv_work[k].adj() * ysp[k];              
+            nvp[j] += yv_work[k].adj() * ysp[k];
           }
         }
 
@@ -279,7 +280,7 @@ namespace dsolve {
                                N_Vector temp1, N_Vector temp2) {
       if (use_fwd_sens) {
         Ode* ode = static_cast<Ode*>(user_data);
-        (*ode)(ns, t, y, ydot, ys, ysdot, temp1, temp2);            
+        (*ode)(ns, t, y, ydot, ys, ysdot, temp1, temp2);
       }
       return 0;
     }
@@ -462,7 +463,7 @@ namespace dsolve {
 
     /**
      * evaluate RHS with data only inputs for N_Vector data
-     */    
+     */
     inline void operator()(double t, N_Vector& nv_y, N_Vector& ydot) const {
       Eigen::Map<Eigen::VectorXd>(NV_DATA_S(ydot), N) = dbl_rhs_impl(t, nv_y);
     }
@@ -507,7 +508,7 @@ namespace dsolve {
       Eigen::VectorXd& g = g_work;
       for (size_t i = 0; i < N; ++i) {
         if (i > 0) {
-          nested.set_zero_all_adjoints();            
+          nested.set_zero_all_adjoints();
         }
         dydt.coeffRef(i) = (fyv.coeffRef(i)).val();
         (fyv.coeffRef(i)).grad();
@@ -569,7 +570,7 @@ namespace dsolve {
           auto ysp = N_VGetArrayPointer(ys[i]);
           auto nvp = N_VGetArrayPointer(ysdot[i]);
           for (int k = 0; k < N; ++k) {
-            nvp[j] += yv[k].adj() * ysp[k];              
+            nvp[j] += yv[k].adj() * ysp[k];
           }
         }
 
