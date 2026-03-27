@@ -19,18 +19,18 @@ namespace torsten{
   template<typename T_model, typename T_em>
   struct EventSolver;
 
-  /** 
+  /**
    * The solver that solves events one by one according to @c evid and
    * dosing information. It is a wrapper that is aware of @c T_model so it build model
    * and select solver accordingly.
-   * 
+   *
    * @tparam T_model type of model
    * @tparam T_event_record type of event record
-   * @tparam T0 TIME type 
+   * @tparam T0 TIME type
    * @tparam T4 THETA type
    * @theta_container container for theta type, could be
    *                  @c std::vector or @c eigen::vector.
-   * 
+   *
    */
   template<typename T_model, typename T_event_record,
            typename T0, typename T4, template<typename...> class theta_container,
@@ -243,7 +243,7 @@ namespace torsten{
      * on <code>res</code> arg for results. Here the result is <code>var</code>.
      *
      * @param events_rec event record
-     * @param res solution 
+     * @param res solution
      * @param integrator ODE integrator
      * @param theta PMX parameters passed into ODE function
      * @param event_ctrl optional PMX parameters: bioavailability & tlag
@@ -280,7 +280,7 @@ namespace torsten{
 
       std::vector<MPI_Request> req(np);
       vector<MatrixXd> res_d(np);
-      
+
       res.resize(nCmt, events_rec.total_num_event_times);
 
       PKRec<scalar> init(nCmt);
@@ -361,13 +361,13 @@ namespace torsten{
               iev++;
             }
           }
-        } 
+        }
       }
 
       MPI_Barrier(comm);
 
       if(is_invalid) {
-        throw std::runtime_error(rank_fail_msg.str());
+        throw std::domain_error(rank_fail_msg.str());
       }
     }
 
@@ -461,7 +461,7 @@ namespace torsten{
 
       if(is_invalid) {
         MPI_Barrier(comm);
-        throw std::runtime_error(rank_fail_msg.str());
+        throw std::domain_error(rank_fail_msg.str());
       }
     }
 #else
@@ -483,14 +483,8 @@ namespace torsten{
 
       const int nCmt = EM::nCmt(events_rec);
       const int np = events_rec.num_subjects();
-      
-      res.resize(nCmt, events_rec.total_num_event_times);
 
-      static bool has_warning = false;
-      if (!has_warning) {
-        std::cout << "Torsten Population PK solver " << "running sequentially" << "\n";
-        has_warning = true;
-      }
+      res.resize(nCmt, events_rec.total_num_event_times);
 
       for (int id = 0; id < np; ++id) {
         const int nKeep = events_rec.num_event_times(id);

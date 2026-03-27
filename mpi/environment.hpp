@@ -5,6 +5,7 @@
 #if defined(STAN_LANG_MPI) || defined(TORSTEN_MPI)
 #include <boost/mpi.hpp>
 #endif
+#include <iostream>
 
 // default comm to world comm, in case stan needs to be
 // called as library.
@@ -30,10 +31,14 @@ namespace math {
           int flag;
           MPI_Initialized(&flag);
           if(!flag) {
-            int provided;
-            MPI_Init_thread(NULL, NULL, MPI_THREAD_SINGLE, &provided);
-            // print provided when needed
+            MPI_Init(NULL, NULL);
+
+            int s;
+	    MPI_Comm_size(MPI_COMM_WORLD, &s);
+	    std::cout << "Torsten Population PK solver: " << "MPI n=" << s << "\n";
           }
+#else
+	  std::cout << "Torsten Population PK solver: " << "sequential" << "\n";
 #endif
         }
 
@@ -111,7 +116,7 @@ namespace math {
         }
       }
     };
-  
+
     /* MPI communicator wrapper for RAII. Note that no
      * MPI's predfined comm such as @c MPI_COMM_WOLRD are allowed.*/
     struct Session {
@@ -210,7 +215,7 @@ namespace math {
         }
         return inter_chain;
       }
-        
+
       static const Communicator& intra_chain_comm(int num_mpi_chains) {
         if (intra_chain.comm() == MPI_COMM_NULL) {
           mpi_comm_inter_chain(num_mpi_chains);
@@ -219,7 +224,7 @@ namespace math {
         }
         return intra_chain;
       }
-        
+
       static bool is_in_inter_chain_comm(int num_mpi_chains) {
         return inter_chain_comm(num_mpi_chains).rank() >= 0;
       }

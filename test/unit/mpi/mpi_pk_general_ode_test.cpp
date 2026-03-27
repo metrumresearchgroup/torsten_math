@@ -390,7 +390,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, exception_sync) {
                                                   biovar_m,
                                                   tlag_m,
                                            1e-6, 1e-6, 1e4, nullptr),
-                     std::runtime_error, "failed with error flag -1");
+                     std::domain_error, "failed with error flag -1");
   } else {
     EXPECT_THROW_MSG(pmx_solve_group_adams(model_t::f_, model_t::Ncmt,
                                                   len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m, // NOLINT
@@ -398,7 +398,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, exception_sync) {
                                                   biovar_m,
                                                   tlag_m,
                                                   1e-6, 1e-6, 1e4, nullptr),
-                     std::runtime_error, "received invalid data for id 4");
+                     std::domain_error, "received invalid data for id 4");
   }
   MPI_Barrier(comm);
 
@@ -411,7 +411,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, exception_sync) {
                                                   biovar_m,
                                                   tlag_m,
                                                   1e-6, 1e-6, 1e4, nullptr),
-                     std::runtime_error, "failed with error flag -1");
+                     std::domain_error, "failed with error flag -1");
   } else {
     EXPECT_THROW_MSG(pmx_solve_group_adams(model_t::f_, model_t::Ncmt,
                                                   len, time_m, amt_m, rate_m, ii_m, evid_m, cmt_m, addl_m, ss_m, // NOLINT
@@ -419,7 +419,7 @@ TEST_F(TorstenPopulationPMXTwoCptTest, exception_sync) {
                                                   biovar_m,
                                                   tlag_m,
                                                   1e-6, 1e-6, 1e4, nullptr),
-                     std::runtime_error, "received invalid data for id");
+                     std::domain_error, "received invalid data for id");
   }
   MPI_Barrier(comm);
 }
@@ -619,7 +619,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, exception_max_num_steps_fails) {
                                             theta_m, biovar_m, tlag_m,
                                             rtol, atol, max_num_steps, nullptr),
 #if defined(STAN_LANG_MPI) || defined(TORSTEN_MPI)
-               std::runtime_error);
+               std::domain_error);
 #else
                std::domain_error);
 #endif
@@ -640,7 +640,7 @@ TEST_F(TorstenPopulationNeutropeniaTest, exception_var_max_num_steps_fails) {
                                             theta_m_v, biovar_m, tlag_m,
                                             rtol, atol, max_num_steps, nullptr),
 #if defined(STAN_LANG_MPI) || defined(TORSTEN_MPI)
-               std::runtime_error);
+               std::domain_error);
 #else
                std::domain_error);
 #endif

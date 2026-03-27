@@ -14,7 +14,8 @@
  stan::math::mpi::Communicator stan::math::mpi::Session::intra_chain(MPI_COMM_NULL); \
  int torsten::mpi::Session::num_chains = 1;
 #else
-#define TORSTEN_MPI_SESSION_INIT
+#define TORSTEN_MPI_SESSION_INIT \
+  stan::math::mpi::Envionment   stan::math::mpi::Session::env; // dummy env
 #endif
 
 #endif
