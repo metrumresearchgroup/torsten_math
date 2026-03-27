@@ -30,9 +30,10 @@ namespace math {
           int flag;
           MPI_Initialized(&flag);
           if(!flag) {
-            int provided;
-            MPI_Init_thread(NULL, NULL, MPI_THREAD_SINGLE, &provided);
+            int s;
+            MPI_Init(NULL, NULL);
             // print provided when needed
+	    MPI_Comm_size(MPI_COMM_WORLD, &s);
           }
 #endif
         }

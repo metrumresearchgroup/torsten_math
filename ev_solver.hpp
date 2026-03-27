@@ -300,6 +300,7 @@ namespace torsten{
         /* only solver rank */
 
         if (rank == my_worker_id) {
+	  std::cout << "taki test: " << rank << " " << my_worker_id << " " << size << std::endl;
           if (is_invalid) {
             res_d[id].setConstant(invalid_res_d);
           } else {
@@ -367,7 +368,7 @@ namespace torsten{
       MPI_Barrier(comm);
 
       if(is_invalid) {
-        throw std::runtime_error(rank_fail_msg.str());
+        throw std::domain_error(rank_fail_msg.str());
       }
     }
 
@@ -461,7 +462,7 @@ namespace torsten{
 
       if(is_invalid) {
         MPI_Barrier(comm);
-        throw std::runtime_error(rank_fail_msg.str());
+        throw std::domain_error(rank_fail_msg.str());
       }
     }
 #else
