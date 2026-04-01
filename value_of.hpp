@@ -81,6 +81,15 @@ inline auto value_of(const std::vector<T>& x) {
     }
     return res;
   }
+
+  template <typename T, int R, int C>
+  inline Eigen::Matrix<double, R, C> value_of(const Eigen::Map<const Eigen::Matrix<stan::math::var_value<double>, -1, -1>> & M) {
+    Eigen::Matrix<double, R, C> res(R, C);
+    for (auto i = 0; i < M.size(); ++i) {
+      res(i) = stan::math::value_of(M(i));
+    }
+    return res;
+  }
 }
 
 #endif
