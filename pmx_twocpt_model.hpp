@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_TWOCPT_MODEL_HPP
 
 #include <stan/math/torsten/pmx_linode_model.hpp>
+#include <stan/math/torsten/pmx_cpt_disposition.hpp>
 #include <stan/math/rev/fun/sqrt.hpp>
 #include <stan/math/prim/fun/sqrt.hpp>
 #include <stan/math/rev/fun/exp.hpp>
@@ -116,9 +117,7 @@ namespace torsten {
     const T_par ksum_;
     std::vector<T_par> alpha_;
     const std::vector<T_par> par_;
-    Eigen::Matrix<T_par, -1, -1> p_;
-    Eigen::Matrix<T_par, -1, 1> diag_;
-    Eigen::Matrix<T_par, -1, -1> p_inv_;
+    const internal::PMXTwoCptDisposition<T_par> disp_;
 
   public:
     static constexpr int Ncmt = 3;
@@ -156,9 +155,7 @@ namespace torsten {
         0.5 * (ksum_ - stan::math::sqrt(ksum_ * ksum_ - 4 * k10_ * k21_)),
         ka_},
       par_{CL_, Q_, V2_, V3_, ka_},
-      p_{Ncmt, Ncmt},
-      diag_{Ncmt},
-      p_inv_{Ncmt, Ncmt} {
+      disp_(ka_, k10_, k12_, k21_) {
       const char* fun = "PMXTwoCptModel";
       stan::math::check_positive_finite(fun, "CL", CL_);
       stan::math::check_positive_finite(fun, "Q", Q_);
@@ -166,29 +163,6 @@ namespace torsten {
       stan::math::check_positive_finite(fun, "V3", V3_);
       stan::math::check_nonnegative(fun, "ka", ka_);
       stan::math::check_finite(fun, "ka", ka_);
-
-      T_par s = stan::math::sqrt(-4.0 * k10_ * k21_ + (k10_ + k12_ + k21_) * (k10_ + k12_ + k21_));
-      T_par q = ka_ * ka_ - ka_ * k10_ - ka_ * k12_ - ka_ * k21_ + k10_ * k21_;
-      T_par w = k10_ + k12_ - k21_;
-      if (ka_ > 0) {
-        p_ << q / (ka_ * k12_), 0, 0,
-          -(ka_ - k21_)/k12_, -0.5 * (w + s) / k12_, -0.5 * (w - s) / k12_, 
-          1, 1, 1;
-        p_inv_ << ka_ * k12_/q, 0, 0,
-          -ka_ * k12_ * ( 2.0 * ka_ - k10_ - k12_ - k21_ + s) / (2.0 * q * s), -k12_ / s, 0.5 * (s - w) / s,
-          -ka_ * k12_ * (-2.0 * ka_ + k10_ + k12_ + k21_ + s) / (2.0 * q * s),  k12_ / s, 0.5 * (s + w) / s;
-        diag_ << -ka_,
-          -0.5 * (k10_ + k12_ + k21_ + s),
-          -0.5 * (k10_ + k12_ + k21_ - s);
-      } else {
-        p_.resize(Ncmt-1, Ncmt-1);
-        p_inv_.resize(Ncmt-1, Ncmt-1);
-        diag_.resize(Ncmt-1);
-        p_ << -0.5 * (w + s) / k12_, -0.5 * (w - s) / k12_, 1, 1;
-        p_inv_ << -k12_/s,  0.5 * (s - w) / s, k12_/s, 0.5 * (s + w) / s;
-        diag_ << -0.5 * (k12_ + k10_ + k21_ + s),
-          -0.5 * (k12_ + k10_ + k21_ - s);
-      }
     }
 
   /**
@@ -218,30 +192,15 @@ namespace torsten {
     }
 
   /**
-   * Solve two-cpt model: analytical solution
+   * Solve two-cpt model: closed-form solution in terms of divided
+   * differences, well defined when ka equals a disposition rate
    */
     template<typename Tt0, typename Tt1, typename T, typename T1>
     void solve(PKRec<T>& y,
                const Tt0& t0, const Tt1& t1,
                const std::vector<T1>& rate,
                const dsolve::PMXAnalyiticalIntegrator& integ) const {
-      using stan::math::exp;
-
-      typename stan::return_type_t<Tt0, Tt1> dt = t1 - t0;
-
-      if (ka_ > 0.0) {
-        LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p_, diag_, p_inv_);
-        PMXLinOdeEigenDecompModel<T_par> linode_model(pdp);
-        linode_model.solve(y, t0, t1, rate, integ);
-      } else {
-        y(0) += rate[0] * dt;
-        LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p_, diag_, p_inv_);
-        PMXLinOdeEigenDecompModel<T_par> linode_model(pdp);
-        PKRec<T> y2 = y.tail(Ncmt - 1);
-        std::vector<T1> rate2(rate.begin() + 1, rate.end());
-        linode_model.solve(y2, t0, t1, rate2, integ);
-        y.tail(Ncmt - 1) = y2;
-      }
+      internal::pmx_cpt_solve(disp_, y, t1 - t0, rate);
     }
 
   /**
@@ -347,26 +306,11 @@ namespace torsten {
     template<typename T_amt, typename T_r, typename T_ii>
     Eigen::Matrix<typename stan::return_type<T_par, T_amt, T_r, T_ii>::type, -1, 1>
     solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii, const int& cmt) const {
-      using Eigen::Matrix;
-      using Eigen::Dynamic;
-      using std::vector;
-      using stan::math::exp;
-      using stan::math::matrix_exp;
-      using stan::math::value_of;
-      using stan::math::mdivide_left;
-      using stan::math::multiply;
-
-      using ss_scalar_type = typename stan::return_type<T_par, T_amt, T_r, T_ii>::type;
-
       stan::math::check_positive_finite("steady state two-cpt solver", "cmt", cmt);
       stan::math::check_less("steady state two-cpt solver", "cmt", cmt, 4);
       stan::math::check_positive_finite("steady state two-cpt solver", "ka", ka_);
 
-      LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p_, diag_, p_inv_);
-      PMXLinOdeEigenDecompModel<T_par> linode_model(pdp);
-      PKRec<ss_scalar_type> pred = linode_model.solve(t0, amt, rate, ii, cmt);
-
-      return pred;
+      return internal::pmx_cpt_steady_state(disp_, amt, rate, ii, cmt);
     }
 
     /*

@@ -2,6 +2,7 @@
 #define STAN_MATH_TORSTEN_ONECPT_MODEL_HPP
 
 #include <stan/math/torsten/pmx_linode_model.hpp>
+#include <stan/math/torsten/pmx_cpt_disposition.hpp>
 #include <stan/math/torsten/PKModel/functors/check_mti.hpp>
 #include <stan/math/torsten/model_solve_d.hpp>
 #include <stan/math/torsten/dsolve/pmx_ode_integrator.hpp>
@@ -92,6 +93,7 @@ namespace torsten {
     const T_par k10_;
     const std::vector<T_par> alpha_;
     const std::vector<T_par> par_;
+    const internal::PMXOneCptDisposition<T_par> disp_;
 
   public:
     static constexpr int Ncmt = 2;
@@ -119,7 +121,8 @@ namespace torsten {
       ka_(ka),
       k10_(CL / V2),
       alpha_{k10_, ka_},
-      par_{CL_, V2_, ka_}
+      par_{CL_, V2_, ka_},
+      disp_(ka_, k10_)
     {
       const char* fun = "PMXOneCptModel";
       stan::math::check_positive_finite(fun, "CL", CL_);
@@ -157,37 +160,18 @@ namespace torsten {
     const PMXOneCptODE         & f()       const { return f_;     }
     const int                 & ncmt ()   const { return Ncmt;   }
 
+    /**
+     * Solve one-cpt model: closed-form solution. The system matrix is
+     * lower triangular, so its exponential needs no eigendecomposition
+     * and stays well defined when ka == k10, where the matrix has a
+     * repeated eigenvalue and no eigenvector basis.
+     */
     template<typename Tt0, typename Tt1, typename T, typename T1>
     void solve(Eigen::Matrix<T, -1, 1>& y,
                const Tt0& t0, const Tt1& t1,
                const std::vector<T1>& rate,
                const dsolve::PMXAnalyiticalIntegrator& integ) const {
-      using stan::math::exp;
-
-      typename stan::return_type_t<Tt0, Tt1> dt = t1 - t0;
-      Eigen::Matrix<T, -1, 1> pred = torsten::PKRec<T>::Zero(Ncmt);
-
-      if (ka_ > 0.0) {
-        Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt);
-        Eigen::Matrix<T_par, -1, 1> diag(Ncmt);
-        p << -(ka_ - k10_)/ka_, 0, 1, 1;
-        p_inv << -ka_ / (ka_ - k10_), 0, ka_ / (ka_ - k10_), 1;
-        diag << -ka_, -k10_;
-        LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p, diag, p_inv);
-        PMXLinOdeEigenDecompModel<T_par> linode_model(pdp);
-        linode_model.solve(y, t0, t1, rate, integ);
-      } else {
-        typename stan::return_type_t<T_par, Tt0, Tt1> exp1 = exp(-k10_ * dt);
-
-        // contribution from cpt 1 bolus dose
-        pred(1) += y(1) * exp1;
-
-        // contribution from cpt 1 infusion dose
-        pred(1) += rate[1] * (1 - exp1) / k10_;
-
-        pred(0) += y(0) + rate[0] * dt;
-        y = pred;
-      }
+      internal::pmx_cpt_solve(disp_, y, t1 - t0, rate);
     }
 
     /**
@@ -260,32 +244,11 @@ namespace torsten {
     template<typename T_amt, typename T_r, typename T_ii>
     Eigen::Matrix<typename stan::return_type<T_par, T_amt, T_r, T_ii>::type, Eigen::Dynamic, 1>
     solve(double t0, const T_amt& amt, const T_r& rate, const T_ii& ii, int cmt) const { //NOLINT
-      using Eigen::Matrix;
-      using Eigen::Dynamic;
-      using std::vector;
-
-      const double inf = std::numeric_limits<double>::max();  // "infinity"
-
       stan::math::check_positive_finite("steady state one-cpt solver", "cmt", cmt);
       stan::math::check_less("steady state one-cpt solver", "cmt", cmt, 3);
       stan::math::check_positive_finite("steady state one-cpt solver", "ka", ka_);
 
-      using ss_scalar_type = typename stan::return_type_t<T_par, T_amt, T_r, T_ii>;
-      PKRec<ss_scalar_type> pred = PKRec<ss_scalar_type>::Zero(Ncmt);
-
-      Eigen::Matrix<T_par, -1, -1> p(Ncmt, Ncmt), p_inv(Ncmt, Ncmt);
-      Eigen::Matrix<T_par, -1, 1> diag(Ncmt);
-      p.setZero();
-      p_inv.setZero();
-      diag.setZero();
-      p << -(ka_ - k10_)/ka_, 0, 1, 1;
-      p_inv << -ka_ / (ka_ - k10_), 0, ka_ / (ka_ - k10_), 1;
-      diag << -ka_, -k10_;
-      LinOdeEigenDecomp<T_par> pdp = std::forward_as_tuple(p, diag, p_inv);
-      PMXLinOdeEigenDecompModel<T_par> linode_model(pdp);
-      pred = linode_model.solve(t0, amt, rate, ii, cmt);
-
-      return pred;
+      return internal::pmx_cpt_steady_state(disp_, amt, rate, ii, cmt);
     }
 
     /*
